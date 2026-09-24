@@ -58,9 +58,9 @@ The app passes `Date()` as `createdAt`. The test passes fixed values. Rejected: 
 
 Today queries the current record day and the previous one. It shows the previous day's section only when that query returns at least one entry. After a save, Today scrolls to the saved entry's `id`. Rejected: day navigation. It is a feature. Rejected: hiding a previous-day entry. A saved entry that the person cannot see reads as a refusal.
 
-### Today recomputes the day on activation and at 04:00
+### Today reads through the store and recomputes the day on activation and at 04:00
 
-A parent view computes the two intervals and passes them to a child view whose `init` builds the `@Query`. The parent recomputes on `scenePhase == .active` and on a timer set for the next 04:00. Rejected: one `@Query` built at launch. Today would show yesterday all morning after an overnight background.
+Today holds the two intervals in state and reads entries through `RecordStore.entries(in:)`. It reads again on `scenePhase == .active`, after a save, and on a task that sleeps until the current day's end. Rejected: `@Query` in a child view. It reads the container directly, so the store would no longer be the only path to entries, and a `@Query` built at launch shows yesterday all morning after an overnight background. Built on 24 September 2026.
 
 ### Display and label functions live in the package
 
@@ -84,12 +84,12 @@ The new-entry screen returns `false` for the keyboard extension point, so third-
 
 ### Xcode project written by hand with synchronized folders
 
-The project file uses Xcode 16's synchronized root groups so it lists folders, not files. Adding a Swift file needs no project edit. `CODE_SIGN_ENTITLEMENTS` names `Midmorning.entitlements`, which holds the App Group. Rejected: XcodeGen or Tuist. Neither exists on this Mac and both add a tool to the loop.
+The project file uses Xcode 16's synchronized root groups so it lists folders, not files. Adding a Swift file needs no project edit. `CODE_SIGN_ENTITLEMENTS` names `Midmorning.entitlements`, which holds the App Group. `Info.plist` sits at `App/Midmorning-Info.plist`, outside the synchronized folder, because Xcode copies every file in that folder as a resource and the copy collides with the generated plist. Rejected: XcodeGen or Tuist. Neither exists on this Mac and both add a tool to the loop.
 
 ## Risks / Trade-offs
 
 - [SwiftData macro build on macOS in `swift test`] → the package declares macOS 14 as the platform; Xcode 27's toolchain supports it.
-- [App Group on an unsigned simulator build] → the simulator returns a container URL with or without the entitlement. Task 2.2 checks the entitlement in the built app with `codesign` instead.
+- [App Group on an unsigned simulator build] → the simulator returns a container URL with or without the entitlement. A simulator build carries its entitlements in the binary's `__TEXT,__entitlements` section, not in the code signature, so task 2.2 reads that section. Confirmed on 24 September 2026.
 - [The simulator does not show the protection class or the backup flag] → a device build checks them. Until then, a reviewer reads the code path.
 - [xcodebuild cold build time] → the skeleton app is small. The verify script runs `swift test` and `xcodebuild` at the same time, so a cold Xcode build does not use the whole budget alone.
 - [No signing identity on this Mac] → all builds target the simulator; a device build waits for a team on the project.
