@@ -1,0 +1,50 @@
+schema: spec-driven
+
+context: |
+  Midmorning: an iOS self-help companion for adults with recurrent binge
+  eating. A 12-week programme built on published CBT-E principles. It has
+  two core parts. The first is a real-time eating record; an entry takes
+  under 20 seconds. The second is a regular eating plan that the app
+  reminds the person to follow.
+  docs/prd.md is authoritative. When the PRD and a spec conflict, the PRD is
+  correct and the spec is wrong.
+  Stack: Swift and SwiftUI, iOS 17 and later. Pure SwiftPM packages under
+  Packages/ hold the models and logic and run their tests with swift test on
+  macOS. The Xcode project under App/ holds the UI. SwiftData with CloudKit
+  private-database sync; the model follows CloudKit's constraints in the
+  first change. Offline-first. No accounts. No server we run. No third-party
+  SDKs.
+  Defined terms: "entry", "What", "Today", "felt like a binge", "star" and
+  "starred", "record day", "creation moment", "new-entry screen", "the
+  store". Use no synonym for a defined term. Never "log", "meal log", "food
+  diary", "intake", "portion", "calories", "mark", "note", "timestamp".
+  Never: calories, totals, streaks, colour-coded food, goal weight, BMI after
+  onboarding, AI-generated advice at runtime, comparison to other users.
+  Done means ./verify exits 0.
+
+# Every artifact follows ASD-STE100 (Simplified Technical English).
+# Ash ruled this on 24 September 2026 for all specs, now and in future.
+rules:
+  proposal:
+    - "Write in ASD-STE100. One instruction per sentence. About 20 words per sentence."
+    - "Active voice. Name who acts."
+    - "Use must for a requirement and can for a capability. Do not use may, might, should or shall."
+    - "Present tense for what the code does. Past tense only with a date."
+    - "One meaning per word. Use the PRD's terms. No synonyms."
+    - "Keep it under one page."
+  specs:
+    - "Write in ASD-STE100. One instruction per sentence. About 20 words per sentence."
+    - "Active voice. Name who acts: the app, the store, the person."
+    - "Write requirements with MUST or MUST NOT. Do not use SHALL, should, may or might. MUST is an RFC keyword and is exempt from the STE word list."
+    - "One requirement per behaviour. Every requirement has at least one scenario."
+    - "Use the defined terms from the context. Never log, meal log, food diary, intake, portion, calories, mark, note, timestamp."
+    - "Quote user-facing strings verbatim. STE does not apply inside the quotes."
+  design:
+    - "Write in ASD-STE100. One instruction per sentence. About 20 words per sentence."
+    - "Active voice. Name who acts."
+    - "State each decision, the alternative you rejected, and why. Say what it costs to reverse."
+    - "No implementation that the specs do not need."
+  tasks:
+    - "Write in ASD-STE100. One instruction per task line, imperative, about 20 words."
+    - "Every task names the command or test that proves it is done."
+    - "No task for work that a spec does not require."
