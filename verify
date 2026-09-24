@@ -1,0 +1,58 @@
+#!/bin/bash
+# The contract for "done" in this repo. Every check that defines done runs
+# here. Any failed check exits non-zero. A run must finish in 240 seconds
+# of wall clock, and the script fails when it does not.
+#
+# Do NOT add or remove a check without asking Ash first.
+#
+# Checks:
+#   1. swift test on Packages/Record      (the tested logic; runs on macOS)
+#   2. xcodebuild of the app              (simulator build; no test run)
+#   3. openspec validate --strict         (every change and spec parses)
+#
+# The Swift test and the Xcode build run at the same time, so a cold Xcode
+# build does not use the whole budget alone.
+set -uo pipefail
+cd "$(dirname "$0")"
+
+BUDGET_SECONDS=240
+started=$(date +%s)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+swift test --package-path Packages/Record >"$work/swift-test.log" 2>&1 &
+swift_pid=$!
+
+xcodebuild -project App/Midmorning.xcodeproj -scheme Midmorning \
+  -destination 'generic/platform=iOS Simulator' -quiet build \
+  >"$work/xcodebuild.log" 2>&1 &
+xcode_pid=$!
+
+openspec validate --all --strict >"$work/openspec.log" 2>&1
+openspec_status=$?
+
+wait "$swift_pid";  swift_status=$?
+wait "$xcode_pid";  xcode_status=$?
+
+failed=0
+report() {
+  local label="$1" status="$2" log="$3"
+  if [ "$status" -eq 0 ]; then
+    printf 'ok   %s\n' "$label"
+  else
+    printf 'FAIL %s\n' "$label"
+    tail -40 "$log"
+    failed=1
+  fi
+}
+report "swift test Record"   "$swift_status"    "$work/swift-test.log"
+report "xcodebuild Midmorning" "$xcode_status"  "$work/xcodebuild.log"
+report "openspec validate"   "$openspec_status" "$work/openspec.log"
+
+elapsed=$(( $(date +%s) - started ))
+printf 'time %ss (budget %ss)\n' "$elapsed" "$BUDGET_SECONDS"
+if [ "$elapsed" -gt "$BUDGET_SECONDS" ]; then
+  printf 'FAIL over budget: the loop has got slow\n'
+  failed=1
+fi
+exit "$failed"
