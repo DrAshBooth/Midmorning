@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import RecordCore
+import Record
 
 @main
 struct MidmorningApp: App {
@@ -9,7 +9,7 @@ struct MidmorningApp: App {
 
     init() {
         do {
-            store = try RecordStore(url: StoreLocation.url())
+            store = try RecordStore(directory: StoreLocation.directory())
         } catch {
             // The error carries no entry data. A store that cannot open is a
             // fault the person cannot fix; stop rather than run with no record.
@@ -38,22 +38,25 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 enum StoreLocation {
     static let appGroup = "group.uk.midmorning"
 
-    /// Creates a `Record` directory under Application Support with
-    /// NSFileProtectionComplete and backup exclusion, so the store and its
-    /// -wal and -shm files inherit both. Returns the store file's URL.
-    static func url() throws -> URL {
+    /// Creates the `Record` directory under Application Support with
+    /// NSFileProtectionComplete and backup exclusion, so `Record.store`,
+    /// `Local.store` and their -wal and -shm files all inherit both
+    /// (data-and-privacy spec, "The store lives in the app's own
+    /// container"; "Two store configurations in one directory"). Returns the
+    /// directory; `RecordStore` places both files inside it.
+    static func directory() throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        var directory = support.appendingPathComponent("Record", isDirectory: true)
+        let directory = StoreLayout.storeDirectory(applicationSupportDirectory: support)
         try FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true,
             attributes: [.protectionKey: FileProtectionType.complete]
         )
         try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: directory.path)
+        var mutableDirectory = directory
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try directory.setResourceValues(values)
-        return directory.appendingPathComponent("Record.store")
+        try mutableDirectory.setResourceValues(values)
+        return directory
     }
-
 }

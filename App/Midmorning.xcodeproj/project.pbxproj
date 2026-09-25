@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4D1D000000000000000000A1 /* RecordCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4D1D000000000000000000A0 /* RecordCore */; };
+		4D1D000000000000000000A1 /* Record in Frameworks */ = {isa = PBXBuildFile; productRef = 4D1D000000000000000000A0 /* Record */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D1D000000000000000000A1 /* RecordCore in Frameworks */,
+				4D1D000000000000000000A1 /* Record in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,7 +70,7 @@
 			);
 			name = Midmorning;
 			packageProductDependencies = (
-				4D1D000000000000000000A0 /* RecordCore */,
+				4D1D000000000000000000A0 /* Record */,
 			);
 			productName = Midmorning;
 			productReference = 4D1D0000000000000000002B /* Midmorning.app */;
@@ -272,9 +272,9 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		4D1D000000000000000000A0 /* RecordCore */ = {
+		4D1D000000000000000000A0 /* Record */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = RecordCore;
+			productName = Record;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -1,11 +1,12 @@
 import Foundation
 import XCTest
-@testable import RecordCore
+@testable import Record
 
 @MainActor
 final class RecordStoreTests: XCTestCase {
-    /// The one test of the walking skeleton. It saves entries around the
-    /// 04:00 boundary, reopens the file, and asserts what Today reads.
+    /// From the walking skeleton: saves entries around the 04:00 boundary,
+    /// reopens the store, and asserts what Today reads — now backed by
+    /// append-only `ItemVersion` rows read through `EntryWinner`.
     func testEntriesSurviveReopenAndComeBackInRecordDayOrder() throws {
         var london = Calendar(identifier: .gregorian)
         london.timeZone = TimeZone(identifier: "Europe/London")!
@@ -18,10 +19,9 @@ final class RecordStoreTests: XCTestCase {
             .appendingPathComponent("RecordStoreTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let url = directory.appendingPathComponent("Record.store")
 
         // First container: save entries out of time order, with fixed creation moments.
-        var store: RecordStore? = try RecordStore(url: url)
+        var store: RecordStore? = try RecordStore(directory: directory)
         try store!.add(time: at(24, 13, 5), what: "Toast and tea", feltLikeABinge: true, createdAt: at(24, 13, 8), utcOffsetSeconds: londonOffset)
         try store!.add(time: at(24, 8, 10), what: "Porridge", feltLikeABinge: false, createdAt: at(24, 9, 0), utcOffsetSeconds: londonOffset)
         try store!.add(time: at(25, 0, 30), what: "Crisps", feltLikeABinge: false, createdAt: at(25, 0, 31), utcOffsetSeconds: londonOffset)
@@ -33,8 +33,8 @@ final class RecordStoreTests: XCTestCase {
         XCTAssertEqual(trimmed.time, at(24, 20, 0), "time is stored to the minute")
         store = nil
 
-        // Second container on the same file: the entries survived.
-        let reopened = try RecordStore(url: url)
+        // Second container on the same directory: the entries survived.
+        let reopened = try RecordStore(directory: directory)
         let expected: [(String, String, Bool, Date)] = [
             ("04:00", "Tea", false, at(24, 4, 1)),
             ("08:10", "Porridge", false, at(24, 9, 0)),
@@ -76,5 +76,26 @@ final class RecordStoreTests: XCTestCase {
         // Night.
         XCTAssertTrue(RecordDay.isNight(at(25, 1, 0), calendar: london))
         XCTAssertFalse(RecordDay.isNight(at(24, 13, 30), calendar: london))
+    }
+
+    /// mm-t12.4, "Two files": Record.store and Local.store, each with their
+    /// own -wal and -shm, and nothing else in the directory.
+    func testTwoStoreConfigurationsInOneDirectory() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("RecordStoreTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        // Keep the container open: the -wal and -shm sidecar files exist
+        // only while a connection is live.
+        let store = try RecordStore(directory: directory)
+        try store.add(time: Date(), what: "Toast", feltLikeABinge: false, createdAt: Date(), utcOffsetSeconds: 0)
+
+        let names = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+        let stems = Set(names.map { ($0 as NSString).deletingPathExtension })
+        XCTAssertEqual(stems, ["Record", "Local"], "nothing else lives in the store directory")
+        XCTAssertTrue(names.contains("Record.store"))
+        XCTAssertTrue(names.contains("Local.store"))
+        withExtendedLifetime(store) {}
     }
 }

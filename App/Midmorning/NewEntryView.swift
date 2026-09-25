@@ -1,11 +1,11 @@
 import SwiftUI
-import RecordCore
+import Record
 
 /// The new-entry screen: time, What, the star, Save and Cancel. No title.
 struct NewEntryView: View {
     let store: RecordStore
     let day: DateInterval
-    let onSave: (Entry) -> Void
+    let onSave: (RecordRow) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase

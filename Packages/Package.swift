@@ -8,10 +8,13 @@ let package = Package(
     name: "Midmorning",
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
-        .library(name: "RecordCore", targets: ["RecordCore"]),
+        .library(name: "Record", targets: ["Record"]),
+        .library(name: "Constants", targets: ["Constants"]),
     ],
     targets: [
-        .target(name: "RecordCore"),
-        .testTarget(name: "RecordCoreTests", dependencies: ["RecordCore"]),
+        .target(name: "Constants"),
+        .target(name: "Record", dependencies: ["Constants"], resources: [.copy("FrozenSchema.json")]),
+        .testTarget(name: "ConstantsTests", dependencies: ["Constants"]),
+        .testTarget(name: "RecordTests", dependencies: ["Record"]),
     ]
 )

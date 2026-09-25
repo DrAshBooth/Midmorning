@@ -1,0 +1,18 @@
+{
+  "Item": ["id"],
+  "ItemVersion": ["id", "entryId", "changedAt", "deleted", "dayKey", "time", "utcOffsetSeconds", "what", "feltLikeABinge", "createdAt"],
+  "DayState": ["id", "dateKey", "kind", "value", "changedAt"],
+  "Template": ["id", "kind", "slotsJSON", "changedAt"],
+  "Day": ["id", "dateKey", "slotsJSON", "windowBeforeMinutes", "windowAfterMinutes", "changedAt", "setAt", "setBy"],
+  "Answer": ["id", "kind", "dateKey", "slotIndex", "cardId", "value", "changedAt"],
+  "Measure": ["id", "dateKey", "weightKg", "changedAt"],
+  "Session": ["id", "startedAt", "startDayKey", "outcome", "outcomeAt", "outcomeDayKey", "entryId"],
+  "ListItem": ["id", "kind", "text", "position", "deleted", "changedAt"],
+  "Sheet": ["id", "kind", "payloadJSON", "entryId", "deleted", "changedAt"],
+  "Review": ["id", "kind", "dueDateKey", "frozenAt", "answersJSON", "selfHarmAnswered", "pinnedNote", "changedAt"],
+  "Profile": ["id", "heightCm", "onboardingBMI", "cautionFlag", "askedAt", "changedAt"],
+  "Settings": ["id", "key", "value", "changedAt"],
+  "Seen": ["id", "cardId", "seenAt"],
+  "Place": ["id"],
+  "Device": ["id", "installId", "joinedDay", "lastSeenDay", "leftAt", "changedAt"]
+}
