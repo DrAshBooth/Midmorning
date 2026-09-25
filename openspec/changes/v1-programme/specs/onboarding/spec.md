@@ -10,7 +10,7 @@ Onboarding is the four screens the person passes once, before the programme star
 
 The app MUST show onboarding the first time the app opens after install. From the sync change, the app checks iCloud for a record before screen 1. The "Restore before onboarding" requirement states that. Onboarding MUST have exactly four screens in this order: "What this is and isn't", "A few questions first", "Your start", "Permissions". The app MUST NOT show onboarding again after the person completes it.
 
-After Delete-all the app MUST show onboarding again (`data-and-privacy` owns Delete-all). The app MUST NOT ask the screening questions again after onboarding, except at the restart re-screen that `safeguarding` defines. Every onboarding screen MUST show Get support in the navigation bar (`safeguarding` owns the button). The four screens MUST NOT need a network connection.
+After Delete-all the app MUST show onboarding again (`data-and-privacy` owns Delete-all). The app MUST NOT ask the screening questions again after onboarding. The exceptions are the self-harm item at every weekly review and check-in, and the restart re-screen that `safeguarding` defines. Every onboarding screen MUST show Get support in the navigation bar (`safeguarding` owns the button). The four screens MUST NOT need a network connection.
 
 The four screens together MUST ask the person to type at most five numbers. Every other input MUST be one tap. A reviewer walks the four screens with every default on the simulator. The target for that walk is under three minutes.
 
@@ -60,7 +60,7 @@ From the sync change, when the device has an iCloud account, the app MUST read t
 
 After "Get it back" the app MUST turn sync on. The app MUST then start the first import. The app MUST then show screen 1 and screen 4. The app MUST skip screens 2 and 3. On screen 4 the "Your record" section MUST show "This device and my iCloud" as chosen.
 
-The app MUST NOT write a Profile row, a Settings row or a StageOpened row until the first import completes. The start day is a Settings row, so the app MUST NOT write it either. The imported Profile supplies the height, the onboarding BMI and the caution flag. The app MUST NOT ask the screening questions after "Get it back".
+The app MUST NOT write a Profile row, a Settings row or a StageOpened row until the first import completes. The start day is a Settings row, so the app MUST NOT write it either. The imported Profile supplies the height, the onboarding BMI, the caution flag and `askedAt`. The app MUST NOT ask the screening questions after "Get it back".
 
 After "Start fresh" the app MUST show "What this is and isn't" with sync off. The app MUST NOT change the record in iCloud after "Start fresh".
 
@@ -363,19 +363,19 @@ When the person denies notifications, the app MUST complete onboarding with ever
 
 ### Requirement: What onboarding keeps and what it never keeps
 
-From the screening the store MUST hold exactly three values. They are the height in centimetres, the onboarding BMI and the caution flag. `safeguarding` sets the caution flag.
+From the screening the store MUST hold exactly four values. They are the height in centimetres, the onboarding BMI, the caution flag and `askedAt`. `askedAt` holds the moment of the screening, as `safeguarding` states. `safeguarding` sets the caution flag.
 
 From the commitment the store MUST hold the start day and the quiet hours. It MUST hold the weigh-in day or the "I won't be weighing" choice. Local.store MUST hold the install moment, the completion flag and the sync choice as device state. `data-and-privacy` defines Local.store. From the sync change, after "Get it back" the first import supplies every synced value. The app MUST NOT write one itself.
 
-The store MUST NOT hold the age or the weight that the person typed at onboarding. The store MUST NOT hold the pregnancy answer, the treatment answer or a self-harm answer. The store MUST NOT hold the screening date.
+The store MUST NOT hold the age or the weight that the person typed at onboarding. The store MUST NOT hold the pregnancy answer, the treatment answer or a self-harm answer. The store MUST NOT hold a screening date or moment other than `askedAt`.
 
-The Profile row MUST NOT carry a creation moment. It carries its `changedAt` per key and nothing else about time. `data-and-privacy` names the CKRecord system dates as the dates the store never reads. The app MUST NOT save the onboarding weight as a weigh-in.
+The Profile row MUST NOT carry a creation moment. It carries `changedAt` per key and `askedAt`, and nothing else about time. `data-and-privacy` names the CKRecord system dates as the dates the store never reads. The app MUST NOT save the onboarding weight as a weigh-in.
 
-The app MUST NOT show the height, the onboarding BMI or the caution flag on any screen after screen 2. The app MUST read these three values only for the underweight check and the restart re-screen. `safeguarding` defines both. The app MUST NOT write any screening answer to the system log or an error. The height, the onboarding BMI and the caution flag sync with the store under the rules `data-and-privacy` defines.
+The app MUST NOT show the height, the onboarding BMI, the caution flag or `askedAt` after screen 2. The app MUST read these four values only for the underweight check and the restart re-screen. `safeguarding` defines both. The app MUST NOT write any screening answer to the system log or an error. The four values sync with the store under the rules `data-and-privacy` defines.
 
 #### Scenario: The store after onboarding
 - **WHEN** the person completes onboarding with a start day, Sunday, default quiet hours, 170 cm and 60 kg
-- **THEN** the store holds the start day, Sunday, 22:00 to 07:00, 170, 20.76 and the caution flag off, and no age, weight, date, creation moment or yes-or-no answer
+- **THEN** the store holds the start day, Sunday, 22:00 to 07:00, 170, 20.76, the caution flag off and `askedAt` as the screening moment, and no age, weight, other date, creation moment or yes-or-no answer
 
 #### Scenario: First weigh-in day
 - **WHEN** the person opens the weigh-in screen on the first weigh-in day

@@ -118,7 +118,7 @@ The repository MUST hold a forbidden list. The content test MUST fail when a car
 
 The content test MUST match each entry as a whole word, case-insensitive. A word is a maximal run of letters, digits, apostrophes and hyphens. An entry with a space MUST match as a run of whole words in that order.
 
-The full forbidden list applies to the cards, the opening sentences, the rule strings and the Today card strings. It also applies to the pattern templates, every question and the alternatives examples. The content test MUST check each of those families against the full list. The content test MUST check the strings with ids support.*, gp.*, notrightnow.* and gpsuggestion.* against the short list only. The short list is "Fairburn", "Oxford", "CREDO", "CBT-E", "CBT", "binger", "bingeing", "binge episode", "you've got this", "well done", "great job" and "proud".
+The full forbidden list applies to the cards, the opening sentences, the rule strings and the Today card strings. It also applies to the pattern templates, every question and the alternatives examples. The content test MUST check each of those families against the full list. The content test MUST check the strings with ids support.*, gp.*, exclusion.*, notrightnow.* and gpsuggestion.* against the short list only. The short list is "Fairburn", "Oxford", "CREDO", "CBT-E", "CBT", "binger", "bingeing", "binge episode", "you've got this", "well done", "great job" and "proud".
 
 #### Scenario: A forbidden word
 - **WHEN** a card's body holds "This programme treats binge eating."
@@ -427,7 +427,8 @@ The content bundle MUST hold every reviewed string the app shows, in these famil
 - The maintenance plan questions: "maintenance.<n>". Staying-on-track owns the text. One of them is "Is there anyone you could tell, if you wanted to?"
 - The GP paragraph and its variants: "gp.default", "gp.selfharm" and "gp.under18". Safeguarding owns the text.
 - The support sheet strings: "support.<name>". Safeguarding owns the text.
-- The not-right-now pages: "notrightnow.<reason>". Safeguarding owns the text.
+- The exclusion page reasons: "exclusion.selfharm", "exclusion.age", "exclusion.weight", "exclusion.pregnancy" and "exclusion.treatment". Safeguarding owns the text.
+- The not-right-now pages: "notrightnow.selfharm" and "notrightnow.weight". Safeguarding owns the text. For the pregnancy and treatment reasons, the page shows "exclusion.pregnancy" and "exclusion.treatment". The bundle MUST NOT hold "notrightnow.pregnancy" or "notrightnow.treatment".
 - The GP suggestion pages: "gpsuggestion.<reason>". Safeguarding owns the text.
 
 These strings MUST follow the same version, sign-off, tone and forbidden-list rules as the cards. Every string with a count MUST follow the catalogue rules below. "rule.stage2" and "rule.stage3" MUST hold exactly the two positional placeholders their text shows. Every other rule string MUST hold at most one %lld placeholder.
@@ -515,6 +516,10 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 #### Scenario: Two strings with one id
 - **WHEN** the bundle holds two strings with the id "support.samaritans"
 - **THEN** the content test fails and names "support.samaritans"
+
+#### Scenario: The not-right-now ids
+- **WHEN** a reviewer lists every bundle id that starts with "notrightnow."
+- **THEN** the list holds "notrightnow.selfharm" and "notrightnow.weight" and no other id
 
 ### Requirement: Catalogue rules
 

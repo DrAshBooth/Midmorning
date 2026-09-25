@@ -20,8 +20,9 @@ When Ash archives an owning change, Ash moves its rows to that change's README. 
 | body-image-module | every requirement | Absent | 3.5 body-image-module | the requirement beads under mm-t35 |
 | staying-on-track | every requirement | Absent. "Start week 1 again" is a `programme` requirement and stays in the first cut | 3.6 staying-on-track | the requirement beads under mm-t36 |
 | app-lock | A new entry before authentication: the widget, intent and control scenarios | The first cut builds the other scenarios | 2.5 widgets-and-intents | mm-t25.15 |
+| app-lock | Face ID only or Touch ID only | The first cut builds the other scenarios | 4.1b sync | mm-t41b.10 |
 | content | Each stage has three to five cards | Only stage 1 and 2 cards in the bundle; the content version is 1 | 3.1 urge-toolkit, 3.2b taking-stock, 3.3 problem-solving, 3.4 food-rules, 3.5 body-image-module, 3.6 staying-on-track | mm-t31.15, mm-t32b.3, mm-t33.16, mm-t34.13, mm-t35.12, mm-t36.15 |
-| content | Every bundled string family has ids | The families that later changes own are absent from the bundle | 2.5 widgets-and-intents, 3.1 urge-toolkit, 3.3 problem-solving, 3.4 food-rules, 3.6 staying-on-track | mm-t25.15, mm-t31.16, mm-t33.17, mm-t34.15, mm-t36.20 |
+| content | Every bundled string family has ids | The families that later changes own are absent from the bundle | 2.5 widgets-and-intents, 3.1 urge-toolkit, 3.3 problem-solving, 3.4 food-rules, 3.6 staying-on-track | mm-t25.15, mm-t25.16, mm-t31.16, mm-t33.17, mm-t34.15, mm-t36.20 |
 | content | One in-app link on a card | Only stage 1 and 2 cards in the bundle | 3.5 body-image-module | mm-t35.12 |
 | content | Plain UK English | Only stage 1 and 2 cards in the bundle | 3.1 urge-toolkit | mm-t31.15 |
 | content | The card catalogue | Only stage 1 and 2 cards in the bundle; the content version is 1 | 3.4 food-rules, 3.5 body-image-module | mm-t34.13, mm-t35.12 |
@@ -40,11 +41,16 @@ When Ash archives an owning change, Ash moves its rows to that change's README. 
 | data-and-privacy | What never leaves the device | The first cut builds the other scenarios | 2.5 widgets-and-intents, 4.1b sync | mm-t25.15, mm-t41b.11 |
 | onboarding | Screen 4: permissions | The first cut builds the other scenarios | 2.5 widgets-and-intents | mm-t25.15 |
 | programme | A gate change never closes a stage | Constants do not change during the first cohort | 3.6 staying-on-track | mm-t36.16 |
-| programme | A stage opening shows one card | The first cut builds the other scenarios | 2.5 widgets-and-intents | mm-t25.15 |
+| programme | A stage opening shows one card | The first cut builds the other scenarios | 2.5 widgets-and-intents, 3.1 urge-toolkit, 3.3 problem-solving, 3.6 staying-on-track | mm-t25.15, mm-t31.15, mm-t33.16, mm-t36.15 |
+| programme | No opening card after a binge in the same record day | The first cut builds the other scenarios | 3.1 urge-toolkit, 3.3 problem-solving | mm-t31.15, mm-t33.16 |
 | programme | Reading ahead is never blocked | The first cut builds the other scenarios | 3.3 problem-solving | mm-t33.16 |
+| programme | Resume after an absence | The first cut builds the other scenarios | 3.2b taking-stock | mm-t32b.3 |
+| programme | The Focus card after stage 2 opens | No Focus card; the whole requirement waits for 2.5 | 2.5 widgets-and-intents | mm-t25.16 |
+| programme | The Programme screen shows where the person is | The first cut builds the other scenarios | 3.2b taking-stock, 3.4 food-rules, 3.6 staying-on-track | mm-t32b.3, mm-t34.13, mm-t36.15 |
 | programme | The card's answer is kept in the record | The first cut builds the other scenarios | 4.1b sync | mm-t41b.11 |
 | programme | The constants live in one value | The first cut builds the other scenarios | 3.1 urge-toolkit | mm-t31.17 |
 | programme | The seven stages and their tools | Rows show their opening rule; no tool opens beyond stage 2 | 3.1 urge-toolkit, 3.2b taking-stock, 3.3 problem-solving, 3.4 food-rules, 3.5 body-image-module, 3.6 staying-on-track | mm-t31.15, mm-t32b.3, mm-t33.16, mm-t34.13, mm-t35.12, mm-t36.15 |
+| programme | Today is home | The first cut builds the other scenarios | 3.2b taking-stock | mm-t32b.3 |
 | record | The Today stack | The first cut builds the other scenarios | 3.1 urge-toolkit, 3.3 problem-solving | mm-t31.17, mm-t33.16 |
 | regular-eating-plan | A missed planned meal gets one prompt | Two forms only: "Skipped" and "Add it" | 3.3 problem-solving | mm-t33.14 |
 | regular-eating-plan | Weekday and weekend templates | The first cut builds the other scenarios | 4.1b sync | mm-t41b.11 |

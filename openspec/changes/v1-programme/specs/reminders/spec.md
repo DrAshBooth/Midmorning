@@ -554,7 +554,7 @@ With the switch on, planned meal reminders MUST use the Time Sensitive interrupt
 
 When the person taps "Pause for today", the scheduler MUST cancel every pending reminder for the rest of the record day. This MUST include snoozed reminders and the close-the-day reminder. The scheduler MUST schedule the next record day as usual. The scheduler MUST NOT change a reminder switch for a pause.
 
-`remindersPausedAt` is a synced value that the `safeguarding` and `staying-on-track` capabilities set and clear. While `remindersPausedAt` is set, the scheduler MUST cancel every pending reminder. The scheduler MUST schedule nothing while it stays set. Each device MUST compute its own effective reminders from `remindersPausedAt`, `finishDate` and its switches. After `finishDate`, the scheduler MUST apply the reduced cadence the `staying-on-track` capability defines. The not-right-now page for the self-harm reason MUST NOT pause reminders, as the `safeguarding` capability states.
+`remindersPausedAt` is a synced value. `safeguarding` sets it, and the settings screen control "Turn reminders on" clears it. While `remindersPausedAt` is set, the scheduler MUST cancel every pending reminder. The scheduler MUST schedule nothing while it stays set. Each device MUST compute its own effective reminders from `remindersPausedAt`, `finishDate` and its switches. After `finishDate`, the scheduler MUST apply the reduced cadence the `staying-on-track` capability defines. When the not-right-now page shows no weight reason, the scheduler MUST NOT pause reminders, as the `safeguarding` capability states.
 
 #### Scenario: Pause at 14:00
 - **WHEN** the person taps "Pause for today" at 14:00 with Mid-afternoon at 16:00, Evening meal at 19:00 and the close-the-day time 21:45
@@ -573,7 +573,7 @@ When the person taps "Pause for today", the scheduler MUST cancel every pending 
 - **THEN** the Lunch reminder fires at 13:00
 
 #### Scenario: The self-harm reason
-- **WHEN** the app shows the not-right-now page for the self-harm reason and today's plan has Lunch at 13:00
+- **WHEN** the app shows the not-right-now page with the self-harm reason and no weight reason, and today's plan has Lunch at 13:00
 - **THEN** the Lunch reminder fires at 13:00
 
 ### Requirement: The scheduler pipeline

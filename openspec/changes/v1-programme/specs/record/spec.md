@@ -2,7 +2,13 @@
 
 ## Purpose
 
-This delta adds the rest of the paper record to the entry and to Today. It adds the Where chips, the Context field, edit, delete, "Didn't record", earlier days, the collapsed day, "Pause for today" and the gap band. The `record-entry-on-today` change owns entry creation, the record day, Today's column, storage and the accessibility of the record. Those rules stay as they are. The `reminders` capability owns the neutral midday prompt for a missed morning and the close-the-day reminder of the day.
+This delta adds the rest of the paper record to the entry and to Today. It adds the Where chips, the Context field, edit, delete, "Didn't record", earlier days, the collapsed day, "Pause for today" and the gap band. The `record-entry-on-today` change owns entry creation, the record day, storage and the other rules of the record. Some of its rules conflict with this delta. Ash ruled on 25 September 2026 that the rules of this delta win. The `record-full` build change (1.2b) MODIFIES these requirements of `record-entry-on-today`:
+
+- "Today's appearance", for the count line of a collapsed day and the gap band
+- "Today shows the record day's entries in time order", for the current day first, the previous day under it and collapsed by default, a collapsed day that hides its rows, and Where and Context on a row
+- "Accessibility of the record", for the row label and the reading order of the new-entry screen
+
+The `reminders` capability owns the neutral midday prompt for a missed morning and the close-the-day reminder of the day.
 
 ## ADDED Requirements
 
@@ -67,7 +73,7 @@ The order above is the only order. Another capability MUST NOT add an element to
 - **THEN** the first element is the "Urge" button, then the navigation bar starting with "Add an entry"
 
 #### Scenario: Previous day
-- **WHEN** the previous record day has three entries
+- **WHEN** the previous record day has three entries and the person has not collapsed or expanded it
 - **THEN** Today shows the previous day section under the current day, collapsed to its heading and "3 entries", and expands it on a tap
 
 ### Requirement: Where chips
@@ -272,9 +278,9 @@ The day MUST show its entries with the same rules as a day on Today. The day MUS
 
 ### Requirement: Collapse a day to a count
 
-Each day heading with at least one entry MUST show a control that collapses the day. A collapsed day MUST show its heading and one line with the count of entries, and nothing else. The count line MUST read "1 entry" for one entry and "N entries" for more. The count line MUST use the same text style as a row. The app MUST NOT show a count of starred entries.
+Each day heading with at least one entry MUST show a control that collapses the day. A collapsed day MUST show its heading and one line with the count of entries, and nothing else. The count line MUST read "1 entry" for one entry and "N entries" for more. The count line MUST use the same text style as a row. The app MUST NOT show a count of starred entries on a collapsed day. On Today, the app MUST NOT show a count of entries except the count line of a collapsed day.
 
-The app MUST show a day expanded until the person collapses it. The app MUST keep the collapsed state per record day until the person expands it. When the person saves an entry into a collapsed day, the app MUST expand that day. This count is the only count of entries the app shows, and only on request.
+The app MUST show the current record day expanded until the person collapses it. The app MUST show the previous record day collapsed until the person expands it. The app MUST show a day before the previous record day expanded until the person collapses it. These are the default states. The app MUST keep the person's last collapse or expand choice per record day. For a day with no kept choice, the app MUST show the default state. When the person saves an entry into a collapsed day, the app MUST expand that day. The app MUST then keep the expanded state as the last choice for that record day.
 
 #### Scenario: Collapse the current day
 - **WHEN** the current record day has eight entries and the person collapses it
@@ -295,6 +301,22 @@ The app MUST show a day expanded until the person collapses it. The app MUST kee
 #### Scenario: Empty day
 - **WHEN** a day has no entries
 - **THEN** the day heading shows no collapse control
+
+#### Scenario: Default states
+- **WHEN** the current record day has two entries, the previous record day has three entries, and the person has not collapsed or expanded either day
+- **THEN** Today shows the current day's heading and two rows, then the previous day's heading and "3 entries"
+
+#### Scenario: Save into the previous day
+- **WHEN** the previous record day is collapsed and the person saves an entry at 23:30 on it
+- **THEN** Today expands the previous day and shows the 23:30 entry, and after the person closes the app and opens it again on the same record day, Today still shows the previous day expanded
+
+#### Scenario: Kept choice after the app opens again
+- **WHEN** the person expands the previous record day, closes the app and opens it again on the same record day
+- **THEN** Today shows the previous day expanded
+
+#### Scenario: Default state of an earlier day
+- **WHEN** Thursday 24 September has two entries, the person has not collapsed or expanded it, and on Saturday 26 September the person opens it from "Earlier days"
+- **THEN** the app shows Thursday 24 September's two rows and no count line
 
 ### Requirement: The gap band
 
@@ -336,7 +358,7 @@ When a save throws, the new-entry screen MUST stay open. It MUST show "Could not
 
 ### Requirement: The app keeps day states on the device
 
-The store MUST keep the states "didn't record", "paused" and "collapsed" per record day. A state MUST survive the app closing and opening again. The app MUST keep the states with the same protection, backup exclusion and log rules as an entry. The app MUST NOT need a network to set or read a state. The `data-and-privacy` capability owns how a state syncs to the person's iCloud private database.
+The store MUST keep the states "didn't record", "paused" and "fasting" per record day. The app MUST keep the collapse or expand choice per record day in `Local.store`, as `data-and-privacy` states. A state MUST survive the app closing and opening again. The app MUST keep the states with the same protection, backup exclusion and system-log rules as an entry. The app MUST NOT need a network to set or read a state or a collapse or expand choice. The `data-and-privacy` capability owns how a state syncs to the person's iCloud private database.
 
 #### Scenario: Restart
 - **WHEN** the person turns on "Didn't record", closes the app and opens it again
@@ -346,13 +368,15 @@ The store MUST keep the states "didn't record", "paused" and "collapsed" per rec
 - **WHEN** the device has no network connection
 - **THEN** the person can pause the day and collapse a day
 
-#### Scenario: State in a log
+#### Scenario: A failed state save
 - **WHEN** the store fails to save a state for Thursday 24 September
 - **THEN** the error the store throws contains no date and no state
 
 ### Requirement: Accessibility of the additions
 
-Every chip, field and control in this delta MUST have a VoiceOver label. A row's label MUST hold, in order: the time, the What, the Where, the Context, "felt like a binge". The label MUST hold only the parts that are present. A comma and a space MUST separate the parts. The band MUST be one accessibility element with the label "Gap".
+Every chip, field and control in this delta MUST have a VoiceOver label. A row's label MUST hold, in order: the time, the What, the Where, the Context, "felt like a binge". The label MUST hold only the parts that are present. A comma and a space MUST separate the parts. The band MUST be one accessibility element with the label "Gap of more than %lld hours". The app MUST fill the label from MAX_AWAKE_GAP_HOURS.
+
+The app MUST set the new-entry screen's reading order to What, Where, Context, "felt like a binge", Time, Save, Cancel.
 
 The collapse control's label MUST read "Collapse day" when the day is expanded and "Expand day" when it is collapsed. A row MUST offer "Delete" as a VoiceOver action. Every text in this delta MUST use system text styles. Every text in this delta MUST scale with Dynamic Type. A state in this delta MUST NOT depend on colour alone.
 
@@ -364,9 +388,13 @@ The collapse control's label MUST read "Collapse day" when the day is expanded a
 - **WHEN** VoiceOver reads an unstarred entry at 13:05 with an empty What and Where "Out"
 - **THEN** it reads "13:05, Out"
 
+#### Scenario: Reading order with Where and Context
+- **WHEN** the person opens the new-entry screen from "Add an entry" with the star off, and VoiceOver moves from the first element to the last
+- **THEN** VoiceOver focus moves through the What field, the Where chips, the Context field, the "felt like a binge" star, the time control, Save and Cancel, in that order
+
 #### Scenario: The band
 - **WHEN** VoiceOver moves over a band
-- **THEN** it reads "Gap"
+- **THEN** it reads "Gap of more than 4 hours"
 
 #### Scenario: Delete with VoiceOver
 - **WHEN** a person who uses VoiceOver chooses the "Delete" action on a row and taps "Delete"

@@ -346,7 +346,7 @@ The `programme` capability opens stage 5 in week WEEK_OF_TAKING_STOCK = 6, count
 
 Before the week-1 questions, the app MUST show "Starred entries: %1$lld in week 1, %2$lld in week %3$lld." with the two counts and the review's week number. For each week-1 question, the app MUST show the question and the week-1 answer under it. The app MUST then show an empty field with the heading "And now?".
 
-When no week-1 answers exist, the app MUST ask the three questions with empty fields. The app MUST show no text about the missing answers. Taking stock is one session. When the next review is due before the person finishes taking stock, the "Reviews" list MUST keep the taking-stock row. That row MUST open taking stock until the person finishes it. The next review MUST then be a plain review.
+When no week-1 answers exist, the app MUST ask the three questions with empty fields. The app MUST show no text about the missing answers. Taking stock is one session. The next review can become due before the person completes the taking stock session. The "Reviews" list MUST then keep the taking-stock row. That row MUST open taking stock until the person completes the session. The next review MUST then be a plain review.
 
 The `programme` capability owns the restart. A restart does not delete the stage 5 opening row. The engine ignores a stage 5 opening earlier than the restart moment. Stage 5 then opens again by the programme's rule from the new start. When stage 5 opens again, the first review due on or after that day MUST grow into taking stock again.
 
@@ -362,12 +362,12 @@ The `programme` capability owns the restart. A restart does not delete the stage
 - **WHEN** the person never finished the review of week 1 and opens taking stock
 - **THEN** taking stock shows the three questions with empty fields and no text about week 1 answers
 
-#### Scenario: Taking stock left unfinished
-- **WHEN** the person does not finish taking stock in the review of week 7 and the review of week 8 becomes due
+#### Scenario: Taking stock session not complete
+- **WHEN** the person does not complete the taking stock session in the review of week 7 and the review of week 8 becomes due
 - **THEN** the "Reviews" list shows a row that opens taking stock, and the review of week 8 has no taking stock part
 
 #### Scenario: After a restart
-- **WHEN** the person finished taking stock in the first run, restarted the programme, and `programme` opens stage 5 again on Monday 8 February
+- **WHEN** the person completed the taking stock session in the first run, restarted the programme, and `programme` opens stage 5 again on Monday 8 February
 - **THEN** the first review that becomes due on or after Monday 8 February grows into taking stock again
 
 ### Requirement: The taking stock questionnaire and the module recommendation
@@ -378,7 +378,11 @@ The app MUST recommend Food rules when question 1 or 2 has "Some days" or "Most 
 
 The recommendation MUST read one of: "From your answers, Food rules is the one to open first.", "From your answers, Body image is the one to open first.", "From your answers, both modules apply. Start with either." or "From your answers, neither module stands out. Both are open if you want them." A recommendation string MUST NOT contain "feeling fat". Under the recommendation, the app MUST show two controls, "Open Food rules" and "Open Body image", whatever the recommendation.
 
-When the person taps either control, the app MUST save the answers. The app MUST then complete the taking stock session. The app MUST then open that module. The app MUST NOT show a sum of the answers. The store MUST keep the five answers and the recommendation. The `dieting-module` and `body-image-module` capabilities own the module screens.
+When the person taps either control, the app MUST save the questionnaire answers and the chosen module. At that tap, the app MUST NOT open the module or complete the taking stock session. After the tap, the app MUST show the tapped control as chosen and the other control as not chosen. When the person later taps the other control, the app MUST replace the chosen module with that control's module. The review MUST continue with the reflection questions, the one thing to change, the self-harm item and "I'm getting worse".
+
+"Done" MUST close the review with or without a chosen module, as for any review. When the person first taps the review's "Done" with a chosen module, the app MUST complete the taking stock session. After the review closes at that tap, the app MUST open the chosen module. After the app opens the chosen module, the app MUST NOT open a module at a later "Done" on that review.
+
+The app MUST NOT show a sum of the answers. The store MUST keep the five answers, the recommendation and the chosen module. The `dieting-module` and `body-image-module` capabilities own the module screens.
 
 #### Scenario: Food rules only
 - **WHEN** the person answers question 1 "Most days" and the other four "Not at all"
@@ -397,8 +401,24 @@ When the person taps either control, the app MUST save the answers. The app MUST
 - **THEN** the review shows "From your answers, neither module stands out. Both are open if you want them.", then "Open Food rules" and "Open Body image"
 
 #### Scenario: Open the other module
-- **WHEN** the recommendation names Food rules and the person taps "Open Body image"
-- **THEN** the app saves the answers, completes the taking stock session and opens the body image module
+- **WHEN** the recommendation names Food rules, the person taps "Open Body image" and later taps the review's "Done"
+- **THEN** the app saves the answers and the chosen module at the tap, completes the taking stock session at the review's "Done", then opens the body image module
+
+#### Scenario: The self-harm item before the module opens
+- **WHEN** the person taps "Open Food rules" in taking stock, answers step 1 of the self-harm item "No" and taps the review's "Done"
+- **THEN** the review stays open after the tap on "Open Food rules" and asks step 1, and the app opens the dieting module only after the review's "Done"
+
+#### Scenario: The chosen control
+- **WHEN** the person taps "Open Food rules"
+- **THEN** the review shows "Open Food rules" as chosen, not by colour alone, and "Open Body image" as not chosen
+
+#### Scenario: Tap both controls
+- **WHEN** the person taps "Open Food rules", then "Open Body image", then the review's "Done"
+- **THEN** the store keeps Body image as the chosen module, and the app opens the body image module only
+
+#### Scenario: Reopen after the module opened
+- **WHEN** the person completed the taking stock session with Food rules chosen on Monday, reopens the review on Wednesday and taps the review's "Done"
+- **THEN** the review closes and the app opens no module
 
 ### Requirement: What the review never shows
 
@@ -424,7 +444,7 @@ The review MUST NOT show a streak, a badge or a count of entries other than the 
 
 ### Requirement: Accessibility of the review
 
-Each summary sentence MUST be one accessibility element whose label is the sentence text. The label of each free-text field MUST be its question. The self-harm item, "I'm getting worse", the questionnaire answers and "Done" MUST each have a VoiceOver label. The "I'm getting worse" button MUST have the VoiceOver hint "Opens a page about seeing your GP." A chosen questionnaire answer MUST NOT depend on colour alone.
+Each summary sentence MUST be one accessibility element whose label is the sentence text. The label of each free-text field MUST be its question. The self-harm item, "I'm getting worse", the questionnaire answers, the module controls and "Done" MUST each have a VoiceOver label. The "I'm getting worse" button MUST have the VoiceOver hint "Opens a page about seeing your GP." A chosen questionnaire answer MUST NOT depend on colour alone. A chosen module control MUST NOT depend on colour alone. Each module control MUST have the VoiceOver button trait. The chosen one MUST also have the selected trait.
 
 The pinned note on Today MUST be one accessibility element whose label is its text. Text in the review, taking stock and the pinned note MUST use system text styles. That text MUST scale with Dynamic Type.
 
@@ -439,6 +459,10 @@ The pinned note on Today MUST be one accessibility element whose label is its te
 #### Scenario: VoiceOver on "I'm getting worse"
 - **WHEN** VoiceOver focuses "I'm getting worse"
 - **THEN** it reads the label "I'm getting worse", the button trait, and the hint "Opens a page about seeing your GP."
+
+#### Scenario: VoiceOver on the chosen module
+- **WHEN** the person taps "Open Food rules" and VoiceOver focuses that control
+- **THEN** VoiceOver reads the label "Open Food rules", the button trait and the selected trait
 
 #### Scenario: Largest text size
 - **WHEN** the person sets the largest accessibility text size

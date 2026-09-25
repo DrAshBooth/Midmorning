@@ -112,7 +112,7 @@ Until the first import completes, the app MUST NOT write a `Profile` or a `Setti
 
 `Profile` MUST have one fixed id. `Profile` MUST carry no creation moment. When two `Profile` rows share that id, the app MUST keep each field from the row with the later `changedAt`. `Settings` MUST be one row per key, with the key, the value and `changedAt`. When two `Settings` rows share a key, the store keeps the row with the later `changedAt`. So the store keeps a restart's later write of the start day or the height.
 
-The app MUST NOT ask the screening questions again after a restore. The only exception is the restart re-screen the staying-on-track capability states.
+The app MUST NOT ask the screening questions again after a restore. The exceptions are the self-harm item at every weekly review and check-in, and the restart re-screen that `safeguarding` states.
 
 #### Scenario: Get it back
 - **WHEN** the person reinstalls the app on a device signed into iCloud with a sync zone and taps "Get it back"
@@ -234,9 +234,9 @@ The store MUST sync every value in the "Shared" column of this table through `Re
 | `Settings` rows: the start day, the day start rows, the slot labels, the weigh-in day, the weigh-in unit, quiet hours | the module switches |
 | `Settings` rows: the reminder times, the weekly summary sentence opt-outs, the pattern sentence opt-outs | the install id and moment, the completion flag |
 | `Settings` rows: `finishDate`, the finish answers beside it, and `remindersPausedAt` | the sync choice, the iCloud account hash, the last successful sync day |
-| the profile: height, the onboarding BMI, the caution flag | the launch failure count, the reconcile counts, the crash count, the store creation moment |
+| the profile: height, the onboarding BMI, the caution flag, `askedAt` | the launch failure count, the reconcile counts, the crash count, the store creation moment |
 | the stage-opened rows, the card answers, the device rows | the pending offline erase instruction, the first-import-running flag |
-| | the morning-plan unanswered count, the collapsed day keys, the snooze counts, the permission line tapped flag |
+| | the morning-plan unanswered count, the collapse or expand choice per record day, the snooze counts, the permission line tapped flag |
 
 #### Scenario: Plan on two devices
 - **WHEN** sync is on and the person saves a planned day on one device
@@ -392,7 +392,7 @@ The snooze count MUST live in `Local.store`, keyed by the date key and the slot 
 
 ### Requirement: Day states, sessions and reviews
 
-A day state MUST be one row per date key and state kind, with its own `changedAt`. The collapsed state is not a day state; it lives in `Local.store` by date key. A `Session` row MUST hold `startedAt`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey` and `entryId`. Readers MUST treat one urge per record day as open: the one with the earliest start. The store MUST close every other open session of that day silently at the day end.
+A day state MUST be one row per date key and state kind, with its own `changedAt`. The collapse or expand choice is not a day state. It lives in `Local.store` by date key. A `Session` row MUST hold `startedAt`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey` and `entryId`. Readers MUST treat one urge per record day as open: the one with the earliest start. The store MUST close every other open session of that day silently at the day end.
 
 A review's natural key MUST be the due day's date key: the start day plus seven times n. It MUST NOT be a week number. After a restart the "Reviews" list can show two runs. A device MUST freeze a review's numbers only when its last sync moment is later than the review's due moment. When two frozen rows share a key, the store MUST keep the row with the earliest freeze moment. An edit MUST write into that row.
 
@@ -401,8 +401,8 @@ A review's natural key MUST be the due day's date key: the start day plus seven 
 - **THEN** the store holds two rows for 6 October, one per state kind, each with its own `changedAt`
 
 #### Scenario: Collapsed day
-- **WHEN** the person collapses 6 October on device A
-- **THEN** device A's `Local.store` holds the key 6 October and device B shows the day open
+- **WHEN** sync is on, 6 October is the current record day on both devices, the person collapses it on device A, and both devices sync
+- **THEN** device A's `Local.store` holds the collapse choice for 6 October, `Record.store` holds no row for it, and device B shows 6 October expanded
 
 #### Scenario: Two open urges
 - **WHEN** device A starts an urge at 21:00 and device B at 21:10 on the same record day, and both sync
@@ -434,7 +434,7 @@ Slot labels MUST be six `Settings` keys, `slot.label.<index>`. A rename MUST NOT
 
 ### Requirement: The Reconciler never deletes a row
 
-The Reconciler MUST pick one winner per natural key on read, by the rule each capability states. The Reconciler MUST NOT delete a row. The store MUST delete a losing row only when it is 90 days older than the latest sync moment. The same row MUST also be 90 days older than the device clock. For the stage-opened rows the natural key is the stage and the winner is the row with the earliest moment. The programme capability owns the opening moment the engine writes.
+The Reconciler MUST pick one winner per natural key on read, by the rule each capability states. The Reconciler MUST NOT delete a row. The store MUST delete a losing row only when it is 90 days older than the latest sync moment. The same row MUST also be 90 days older than the device clock. For the stage-opened rows the natural key is the stage and the winner is the row with the earliest moment. The programme capability owns the opening moment the engine writes. A reader MUST treat an `askedAt` later than the device clock as `safeguarding` states.
 
 The Reconciler MUST ignore on read a review, a stage opening or a check-in dated later than the device clock. It MUST NOT delete such a row. A restart MUST NOT delete the stage 5 opening row. The engine MUST ignore a stage 5 opening earlier than the restart moment.
 
@@ -658,7 +658,7 @@ The person's data MUST leave the device only to the private iCloud database or i
 - urge outcomes and every list
 - worksheets, weekly review answers and taking stock answers
 - Feeling fat notes, the maintenance plan and the pinned note
-- height, the onboarding BMI, the caution flag and the self-harm answers
+- height, the onboarding BMI, the caution flag, `askedAt` and the self-harm answers
 
 The app MUST NOT send the person's data to the public database, to a server or to a third party. The app MUST NOT send the person's data to Spotlight, to Siri, to HealthKit or to the pasteboard. The app MUST NOT include a third-party SDK. The app MUST NOT open a network connection except to iCloud for sync.
 
@@ -678,13 +678,13 @@ A link the person taps in Get support MUST open in `SFSafariViewController`. The
 
 ### Requirement: Retention
 
-The store MUST NOT keep the screening date. The store MUST keep from screening only height, the onboarding BMI and the caution flag, as the onboarding capability states. The store MUST NOT expose a CKRecord's creation or modification date to any reader. The store MUST NOT keep a self-harm answer. The store MUST keep only `selfHarmAnswered: true` for a review.
+From a screening with no exclusion, the store MUST keep only height, the onboarding BMI, the caution flag and `askedAt`. From a restart re-screen that excludes, the store MUST keep only `remindersPausedAt`, as `safeguarding` states. `askedAt` holds the moment of the last screening. The store MUST NOT keep any other screening date or moment. `remindersPausedAt` is a reminder value, not a screening moment. The `changedAt` of a Profile field is not a screening moment. The onboarding capability lists the four values. The store MUST NOT expose a CKRecord's creation or modification date to any reader. The store MUST NOT keep a self-harm answer. The store MUST keep only `selfHarmAnswered: true` for a review.
 
 Entry versions and losing rows each have a 90-day rule, stated above. The app MUST keep no other copy of the person's data past Delete-all.
 
 #### Scenario: Screening date
 - **WHEN** a reviewer reads `Record.store` and `Local.store` after onboarding
-- **THEN** neither holds the date of screening
+- **THEN** `Profile` in `Record.store` holds `askedAt`, and neither store holds any other screening date or moment
 
 #### Scenario: Self-harm answer
 - **WHEN** the person answers "Yes" to the self-harm question at a weekly review

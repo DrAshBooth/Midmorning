@@ -28,11 +28,11 @@ See that change's design and `brain/architecture.md`. This design adds what the 
 
 ## Decisions
 
-### One umbrella package, four targets
+### One umbrella package, five targets
 
-`Packages/Package.swift` holds every module as a target, so each compiles once under one `swift test` line. Ash chose this on 25 September 2026 for the verify budget. `Record` keeps the entry, its versions, the record day and the store. `Plan` holds the plan, templates, planned days, the match of planned meals to entries and the gap computation. `Packages/Programme` holds the stage engine, `ProgrammeConstants`, week counting, the weekly review builder, pattern sentences, the safeguarding rules, the scheduler and the analytics summary builder. `Packages/Content` holds the cards, their versions and the string catalogue.
+`Packages/Package.swift` holds every module as a target, so each compiles once under one `swift test` line. Ash chose this on 25 September 2026 for the verify budget. `Record` keeps the entry, its versions, the record day and the store. `Plan` holds the plan, templates, planned days, the match of planned meals to entries and the gap computation. `Packages/Programme` holds the stage engine, week counting, the weekly review builder, pattern sentences, the safeguarding rules, the scheduler and the analytics summary builder. `Packages/Content` holds the cards, their versions and the string catalogue. `Constants` holds `ProgrammeConstants`. `Constants` is a leaf target that `Record`, `Plan` and `Programme` import (decision 61).
 
-Every target imports Foundation and SwiftData only; Content can also import CryptoKit. `Programme` takes value facts and imports neither `Record` nor `Plan`. The app target holds views, notifications, widgets, App Intents, LocalAuthentication, PDF rendering and CloudKit code.
+Every target imports Foundation and SwiftData. Content can also import CryptoKit, and `Record`, `Plan` and `Programme` also import `Constants`. `Programme` takes value facts and imports `Constants`, but neither `Record` nor `Plan`. The app target holds views, notifications, widgets, App Intents, LocalAuthentication, PDF rendering and CloudKit code.
 
 Rejected: one package per module. Each one rebuilds `Record`, and a cold verify exceeds the budget. Rejected: logic in the app target. Nothing there runs under `swift test`.
 
@@ -61,7 +61,7 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 | `ListItem` | alternatives, food rule, avoided food, ladder step, custom place | id | later changedAt; union by id |
 | `Sheet` | worksheet, maintenance plan, taking stock, reintroduction, Feeling fat note | id (maintenance plan: fixed) | later changedAt |
 | `Review` | weekly review, check-in | due dateKey | earliest freeze; edits into the winner |
-| `Profile` | height, onboarding BMI, caution flag | fixed id | later changedAt per key |
+| `Profile` | height, onboarding BMI, caution flag, askedAt | fixed id | later changedAt per key |
 | `Settings` | one row per key: start day, day start history, slot labels, weigh-in day or none, unit, quiet hours, reminder times, switches that sync, finishDate, finish answers, remindersPausedAt, restart moment | key | later changedAt |
 | `Seen` | card views | id | none |
 | `Place` | reserved name; holds no rows in v1. Custom places are `ListItem` kind custom place | | |
@@ -90,7 +90,7 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 - pending offline erase instruction
 - first-import-running flag
 - morning-plan unanswered count
-- collapsed day keys
+- collapse or expand choice per record day
 - snooze counts
 
 ### Entries are append-only versions
@@ -223,7 +223,7 @@ A file in the repository freezes the record type and field names; the content te
 - [The on-read winner rule costs a scan] → the store indexes versions by entry id and deletes only losing versions, after both 90-day tests pass.
 - [Templates sound robotic] → the clinician writes the templates; the engine only fills numbers.
 - [A person who purges is not screened out] → Ash's decision; screen 1 warns, a stage-2 card explains, and the proposal dates a revisit before beta.
-- [Threshold rules as device function] → Rule A only stops the programme; the rest suggest a GP; a written MHRA opinion is a release gate.
-- [Simulator cannot verify protection classes, sync, zone deletion or Face ID] → each build task names its device checklist beside its pure-function tests. About 120 scenarios need a device and about 22 a second device; each build change lists its own with a date and a screenshot.
+- [Threshold rules as device function] → Rule A, and the weight reason at a restart re-screen, pause reminders; the rest suggest a GP; a written MHRA opinion is a release gate.
+- [Simulator cannot verify protection classes, sync, zone deletion or Face ID] → each build task names its device checklist beside its pure-function tests. About 120 scenarios need a device and about 22 a second device; the agent lists each in the epic's device-check bead, and Ash does the check and adds a date and a screenshot to the change README (decision 68).
 - [Separate packages each rebuild Record] → Ash decides the package layout; until then `Programme` takes value facts so it does not import `Record`.
 - [A launch that fails] → a launch marker file; the third failed launch opens the store read-only with Export and Get support; a store that fails to open shows a page with "Try again" and "Delete everything".

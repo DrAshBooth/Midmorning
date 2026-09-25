@@ -214,6 +214,10 @@ After the self-harm item, the check-in MUST ask "Restart the programme?" with "R
 - **WHEN** the person answers "Yes" to the first step of the self-harm item and "No" to the second
 - **THEN** the check-in shows the support sheet inline as `safeguarding` defines it, continues to "Restart the programme?", and the planned meal reminders stay on
 
+#### Scenario: Self-harm Yes then Yes at a check-in
+- **WHEN** the person answers "Yes" to the first step of the self-harm item and "Yes" to the second
+- **THEN** the app shows the not-right-now page with the self-harm reason, as at a weekly review
+
 #### Scenario: Not now
 - **WHEN** the person taps "Not now" at the first check-in
 - **THEN** the check-in closes, the reduced cadence continues and the second check-in stays scheduled
@@ -236,7 +240,7 @@ After the self-harm item, the check-in MUST ask "Restart the programme?" with "R
 
 ### Requirement: What a restart does to the finish
 
-`programme` owns the restart. That covers the "Start week 1 again" control on the Programme screen and the start-day choice with "Today", "Tomorrow" and "Cancel". It also covers what a restart keeps and how the engine treats the stage 5 opening after it. `safeguarding` owns the re-screen that runs more than 84 record days after the last start. A check-in's "Restart" opens the same control. This capability states what a restart does to the finish and the check-ins, whichever way the person opens it.
+`programme` owns the restart. That covers the "Start week 1 again" control on the Programme screen and the start-day choice with "Today", "Tomorrow" and "Cancel". It also covers what a restart keeps and how the engine treats the stage 5 opening after it. `safeguarding` owns the re-screen that runs more than 84 record days after the last screening. A check-in's "Restart" opens the same control. This capability states what a restart does to the finish and the check-ins, whichever way the person opens it.
 
 The restart MUST keep the maintenance plan, the weigh-ins and every completed check-in row. The restart MUST write an empty value to the `finishDate` key and to each Settings key beside it. The restart MUST write the restart moment to its Settings key, before or after the finish. Every device keeps the later `changedAt`, so every device keeps the restart's writes over the finish's.
 
@@ -312,7 +316,7 @@ The app MUST let the person stay in the reduced cadence for any length of time. 
 
 #### Scenario: Restart a year later
 - **WHEN** the person taps "Start week 1 again" 52 weeks after the finish and picks "Today"
-- **THEN** the app runs the re-screening that `safeguarding` defines first, because more than 84 record days have passed since the last start, then week 1 begins that day with the plan, the lists and the worksheets kept
+- **THEN** the app runs the re-screening that `safeguarding` defines first, because more than 84 record days have passed since the last screening, then week 1 begins that day with the plan, the lists and the worksheets kept
 
 ### Requirement: The stage's data stays in the store
 

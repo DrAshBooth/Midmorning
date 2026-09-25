@@ -6,8 +6,8 @@ page holds the why behind the choices that are expensive to reverse. Ash decided
 each one on 24 September 2026 unless a line says otherwise.
 
 ## Logic in pure SwiftPM packages, UI in the Xcode project
-`Packages/Record` holds the model, the store and the pure functions. It targets
-macOS 14 and iOS 17, so `swift test` runs on the Mac in seconds with no
+`Packages/` is one umbrella package with five targets: Record, Plan, Programme,
+Content and Constants. It builds for macOS 14 and iOS 17, so `swift test` runs on the Mac in seconds with no
 simulator. `App/` holds SwiftUI views and the entry point only. The team writes
 the project file by hand with synchronized folders, so a new Swift file needs no
 project edit. Reversal cost grows with every test that the team puts in the
@@ -86,8 +86,8 @@ the rules means App Intents and the widget cannot bypass them.
 No server we run, no accounts, no third-party SDK, no analytics of our own: the
 team reads Apple's App Analytics only (25 September 2026). Sync sends one batch
 a day so Apple never sees the eating timeline. The cover shows nothing and
-offers no support until unlocked. Only one safeguarding rule stops the
-programme; the rest suggest a GP, and a written MHRA opinion gates the first
+offers no support until unlocked. Only the underweight rule, at a weigh-in or a
+restart re-screen, pauses reminders; the rest suggest a GP, and a written MHRA opinion gates the first
 external build.
 
 No entry field reaches a log, an error, a crash report or an analytics event.
@@ -97,10 +97,12 @@ tracking and no collected data. These are cheap now and hard to retrofit.
 
 ## Product rules that shape every record screen
 Save is quiet: standard dismissal, no confirmation, no colour change. The star
-is an asterisk in the time's own colour and weight. No counts, totals, streaks,
-dividers or empty-state text. An empty What is a complete entry; a time and a
+is an asterisk in the time's own colour and weight. No totals, streaks or
+empty-state text, and no count except the count line of a collapsed day. The
+gap band is the only element between rows (decision 64). An empty What is a complete entry; a time and a
 star is what a person can manage after a binge. Yesterday's entries stay
-reachable and visible, so a late entry never vanishes. Visible strings are
+reachable: the previous day sits under the current day, collapsed by default,
+and a late entry expands it. Visible strings are
 "Today", "What", "felt like a binge", "Save", "Cancel".
 
 ## Words and specs
@@ -121,7 +123,8 @@ builds the rest. A row for a whole spec belongs to the owning epic's own
 beads, and a row with several owners moves to a README only with its last
 owner. Children inherit the epic's blocked state, so an unblocked epic gets
 one worktree (`claude -w <epic>`), and the agent in it builds the children in
-checklist order. Beads point at spec headings, never line numbers. They live
+checklist order. Each epic has a device-check bead that Ash closes, and wiring
+beads run cross-epic scenarios end to end. Beads point at spec headings, never line numbers. They live
 in the shared Dolt server, and Ash pushes them with `bd dolt push`. Decided
 25 September 2026.
 

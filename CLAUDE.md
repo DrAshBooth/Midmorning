@@ -92,15 +92,27 @@ that is in_progress.
 In the worktree. `claude -w <epic-id>` opens it. Claim the epic. Open or
 continue its openspec build change. Build one child at a time, P0 first and
 P2 last. A child's acceptance names the scenarios it builds; the change's
-tasks.md lists every other scenario as `deferred: <bead id>`. Run `./verify`.
+tasks.md lists every other scenario as `deferred: <bead id>`. When a scenario
+needs an epic that Ash has not merged yet, the agent tests it over fixture
+facts. A wiring bead (label `wiring`) in the later epic runs it end to end. Run `./verify`.
 The first run in a new worktree is cold and can exceed 240 s; run it again,
-because the warm run is the budget. The change README states the cold time. Commit on the worktree branch, and close
-each child with `--reason` naming the commit. Pass `--type change` to
-`openspec validate` and `openspec show` for a build change, because a build
-change can share its name with a main spec.
+because the warm run is the budget. The change README states the cold time.
+When a child's tests pass, commit on the worktree branch and close the child
+with `--reason` naming the commit. List each pending device check in the epic's
+device-check bead (label `device-check`); Ash does the checks. Pass
+`--type change` to `openspec validate` and `openspec show` for a build
+change, because a build change can share its name with a main spec. The
+change's delta ADDs each requirement that `openspec/specs` does not hold yet,
+with only the scenarios that the build change builds. When `openspec/specs`
+already holds the
+requirement, the delta MODIFIES it with the full text copied from
+`openspec/specs` on the branch.
 
 After the worktree. Ash merges without squashing, so the commit named in each
-`--reason` stays. Ash archives the change and closes the epic. If Ash rejects
+`--reason` stays. Ash archives the change, pushes main and runs
+`bd dolt push`. Ash closes the device-check bead after the device checks, and
+then the epic. Each worktree starts its branch from local HEAD (`worktree.baseRef` is `head`
+in `.claude/settings.json`). If Ash rejects
 a branch, Ash reopens its closed children with `bd reopen`. Parallel worktrees
 edit Today, `Packages/Package.swift` and the content version; Ash sets the
 content version at the merge. Ash closes the milestones and the chores

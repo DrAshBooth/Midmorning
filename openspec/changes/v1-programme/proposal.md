@@ -46,7 +46,7 @@ Not in V1: weight loss or nutrition of any kind, diagnosis, a human guide, an AI
 - `export`: a PDF of any date range like the paper record.
 
 ### Modified Capabilities
-- `record`: this change adds requirements, including the Today stack. Two sentences in `record-entry-on-today` now scope the empty-Today rule and the word ban to that change's screens. The team made that edit in place because the change is not archived.
+- `record`: this change adds requirements, including the Today stack. Two sentences in `record-entry-on-today` now scope the empty-Today rule and the word ban to that change's screens. The team made that edit in place because the change is not archived. Ash ruled on 25 September 2026 (decision 64) that the v1 record rules win. The record-full change (1.2b) MODIFIES "Today's appearance", "Today shows the record day's entries in time order" and "Accessibility of the record" after mm-t10 archives the skeleton.
 
 ## Impact
 
@@ -92,7 +92,7 @@ Not in V1: weight loss or nutrition of any kind, diagnosis, a human guide, an AI
 24. The export PDF is tagged. No password.
 25. App Store category Lifestyle, overruling the PRD. No App Shortcuts provider. A "Keep it private" sheet.
 26. A TestFlight build every 45 days at most, and a counts-only Diagnostics page. No managed-device handling.
-27. One umbrella package with four targets and one `swift test` line. A warm-run budget.
+27. One umbrella package with one `swift test` line (five targets since decision 61). A warm-run budget.
 
 ## Decisions Ash made on 25 September 2026, after the third review round
 
@@ -119,7 +119,7 @@ The data-model review's findings need no decision; the team applies them. Every 
 43. The epic chain is shorter: content, the model foundation, settings, onboarding, app lock, the engine, weigh-in and the plan run in parallel where the specs permit.
 44. The reminders change (2.4) builds the notification-action handlers and the action queue.
 45. A named bead builds each deferred scenario, and the `deferred:` marker gives its id.
-46. The settings change (1.3) builds the settings shell, and each feature change adds its own controls.
+46. The settings change (1.3) builds the settings shell, and each feature change adds its own controls. (Decision 65: 1.3 also builds "Day starts at" and the "Gap bands" switch.)
 47. The external release gates start at once. The string gates wait for every first-cut build change. Four gates and one submission task join them.
 48. The programme change (2.1) builds re-screening at a restart. Only the check-in shortcut waits for 3.6.
 49. A delete writes a kept version with the deleted flag, and every reader hides it.
@@ -129,8 +129,27 @@ The data-model review's findings need no decision; the team applies them. Every 
 53. Ash pushes the beads with `bd dolt push` after each batch.
 54. The build changes `model-foundation` (1.2a) and `record-full` (1.2b) are separate. The string-family requirement splits into one bead per family.
 55. The product-rules beads are constraints, and Ash closes them at the first cut.
-56. No dependency blocks second-cut work. The dispatch command filters by the first-cut label.
+56. No dependency blocks second-cut work. The dispatch command filters by the first-cut label. (Decision 69 adds eight edges.)
 57. Foundation beads are P0, and accessibility and never-shows beads are P2. Every requirement, remainder and constraint bead carries a size label; the two gate index beads have none.
+
+## Decisions Ash made on 25 September 2026, after the second bead review
+
+58. Ash does the skeleton device checks (mm-t10) first, and 1.2a waits for them.
+59. The weigh-in change (2.2) owns the weigh-in day reminder and follows 2.4, so cut zero leaves weigh-in out.
+60. A scenario that needs a later change runs over fixture facts in its own change. A wiring bead in the later change runs it end to end. A bead-level edge replaces the fixture where the edge costs nothing.
+61. `ProgrammeConstants` lives in a small `Constants` target that 1.2a builds.
+62. In the first cut, the app writes the StageOpened rows of stages 3 to 7 and shows no new card. Each stage's opening card shows once, when its tool ships.
+63. The Focus card waits for 2.5.
+64. The v1 record rules win over the skeleton's Today rules. The record-full change (1.2b) MODIFIES the skeleton requirements it changes.
+65. The settings change (1.3) builds "Day starts at" and the "Gap bands" switch.
+66. A build change ADDs a requirement with only its built scenarios, and a later change MODIFIES it with the full text. Ash archives v1-programme with `--skip-specs`.
+67. Each worktree starts its branch from local HEAD. Ash pushes main and the beads after each merge.
+68. An agent closes a child when its tests pass. Each epic has a device-check bead that Ash closes after the device checks.
+69. Eight edges hold second-cut epics behind the epics their scenarios need.
+70. An answer that excludes at a restart opens the not-right-now page with its reason. The weight reason pauses reminders, as Rule A does.
+71. The 84-record-day re-screen window counts from the last screening.
+72. In taking stock, the chosen module opens after "Done", so the self-harm item and "I'm getting worse" always come first.
+73. The clinical sign-off of the thresholds follows the builds it certifies. A gate-corrections change (4.3c) applies what the gates ask for before the first upload.
 
 ## Assumptions the specs make where the PRD is silent
 

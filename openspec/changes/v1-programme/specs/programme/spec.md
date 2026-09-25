@@ -315,13 +315,15 @@ The app MUST match past planned meals with the window constants the store kept w
 
 ### Requirement: A stage opening shows one card
 
-When a stage opens, the app MUST show one opening card. The card MUST sit in the Today card slot. Record defines the Today stack. The card MUST also sit at the top of the Programme screen. The card MUST show the stage title, one opening sentence from the content bundle, and two controls, "Open" and "Close".
+When a stage opens, the app MUST show one opening card. When the build does not have the stage's tool, a later paragraph states when the card shows. The card MUST sit in the Today card slot. Record defines the Today stack. The card MUST also sit at the top of the Programme screen. The card MUST show the stage title, one opening sentence from the content bundle, and two controls, "Open" and "Close".
 
 The card never returns after either control. Its dismiss control is therefore "Close", not "Not now".
 
 "Open" MUST show the stage on the Programme screen. "Open" MUST also take the card off both screens. "Close" MUST take the card off both screens. The card MUST stay until the person taps one of the two controls.
 
 The app MUST NOT add an animation, a sound or a haptic. The app MUST NOT add a number on the app icon, a notification or a colour change. The card MUST use the same text style as an entry row. The app MUST NOT show an opening card for stage 1. When two stages open at once, the app MUST show their cards one at a time, in stage order.
+
+A stage's tool can arrive in a later app build than the stage's opening. The engine MUST report the opening when it happens, not when the tool arrives. The app MUST write the StageOpened row with the opening moment, as for any other stage. From the first launch of a build that contains the tool, the app MUST show the stage's opening card once. The app MUST NOT show the card before that launch. From that launch, the app MUST also apply the rule "No opening card after a binge in the same record day".
 
 The opening sentences are:
 
@@ -357,6 +359,14 @@ The stage 2 card MUST add one line after the opening sentence when it first appe
 #### Scenario: Two stages open at once
 - **WHEN** stage 5 and stage 7 open at the same 04:00
 - **THEN** Today shows the stage 5 card, and shows the stage 7 card after the person answers the stage 5 card
+
+#### Scenario: A tool arrives after its stage opened
+- **WHEN** stage 3 opens at 04:00 on Monday 19 October 2026 in a build without the Urge button, and the person first opens a build with it at 08:00 on Friday 6 November with no starred entry that record day
+- **THEN** the store holds the stage 3 opening moment 04:00 on Monday 19 October 2026, the app shows no stage 3 opening card before that launch, and Today shows the card at that launch
+
+#### Scenario: A tool arrives on a record day with a starred entry
+- **WHEN** stage 3 opened in a build without the Urge button, the person saves a starred entry at 07:30 on Friday 6 November 2026, and first opens a build with the Urge button at 08:00
+- **THEN** Today shows no stage 3 opening card on Friday 6 November, and shows it the first time Today appears after 04:00 on Saturday 7 November
 
 ### Requirement: The card's answer is kept in the record
 
@@ -536,7 +546,7 @@ The screen MUST show "Start week 1 again" under the stage rows, at all times aft
 
 The Programme screen MUST show "Start week 1 again" at all times after onboarding. One tap MUST open the start-day choice with "Today", "Tomorrow" and "Cancel". When the person picks a day, the app MUST set it as the new start day. Week 1 MUST start from it. "Cancel" MUST close the choice and change nothing.
 
-Within 84 record days of the last start day, the app MUST ask nothing else. More than 84 record days after the last start day, the app MUST run safeguarding's re-screening first. The start-day choice MUST come after it. The last start day is the start day in force when the person taps the control.
+The app MUST count record days from the record day of the last screening. The `safeguarding` capability defines the last screening. The store keeps its moment in the Profile field `askedAt`. Within 84 record days of the last screening, the app MUST ask nothing else. More than 84 record days after the last screening, the app MUST run safeguarding's re-screening first. The start-day choice MUST come after it.
 
 The restart MUST keep every entry, plan, list, worksheet, weigh-in and maintenance plan. Every open stage MUST stay open. The restart MUST NOT delete or write any StageOpened row.
 
@@ -545,7 +555,7 @@ The restart MUST write the restart moment to its Settings key. The engine reads 
 Staying-on-track's "Restart the programme?" at a check-in is a shortcut to this control. Staying-on-track states what a restart does to the finish, the check-ins and the reminders.
 
 #### Scenario: Restart today
-- **WHEN** the person taps "Start week 1 again" on Friday 15 January 2027, 40 record days after the start day, and picks "Today"
+- **WHEN** the person taps "Start week 1 again" on Friday 15 January 2027, 40 record days after the last screening, and picks "Today"
 - **THEN** the app asks nothing else, the start day is Friday 15 January, the Programme screen shows "Week 1", and every entry, plan, list and worksheet stays
 
 #### Scenario: Restart tomorrow
@@ -560,8 +570,8 @@ Staying-on-track's "Restart the programme?" at a check-in is a shortcut to this 
 - **WHEN** the person taps "Start week 1 again" on the third day after onboarding and picks "Today"
 - **THEN** the start day is that day, and the recorded days before it still count toward stage 2
 
-#### Scenario: More than 84 record days after the last start
-- **WHEN** the start day is Monday 28 September 2026 and the person taps "Start week 1 again" on Tuesday 22 December, 85 record days later
+#### Scenario: More than 84 record days after the last screening
+- **WHEN** the last screening was at onboarding on Monday 28 September 2026, the person restarted with no re-screen on Monday 30 November, 63 record days later, and taps "Start week 1 again" on Tuesday 22 December, 85 record days after that screening and 22 record days after that restart
 - **THEN** the app runs the re-screening that safeguarding defines before the start-day choice
 
 #### Scenario: Stages after a restart
@@ -599,7 +609,7 @@ The app MUST hold every programme constant in one value type, ProgrammeConstants
 - PLANNED_MEAL_WINDOW_AFTER_MINUTES = 90
 - REMINDER_HORIZON_DAYS = 6
 
-Every capability MUST read its constant from ProgrammeConstants. The code MUST NOT repeat a constant's value as a literal elsewhere. The type MUST live in the models package, not in the UI. A test MUST check each value of `.default`.
+Every capability MUST read its constant from ProgrammeConstants. The code MUST NOT repeat a constant's value as a literal elsewhere. The type MUST live in the `Constants` target, not in the UI. `Constants` is a leaf target that `Record`, `Plan` and `Programme` import. A test MUST check each value of `.default`.
 
 LOCK_GRACE_SECONDS is a set of four values. App-lock owns the "Lock after" setting that picks one. Its default is 0.
 

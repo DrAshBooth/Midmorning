@@ -14,7 +14,7 @@ The app MUST NOT accept a food photo. The app MUST NOT compare the person to oth
 
 #### Scenario: A day with many entries
 - **WHEN** a record day has fifteen entries
-- **THEN** the app shows the day at the same visual weight as a day with five, with no count and no total
+- **THEN** the app shows the day at the same visual weight as a day with five, with no total and no count except the count line of a collapsed day, as the `record` capability states
 
 #### Scenario: A week with fewer starred entries
 - **WHEN** the weekly review finds fewer starred entries than the week before

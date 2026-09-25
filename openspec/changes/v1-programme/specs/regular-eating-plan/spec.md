@@ -348,7 +348,7 @@ When an entry matches a planned meal that has a "Skipped" answer, the app keeps 
 
 From stage 2, Today MUST show the current record day's planned meals in the column. Today MUST place them in time order with the entries. The `programme` capability makes Today the app's first screen from stage 2. A planned meal row MUST show the slot label and the planned time. When an entry matches the planned meal, the row MUST show the entry's time, What and star beside the slot. When the window has not ended and no entry matches, the row MUST show the slot and the time only.
 
-With the answer "Skipped" and no matched entry, the row MUST show the slot, the time and "Skipped". An entry that matches nothing MUST appear as a plain entry row. When Today shows the previous record day, it MUST show that day's planned meals the same way. A planned meal row MUST have the same background, height, spacing and text style as an entry row. Today MUST NOT show a tick, a cross, a colour, a count or a percentage for any planned meal. Today MUST NOT show a count of planned meals with an entry, on any day.
+With the answer "Skipped" and no matched entry, the row MUST show the slot, the time and "Skipped". An entry that matches nothing MUST appear as a plain entry row. When Today shows the previous record day expanded, Today MUST show that day's planned meals the same way. A planned meal row MUST have the same background, height, spacing and text style as an entry row. Today MUST NOT show a tick, a cross, a colour, a count or a percentage for any planned meal. Today MUST NOT show a count of planned meals with an entry, on any day.
 
 #### Scenario: A matched planned meal
 - **WHEN** an entry at 13:10 with What "Toast and tea" matches Lunch at 13:00
@@ -429,7 +429,7 @@ When the record day ends with the prompt unanswered, the app MUST hide the promp
 - **THEN** Today shows the Lunch row with "Skipped" and no prompt
 
 #### Scenario: Unanswered at the end of the day
-- **WHEN** "Day starts at" is 04:00, the Lunch prompt is unanswered, and the current time reaches 04:00 the next day
+- **WHEN** "Day starts at" is 04:00, the day has an entry at 08:00, the Lunch prompt is unanswered, the current time reaches 04:00 the next day, and the person expands the previous record day
 - **THEN** the previous day's Lunch row shows "Lunch" and "13:00" only
 
 ### Requirement: The next-planned-meal line

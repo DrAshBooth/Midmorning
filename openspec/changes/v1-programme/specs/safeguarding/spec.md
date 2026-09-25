@@ -12,7 +12,7 @@ Safeguarding carries the duty of care that a guide would carry in a guided progr
 
 The typed age is the age gate. The app MUST NOT request the Declared Age Range entitlement in V1. The app MUST NOT read a declared age range from the system. The "Regulatory release gates" requirement states the age rating that goes with this rule.
 
-The app MUST evaluate every rule when the person taps "Continue". When one or more rules exclude, the app MUST show the exclusion page with every reason that applies. When no rule excludes, the app MUST let onboarding continue.
+The app MUST evaluate every rule when the person taps "Continue". When one or more rules exclude at onboarding, the app MUST show the exclusion page with every reason that applies. At a restart re-screen, the "Re-screening at a restart" requirement states what follows. When no rule excludes, the app MUST let onboarding continue.
 
 #### Scenario: Under 18
 - **WHEN** the person enters 17 for age
@@ -42,7 +42,7 @@ The app MUST evaluate every rule when the person taps "Continue". When one or mo
 
 The self-harm item has two steps. The first question is "Over the last two weeks, have you had thoughts that you'd be better off dead, or of hurting yourself?" with "No", "Yes" and "I'd rather not say". On "Yes" the app MUST ask "Have you thought about how you would do it?" with "No" and "Yes". The app MUST NOT ask the second question after "No" or "I'd rather not say".
 
-The second question avoids the word "plan", which the app uses for the eating plan. The clinical reviewer MUST sign off the wording and the routing of both questions. The "Regulatory release gates" requirement flags them for that sign-off. `onboarding`, `weekly-review` and `staying-on-track` place the item. This capability owns its wording and what follows.
+The second question avoids the word "plan", which the app uses for the eating plan. The clinical reviewer MUST sign off the wording and the routing of both questions. The "Regulatory release gates" requirement flags them for that sign-off. `onboarding`, `weekly-review` and `staying-on-track` place the item, and the restart re-screen in "Re-screening at a restart" asks it. This capability owns its wording and what follows.
 
 At onboarding, when the person answers "Yes" to the second question, the app MUST exclude with the self-harm reason. When the person answers "Yes" to the first question and "No" to the second, the app MUST NOT exclude. After "No" or "I'd rather not say" the app MUST NOT exclude. The app MUST show nothing under the item after either of those answers.
 
@@ -122,7 +122,7 @@ The exclusion page MUST show the heading "Not right now". Under it the page MUST
 
 Under the reasons the page MUST show the heading "What to do instead". Under that heading the page MUST show the GP paragraph with its "Copy" control. With the age reason the page MUST show the under-18 variant. With the self-harm reason and no age reason the page MUST show the self-harm variant. The page MUST show the four Beat numbers, each with "Call" and "Copy number", and "Beat webchat". The support sheet defines those controls.
 
-The page MUST end with "You can come back if this changes." and one control, "Done". The page MUST show Get support. "Done" MUST return the app to "What this is and isn't". The page MUST NOT name a condition, a diagnosis or a BMI.
+The page MUST end with "You can come back if this changes." and one control, "Done". The page MUST show Get support. After an exclusion at onboarding, "Done" MUST return the app to "What this is and isn't". The page MUST NOT name a condition, a diagnosis or a BMI.
 
 #### Scenario: Under 18
 - **WHEN** the exclusion page opens for a person aged 16
@@ -133,7 +133,7 @@ The page MUST end with "You can come back if this changes." and one control, "Do
 - **THEN** the self-harm paragraph is above the weight paragraph and the GP paragraph is the self-harm variant
 
 #### Scenario: Done
-- **WHEN** the person taps "Done"
+- **WHEN** the person taps "Done" on the exclusion page at onboarding
 - **THEN** the app shows "What this is and isn't"
 
 #### Scenario: Call Beat
@@ -142,14 +142,14 @@ The page MUST end with "You can come back if this changes." and one control, "Do
 
 ### Requirement: The app keeps nothing from an exclusion
 
-The app MUST NOT keep the answers that led to an exclusion. The app MUST NOT keep the reasons or the screening date. The app MUST NOT block a later attempt at onboarding. On the next launch after an exclusion, the app MUST show "What this is and isn't" with every field empty. The app MUST NOT send any signal about an exclusion off the device.
+The app MUST NOT keep the answers that led to an exclusion. The app MUST NOT keep the reasons or the screening date. With the weight reason at a restart re-screen, the app MUST set the synced `remindersPausedAt`, as "Re-screening at a restart" states. That value is the only data that the app keeps or syncs from an exclusion. It is a reminder value, not a screening date. The app MUST NOT block a later attempt at onboarding. On the next launch after an exclusion at onboarding, the app MUST show "What this is and isn't" with every field empty. Except for `remindersPausedAt`, the app MUST NOT send any signal about an exclusion off the device.
 
 #### Scenario: Relaunch after exclusion
-- **WHEN** the person was excluded on Thursday and opens the app on Friday
+- **WHEN** the person was excluded at onboarding on Thursday and opens the app on Friday
 - **THEN** the app shows "What this is and isn't" and every screening field is empty
 
 #### Scenario: The store after exclusion
-- **WHEN** a reviewer inspects the store after an exclusion
+- **WHEN** a reviewer inspects the store after an exclusion at onboarding
 - **THEN** it holds no age, height, weight, BMI, date, answer or reason
 
 ### Requirement: Re-screening at every weekly review and check-in
@@ -190,30 +190,36 @@ With any answer the store MUST keep `selfHarmAnswered: true` for that review. Th
 
 `programme` owns the restart control, "Start week 1 again", and the start-day choice it opens. A check-in's "Restart the programme?" is a shortcut to the same control. `staying-on-track` places it.
 
-The app MUST count record days from the last start. The last start is the start day in force: the onboarding start day, or the latest restart's start day. Within 84 record days of the last start, the app MUST NOT ask a screening question at a restart. The app MUST show the start-day choice at once.
+The app MUST count record days from the record day of the last screening. The last screening is onboarding or the latest re-screen at a restart with no exclusion, whichever is later. The app MUST NOT count from the start day or the restart moment.
 
-More than 84 record days after the last start, the app MUST re-screen before the start-day choice. The re-screen MUST ask height and weight, with the wording `onboarding` defines. It MUST ask pregnancy, treatment and the self-harm item with both steps. The app MUST NOT ask the age again. The app MUST compute the BMI as `onboarding` defines. The app MUST apply every screening rule except the age rule to the answers.
+The app MUST keep the moment of the last screening in the Profile field `askedAt`, with its own `changedAt`. The field name MUST NOT contain a word about screening, as `data-and-privacy` requires. The app MUST write `askedAt` at onboarding and at each re-screen at a restart with no exclusion. The app MUST NOT write `askedAt` at a weekly review or a check-in. When `askedAt` is later than the device clock, the app MUST re-screen at the next restart, as for more than 84 record days.
 
-The BMI rules, with the caution sheet, apply to the new height and weight. When no rule excludes, the app MUST replace the height, the onboarding BMI and the caution flag. Each is a Profile field with its own `changedAt`.
+Within 84 record days of the last screening, the app MUST NOT ask a screening question at a restart. The app MUST show the start-day choice at once.
+
+More than 84 record days after the last screening, the app MUST re-screen before the start-day choice. The re-screen MUST ask height and weight, with the wording `onboarding` defines. It MUST ask pregnancy, treatment and the self-harm item with both steps. The app MUST NOT ask the age again. The app MUST compute the BMI as `onboarding` defines. The app MUST apply every screening rule except the age rule to the answers.
+
+The BMI rules, with the caution sheet, apply to the new height and weight. At a re-screen, the app MUST exclude with the self-harm reason after "Yes" and then "Yes". After "Yes" and then "No", the app MUST show the support line as the self-harm item defines. The re-screen MUST then continue.
+
+When no rule excludes, the app MUST replace the height, the onboarding BMI, the caution flag and `askedAt`. Each is a Profile field with its own `changedAt`.
 
 Every device keeps the restart's later write. `data-and-privacy` defines that rule. The app MUST NOT compare creation moments. The app MUST then show the start-day choice.
 
-When a rule excludes, the app MUST show the exclusion page. The app MUST NOT restart. The app MUST NOT replace the height, the onboarding BMI or the caution flag when a rule excludes. "Done" on that page MUST return the app to the screen beneath. The record, the plan and every list MUST stay as they were.
+When a rule excludes, the app MUST NOT restart. The app MUST open the not-right-now page with every reason that applies, not the exclusion page. With the weight reason, the app MUST set the synced `remindersPausedAt`, as for Rule A. The app MUST NOT replace the height, the onboarding BMI, the caution flag or `askedAt` when a rule excludes. "Done" on that page MUST return the app to the screen beneath. The record, the plan and every list MUST stay as they were.
 
 #### Scenario: Restart a year later
-- **WHEN** the start day is Monday 5 January and the person taps "Start week 1 again" on 20 January the next year
+- **WHEN** the last screening was at onboarding on Monday 5 January and the person taps "Start week 1 again" on 20 January the next year
 - **THEN** the app asks height, weight, pregnancy, treatment and the self-harm item, and not the age
 
 #### Scenario: Restart within 84 record days
-- **WHEN** the start day is Monday 5 January and the person taps "Start week 1 again" on Monday 2 March, 56 record days later
+- **WHEN** the last screening was at onboarding on Monday 5 January and the person taps "Start week 1 again" on Monday 2 March, 56 record days later
 - **THEN** the app asks no question and shows the start-day choice at once
 
 #### Scenario: Restart on the 84th record day
-- **WHEN** the start day is Monday 5 January and the person taps "Start week 1 again" on Monday 30 March, 84 record days later
+- **WHEN** the last screening was at onboarding on Monday 5 January and the person taps "Start week 1 again" on Monday 30 March, 84 record days later
 - **THEN** the app asks no question and shows the start-day choice at once
 
 #### Scenario: Restart from a check-in
-- **WHEN** the start day is Monday 5 January, the person finished on Wednesday 25 March and taps "Restart" at the check-in on Wednesday 22 April, 107 record days after the start
+- **WHEN** the last screening was at onboarding on Monday 5 January, the person finished on Wednesday 25 March and taps "Restart" at the check-in on Wednesday 22 April, 107 record days after that screening
 - **THEN** the app re-screens before the start-day choice
 
 #### Scenario: New BMI
@@ -225,18 +231,34 @@ When a rule excludes, the app MUST show the exclusion page. The app MUST NOT res
 - **THEN** every device reads 172 as the height, because the restart's write has the later `changedAt`
 
 #### Scenario: Underweight at a re-screen
-- **WHEN** the person re-screens more than 84 record days after the last start and enters 170 cm and 53 kg
-- **THEN** the app shows the exclusion page with the weight reason, and the store keeps the earlier height and onboarding BMI
+- **WHEN** the person re-screens more than 84 record days after the last screening and enters 170 cm and 53 kg
+- **THEN** the app does not restart, opens the not-right-now page with the weight reason and sets `remindersPausedAt`, and the store keeps the earlier height, onboarding BMI and `askedAt`
 
 #### Scenario: Excluded at a restart
 - **WHEN** the person answers "Yes" to the pregnancy question at a re-screen
-- **THEN** the app shows the exclusion page, and after "Done" the record and the plan are as they were
+- **THEN** the app opens the not-right-now page with the exclusion page's pregnancy paragraph, and after "Done" the record and the plan are as they were
+
+#### Scenario: Self-harm Yes then Yes at a restart
+- **WHEN** the person answers "Yes" and then "Yes" to the self-harm item at a re-screen
+- **THEN** the app opens the not-right-now page with the self-harm reason, does not restart, and the scheduler keeps every reminder
+
+#### Scenario: Self-harm Yes then No at a restart
+- **WHEN** the person answers "Yes" and then "No" to the self-harm item at a re-screen
+- **THEN** the re-screen shows "That deserves a person. Samaritans are there any time, on 116 123." with Samaritans first, and continues
+
+#### Scenario: askedAt in the future
+- **WHEN** a device clock ran a year ahead at the last re-screen, so `askedAt` is later than the corrected device clock, and the person taps "Start week 1 again"
+- **THEN** the app re-screens before the start-day choice
+
+#### Scenario: Restarts less than 84 record days apart
+- **WHEN** the person re-screens with no exclusion at a restart on Monday 5 January, restarts on Friday 6 March, 60 record days later, and restarts on Sunday 5 April, 90 record days after the re-screen
+- **THEN** the app asks no question on 6 March, and on 5 April, 30 record days after the last restart, it re-screens before the start-day choice
 
 ### Requirement: The underweight check
 
 The app MUST run the underweight check each time the person saves a weigh-in. The app MUST NOT run the check when no weigh-in exists. With "I won't be weighing" chosen at onboarding, no weigh-in exists until the person picks a weigh-in day and saves one. `onboarding` and `weigh-in` define that choice.
 
-The check MUST use the rolling average that `weigh-in` computes, the height, the onboarding BMI and the caution flag. The app MUST compute the implied BMI as the rolling average in kilograms divided by the height in metres squared. Rule A applies when the implied BMI is below 18.5. When Rule A applies, the app MUST show the not-right-now page with the weight reason. Rule A is the only rule that shows the not-right-now page.
+The check MUST use the rolling average that `weigh-in` computes, the height, the onboarding BMI and the caution flag. The app MUST compute the implied BMI as the rolling average in kilograms divided by the height in metres squared. Rule A applies when the implied BMI is below 18.5. When Rule A applies, the app MUST show the not-right-now page with the weight reason. Of Rules A to C, only Rule A shows the not-right-now page.
 
 Rule B applies when the implied BMI is below 19.5 and at least 1.0 below the onboarding BMI. When Rule B applies, the app MUST show the GP suggestion page with the falling weight reason. Rule C compares the rolling average with the rolling average at the latest weigh-in 28 or more days earlier. Rule C applies when the current value is 5% or more below that earlier value. With the caution flag set, Rule C MUST use 3% in place of 5%. When Rule C applies, the app MUST show the GP suggestion page with the quick change reason.
 
@@ -329,9 +351,11 @@ The app MUST NOT pause a reminder, close a tool or hide the record because of th
 
 The page MUST show the heading "This may not be right for you now". The self-harm reason is: "You said you've had thoughts of hurting yourself. That deserves a person, not a programme. Samaritans are there any time, on 116 123. If you are in danger now, call 999." The weight reason is: "Your weight has fallen to a point where this programme isn't the right tool for you. This is not a judgement about you. This is not a diagnosis. Your GP can look at this with you."
 
-Under the reason the page MUST show "Talk to your GP" with the GP paragraph and its "Copy" control. With the self-harm reason the paragraph MUST be the self-harm variant. The page MUST show "Export your record to take with you" as a control that opens `export`. The page MUST show: "Your record stays here, and you can keep adding to it." The page MUST show Get support and one control, "Done".
+The page MUST show one paragraph for each reason that applies, in this order: self-harm, weight, pregnancy, treatment. A re-screen at a restart can give any of the four reasons. For pregnancy and treatment, the page MUST show the exclusion page's paragraphs, from the same bundled strings. The team MUST NOT write new wording for these two reasons.
 
-With the weight reason, the app MUST set the synced `remindersPausedAt` to the current moment when the page opens. Each device then computes its effective reminders. `reminders` and `staying-on-track` state that rule. With the weight reason the page MUST show: "Reminders are paused. You can turn them on again in Settings." With the self-harm reason, the app MUST NOT pause or cancel any reminder. With the self-harm reason the page MUST show: "Your plan and its reminders stay on. You can turn them off in Settings."
+Under the reasons the page MUST show "Talk to your GP" with the GP paragraph and its "Copy" control. With the self-harm reason the paragraph MUST be the self-harm variant. The page MUST show "Export your record to take with you" as a control that opens `export`. The page MUST show: "Your record stays here, and you can keep adding to it." The page MUST show Get support and one control, "Done".
+
+With the weight reason, the app MUST set the synced `remindersPausedAt` to the current moment when the page opens. Each device then computes its effective reminders. `reminders` and `settings` state that rule. With the weight reason the page MUST show: "Reminders are paused. You can turn them on again in Settings." Without the weight reason, the app MUST NOT pause or cancel any reminder. Without the weight reason the page MUST show: "Your plan and its reminders stay on. You can turn them off in Settings."
 
 After the page the app MUST NOT turn paused reminders on again without the person's tap. `reminders` owns the settings screen controls that turn them on again. "Done" MUST return the app to the screen beneath. After the page the record, every open tool and export MUST stay available. The app MUST NOT show the page again until a rule fires again.
 
@@ -348,7 +372,7 @@ After the page the app MUST NOT turn paused reminders on again without the perso
 - **THEN** the scheduler delivers no reminder at 13:00
 
 #### Scenario: Reminders kept by the self-harm reason
-- **WHEN** the page opened from the self-harm item at 12:00 and a planned meal is at 13:00
+- **WHEN** the page opened from the self-harm item at a weekly review at 12:00 and a planned meal is at 13:00
 - **THEN** the scheduler delivers the planned meal reminder at 13:00
 
 #### Scenario: The record stays
@@ -358,6 +382,14 @@ After the page the app MUST NOT turn paused reminders on again without the perso
 #### Scenario: Reminders back on
 - **WHEN** the person turns reminders on in the settings screen after the page
 - **THEN** the scheduler schedules the next planned meal reminder
+
+#### Scenario: Two reasons at a re-screen
+- **WHEN** a re-screen gives the self-harm reason and the weight reason
+- **THEN** the self-harm paragraph is above the weight paragraph, the GP paragraph is the self-harm variant, the app sets `remindersPausedAt`, and the page shows "Reminders are paused. You can turn them on again in Settings."
+
+#### Scenario: Four reasons at a re-screen
+- **WHEN** a re-screen gives the treatment, pregnancy, weight and self-harm reasons
+- **THEN** the page shows the self-harm paragraph, then the weight paragraph, then the exclusion page's pregnancy paragraph and then its treatment paragraph
 
 ### Requirement: Get support on every screen
 
