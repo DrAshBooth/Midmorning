@@ -15,89 +15,6 @@ The `reminders` capability owns the neutral midday prompt for a missed morning a
 
 ## ADDED Requirements
 
-### Requirement: The Today stack
-
-Today MUST show these fixed elements, in this order from the top:
-
-- the pinned note, when one exists
-- the "Weekly review" or "Check-in" line, when one is due
-- one card slot
-- the "Getting started" line, from the end of onboarding until stage 2 opens (`programme` owns the rule)
-- the "Urge open since 22:40" line, when an urge is open
-- the day sections
-
-The card slot MUST hold at most one card at a time. A card is one of these:
-
-- an opening card
-- a suggestion card
-- a stage 1 card
-- the plan card
-- the Focus card
-- the week-13 question
-- the maintenance plan
-
-The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. The app MUST show the next card after the person dismisses the first.
-
-After a starred entry or an "I binged" outcome, the app MUST NOT show a card in the same record day. The one exception is the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card can show in the same record day as the starred entry or the outcome. After that entry or outcome, Today MUST NOT show the pinned note until the next record day. The `weekly-review` capability owns that rule.
-
-Each day section MUST show its heading and its rows. It MUST show a state line when the day is paused or has the state "didn't record". From stage 2 it MUST show the plan beside the record and the gap bands. The current day section MUST come first. The previous day section MUST follow it, collapsed by default, and only when it has an entry.
-
-The navigation bar MUST hold the lock control at its leading end and Get support at its trailing end. The navigation bar MUST hold no other control. The lock control MUST show the cover and lock at once. With the app lock off, it MUST still show the cover until a tap.
-
-A bottom toolbar MUST hold these text controls, in this order:
-
-- "Programme"
-- "Reviews", from the moment the first weekly review becomes due
-- "Settings"
-
-Before the first weekly review becomes due, the bottom toolbar MUST NOT show "Reviews". The settings screen MUST be one tap from Today, through "Settings". From stage 3, the "Urge" button MUST sit above the bottom toolbar. The button MUST stay on screen while the rows scroll. In VoiceOver's reading order the "Urge" button MUST come first from stage 3.
-
-The current day heading and a full-width control "Add an entry" under it MUST form a pinned section header. That header MUST stay on screen while the current day's rows scroll. "Pause for today" MUST sit under the rows as a visible control. "Close the day" MUST sit beside it only after the last planned meal's time, or after 17:00 in stage 1.
-
-"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today".
-
-The `reminders` capability owns the rule and the two strings of the notification permission line. The line MUST sit under the pinned section header, above the rows, as a control. When permission is not determined, the line MUST read "Allow notifications to get reminders.". A tap on it MUST make the system permission request.
-
-When permission is denied and a reminder switch is on, the line MUST read "Notifications are off in iOS Settings.". A tap on it MUST open the iOS Settings app. After that tap, the app MUST hide the line while permission stays denied. Only the Reminders group then shows the state.
-
-Ash chose this layout on 25 September 2026 so the record is the first thing a new person sees. On the same day Ash moved "Programme", "Reviews" and "Settings" to the bottom toolbar, so one "Add an entry" stays on screen.
-
-A two-finger double tap on Today MUST open the new-entry screen. After the new-entry screen closes, VoiceOver focus MUST return to "Add an entry". Each day heading MUST carry the header trait. "Collapse day", "Expand day" and "Didn't record" MUST be VoiceOver custom actions on the heading.
-
-The order above is the only order. Another capability MUST NOT add an element to Today except through the card slot or a day section row.
-
-#### Scenario: Empty day, no cards
-- **WHEN** the current record day has no entries, no review or check-in has ever become due, no card is waiting and notification permission is granted
-- **THEN** Today shows the lock control and Get support in the navigation bar, the "Getting started" line before stage 2, the pinned current day heading with its menu and "Add an entry", "Pause for today", and "Programme" and "Settings" in the bottom toolbar, and nothing else
-
-#### Scenario: Two cards waiting
-- **WHEN** an opening card and a suggestion card are both waiting
-- **THEN** the card slot shows the opening card, and shows the suggestion card after the person taps "Open" or "Close"
-
-#### Scenario: Card after a starred entry
-- **WHEN** the person saves a starred entry at 20:15 and an opening card became due at 20:15
-- **THEN** Today shows no card on that load, and shows the card from 04:00 the next record day
-
-#### Scenario: Lapse card in the same record day
-- **WHEN** stage 7 is open, the person saves a starred entry at 14:10, and the next planned meal is at 16:00
-- **THEN** from 16:00 the card slot shows the maintenance plan card in that record day, and every other card waits for the next record day
-
-#### Scenario: Reading order from stage 3
-- **WHEN** VoiceOver reads Today with stage 3 open
-- **THEN** the first element is the "Urge" button, then the lock control in the navigation bar
-
-#### Scenario: Previous day
-- **WHEN** the previous record day has three entries and the person has not collapsed or expanded it
-- **THEN** Today shows the previous day section under the current day, collapsed to its heading and "3 entries", and expands it on a tap
-
-#### Scenario: Add an entry on a long day
-- **WHEN** the current record day has fifteen entries and the person scrolls to the last row
-- **THEN** the current day heading and "Add an entry" stay on screen, and one tap on "Add an entry" opens the new-entry screen
-
-#### Scenario: Reviews in the bottom toolbar
-- **WHEN** the first weekly review becomes due
-- **THEN** the bottom toolbar shows "Programme", "Reviews" and "Settings", in that order
-
 ### Requirement: Where chips
 
 The new-entry screen MUST show a Where control under What. The control MUST show the chips "Home", "Work", "Out" and "Travelling", then a chip "Add a place". "Add a place" MUST open a one-line text field with no placeholder. The app MUST keep autocorrection and sentence capitalisation in that field. The app MUST turn off the keyboard's inline predictions in that field.
@@ -501,3 +418,88 @@ The collapse control's label MUST read "Collapse day" when the day is expanded a
 #### Scenario: Delete with VoiceOver
 - **WHEN** a person who uses VoiceOver chooses the "Delete" action on a row and taps "Delete"
 - **THEN** the app deletes the entry
+## MODIFIED Requirements
+
+### Requirement: The Today stack
+
+Today MUST show these fixed elements, in this order from the top:
+
+- the pinned note, when one exists
+- the "Weekly review" or "Check-in" line, when one is due
+- one card slot
+- the "Getting started" line, from the end of onboarding until stage 2 opens (`programme` owns the rule)
+- the "Urge open since 22:40" line, when an urge is open
+- the day sections
+
+The card slot MUST hold at most one card at a time. A card is one of these:
+
+- an opening card
+- a suggestion card
+- a stage 1 card
+- the plan card
+- the Focus card
+- the week-13 question
+- the maintenance plan
+
+The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. The app MUST show the next card after the person dismisses the first.
+
+After a starred entry or an "I binged" outcome, the app MUST NOT show a card in the same record day. The one exception is the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card can show in the same record day as the starred entry or the outcome. After that entry or outcome, Today MUST NOT show the pinned note until the next record day. The `weekly-review` capability owns that rule.
+
+Each day section MUST show its heading and its rows. It MUST show a state line when the day is paused or has the state "didn't record". From stage 2 it MUST show the plan beside the record and the gap bands. The current day section MUST come first. The previous day section MUST follow it, collapsed by default, and only when it has an entry.
+
+The navigation bar MUST hold the lock control at its leading end and Get support at its trailing end. The navigation bar MUST hold no other control. The lock control MUST show the cover and lock at once. With the app lock off, it MUST still show the cover until a tap.
+
+A bottom toolbar MUST hold these text controls, in this order:
+
+- "Programme"
+- "Reviews", from the moment the first weekly review becomes due
+- "Settings"
+
+Before the first weekly review becomes due, the bottom toolbar MUST NOT show "Reviews". The settings screen MUST be one tap from Today, through "Settings". From stage 3, the "Urge" button MUST sit above the bottom toolbar. The button MUST stay on screen while the rows scroll. In VoiceOver's reading order the "Urge" button MUST come first from stage 3.
+
+The current day heading and a full-width control "Add an entry" under it MUST form a pinned section header. That header MUST stay on screen while the current day's rows scroll. "Pause for today" MUST sit under the rows as a visible control. "Close the day" MUST sit beside it only after the last planned meal's time, or after 17:00 in stage 1.
+
+"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today".
+
+The `reminders` capability owns the rule and the two strings of the notification permission line. The line MUST sit under the pinned section header, above the rows, as a control. When permission is not determined, the line MUST read "Allow notifications to get reminders.". A tap on it MUST make the system permission request.
+
+When permission is denied and a reminder switch is on, the line MUST read "Notifications are off in iOS Settings.". A tap on it MUST open the iOS Settings app. After that tap, the app MUST hide the line while permission stays denied. Only the Reminders group then shows the state.
+
+Ash chose this layout on 25 September 2026 so the record is the first thing a new person sees. On the same day Ash moved "Programme", "Reviews" and "Settings" to the bottom toolbar, so one "Add an entry" stays on screen.
+
+A two-finger double tap on Today MUST open the new-entry screen. After the new-entry screen closes, VoiceOver focus MUST return to "Add an entry". Each day heading MUST carry the header trait. "Collapse day", "Expand day" and "Didn't record" MUST be VoiceOver custom actions on the heading.
+
+The order above is the only order. Another capability MUST NOT add an element to Today except through the card slot or a day section row.
+
+#### Scenario: Empty day, no cards
+- **WHEN** the current record day has no entries, no review or check-in has ever become due, no card is waiting and notification permission is granted
+- **THEN** Today shows the lock control and Get support in the navigation bar, the "Getting started" line before stage 2, the pinned current day heading with its menu and "Add an entry", "Pause for today", and "Programme" and "Settings" in the bottom toolbar, and nothing else
+
+#### Scenario: Two cards waiting
+- **WHEN** an opening card and a suggestion card are both waiting
+- **THEN** the card slot shows the opening card, and shows the suggestion card after the person taps "Open" or "Close"
+
+#### Scenario: Card after a starred entry
+- **WHEN** the person saves a starred entry at 20:15 and an opening card became due at 20:15
+- **THEN** Today shows no card on that load, and shows the card from 04:00 the next record day
+
+#### Scenario: Lapse card in the same record day
+- **WHEN** stage 7 is open, the person saves a starred entry at 14:10, and the next planned meal is at 16:00
+- **THEN** from 16:00 the card slot shows the maintenance plan card in that record day, and every other card waits for the next record day
+
+#### Scenario: Reading order from stage 3
+- **WHEN** VoiceOver reads Today with stage 3 open
+- **THEN** the first element is the "Urge" button, then the lock control in the navigation bar
+
+#### Scenario: Previous day
+- **WHEN** the previous record day has three entries and the person has not collapsed or expanded it
+- **THEN** Today shows the previous day section under the current day, collapsed to its heading and "3 entries", and expands it on a tap
+
+#### Scenario: Add an entry on a long day
+- **WHEN** the current record day has fifteen entries and the person scrolls to the last row
+- **THEN** the current day heading and "Add an entry" stay on screen, and one tap on "Add an entry" opens the new-entry screen
+
+#### Scenario: Reviews in the bottom toolbar
+- **WHEN** the first weekly review becomes due
+- **THEN** the bottom toolbar shows "Programme", "Reviews" and "Settings", in that order
+

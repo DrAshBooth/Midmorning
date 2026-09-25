@@ -480,26 +480,6 @@ The privacy label on the App Store MUST be "Data Not Collected". The manifest's 
 - **WHEN** a reviewer reads the change's README at submission
 - **THEN** it has a dated line that quotes Apple's definition of "collect" and states why the label is true
 
-### Requirement: The privacy notice
-
-The privacy notice MUST be one tap from the settings screen. The team MUST publish the same notice at a public URL. The notice MUST name the controller and its contact. The notice MUST name the contact email of the support page. The notice MUST state who reads that inbox.
-
-The notice MUST state the lawful basis and the Article 9 condition for each processing. The notice MUST name Apple as a recipient. The notice MUST state where Apple holds the data. The notice MUST state what Apple can see and that the team sees nothing the person writes.
-
-The notice MUST state that the team receives only Apple's aggregated App Analytics and crash reports. Those are the ones the person chooses to share with Apple. The notice MUST state how the person reads and deletes their data in the app. The notice MUST state "A backup of your device can hold reminder times until the app cancels them. It never holds your entries." The notice MUST name the ICO as the authority the person can complain to.
-
-#### Scenario: Privacy notice
-- **WHEN** the person opens the settings screen and taps "Privacy"
-- **THEN** the notice opens and holds the controller, the contact, who reads the contact inbox, Apple, the App Analytics line, the backup line and the ICO
-
-#### Scenario: Public URL
-- **WHEN** a person opens the privacy notice URL from App Store Connect in a browser
-- **THEN** the page shows the same notice as the app
-
-#### Scenario: Erasure
-- **WHEN** the person reads the section on deleting their data
-- **THEN** it names "Delete everything" in the settings screen
-
 ### Requirement: Release gates and the App Store submission
 
 The team MUST NOT give a build to a person outside the team before the DPIA sign-off file is complete. The DPIA MUST cover the co-design panel and the children's-code assessment. The DPIA MUST name App Analytics as the only analytics and Apple as its processor. The team MUST NOT give such a build before the privacy notice is in the app. The team MUST tell each TestFlight tester that Apple collects crash logs and feedback screenshots.
@@ -924,4 +904,24 @@ The store MUST keep one card answer row in `Record.store` for each answered card
 #### Scenario: During the first import
 - **WHEN** the person turns sync on and the first import runs for a minute
 - **THEN** Today shows no card and the store writes no opening moment in that minute
+
+### Requirement: The privacy notice
+
+The privacy notice MUST be one tap from the settings screen. The team MUST publish the same notice at a public URL. The notice MUST name the controller and its contact. The notice MUST name the contact email of the support page. The notice MUST state who reads that inbox.
+
+The notice MUST state the lawful basis and the Article 9 condition for each processing. The notice MUST name Apple as a recipient. The notice MUST state where Apple holds the data. The notice MUST state what Apple can see and that the team sees nothing the person writes.
+
+The notice MUST state that the team receives only Apple's aggregated App Analytics and crash reports. Those are the ones the person chooses to share with Apple. The notice MUST state how the person reads and deletes their data in the app. The notice MUST state "A backup of your device can hold reminder times until the app cancels them. It never holds your entries." The notice MUST name the ICO as the authority the person can complain to.
+
+#### Scenario: Privacy notice
+- **WHEN** the person opens the settings screen and taps "Privacy"
+- **THEN** the notice opens and holds the controller, the contact, who reads the contact inbox, Apple, the App Analytics line, the backup line and the ICO
+
+#### Scenario: Public URL
+- **WHEN** a person opens the privacy notice URL from App Store Connect in a browser
+- **THEN** the page shows the same notice as the app
+
+#### Scenario: Erasure
+- **WHEN** the person reads the section on deleting their data
+- **THEN** it names "Delete everything" in the settings screen
 

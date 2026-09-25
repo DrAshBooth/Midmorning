@@ -101,6 +101,15 @@ Before "Face ID only" or "Touch ID only" turns on, the app MUST show the warning
 - **WHEN** iCloud reports that storage is full
 - **THEN** the group shows "iCloud is full, so sync is paused. Your record is safe on this device." under the switch
 
+### Requirement: Accessibility of the settings screen
+
+Every control on the settings screen MUST have a VoiceOver label equal to its visible label. Every switch MUST read its state. Text MUST scale with Dynamic Type.
+
+#### Scenario: VoiceOver on a switch
+- **WHEN** VoiceOver reads "Weekly summary"
+- **THEN** it reads the label, "switch", and "on" or "off"
+## MODIFIED Requirements
+
 ### Requirement: The About group
 
 The About group MUST show the app version and the content version. It MUST show "Draft" when the content has no sign-off. It MUST show Get support. It MUST show "Contact" with the support email `data-and-privacy` names. It MUST show "Diagnostics", a page of counts only. The counts are:
@@ -128,10 +137,3 @@ The page MUST hold no record content.
 - **WHEN** the content bundle has no sign-off file
 - **THEN** the About group shows "Draft" beside the content version
 
-### Requirement: Accessibility of the settings screen
-
-Every control on the settings screen MUST have a VoiceOver label equal to its visible label. Every switch MUST read its state. Text MUST scale with Dynamic Type.
-
-#### Scenario: VoiceOver on a switch
-- **WHEN** VoiceOver reads "Weekly summary"
-- **THEN** it reads the label, "switch", and "on" or "off"
