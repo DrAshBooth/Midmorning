@@ -1,5 +1,5 @@
 import Foundation
-import RecordCore
+import Record
 
 // Usage: Seeder <store-url> <scenario>
 // Writes entries through RecordStore.add, as the app does, in Europe/London.
