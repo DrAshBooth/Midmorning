@@ -2,11 +2,13 @@
 
 ## Purpose
 
-This delta adds the rest of the paper record to the entry and to Today. It adds the Where chips, the Context field, edit, delete, "Didn't record", earlier days, the collapsed day, "Pause for today" and the gap band. The `record-entry-on-today` change owns entry creation, the record day, storage and the other rules of the record. Some of its rules conflict with this delta. Ash ruled on 25 September 2026 that the rules of this delta win. The `record-full` build change (1.2b) MODIFIES these requirements of `record-entry-on-today`:
+This delta adds the rest of the paper record to the entry and to Today. It adds the Where chips, the Context field, edit, delete, "Didn't record", earlier days, the collapsed day, "Pause for today" and the gap band. It also sets the order and form of the new-entry screen's controls.
+
+The `record-entry-on-today` change owns entry creation, the record day, storage and the other rules of the record. Some of its rules conflict with this delta. Ash ruled on 25 September 2026 that the rules of this delta win. The `record-full` build change (1.2b) MODIFIES these requirements of `record-entry-on-today`:
 
 - "Today's appearance", for the count line of a collapsed day and the gap band
 - "Today shows the record day's entries in time order", for the current day first, the previous day under it and collapsed by default, a collapsed day that hides its rows, and Where and Context on a row
-- "Accessibility of the record", for the row label and the reading order of the new-entry screen
+- "Accessibility of the record", for the row label and the content's reading order on the new-entry screen: What, Where, "felt like a binge", Context, Time
 - "Create an entry", to scope the time range and the "Time range" scenario to a new entry; the edit screen follows "Edit an entry"
 
 The `reminders` capability owns the neutral midday prompt for a missed morning and the close-the-day reminder of the day.
@@ -34,33 +36,39 @@ The card slot MUST hold at most one card at a time. A card is one of these:
 - the week-13 question
 - the maintenance plan
 
-The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. The app MUST show the next card after the person dismisses the first. After a starred entry or an "I binged" outcome, the app MUST NOT show a card in the same record day.
+The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. The app MUST show the next card after the person dismisses the first.
+
+After a starred entry or an "I binged" outcome, the app MUST NOT show a card in the same record day. The one exception is the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card can show in the same record day as the starred entry or the outcome. After that entry or outcome, Today MUST NOT show the pinned note until the next record day. The `weekly-review` capability owns that rule.
 
 Each day section MUST show its heading and its rows. It MUST show a state line when the day is paused or has the state "didn't record". From stage 2 it MUST show the plan beside the record and the gap bands. The current day section MUST come first. The previous day section MUST follow it, collapsed by default, and only when it has an entry.
 
-The "Urge" button MUST stay pinned at the bottom of Today from stage 3. In VoiceOver's reading order the "Urge" button MUST come first from stage 3. The navigation bar MUST hold five controls, in this order:
+The navigation bar MUST hold the lock control at its leading end and Get support at its trailing end. The navigation bar MUST hold no other control. The lock control MUST show the cover and lock at once. With the app lock off, it MUST still show the cover until a tap.
 
-- the add control, with the label "Add an entry"
-- the Programme control
-- the "Reviews" control
-- Get support
-- the lock control
+A bottom toolbar MUST hold these text controls, in this order:
 
-The lock control MUST show the cover and lock at once. With the app lock off, it MUST still show the cover until a tap.
+- "Programme"
+- "Reviews", from the moment the first weekly review becomes due
+- "Settings"
 
-A full-width control "Add an entry" MUST sit under the current day heading, above the rows. "Pause for today" MUST sit under the rows as a visible control. "Close the day" MUST sit beside it only after the last planned meal's time, or after 17:00 in stage 1. "Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today".
+Before the first weekly review becomes due, the bottom toolbar MUST NOT show "Reviews". The settings screen MUST be one tap from Today, through "Settings". From stage 3, the "Urge" button MUST sit above the bottom toolbar. The button MUST stay on screen while the rows scroll. In VoiceOver's reading order the "Urge" button MUST come first from stage 3.
 
-Notification permission can be not determined while a reminder switch is on. Then the line "Notifications are off in iOS Settings." MUST sit under the current day heading, below "Add an entry" and above the rows, as a control. A tap on that control MUST make the system permission request. When permission is denied, the same line MUST show until the person taps it once. After that tap, only the Reminders group shows the state.
+The current day heading and a full-width control "Add an entry" under it MUST form a pinned section header. That header MUST stay on screen while the current day's rows scroll. "Pause for today" MUST sit under the rows as a visible control. "Close the day" MUST sit beside it only after the last planned meal's time, or after 17:00 in stage 1.
 
-Ash chose this layout on 25 September 2026 so the record is the first thing a new person sees. The settings screen MUST be one tap from Today, through the navigation bar.
+"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today".
 
-A two-finger double tap on Today MUST open the new-entry screen. After the new-entry screen closes, VoiceOver focus MUST return to the add control. Each day heading MUST carry the header trait. "Collapse day", "Expand day" and "Didn't record" MUST be VoiceOver custom actions on the heading.
+The `reminders` capability owns the rule and the two strings of the notification permission line. The line MUST sit under the pinned section header, above the rows, as a control. When permission is not determined, the line MUST read "Allow notifications to get reminders.". A tap on it MUST make the system permission request.
+
+When permission is denied and a reminder switch is on, the line MUST read "Notifications are off in iOS Settings.". A tap on it MUST open the iOS Settings app. After that tap, the app MUST hide the line while permission stays denied. Only the Reminders group then shows the state.
+
+Ash chose this layout on 25 September 2026 so the record is the first thing a new person sees. On the same day Ash moved "Programme", "Reviews" and "Settings" to the bottom toolbar, so one "Add an entry" stays on screen.
+
+A two-finger double tap on Today MUST open the new-entry screen. After the new-entry screen closes, VoiceOver focus MUST return to "Add an entry". Each day heading MUST carry the header trait. "Collapse day", "Expand day" and "Didn't record" MUST be VoiceOver custom actions on the heading.
 
 The order above is the only order. Another capability MUST NOT add an element to Today except through the card slot or a day section row.
 
 #### Scenario: Empty day, no cards
-- **WHEN** the current record day has no entries, nothing is due and no card is waiting
-- **THEN** Today shows the navigation bar, the "Getting started" line before stage 2, the current day heading with its menu, the "Add an entry" control, "Pause for today", and nothing else
+- **WHEN** the current record day has no entries, no review or check-in has ever become due, no card is waiting and notification permission is granted
+- **THEN** Today shows the lock control and Get support in the navigation bar, the "Getting started" line before stage 2, the pinned current day heading with its menu and "Add an entry", "Pause for today", and "Programme" and "Settings" in the bottom toolbar, and nothing else
 
 #### Scenario: Two cards waiting
 - **WHEN** an opening card and a suggestion card are both waiting
@@ -70,17 +78,31 @@ The order above is the only order. Another capability MUST NOT add an element to
 - **WHEN** the person saves a starred entry at 20:15 and an opening card became due at 20:15
 - **THEN** Today shows no card on that load, and shows the card from 04:00 the next record day
 
+#### Scenario: Lapse card in the same record day
+- **WHEN** stage 7 is open, the person saves a starred entry at 14:10, and the next planned meal is at 16:00
+- **THEN** from 16:00 the card slot shows the maintenance plan card in that record day, and every other card waits for the next record day
+
 #### Scenario: Reading order from stage 3
 - **WHEN** VoiceOver reads Today with stage 3 open
-- **THEN** the first element is the "Urge" button, then the navigation bar starting with "Add an entry"
+- **THEN** the first element is the "Urge" button, then the lock control in the navigation bar
 
 #### Scenario: Previous day
 - **WHEN** the previous record day has three entries and the person has not collapsed or expanded it
 - **THEN** Today shows the previous day section under the current day, collapsed to its heading and "3 entries", and expands it on a tap
 
+#### Scenario: Add an entry on a long day
+- **WHEN** the current record day has fifteen entries and the person scrolls to the last row
+- **THEN** the current day heading and "Add an entry" stay on screen, and one tap on "Add an entry" opens the new-entry screen
+
+#### Scenario: Reviews in the bottom toolbar
+- **WHEN** the first weekly review becomes due
+- **THEN** the bottom toolbar shows "Programme", "Reviews" and "Settings", in that order
+
 ### Requirement: Where chips
 
-The new-entry screen MUST show a Where control under What. The control MUST show the chips "Home", "Work", "Out" and "Travelling", then a chip "Add a place". "Add a place" MUST open a one-line text field with no placeholder. When the person saves a custom place, the app MUST keep it. The app MUST then show it as a chip after the four fixed chips. The app MUST show at most eight custom chips, most recently used first.
+The new-entry screen MUST show a Where control under What. The control MUST show the chips "Home", "Work", "Out" and "Travelling", then a chip "Add a place". "Add a place" MUST open a one-line text field with no placeholder. The app MUST keep autocorrection and sentence capitalisation in that field. The app MUST turn off the keyboard's inline predictions in that field.
+
+When the person saves a custom place, the app MUST keep it. The app MUST then show it as a chip after the four fixed chips. The app MUST show at most eight custom chips, most recently used first.
 
 An entry MUST have at most one Where. The person MUST be able to save an entry with no Where. A second tap on the selected chip MUST clear the Where. The app MUST NOT show a message when the person leaves Where empty.
 
@@ -110,15 +132,19 @@ The new-entry screen MUST NOT show a previous entry's What, Where or Context as 
 - **WHEN** the person saved an entry with What "Toast and tea", Where "Mum's" and Context "Row with my sister", and opens the new-entry screen
 - **THEN** the screen shows the chip "Mum's", an empty What, an empty Context, and no suggestion from an earlier entry
 
+#### Scenario: Keyboard in "Add a place"
+- **WHEN** the person taps "Add a place" and types in the field
+- **THEN** the keyboard offers autocorrection and a capital letter at the start of a sentence, and shows no inline prediction
+
 ### Requirement: The Context field
 
-The new-entry screen MUST show a Context field under Where. Context MUST accept free text. Context MUST accept an empty text. The app MUST NOT show a placeholder in Context.
+The new-entry screen MUST show a Context field under the "felt like a binge" star. Context MUST accept free text. Context MUST accept an empty text. The app MUST NOT show a placeholder in Context.
 
 When the star is off, the field's label MUST read "Context". When the star is on, the field's label MUST read "What was going on just before?". The app MUST NOT show any other text, icon, colour change or message when the star turns on.
 
 The star control is the system toggle. Its on state MUST use the system grey as its tint. The knob then shows in light and dark mode. The screen MUST show no other colour change when the star turns on.
 
-The app MUST trim white space and line breaks from the start and end of Context. The app MUST keep the rest as typed. The app MUST NOT require Context on a starred entry.
+The app MUST trim white space and line breaks from the start and end of Context. The app MUST keep the rest as typed. The app MUST NOT require Context on a starred entry. The app MUST keep autocorrection and sentence capitalisation in Context. The app MUST turn off the keyboard's inline predictions in Context.
 
 #### Scenario: Star on changes one label
 - **WHEN** the person turns on "felt like a binge"
@@ -135,6 +161,50 @@ The app MUST trim white space and line breaks from the start and end of Context.
 #### Scenario: Context with white space
 - **WHEN** the person types "  Row with my sister " in Context and saves
 - **THEN** the app saves the Context "Row with my sister"
+
+#### Scenario: Keyboard in Context
+- **WHEN** the person types in Context
+- **THEN** the keyboard offers autocorrection and a capital letter at the start of a sentence, and shows no inline prediction
+
+### Requirement: The new-entry screen's controls
+
+The new-entry screen MUST show its controls in this order from the top: What, Where, "felt like a binge", Context, Time. The Context label that the star changes then sits under the star. The edit screen MUST show the same order, with "Delete entry" last.
+
+What MUST stay a multi-line field, so Return adds a line break. The app MUST keep autocorrection and sentence capitalisation in What. The app MUST turn off the keyboard's inline predictions in What.
+
+While the keyboard shows, the keyboard's toolbar MUST show a control "Save" at its trailing end. That control MUST have a touch target of at least 44 by 44 points. A tap on it MUST save the entry as a tap on Save in the navigation bar does. Save MUST also stay in the navigation bar.
+
+On a new entry, the time control MUST show two segments, then the system hour-and-minute wheel. The first segment MUST name the previous record day. The second segment MUST name the current record day. Each segment MUST show the weekday and date only, for example "Thursday 24 September". The app MUST select the second segment when the new-entry screen opens.
+
+The wheel MUST offer only times inside the selected record day, up to the current moment. The app MUST put a time before the day start on the calendar date after the segment's date. The time control MUST keep the VoiceOver label "Time" and the value that "Accessibility of the record" states. Ash chose this form on 25 September 2026, so the time control names the days as Today's headings do.
+
+#### Scenario: Order of the controls
+- **WHEN** the person opens the new-entry screen
+- **THEN** the screen shows What, the Where chips, "felt like a binge", Context and the time control, in that order from the top
+
+#### Scenario: Return in What
+- **WHEN** the person types "Toast", taps Return and types "tea" in What
+- **THEN** What holds "Toast" and "tea" on two lines, and the screen stays open
+
+#### Scenario: Keyboard in What
+- **WHEN** the person types in What
+- **THEN** the keyboard offers autocorrection and a capital letter at the start of a sentence, and shows no inline prediction
+
+#### Scenario: Save from the keyboard's toolbar
+- **WHEN** the person types "Toast and tea" in What and taps "Save" in the keyboard's toolbar
+- **THEN** the app saves the entry and closes the screen, as a tap on Save in the navigation bar does
+
+#### Scenario: The time control in the morning
+- **WHEN** the current time is 07:30 on Friday 25 September and the person opens the new-entry screen
+- **THEN** the time control shows "Thursday 24 September" and "Friday 25 September", with "Friday 25 September" selected, and the wheel at 07:30
+
+#### Scenario: Last night's time after midnight
+- **WHEN** the current time is 02:00 on Friday 25 September, and the person sets the wheel to 23:30 and saves
+- **THEN** the segments read "Wednesday 23 September" and "Thursday 24 September", and the app saves the entry at 23:30 on Thursday 24 September
+
+#### Scenario: A time before the day start
+- **WHEN** the current time is 02:00 on Friday 25 September, and the person sets the wheel to 01:30 and saves
+- **THEN** the app saves the entry at 01:30 on Friday 25 September, and Today shows it under Thursday 24 September
 
 ### Requirement: Today shows Where and Context
 
@@ -156,7 +226,9 @@ Today MUST show an entry's Where after the What when the Where is not empty. Tod
 
 A tap on a row on Today or on an earlier day MUST open the entry for editing. The edit screen is the new-entry screen filled with the entry's values. The person MUST be able to change the time, the What, the Where, the star and the Context.
 
-The time control MUST offer only times inside the entry's own record day. The app MUST compute that record day's bounds from the entry's UTC offset and the day start row. That row is the one in force for that record day key, as `data-and-privacy` states. The time control MUST NOT offer a time after the current moment. On save the app MUST keep the entry's record day as it was. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day.
+The time control MUST offer only times inside the entry's own record day. The time control MUST show one segment, which names that record day. The app MUST compute that record day's bounds from the entry's UTC offset and the day start row. That row is the one in force for that record day key, as `data-and-privacy` states. The time control MUST NOT offer a time after the current moment.
+
+On save the app MUST keep the entry's record day as it was. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day.
 
 #### Scenario: Change the What
 - **WHEN** the person taps the 13:05 entry "Toast and tea", changes What to "Toast, tea and a biscuit" and saves
@@ -165,6 +237,10 @@ The time control MUST offer only times inside the entry's own record day. The ap
 #### Scenario: Change the time inside the entry's record day
 - **WHEN** "Day starts at" is 04:00, the current time is 09:00 on Friday 25 September, and the person opens the Friday 08:30 entry
 - **THEN** the time control offers times from 04:00 to 09:00 on Friday only, and after the person sets 06:45 and saves, Today shows the entry under Friday 25 September at 06:45
+
+#### Scenario: One segment on the edit screen
+- **WHEN** the current time is 02:00 on Friday 25 September and the person opens the Wednesday 23 September 21:00 entry
+- **THEN** the time control shows one segment, "Wednesday 23 September", and the hour-and-minute wheel
 
 #### Scenario: Creation moment stays
 - **WHEN** the person edits an entry with the creation moment 13:08 and saves at 18:00
@@ -266,7 +342,9 @@ On a fasting day the app MUST show no gap band. The `regular-eating-plan`, `week
 
 ### Requirement: Earlier record days
 
-Today MUST show a control "Earlier days". The control MUST open a list of record days, most recent first. The list MUST start at the earliest record day with an entry or a state. The list MUST end at the day before the previous record day. Each row in the list MUST show the weekday and date only. A tap on a row MUST open that day.
+The current day heading's menu MUST offer a control "Earlier days". The control MUST appear only when a record day before the previous record day has an entry or a state.
+
+The control MUST open a list of record days, most recent first. The list MUST start at the earliest record day with an entry or a state. The list MUST end at the day before the previous record day. Each row in the list MUST show the weekday and date only. A tap on a row MUST open that day.
 
 The day MUST show its entries with the same rules as a day on Today. The day MUST show controls to move to the previous and the next record day. A control "Today" MUST return to Today. The app MUST NOT offer a control to create an entry on a day before the previous record day.
 
@@ -285,6 +363,14 @@ The day MUST show its entries with the same rules as a day on Today. The day MUS
 #### Scenario: Return to Today
 - **WHEN** the person is on Monday 21 September and taps "Today"
 - **THEN** the app shows Today
+
+#### Scenario: No earlier day yet
+- **WHEN** the person saved the first entry on Wednesday 23 September and opens Today on Thursday 24 September
+- **THEN** the current day heading's menu shows no "Earlier days"
+
+#### Scenario: An earlier day with a state only
+- **WHEN** the current record day is Wednesday 23 September, and Monday 21 September has the state "didn't record" and no entries
+- **THEN** the current day heading's menu offers "Earlier days", and the list shows "Monday 21 September"
 
 ### Requirement: Collapse a day to a count
 
@@ -360,7 +446,7 @@ The app MUST NOT show a band on a day with the state "didn't record", "paused" o
 
 ### Requirement: A save that fails
 
-When a save throws, the new-entry screen MUST stay open. It MUST show "Could not save. Try again." under Save and no other text. It MUST keep the typed text and the chosen values.
+When a save throws, the new-entry screen MUST stay open. It MUST show "Could not save. Try again." under the navigation bar and no other text. Both Save controls follow this rule. It MUST keep the typed text and the chosen values.
 
 #### Scenario: Full storage
 - **WHEN** the device has no free storage and the person taps Save
@@ -386,9 +472,9 @@ The store MUST keep the states "didn't record", "paused" and "fasting" per recor
 
 Every chip, field and control in this delta MUST have a VoiceOver label. A row's label MUST hold, in order: the time, the What, the Where, the Context, "felt like a binge". The label MUST hold only the parts that are present. A comma and a space MUST separate the parts. The band MUST be one accessibility element with the label "Gap of more than %lld hours". The app MUST fill the label from MAX_AWAKE_GAP_HOURS.
 
-The app MUST set the new-entry screen's reading order to What, Where, Context, "felt like a binge", Time, Save, Cancel.
+When the new-entry screen or the edit screen opens, VoiceOver focus MUST move to What. Cancel and Save MUST stay in the navigation bar, which VoiceOver reads before the content. The new-entry screen's content reading order MUST be What, Where, "felt like a binge", Context, Time.
 
-The app MUST set the edit screen's reading order to What, Where, Context, "felt like a binge", Time, Save, Cancel. The app MUST then put "Delete entry" last, after Cancel.
+The edit screen's content reading order MUST be the same. The app MUST then put "Delete entry" last, after Time. Ash ruled on 25 September 2026 that Cancel and Save stay in the navigation bar, as on every iOS sheet.
 
 The collapse control's label MUST read "Collapse day" when the day is expanded and "Expand day" when it is collapsed. A row MUST offer "Delete" as a VoiceOver action. Every text in this delta MUST use system text styles. Every text in this delta MUST scale with Dynamic Type. A state in this delta MUST NOT depend on colour alone.
 
@@ -401,12 +487,12 @@ The collapse control's label MUST read "Collapse day" when the day is expanded a
 - **THEN** it reads "13:05, Out"
 
 #### Scenario: Reading order with Where and Context
-- **WHEN** the person opens the new-entry screen from "Add an entry" with the star off, and VoiceOver moves from the first element to the last
-- **THEN** VoiceOver focus moves through the What field, the Where chips, the Context field, the "felt like a binge" star, the time control, Save and Cancel, in that order
+- **WHEN** the person opens the new-entry screen from "Add an entry" with the star off and VoiceOver on
+- **THEN** VoiceOver focus is on What, the next elements are Where, "felt like a binge", Context and Time, and Cancel and Save come before What
 
 #### Scenario: Reading order on the edit screen
-- **WHEN** the person taps the 13:05 entry "Toast and tea" on Today, and VoiceOver moves from the first element to the last
-- **THEN** VoiceOver focus moves through the What field, the Where chips, the Context field, the "felt like a binge" star, the time control, Save, Cancel and "Delete entry", in that order
+- **WHEN** the person taps the 13:05 entry "Toast and tea" on Today with VoiceOver on
+- **THEN** VoiceOver focus is on What, the next elements are Where, "felt like a binge", Context, Time and "Delete entry", and Cancel and Save come before What
 
 #### Scenario: The band
 - **WHEN** VoiceOver moves over a band

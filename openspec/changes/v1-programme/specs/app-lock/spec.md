@@ -114,7 +114,7 @@ The rule MUST live in one pure function, `LockPolicy.shouldAsk(enteredBackground
 
 ### Requirement: The lock control on Today
 
-Today's navigation bar MUST hold a lock control after Get support, in the Today stack that `record` defines. A tap on the lock control MUST show the cover at once. The tap MUST lock the app at once, with no grace period. The next "Unlock" MUST make the system authentication request.
+Today's navigation bar MUST hold the lock control at its leading edge, in the Today stack that `record` defines. The lock control MUST show the lock glyph and no text. Its VoiceOver label MUST be "Lock". A tap on the lock control MUST show the cover at once. The tap MUST lock the app at once, with no grace period. The next "Unlock" MUST make the system authentication request.
 
 With the app lock off, the lock control MUST still show the cover. That cover MUST stay until the person taps it. The tap MUST take it off the screen with no authentication request.
 

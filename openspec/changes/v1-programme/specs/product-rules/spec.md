@@ -129,3 +129,50 @@ The app MUST NOT call a language model or any generative service at runtime. Eve
 #### Scenario: A pattern sentence
 - **WHEN** the app builds a pattern sentence from the record
 - **THEN** it fills a reviewed template with numbers and times, and generates no other words
+
+### Requirement: Appearance
+
+Every screen MUST use the system text styles and the system semantic colours. The app MUST NOT use a custom font. The app MUST NOT use a custom colour, except the accent colour.
+
+The app MUST define one accent colour, in the AccentColor asset. The asset MUST hold a light value, a dark value and an Increase Contrast value. Each value MUST contrast with the row background at 3:1 or more. The team changes the accent colour in that one asset only.
+
+Every control MUST use the accent colour as its tint. The app MUST NOT use the accent colour on anything that is not a control. The star control on the new-entry screen is an exception. Its tint is the system grey, as `record` states. System alerts, confirmation dialogs and swipe actions MUST also keep their system colours.
+
+These MUST use the primary text colour and MUST NOT use the accent colour:
+
+- the asterisk of a starred entry
+- the urge curve
+- the line of the weigh-in chart
+- the pinned note and its pin glyph
+
+Every list MUST use the plain list style. A list section MUST NOT have a fill. Every sheet MUST be the system sheet at the large detent. The app MUST NOT set a custom corner radius, a shadow or a background image. Every transition MUST be the system's standard transition.
+
+Every glyph the app adds MUST be an SF Symbol. The app MUST use only four symbols: plus, pin, lock and chevron. A system control keeps its own glyphs.
+
+A screen that shows the record MUST open with a push onto the navigation stack. A screen that asks the person for an answer MUST open as a sheet. Onboarding and the cover are exceptions, because each fills the screen. The app MUST follow the system appearance, light or dark.
+
+Every text field MUST fill the width of its row. Its label MUST sit above it. Its text MUST align to the leading edge. A set of chips MUST wrap onto more lines in a flow layout. A set of chips MUST NOT scroll to the side.
+
+#### Scenario: One accent colour on Today
+- **WHEN** Today shows a starred entry, "Add an entry", the lock control and "Get support", in light and dark mode
+- **THEN** each control uses the accent colour, and each time and the asterisk use the primary text colour
+
+#### Scenario: The star control in dark mode
+- **WHEN** the device is in dark mode and the person turns the star on in the new-entry screen
+- **THEN** the switch uses the system grey, its knob shows, and no other colour on the screen changes
+
+#### Scenario: Where chips at the largest text size
+- **WHEN** the text size is the largest accessibility size (AX5) and the new-entry screen shows all thirteen Where chips
+- **THEN** the chips wrap onto more lines, each chip shows its full text, and nothing scrolls to the side
+
+#### Scenario: A screen that asks for an answer
+- **WHEN** the person taps "Add an entry" on Today
+- **THEN** the new-entry screen opens as the system sheet at the large detent, with "What" above its field
+
+#### Scenario: A screen that shows the record
+- **WHEN** the person opens "Earlier days" from the day heading's menu and taps a day
+- **THEN** the list and then the day each open with a push onto the navigation stack
+
+#### Scenario: Dark mode follows the system
+- **WHEN** the person turns on dark mode in Control Centre while Today is open
+- **THEN** Today shows in dark mode at once, with the same text and the same controls

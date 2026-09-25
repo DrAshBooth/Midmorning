@@ -214,7 +214,7 @@ The app MUST NOT allow a third-party keyboard on the new-entry screen.
 
 Each row on Today MUST be one accessibility element. The row's label MUST hold the time, then the What when not empty, then "felt like a binge" when the star is on. A comma and a space MUST separate the parts. Every control on Today and the new-entry screen MUST have a VoiceOver label.
 
-When the new-entry screen opens, VoiceOver focus MUST move to What. The reading order MUST be What, "felt like a binge", Time, Save, Cancel. The time control's label MUST be "Time". Its VoiceOver value MUST read the date and time, for example "Thursday 24 September, 21:35". What MUST accept dictation from the system keyboard with no extra tap. The star control's visible label and VoiceOver label MUST both be "felt like a binge".
+When the new-entry screen opens, VoiceOver focus MUST move to What. Cancel and Save MUST stay in the navigation bar, which VoiceOver reads before the content. The content's reading order MUST be What, "felt like a binge", Time. The time control's label MUST be "Time". Its VoiceOver value MUST read the date and time, for example "Thursday 24 September, 21:35". What MUST accept dictation from the system keyboard with no extra tap. The star control's visible label and VoiceOver label MUST both be "felt like a binge".
 
 The star MUST NOT depend on colour alone. Text on Today and the new-entry screen MUST use system text styles. Text on Today and the new-entry screen MUST scale with Dynamic Type. The app MUST NOT limit What to one line on Today.
 
@@ -225,6 +225,10 @@ The star MUST NOT depend on colour alone. Text on Today and the new-entry screen
 #### Scenario: Label of an unstarred entry with an empty What
 - **WHEN** VoiceOver reads an unstarred entry at 13:05 with an empty What
 - **THEN** it reads "13:05"
+
+#### Scenario: Reading order of the new-entry screen
+- **WHEN** the person opens the new-entry screen with VoiceOver on
+- **THEN** VoiceOver focus is on What, and the next elements are "felt like a binge" and Time, in that order
 
 #### Scenario: Largest text size
 - **WHEN** the person sets the largest accessibility text size

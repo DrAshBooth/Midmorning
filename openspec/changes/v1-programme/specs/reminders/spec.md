@@ -96,7 +96,7 @@ When an entry matches a planned meal before its time, the scheduler MUST cancel 
 
 A planned meal reminder MUST offer three actions, in this order: the snooze action, "Add" and "Skipped". The snooze action's title is the catalogue entry "Remind me in %lld minutes", filled from SNOOZE_MINUTES, which the "Remind me again in" setting chooses. The reminder MUST offer the same three actions whatever the explicit wording setting.
 
-"Add" MUST open the new-entry screen with the time set to the planned meal's time and the keyboard in What. The `app-lock` capability governs "Add" while the app is locked. "Skipped" MUST set the planned meal as skipped without opening the app. "Skipped" writes an Answer row keyed by the record day key and the slot index, with its own `changedAt`, as `regular-eating-plan` defines. The snooze action MUST snooze the reminder, as the snooze requirement defines. A tap on the reminder itself MUST open Today.
+"Add" MUST open the new-entry screen with the keyboard in What. The time MUST default to the moment the screen opens, as for any new entry. "Add it" on the missed planned meal prompt keeps the planned meal's time, as `regular-eating-plan` states. The `app-lock` capability governs "Add" while the app is locked. "Skipped" MUST set the planned meal as skipped without opening the app. "Skipped" writes an Answer row keyed by the record day key and the slot index, with its own `changedAt`, as `regular-eating-plan` defines. The snooze action MUST snooze the reminder, as the snooze requirement defines. A tap on the reminder itself MUST open Today.
 
 The app MUST register "Skipped" with the authentication-required option, because it writes the record. On a locked device, iOS MUST ask for the device unlock before "Skipped" runs. The app MUST register "Add" with the foreground option, because it opens the app. A foreground action needs the device unlocked, so iOS asks for the device unlock before "Add" opens the app. The app MUST register the snooze action with neither option. The snooze action MUST NOT require the person to unlock the device.
 
@@ -105,8 +105,8 @@ Every planned meal reminder MUST carry a userInfo with seven keys. The keys are 
 The notification action handler MUST read the userInfo. The handler MUST NOT open the store. The handler MUST write the action to the action queue file. The `widgets-and-intents` capability defines the queue file and its protection class. The app MUST apply the queue to the store when protected data becomes available. The app MUST then compute the schedule again.
 
 #### Scenario: Add
-- **WHEN** the person taps "Add" on the Lunch reminder at 13:20
-- **THEN** the new-entry screen opens with the time 13:00 and the keyboard in What
+- **WHEN** the person taps "Add" on the 13:00 Lunch reminder at 13:20
+- **THEN** the new-entry screen opens with the time 13:20, not 13:00, and the keyboard in What
 
 #### Scenario: The three actions
 - **WHEN** "Say what each reminder is for" is off, "Remind me again in" is "15 minutes", and the Lunch reminder fires
@@ -129,8 +129,8 @@ The notification action handler MUST read the userInfo. The handler MUST NOT ope
 - **THEN** iOS asks for no unlock, and the handler schedules the snoozed reminder from the userInfo
 
 #### Scenario: Add from the Lock Screen
-- **WHEN** the device is locked and the person taps "Add" on the Lunch reminder
-- **THEN** iOS asks for the device unlock, and the app then opens the new-entry screen with the time 13:00, as the `app-lock` capability governs
+- **WHEN** the device is locked and the person taps "Add" on the 13:00 Lunch reminder at 13:10
+- **THEN** iOS asks for the device unlock, and the app then opens the new-entry screen with the time 13:10, as the `app-lock` capability governs
 
 #### Scenario: The slot index in the userInfo
 - **WHEN** the person renamed "Lunch" to "Dinner" and the scheduler schedules that slot's reminder
@@ -188,6 +188,8 @@ The Reminders group MUST show a switch "Say what each reminder is for" that defa
 
 With explicit wording on, the title MUST name the reminder. The body MUST still be the time. The explicit titles are the slot's label for a planned meal, "Set today's plan", "Anything to record from this morning?", "Close the day", "Weigh-in day", "Weekly review", "Worksheet review" and "Check-in". The slot's label is the person's label for that slot, or the default. The label is the Settings row `slot.label.<index>` that the `regular-eating-plan` capability owns, with the slot index. The app MUST compute the title in the app process, from the slot index, when it schedules the reminder.
 
+Every reminder MUST play the system default sound, whatever the explicit wording setting. The person can turn that sound off for the app in the iOS Settings app.
+
 The `product-rules` capability lists what a notification never shows. The app MUST NOT show a number on the app icon.
 
 #### Scenario: A discreet planned meal reminder
@@ -213,6 +215,10 @@ The `product-rules` capability lists what a notification never shows. The app MU
 #### Scenario: An explicit check-in reminder
 - **WHEN** "Say what each reminder is for" is on and a check-in reminder fires at 18:00
 - **THEN** the reminder has the title "Check-in" and the body "18:00"
+
+#### Scenario: The reminder sound
+- **WHEN** "Say what each reminder is for" is off and the scheduler schedules the 13:00 Lunch reminder and the 21:45 close-the-day reminder
+- **THEN** both reminders carry the system default sound
 
 #### Scenario: The app icon
 - **WHEN** three reminders fired today and the person has not opened the app

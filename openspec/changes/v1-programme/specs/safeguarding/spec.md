@@ -411,9 +411,9 @@ Every screen the app presents full-screen MUST show a control labelled "Get supp
 
 The weekly review, the check-in and the restart re-screen MUST each show Get support in the navigation bar. Each asks the self-harm item. The sheet exemption MUST NOT apply to these three screens. When the app shows one of these screens as a sheet, that sheet MUST show Get support.
 
-The control MUST be in the same position on every screen. The control MUST use the text style of the other navigation controls. It MUST have no red, no alert icon and no count.
+On every screen that shows it, the control MUST be in the trailing position of the navigation bar. Except on Today, the leading position MUST hold only "Cancel", "Close" or the system back control. On Today the leading position holds the lock control, as `record` states. On a screen that shows Get support, the confirming action MUST be a full-width button below the content. Examples are "Done" in the review and the check-in, "Save" in the plan builder and "Continue" in onboarding. The control MUST use the text style of the other navigation controls. It MUST have no red, no alert icon and no count. Decision 94 sets the side. Ash ruled it on 25 September 2026.
 
-The control MUST be present on every onboarding screen and the three safeguarding pages. The cover MUST show "Midmorning" and "Unlock" only (`app-lock` owns the cover). One tap on the control MUST open the support sheet. The app MUST NOT hide the control behind a detector, a stage or a setting.
+The control MUST be present on every onboarding screen and the three safeguarding pages. The cover MUST NOT show the control. `app-lock` owns the cover and lists what it shows. One tap on the control MUST open the support sheet. The app MUST NOT hide the control behind a detector, a stage or a setting.
 
 #### Scenario: Today
 - **WHEN** the person is on Today
@@ -423,9 +423,13 @@ The control MUST be present on every onboarding screen and the three safeguardin
 - **WHEN** the person is on "What this is and isn't"
 - **THEN** "Get support" is visible
 
+#### Scenario: The side of the control
+- **WHEN** the person is on "What this is and isn't"
+- **THEN** "Get support" is the trailing item of the navigation bar, and "Continue" is a full-width button below the last line
+
 #### Scenario: The cover
 - **WHEN** app lock is on and the app opens to the cover
-- **THEN** the cover shows "Midmorning" and "Unlock" and no "Get support" control, and "Get support" is visible on Today after the person unlocks
+- **THEN** the cover shows no "Get support" control, and "Get support" is visible on Today after the person unlocks
 
 #### Scenario: New-entry screen
 - **WHEN** the new-entry screen is open as a sheet over Today
@@ -583,7 +587,7 @@ The app can make a negative statement: "It is not therapy." The app can describe
 
 ### Requirement: Regulatory release gates
 
-The team MUST hold a written MHRA classification opinion before it gives any build to a person outside the team. A TestFlight build counts as such a build. A regulatory reviewer MUST review every claim before launch. The reviewer MUST write a dated line in the change's README. The App Store subtitle MUST be "A 12-week self-help programme for people who binge eat".
+The team MUST hold a written MHRA classification opinion before it gives any build to a person outside the team. A TestFlight build counts as such a build. A regulatory reviewer MUST review every claim before launch. The reviewer MUST write a dated line in the change's README. The App Store subtitle MUST be "12-week binge eating programme". App Store Connect accepts at most 30 characters in a subtitle. The first line of the App Store description MUST be "A 12-week self-help programme for people who binge eat." Decision 98 sets both strings. Ash ruled it on 25 September 2026.
 
 The App Store category MUST be Lifestyle. The review notes MUST carry the justification for that category: "a structured self-help programme, not a tracker, and holds no HealthKit data". `data-and-privacy` owns the review notes and the demo video that walks every stage on a device.
 
@@ -605,7 +609,7 @@ The team MUST invite every tester by email. The team MUST NOT create a public Te
 
 #### Scenario: The subtitle
 - **WHEN** a reviewer reads the App Store listing
-- **THEN** the subtitle is "A 12-week self-help programme for people who binge eat"
+- **THEN** the subtitle is "12-week binge eating programme", which has 30 characters, and the first line of the description is "A 12-week self-help programme for people who binge eat."
 
 #### Scenario: Storefront
 - **WHEN** a reviewer checks the App Store availability

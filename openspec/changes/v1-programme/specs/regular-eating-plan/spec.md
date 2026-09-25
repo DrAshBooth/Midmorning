@@ -66,7 +66,7 @@ The builder MUST show the gap between each planned meal and the next as a durati
 
 When a planned meal's time is inside quiet hours, the builder MUST show "This time is in quiet hours. The reminder will not be sent." under it. The builder MUST keep the planned meal. The `reminders` capability defines quiet hours and shows the same string on the settings screen.
 
-The builder MUST save with "Save". The builder MUST discard with "Cancel". Save MUST be quiet, with no confirmation, message or sound. The builder MUST NOT hide Get support.
+The builder MUST save with "Save". The builder MUST discard with "Cancel". Save MUST be quiet, with no confirmation, message or sound. The builder MUST NOT hide Get support. "Cancel" MUST be the leading item of the navigation bar. Get support MUST be the trailing item. "Save" MUST be a full-width button below the planned meals. The `safeguarding` capability owns the side of Get support (decision 94).
 
 #### Scenario: Place a slot
 - **WHEN** the person taps "Breakfast" in the builder on an empty day
@@ -99,6 +99,10 @@ The builder MUST save with "Save". The builder MUST discard with "Cancel". Save 
 #### Scenario: A planned meal inside quiet hours
 - **WHEN** quiet hours run from 22:00 to 07:00 and the person places Evening snack at 22:30
 - **THEN** the builder shows "This time is in quiet hours. The reminder will not be sent." under Evening snack and keeps the planned meal
+
+#### Scenario: Save below the planned meals
+- **WHEN** the person opens "Today's plan" in the builder
+- **THEN** "Cancel" is the leading item of the navigation bar, "Get support" is the trailing item, and "Save" is a full-width button below the planned meals
 
 ### Requirement: Rename a slot in the plan builder
 

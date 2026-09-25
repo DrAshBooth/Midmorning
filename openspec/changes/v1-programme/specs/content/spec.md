@@ -538,6 +538,8 @@ Every string in the content bundle and in every string catalogue MUST follow the
 - A string MUST NOT hold the bare plural "binges".
 - A script MUST generate the README sign-off list from the catalogue ids. The team MUST NOT write the list by hand.
 
+The catalogue key "about.contact" holds the Contact email that the About group shows. The `settings` capability owns the About group. Until the team sets the confirmed email, the key MUST hold the placeholder "contact@example.invalid". The content test MUST pass "about.contact" when it holds the placeholder or an email address. The sentence-case and full-stop rules MUST NOT apply to "about.contact".
+
 #### Scenario: A count without plural forms
 - **WHEN** a catalogue string holds "%lld recorded days" with no plural forms
 - **THEN** the content test fails and names the string's id
@@ -569,6 +571,10 @@ Every string in the content bundle and in every string catalogue MUST follow the
 #### Scenario: The sign-off list
 - **WHEN** the team builds the README sign-off list
 - **THEN** a script generates it from the catalogue ids, and the content test fails when the list and the ids differ
+
+#### Scenario: The Contact placeholder
+- **WHEN** the catalogue key "about.contact" holds "contact@example.invalid"
+- **THEN** the content test passes the key and names no rule
 
 ### Requirement: The content test checks the frozen names file
 

@@ -36,13 +36,15 @@ The `reminders` capability owns the weekly review reminder. Once the next review
 
 ### Requirement: Finish and reopen a review
 
-The review MUST have a "Done" control that stays active at all times. Every part of the review MUST be optional. "Done" MUST save the review. "Done" MUST then close it with the system's standard dismissal.
+The review MUST have a "Done" control that stays active at all times. "Done" MUST be a full-width button below the review's content. Get support MUST be the trailing item of the review's navigation bar, as `safeguarding` states (decision 94). Every part of the review MUST be optional. "Done" MUST save the review. "Done" MUST then close it with the system's standard dismissal.
 
 "Done" MUST work with any answer to the self-harm item and with none. The self-harm requirement states what the store keeps when the item has no answer, and that the app asks it again. The app MUST NOT show a message, a sound, a haptic or an animation on "Done". The person MUST be able to reopen and edit a finished review until the next review becomes due.
 
 The app MUST offer a "Reviews" list of finished reviews, newest first. The `programme` capability places the list one tap from Today. Each row MUST read "Week %1$lld, %2$@. Starred entries: %3$lld." The second placeholder is the week's date range from the en_GB interval formatter. The third is the frozen starred count from the Review row, for example "Week 3, 12–18 October. Starred entries: 4." With "Weekly summary" off, each row MUST read "Week %1$lld, %2$@" only.
 
 The list MUST NOT show an arrow, a colour, a total or a comparison between rows. A row MUST open the review for reading. Each review has its own due day as its key, so after a restart the list can show two runs.
+
+Today MUST NOT show the "Reviews" control until the first review becomes due. From that moment Today MUST show the control. Before the person finishes a review, the list MUST show no rows and no text about the empty list. Decision 95 sets this rule. Ash ruled it on 25 September 2026.
 
 The app MUST save every review in the store on the device. Every Review row MUST carry its own changedAt. The `data-and-privacy` capability owns sync to the person's iCloud private database and Delete-all.
 
@@ -51,6 +53,10 @@ The app MUST NOT put a review answer in the system log or an error. The app MUST
 #### Scenario: Done with empty answers
 - **WHEN** the person answers the self-harm item "No", leaves every other field empty and taps "Done"
 - **THEN** the review closes as any sheet closes, with no message about the empty fields
+
+#### Scenario: Done below the content
+- **WHEN** the person opens the review of week 1
+- **THEN** "Get support" is the trailing item of the navigation bar, and "Done" is a full-width button below the review's content
 
 #### Scenario: Edit before the next review
 - **WHEN** the person finished the review of week 1 on Monday and opens it again on Wednesday
@@ -63,6 +69,14 @@ The app MUST NOT put a review answer in the system log or an error. The app MUST
 #### Scenario: The Reviews list with the summary off
 - **WHEN** "Weekly summary" is off and the person opens the "Reviews" list
 - **THEN** each row shows its week and dates only, with no starred count
+
+#### Scenario: No Reviews control before the first review
+- **WHEN** the start day is Monday 28 September and the person opens Today at 20:00 on Sunday 4 October
+- **THEN** Today shows no "Reviews" control
+
+#### Scenario: The Reviews control appears
+- **WHEN** the start day is Monday 28 September and the person opens Today at 07:00 on Monday 5 October
+- **THEN** Today shows the "Reviews" control, and before the person finishes a review the list shows no rows and no text
 
 #### Scenario: Store error
 - **WHEN** the store fails to save a review with the answer "Evenings were hard"
@@ -242,9 +256,11 @@ After the reflection questions the review MUST ask "What's the one thing to chan
 
 Today MUST show the pinned note in the place the Today stack that `record` defines gives it. Today MUST show it in the same text style as an entry's What. Today MUST show a pin glyph in the text colour beside it. The app MUST NOT add a label, a colour or any other word to the pinned note.
 
-The pinned note MUST stay on Today until the person taps "Done" on the next review. The next review's field MUST start empty. When the next review's field has text on "Done", that text MUST replace the pinned note. When the next review's field is empty on "Done", Today MUST show no pinned note. A tap on the pinned note MUST open its text for editing. When the person clears the text, Today MUST show no pinned note.
+The pinned note MUST stay until the person taps "Done" on the next review. The next review's field MUST start empty. When the next review's field has text on "Done", that text MUST replace the pinned note. When the next review's field is empty on "Done", Today MUST show no pinned note. A tap on the pinned note MUST open its text for editing. When the person clears the text, Today MUST show no pinned note.
 
 The app MUST NOT ask whether the person did the one thing. When the app is not active, Today MUST hide the pinned note.
+
+After a starred entry, Today MUST NOT show the pinned note for the rest of that record day. After an "I binged" urge outcome, Today MUST NOT show the pinned note for the rest of that record day. This rule applies to every Today load that follows the entry or the outcome. Today MUST show the pinned note again the first time Today appears on the next record day. The app MUST NOT change or delete the pinned note's text under this rule. The rule is the same as "No opening card after a binge in the same record day" in `programme`. Decision 90 sets this rule. Ash ruled it on 25 September 2026.
 
 #### Scenario: A pinned note appears
 - **WHEN** the person types "Eat lunch at work" in the one thing field and taps "Done"
@@ -261,6 +277,14 @@ The app MUST NOT ask whether the person did the one thing. When the app is not a
 #### Scenario: Edit from Today
 - **WHEN** the person taps the pinned note, changes it to "Eat lunch by 13:00" and closes it
 - **THEN** Today shows "Eat lunch by 13:00"
+
+#### Scenario: A starred entry holds the pinned note
+- **WHEN** the pinned note is "Eat lunch at work" and the person saves a starred entry at 22:10
+- **THEN** Today shows no pinned note for the rest of that record day, and shows "Eat lunch at work" the first time Today appears after 04:00
+
+#### Scenario: A binge outcome holds the pinned note
+- **WHEN** the pinned note is "Eat lunch at work", the person saves the outcome "I binged" at 23:00 and returns to Today at 23:05
+- **THEN** Today shows no pinned note until the next record day, and the pinned note's text is still "Eat lunch at work"
 
 ### Requirement: The self-harm item at the review
 
@@ -398,7 +422,7 @@ The person can answer the self-harm item "Yes" then "Yes" in a review with a cho
 
 When the system or the person closes the app before "Done", the review can reopen. At that review's "Done" with a chosen module, the app MUST complete the session. The app MUST NOT open a module.
 
-After either "Done", the store MUST keep the chosen module. Stage 6 opens when the session completes, or stays open after a restart, as `programme` defines. The chosen module then stays one tap away on the Programme screen.
+After either "Done", the store MUST keep the chosen module. Stage 6 opens when the session completes, or stays open after a restart, as `programme` defines. The chosen module then stays in the "Tools" group of its stage screen, one tap from the Programme screen.
 
 The app MUST NOT show a sum of the answers. The store MUST keep the five answers, the recommendation and the chosen module. The `dieting-module` and `body-image-module` capabilities own the module screens.
 
@@ -440,11 +464,11 @@ The app MUST NOT show a sum of the answers. The store MUST keep the five answers
 
 #### Scenario: Self-harm Yes then Yes after a module choice
 - **WHEN** the person taps "Open Food rules" in taking stock, answers the self-harm item "Yes" then "Yes", taps "Done" on the not-right-now page, then taps the review's "Done"
-- **THEN** the store keeps Food rules as the chosen module, the app completes the taking stock session and opens no module, and "Food rules" is one tap away on the Programme screen
+- **THEN** the store keeps Food rules as the chosen module, the app completes the taking stock session and opens no module, and "Food rules" is in the "Tools" group of the stage 6 screen
 
 #### Scenario: Reopen after the app closed
 - **WHEN** the person taps "Open Food rules" in taking stock, the system closes the app before "Done", and the person reopens the review and taps the review's "Done"
-- **THEN** the taking stock session is complete, the app opens no module, and "Food rules" is one tap away on the Programme screen
+- **THEN** the taking stock session is complete, the app opens no module, and "Food rules" is in the "Tools" group of the stage 6 screen
 
 #### Scenario: Done with no module chosen
 - **WHEN** the person answers the questionnaire in the review of week 7, taps neither module control, taps the review's "Done", and the review of week 8 becomes due

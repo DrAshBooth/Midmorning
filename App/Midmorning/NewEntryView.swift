@@ -24,7 +24,7 @@ struct NewEntryView: View {
             // Rows sit in the reading order the spec fixes (What, the star,
             // Time), so the visual order equals the VoiceOver order. Save and
             // Cancel stay in the navigation bar, which VoiceOver reads first;
-            // decision 106 settles their place.
+            // decision 106 keeps them there.
             Form {
                 LabeledContent {
                     TextField("", text: $what, axis: .vertical)

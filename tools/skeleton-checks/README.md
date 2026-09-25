@@ -1,7 +1,7 @@
 # Skeleton checks on the simulator
 
 These tools produced the evidence for rows 2.4 to 2.9 and 2.12 of
-`openspec/changes/record-entry-on-today/tasks.md` on 25 September 2026.
+`openspec/changes/archive/2026-09-25-record-entry-on-today/tasks.md` on 25 September 2026.
 They are not part of `./verify`.
 
 - `seeder/` writes seeded stores through `RecordStore.add`, as the app does.

@@ -60,6 +60,8 @@ From the sync change, when the device has an iCloud account, the app MUST read t
 
 After "Get it back" the app MUST turn sync on. The app MUST then start the first import. The app MUST then show screen 1 and screen 4. The app MUST skip screens 2 and 3. On screen 4 the "Your record" section MUST show "This device and my iCloud" as chosen.
 
+While the first import runs, the "Your record" section MUST show one line under its controls: "Getting your record back from iCloud." Screen 4 MUST keep "Start" disabled until the first import completes or fails. When the import completes, the app MUST hide the line and make "Start" active. When the import fails, the line MUST read "Could not get your record back. Try again in Settings." The app MUST then make "Start" active.
+
 The app MUST NOT write a Profile row, a Settings row or a StageOpened row until the first import completes. The start day is a Settings row, so the app MUST NOT write it either. The imported Profile supplies the height, the onboarding BMI, the caution flag and `askedAt`. The app MUST NOT ask the screening questions after "Get it back".
 
 After "Start fresh" the app MUST show "What this is and isn't" with sync off. The app MUST NOT change the record in iCloud after "Start fresh".
@@ -79,6 +81,18 @@ After "Start fresh" the app MUST show "What this is and isn't" with sync off. Th
 #### Scenario: Nothing written before the import completes
 - **WHEN** the person taps "Get it back" and the first import has not completed
 - **THEN** the store holds no Profile row, Settings row or StageOpened row that this device wrote, and no start day
+
+#### Scenario: Screen 4 while the import runs
+- **WHEN** the person taps "Get it back", taps "Continue" on screen 1, and the first import is still running
+- **THEN** screen 4 shows "Getting your record back from iCloud." under "Your record", "Start" is disabled, and a tap on "Start" does nothing
+
+#### Scenario: The import completes on screen 4
+- **WHEN** screen 4 shows "Getting your record back from iCloud." and the first import completes
+- **THEN** the app hides the line, "Start" is active, and a tap on "Start" shows Today with the imported entries
+
+#### Scenario: The import fails on screen 4
+- **WHEN** screen 4 shows "Getting your record back from iCloud." and the first import fails
+- **THEN** the line reads "Could not get your record back. Try again in Settings.", and "Start" is active
 
 #### Scenario: Start fresh
 - **WHEN** the person taps "Start fresh"
@@ -395,7 +409,7 @@ Onboarding MUST say that the programme is not for weight loss on three screens, 
 
 ### Requirement: Finish
 
-"Start" MUST stay active. In the first cut "Your record" has one choice, so the app MUST complete onboarding at once on "Start". From the sync change, "Your record" has two choices. When the person taps "Start" with no choice, the app MUST move VoiceOver focus to "Your record". The app MUST then show "Please answer this one." under the two controls. The app MUST NOT complete onboarding.
+"Start" MUST stay active, with one exception. After "Get it back", "Start" stays disabled while the first import runs, as "Restore before onboarding" states. In the first cut "Your record" has one choice, so the app MUST complete onboarding at once on "Start". From the sync change, "Your record" has two choices. When the person taps "Start" with no choice, the app MUST move VoiceOver focus to "Your record". The app MUST then show "Please answer this one." under the two controls. The app MUST NOT complete onboarding.
 
 When the person taps "Start" with the choice made, the app MUST set the completion flag in Local.store. The app MUST then show Today, as `programme` defines the home screen. The app MUST make the new-entry screen reachable at once, whichever start day the person chose.
 

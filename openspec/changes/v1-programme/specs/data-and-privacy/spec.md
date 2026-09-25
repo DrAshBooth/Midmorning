@@ -106,9 +106,9 @@ When iCloud reports that storage is full, the app MUST pause sync. The settings 
 
 ### Requirement: The app reads iCloud before onboarding
 
-Before onboarding, when the device has an iCloud account, the app MUST read the private database. It MUST look for a sync zone and for the Erasure zone. The onboarding capability owns the question "Your record is in iCloud. Get it back on this device?" and its controls "Get it back" and "Start fresh". When the person taps "Get it back", the app MUST turn sync on. The app MUST then import the zone.
+Before onboarding, when the device has an iCloud account, the app MUST read the private database. It MUST look for a sync zone and for the Erasure zone. The onboarding capability owns the question "Your record is in iCloud. Get it back on this device?" and its controls "Get it back" and "Start fresh". When the person taps "Get it back", the app MUST turn sync on. The app MUST then import the zone. When the first import fails, sync MUST stay on. "Sync now" in the settings screen MUST then start the first import again.
 
-Until the first import completes, the app MUST NOT write a `Profile` or a `Settings` row. Until then the app MUST NOT write a stage-opened row or a start day. While the first import runs, the app MUST show no card. While it runs, the app MUST write no opening moment.
+Until the first import completes or fails, the app MUST NOT write a `Profile` or a `Settings` row. Until then the app MUST NOT write a stage-opened row or a start day. While the first import runs, the app MUST show no card. While it runs, the app MUST write no opening moment.
 
 `Profile` MUST have one fixed id. `Profile` MUST carry no creation moment. When two `Profile` rows share that id, the app MUST keep each field from the row with the later `changedAt`. `Settings` MUST be one row per key, with the key, the value and `changedAt`. When two `Settings` rows share a key, the store keeps the row with the later `changedAt`. So the store keeps a restart's later write of the start day or the height.
 
@@ -129,6 +129,10 @@ The app MUST NOT ask the screening questions again after a restore. The exceptio
 #### Scenario: Two Settings rows for the start day
 - **WHEN** an import finds two `Settings` rows for the start day, changed on 1 September and 20 October after a restart
 - **THEN** the store reads the start day from the row changed on 20 October and keeps both rows
+
+#### Scenario: A failed first import
+- **WHEN** the first import after "Get it back" fails, and the person later taps "Sync now" in the settings screen
+- **THEN** the app starts the first import again
 
 #### Scenario: Nothing written during the first import
 - **WHEN** the person taps "Get it back" and the import takes two minutes

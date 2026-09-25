@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The weigh-in is the one number the programme asks for each week. On the weigh-in day the app asks for one number, then shows a four-week rolling average as a line. The screen treats a weekly number as something to save, not something to watch. Only `safeguarding` reads the trend. Weighing is optional: a person who chose "I won't be weighing" can pick a weigh-in day later from this screen.
+The weigh-in is the one number the programme asks for each week. On the weigh-in day the app asks for one number, then shows a four-week rolling average as a line. The screen treats a weekly number as something to save, not something to watch. Only `safeguarding` reads the trend. Weighing is optional: a person who chose "I won't be weighing" can pick a weigh-in day later from this screen. While no weigh-in day exists, the screen shows no chart, and the store keeps every weigh-in. The person reaches the screen from the "Getting started" stage screen.
 
 ## ADDED Requirements
 
@@ -12,11 +12,13 @@ The weigh-in day is the weekday the person picked at onboarding, or none when th
 
 The store MUST keep it as one settings row with a key, a value and a `changedAt`. When two devices set it, the app keeps the row with the later `changedAt`. The app MUST treat the weigh-in day as the record day whose calendar date falls on that weekday. `record` defines the record day and its day start.
 
-The app MUST let the person change the weigh-in day from the weigh-in screen. The control's label MUST be "Weigh-in day". The setting in the settings screen MUST carry the same label, "Weigh-in day". `reminders` owns the switch "Weigh-in day reminder".
+The app MUST let the person change the weigh-in day from the weigh-in screen. The control's label MUST be "Weigh-in day". The control MUST offer the seven weekdays and "I won't be weighing". The setting in the settings screen MUST carry the same label, "Weigh-in day", and the same choices. `reminders` owns the switch "Weigh-in day reminder".
 
 A change MUST take effect at once. The app MUST NOT show a message about the change. `reminders` owns the weigh-in day reminder and its default time of 07:30.
 
-With no weigh-in day, the weigh-in screen MUST show "Choose a weigh-in day" with the seven weekdays as one-tap choices. The screen MUST then show no weight input and no refusal text. `reminders` MUST NOT schedule a weigh-in day reminder while no weigh-in day exists. `weekly-review` and `staying-on-track` MUST leave the weigh-in part out of every review and check-in while no weigh-in day exists. A tap on a weekday MUST set the weigh-in day at once, with no message. The app MUST then treat the screen as it does after any change of the weigh-in day.
+With no weigh-in day, the weigh-in screen MUST show "Choose a weigh-in day" with the seven weekdays as one-tap choices. The screen MUST then show no weight input, no refusal text, no chart and no explanation. `reminders` MUST NOT schedule a weigh-in day reminder while no weigh-in day exists. `weekly-review` and `staying-on-track` MUST leave the weigh-in part out of every review and check-in while no weigh-in day exists. A tap on a weekday MUST set the weigh-in day at once, with no message. The app MUST then treat the screen as it does after any change of the weigh-in day.
+
+The person can choose "I won't be weighing" after weigh-ins exist. The screen then hides the chart, as the chart rule states. The store MUST keep every weigh-in. When the person picks a weigh-in day again, the chart MUST show every kept weigh-in. Decision 103 sets this rule. Ash ruled it on 25 September 2026.
 
 #### Scenario: Weigh-in after midnight on the weigh-in day
 - **WHEN** the weigh-in day is Monday and the person saves a weigh-in at 01:00 on Tuesday 29 September
@@ -54,13 +56,27 @@ With no weigh-in day, the weigh-in screen MUST show "Choose a weigh-in day" with
 - **WHEN** the person changes the weigh-in day from Monday to Friday
 - **THEN** `reminders` schedules the weigh-in day reminder on Friday at its set time, 07:30 by default
 
+#### Scenario: Opt out after weigh-ins
+- **WHEN** the person has four weigh-ins and picks "I won't be weighing" under "Weigh-in day" on the weigh-in screen
+- **THEN** the screen shows "Choose a weigh-in day" with the seven weekdays, no chart and no explanation, and the store still holds the four weigh-ins
+
+#### Scenario: A weigh-in day again after an opt-out
+- **WHEN** the person has four weigh-ins, the last on Monday 26 October, and no weigh-in day, and taps "Friday" under "Choose a weigh-in day" on Wednesday 4 November
+- **THEN** the screen shows the chart with four points, the explanation, and the refusal text that ends "Next: Friday 6 November."
+
 ### Requirement: The app accepts a weight on the weigh-in day only
+
+The app MUST open the weigh-in screen from the "Weigh-in" row on the "Getting started" stage screen. `programme` owns that screen. From Today the route is "Programme", then "Getting started", then "Weigh-in". A tap on the weigh-in day reminder also opens the screen, as `reminders` states. Decision 93 sets this route. Ash ruled it on 25 September 2026.
 
 On the weigh-in day the weigh-in screen MUST show the weight input and "Save". The app MUST accept at most one weigh-in per weigh-in day. The app MUST NOT accept a weigh-in less than six days after the last one. On any other day the screen MUST NOT show the weight input.
 
 On any other day the screen MUST show the refusal text in the body text style. The refusal text MUST be "Your weigh-in day is %1$@. The app asks once a week, because day-to-day numbers move on their own. Next: %2$@." The app MUST fill %1$@ with the weigh-in day's name. The app MUST fill %2$@ with the date of the next day it accepts a weigh-in. Both values MUST come from the en_GB formatter.
 
 The refusal text MUST have no icon and no colour. The app MUST NOT accept a weight from any other screen, widget, notification action or App Intent. For 10 minutes after "Save", the person MUST be able to change the number. After those 10 minutes the app MUST fix the number. After that, the app MUST NOT let the person change or add a weigh-in for that day.
+
+#### Scenario: The route from Today
+- **WHEN** the weigh-in day is Monday and the person taps "Programme" in Today's bottom toolbar, then "Getting started", then "Weigh-in" at 08:00 on Monday 28 September
+- **THEN** the weigh-in screen opens with the weight input, after three taps from Today
 
 #### Scenario: On the weigh-in day
 - **WHEN** the weigh-in day is Monday and the person opens the weigh-in screen at 08:00 on Monday 28 September
@@ -158,7 +174,7 @@ The app MUST NOT fill a missing week with an estimate, the previous value or zer
 
 ### Requirement: The chart
 
-When at least one weigh-in exists, the weigh-in screen MUST show a chart on every day. The chart MUST show a line through the rolling averages, one per weigh-in, in date order. The chart MUST show every weigh-in as a point.
+When at least one weigh-in and a weigh-in day exist, the weigh-in screen MUST show a chart on every day. While no weigh-in day exists, the screen MUST NOT show the chart. The store keeps the weigh-ins for an export and for a later weigh-in day. The chart MUST show a line through the rolling averages, one per weigh-in, in date order. The chart MUST show every weigh-in as a point.
 
 Each point MUST be at least 6 points across and in the secondary text colour. Each point MUST contrast with the chart's background at 3:1 or more. That contrast MUST hold in light mode, in dark mode and with Increase Contrast on. The line MUST use the primary text colour. The chart MUST use no other colour.
 
@@ -189,6 +205,10 @@ With one weigh-in the chart MUST show one point and no line. Across a missing we
 #### Scenario: No weigh-in day and no weigh-in
 - **WHEN** the person has no weigh-in day and no weigh-in, and opens the screen
 - **THEN** the screen shows "Choose a weigh-in day" and no chart
+
+#### Scenario: Weigh-ins with no weigh-in day
+- **WHEN** the person has four weigh-ins, then chooses "I won't be weighing", and opens the weigh-in screen on any day
+- **THEN** the screen shows "Choose a weigh-in day", no chart and no explanation, and the store still holds the four weigh-ins
 
 ### Requirement: The one-line explanation
 
@@ -338,7 +358,7 @@ The app MUST NOT read from or write to HealthKit. The app MUST NOT request the H
 
 ### Requirement: The weigh-in page in an export
 
-`export` owns the export and the choice to include weigh-ins. That choice MUST be off until the person turns it on. When the person includes weigh-ins, the export MUST add one page. That page MUST list each weigh-in in the date range with its date and its value in the person's unit. The page MUST NOT show a rolling average, a BMI, a goal, a difference between weigh-ins or a chart. When the person does not include weigh-ins, the export MUST hold no weight value.
+`export` owns the export and the choice to include weigh-ins. That choice MUST be off until the person turns it on. When the person includes weigh-ins, the export MUST add one page. That page MUST list each weigh-in in the date range with its date and its value in the person's unit. The page MUST NOT show a rolling average, a BMI, a goal, a difference between weigh-ins or a chart. When the person does not include weigh-ins, the export MUST hold no weight value. While no weigh-in day exists, an export that includes weigh-ins MUST still list the kept weigh-ins.
 
 #### Scenario: Weigh-ins included
 - **WHEN** the person exports 28 September to 26 October with weigh-ins included and the unit "kg"
@@ -347,6 +367,10 @@ The app MUST NOT read from or write to HealthKit. The app MUST NOT request the H
 #### Scenario: Weigh-ins not included
 - **WHEN** the person exports 28 September to 26 October without weigh-ins
 - **THEN** the export holds no weight value
+
+#### Scenario: Weigh-ins after an opt-out
+- **WHEN** the person saved five weigh-ins from 28 September to 26 October, then chose "I won't be weighing", and exports that range with weigh-ins included
+- **THEN** the export has one weigh-in page with five rows
 
 ### Requirement: Accessibility of the weigh-in
 

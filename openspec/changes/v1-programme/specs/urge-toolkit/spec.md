@@ -120,7 +120,7 @@ The urge screen MUST show the person's alternatives list under the wave. The scr
 
 ### Requirement: The alternatives list setup
 
-The setup MUST be reachable from the stage 3 tools and from the urge screen. `programme` owns the stage 3 tools screen and the stage title "Alternatives". The setup's title MUST be "Alternatives list". The list MUST hold at most 10 items. Each item MUST hold at most 80 characters of free text. The setup MUST show examples the person can add with one tap.
+The setup MUST be reachable from the "Alternatives list" row and from the urge screen. That row sits in the "Tools" group of the "Alternatives" stage screen. `programme` owns the stage screen, its "Tools" group and the stage title "Alternatives". The setup's title MUST be "Alternatives list". The list MUST hold at most 10 items. Each item MUST hold at most 80 characters of free text. The setup MUST show examples the person can add with one tap.
 
 The examples MUST be bundled text with the clinical reviewer's sign-off. `content` owns that sign-off. The examples MUST include "Go out for a walk", "Call or message a friend", "Have a shower or a bath", "Do a puzzle or a game", "Go to another room and shut the door", "Put music or a podcast on" and "Do one small job with your hands". An added example MUST become the person's item. The person MUST be able to edit its text.
 
@@ -131,7 +131,7 @@ The app MUST NOT add an item without a tap from the person. The app MUST NOT sho
 The setup MUST show a switch, "Buzz at %lld minutes", with URGE_TIMER_MINUTES in %lld. With the constant at 20 the label reads "Buzz at 20 minutes". The switch MUST be off by default. The timer requirement defines what the switch does.
 
 #### Scenario: The setup's title
-- **WHEN** the person opens the setup from the stage 3 tools
+- **WHEN** the person taps "Alternatives list" in the "Tools" group of the "Alternatives" stage screen
 - **THEN** the screen's title reads "Alternatives list"
 
 #### Scenario: Add an example

@@ -8,11 +8,11 @@ The settings screen holds every switch, time and choice the person can change, i
 
 ### Requirement: One screen, one tap from Today
 
-The app MUST show one settings screen. The person MUST reach it in one tap from Today. The screen MUST show these groups in this order: Reminders, Record, Weigh-in, Privacy, About. Get support MUST stay in the navigation bar.
+The app MUST show one settings screen. The person MUST reach it in one tap from Today. The control "Settings" MUST sit in Today's bottom toolbar, as text, in the Today stack that `record` defines. The screen MUST show these groups in this order: Reminders, Record, Weigh-in, Privacy, About. Get support MUST stay in the navigation bar.
 
 #### Scenario: Reach the settings screen
-- **WHEN** the person is on Today
-- **THEN** one tap opens the settings screen
+- **WHEN** the person is on Today and taps "Settings" in the bottom toolbar
+- **THEN** the settings screen opens after that one tap
 
 ### Requirement: The Reminders group
 

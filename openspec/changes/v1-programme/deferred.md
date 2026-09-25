@@ -49,7 +49,7 @@ When Ash archives an owning change, Ash moves its rows to that change's README. 
 | programme | The Programme screen shows where the person is | The first cut builds the other scenarios | 3.2b taking-stock, 3.5 body-image-module, 3.6 staying-on-track | mm-t32b.3, mm-t35.12, mm-t36.15 |
 | programme | The card's answer is kept in the record | The first cut builds the other scenarios | 4.1b sync | mm-t41b.11 |
 | programme | The constants live in one value | The first cut builds the other scenarios | 3.1 urge-toolkit | mm-t31.17 |
-| programme | The seven stages and their tools | Rows show their opening rule; no tool opens beyond stage 2 | 3.1 urge-toolkit, 3.2b taking-stock, 3.3 problem-solving, 3.4 food-rules, 3.5 body-image-module, 3.6 staying-on-track | mm-t31.15, mm-t32b.3, mm-t33.16, mm-t34.13, mm-t35.12, mm-t36.15 |
+| programme | The seven stages and their tools | The rows of stages 3 to 7 show "Comes in a later version", carry no "Now" marker and open nothing on a tap (decision 102). No tool opens beyond stage 2, so the "Tools" groups hold only "Weigh-in" and "Plan" | 3.1 urge-toolkit, 3.2b taking-stock, 3.3 problem-solving, 3.4 food-rules, 3.5 body-image-module, 3.6 staying-on-track | mm-t31.15, mm-t32b.3, mm-t33.16, mm-t34.13, mm-t35.12, mm-t36.15 |
 | programme | Today is home | The first cut builds the other scenarios | 3.2b taking-stock | mm-t32b.3 |
 | record | The Today stack | The first cut builds the other scenarios | 3.1 urge-toolkit, 3.3 problem-solving | mm-t31.17, mm-t33.16 |
 | regular-eating-plan | A missed planned meal gets one prompt | Two forms only: "Skipped" and "Add it" | 3.3 problem-solving | mm-t33.14 |

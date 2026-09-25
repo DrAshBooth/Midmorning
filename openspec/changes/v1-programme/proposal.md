@@ -167,6 +167,37 @@ The data-model review's findings need no decision; the team applies them. Every 
 82. Each repeat of taking stock opens the same session with the answers saved so far, from any taking-stock row.
 83. A Feeling fat note follows the entry rule: an edit keeps the time inside the note's own record day.
 
+## Decisions Ash made on 25 September 2026, after the final bead review
+
+84. The co-design panel sees the record in person two times: after 1.2b merges, on Ash's device, and on cut zero.
+85. Before iOS asks for permission, Today's line reads "Allow notifications to get reminders." After a refusal it reads "Notifications are off in iOS Settings." This refines decision 39.
+86. The new-entry screen's order is What, Where, "felt like a binge", Context, Time, so the Context label that the star changes sits under the star.
+87. A "Save" control sits in the keyboard's accessory bar and in the navigation bar. What stays multi-line.
+88. The time control is two record-day segments, named as Today's headings name the days, and the system hour-and-minute wheel. The edit screen shows one segment.
+89. What, Context and "Add a place" keep autocorrection and sentence capitalisation, and turn off inline predictions. A device check confirms that the keyboard does not offer a What back.
+90. After a starred entry or an "I binged" outcome, Today holds the pinned note until the next record day, as it holds the cards.
+91. Today uses a notes-style shell: the lock glyph and "Get support" in the bar, "Programme", "Reviews" and "Settings" in a bottom toolbar, and one pinned "Add an entry". This refines decision 38.
+92. A product-rules "Appearance" requirement, a shared Appearance.swift and one sober accent colour give every worktree one look. The panel confirms the accent colour.
+93. A tap on a stage row opens a stage screen with its cards and, for an open stage, a "Tools" group. The weigh-in route is Today, Programme, Getting started, Weigh-in.
+94. "Get support" is the trailing bar item on every screen that shows it. A screen's confirming action is a full-width button below the content.
+95. "Reviews" and "Earlier days" appear only when they have something to show. "New worksheet" sits above an empty "Worksheets" list, with no text.
+96. After "Get it back", onboarding screen 4 stays, with a status line and "Start" disabled, until the import completes or fails.
+97. The agent writes draft bodies for the stage 1 and 2 cards under the Draft flag. The clinical reviewer replaces them.
+98. The App Store subtitle is "12-week binge eating programme". The long sentence is the first line of the description.
+99. One human bead confirms the legal entity, the organisation account, the support domain, the support page and the Contact email. mm-t43.17 waits for it.
+100. The stage 7 lapse card is the one card that appears in the same record day as the starred entry.
+101. One clinical walk of the after-binge paths occurs before the launch build.
+102. In the first TestFlight cut, the rows of stages 3 to 7 show a neutral "Comes in a later version", with no marker and no tap.
+103. The weigh-in screen hides the chart while no weigh-in day exists. The weigh-ins stay for the export and for a later opt-in.
+104. "Add" on a planned meal reminder sets the entry time to now. "Add it" keeps the planned time.
+105. Every reminder plays the system default sound.
+
+## Decisions Ash made on 25 September 2026, after the simulator checks of the skeleton
+
+106. Cancel and Save stay in the navigation bar of the new-entry and edit screens, and VoiceOver reads them before the content. Focus moves to What when the screen opens. "Delete entry" stays last on the edit screen.
+
+Ash closed mm-t10 with a draft of the skeleton's shame walk from simulator screenshots, in place of a walk on the built app. The walk in mm-t12b.1 is the first by a person.
+
 ## Assumptions the specs make where the PRD is silent
 
 Each spec lists its own under its Purpose or in the writer's report. The design lists the ones that shape the data model.

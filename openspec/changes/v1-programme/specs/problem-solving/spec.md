@@ -287,6 +287,8 @@ The worksheet MUST have a "Done" control that closes the worksheet with the syst
 
 The "Worksheets" list MUST show every saved worksheet, newest first by the moment the person started it. Each row MUST show the first line of step 1 and the worksheet's start date. The date MUST come from the en_GB formatter. When step 1 is empty, the row MUST show "Worksheet" and the date.
 
+The "New worksheet" control MUST sit above the "Worksheets" list. When no worksheet exists, the screen MUST show "New worksheet" above an empty list. The app MUST NOT show text or an image in place of the rows. Decision 95 sets this rule. Ash ruled it on 25 September 2026.
+
 The list MUST NOT show a count of worksheets or a count of finished steps. A worksheet MUST show its linked pattern sentence above step 1 as the sentence read when the worksheet started. The app MUST NOT change the linked sentence when the numbers change later.
 
 A worksheet started from "New worksheet" MUST have no linked sentence and no empty space for one. The person MUST be able to open and edit any worksheet at any time. The person MUST be able to delete a worksheet after the system's standard confirmation. A delete MUST write `deleted = true` and the moment into the worksheet row. The store MUST NOT hard-delete the row. A reader MUST NOT show a deleted worksheet.
@@ -304,6 +306,10 @@ When the person deletes a worksheet, the app MUST cancel its worksheet review re
 #### Scenario: A worksheet without a problem name
 - **WHEN** a worksheet started on 3 October has an empty step 1
 - **THEN** its row shows "Worksheet" and "3 October"
+
+#### Scenario: No worksheet yet
+- **WHEN** stage 4 is open, the person has no worksheet and opens the Problem solving screen
+- **THEN** the screen shows "New worksheet" above an empty "Worksheets" list, with no text or image in place of the rows
 
 #### Scenario: Delete a worksheet
 - **WHEN** the person deletes a worksheet with a worksheet review reminder set for 17 October

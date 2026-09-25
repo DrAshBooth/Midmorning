@@ -42,9 +42,9 @@ Each stage adds tools on top of the tools before it. A tool MUST stay open in ev
 
 The app MUST open on Today at every launch, in every stage. Today is home from day 1 because the record is the core. From stage 2, Today also shows the plan beside the record. Regular-eating-plan owns the plan beside the record. The app MUST NOT open on the Programme screen, a card or an opening card.
 
-Record owns the Today navigation bar. Record owns the bar's contents. The Programme screen MUST be one tap from Today. The "Reviews" list MUST be one tap from Today. Weekly-review owns the list.
+Record owns Today's navigation bar, its bottom toolbar and their contents. The Programme screen MUST be one tap from Today, through "Programme" in the bottom toolbar. From the moment the first weekly review becomes due, the "Reviews" list MUST be one tap from Today. That tap is on "Reviews" in the bottom toolbar. Before that moment, Today shows no "Reviews" control, as weekly-review states. Weekly-review owns the list.
 
-The settings screen MUST be one tap from Today. Get support MUST be in the navigation bar of every screen. Safeguarding owns the button.
+The settings screen MUST be one tap from Today, through "Settings" in the bottom toolbar. Get support MUST be in the navigation bar of every screen. Safeguarding owns the button.
 
 From the end of onboarding until stage 2 opens, Today MUST show a "Getting started" line. A tap on the line MUST show the stage 1 cards. Record owns the line's place in the Today stack. When stage 2 opens, the app MUST take the line off Today. The line MUST NOT depend on the week.
 
@@ -69,8 +69,12 @@ From the end of onboarding until stage 2 opens, Today MUST show a "Getting start
 - **THEN** Today shows no "Getting started" line from the next Today load, and the stage 1 cards stay open on the Programme screen
 
 #### Scenario: One tap to each screen
-- **WHEN** the person is on Today
-- **THEN** one tap reaches the Programme screen, one tap reaches the "Reviews" list, one tap reaches the settings screen, and one tap reaches Get support
+- **WHEN** the person is on Today and the first weekly review has become due
+- **THEN** one tap on "Programme", "Reviews" or "Settings" in the bottom toolbar reaches the Programme screen, the "Reviews" list or the settings screen, and one tap reaches Get support in the navigation bar
+
+#### Scenario: Before the first weekly review
+- **WHEN** the person is on Today in week 1 and no weekly review has become due
+- **THEN** one tap on "Programme" or "Settings" in the bottom toolbar reaches the Programme screen or the settings screen, and the bottom toolbar shows no "Reviews"
 
 ### Requirement: Weeks count from the start day
 
@@ -260,7 +264,7 @@ After a restart, the app MUST count weeks of regular eating from the new start d
 
 ### Requirement: Reading ahead is never blocked
 
-The app MUST let the person open every card of every stage from day 1. The Programme screen MUST list every stage, open or closed. A tap on a closed stage MUST open its cards. The app MUST NOT show a tool before its stage opens. In a closed stage, the Programme screen MUST show the opening rule in plain words in place of the tools.
+The app MUST let the person open every card of every stage from day 1. The Programme screen MUST list every stage, open or closed. A tap on a closed stage's row MUST open its stage screen, which lists its cards. The stage screen rule below owns that screen. The app MUST NOT show a tool before its stage opens. In a closed stage, the Programme screen MUST show the opening rule in plain words in place of the tools. The Programme screen rule below states what a row shows in a build without the stage's tool.
 
 The rule strings are, in stage order from stage 2:
 
@@ -277,7 +281,7 @@ The app MUST show the count in the same text style as every row. The screen MUST
 
 #### Scenario: Stage 4 cards on day 1
 - **WHEN** the person taps "Problem solving" on the Programme screen on day 1
-- **THEN** the app shows the stage's cards and no worksheet
+- **THEN** the app shows the "Problem solving" stage screen with the stage's cards, no "Tools" group and no worksheet
 
 #### Scenario: A closed stage's row
 - **WHEN** stage 2 is closed and the person has two recorded days
@@ -392,7 +396,7 @@ While the first import after sync turns on is running, the app MUST show no card
 
 The app MUST NOT show an opening card after a starred entry in the same record day. The app MUST NOT show an opening card after an "I binged" urge outcome in the same record day. This rule applies to every Today load that follows the entry or the outcome. The card MUST wait for the next record day.
 
-The stage MUST open at once. Only the card waits. The app MUST show the card the first time Today appears on the next record day. The same rule applies to the stage 1 cards on Today, the plan card and the Focus card below.
+The stage MUST open at once. Only the card waits. The app MUST show the card the first time Today appears on the next record day. The same rule applies to the stage 1 cards on Today, the plan card and the Focus card below. This rule does not cover the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card alone can show in the same record day as the starred entry or the outcome. Decision 100 sets this exception.
 
 #### Scenario: The fifth recorded day ends with a starred entry
 - **WHEN** the person saves a starred entry at 22:10 that makes the fifth recorded day
@@ -508,7 +512,9 @@ The Programme screen's title MUST be "Programme". The screen MUST show one week 
 
 After a restart, the "Now" marker moves. It MUST sit on the lowest stage whose week gate has not passed since the restart. When every week gate has passed since the restart, the rule above applies again.
 
-A row of an open stage MUST show its title and its tools. The stage 6 row MUST name the dieting module "Food rules". A row of a closed stage MUST show its title and its opening rule.
+A row of an open stage MUST show its title and its tools. The stage 6 row MUST name the dieting module "Food rules". A row of a closed stage MUST show its title and its opening rule. A tap on a row MUST push the stage screen for that stage. The stage screen rule below owns that screen.
+
+A build can lack a stage's tool, as the opening card rule above states. In such a build, the stage's row MUST show "Comes in a later version" under its title. That line MUST replace the row's tools or its opening rule. The row MUST NOT carry the "Now" marker. In its place, the marker MUST sit on the nearest earlier open stage whose tool the build has. A tap on the row MUST NOT open anything. Decision 102 sets this rule. Ash ruled it on 25 September 2026.
 
 The screen MUST NOT show a progress bar, a percentage or a tick. The count toward a gate appears only inside the gate's rule string, as plain text. The screen MUST NOT show a count of entries or starred entries. The screen MUST NOT show any text about time since the last entry or the last visit. Every row MUST have the same visual weight, open or closed.
 
@@ -541,6 +547,66 @@ The screen MUST show "Start week 1 again" under the stage rows, at all times aft
 #### Scenario: The marker after a restart
 - **WHEN** every stage was open, the person restarted with the start day Monday 4 January 2027, and the current record day is Monday 18 January
 - **THEN** the screen shows "Taking stock" with "Now" and "Opens 6 weeks after your plan starts", and no "Now" on any other row
+
+#### Scenario: Stages without their tools in the build
+- **WHEN** the build holds the tools of stages 1 and 2 only, and stages 1 to 4 are open
+- **THEN** "Regular eating" carries "Now", the rows of stages 3 to 7 each show "Comes in a later version" and no "Now", and a tap on the "Alternatives" row opens nothing
+
+### Requirement: The stage screen
+
+A tap on a stage row on the Programme screen MUST push the stage screen for that stage. The Programme screen rule above states the one exception, a row that shows "Comes in a later version". The stage screen's title MUST be the stage title. Decision 93 sets this screen. Ash ruled it on 25 September 2026.
+
+Under the title, the screen MUST show one line. For a closed stage, the line MUST be the stage's rule string. For an open stage, the line MUST be "Opened in week %lld". The app MUST fill %lld with the week of the record day on which the stage opened. For stage 1, that record day is the start day. When that record day or the current record day is before week 1, the screen MUST show no line.
+
+Under the line, the screen MUST show the stage's card list. `content` owns the card list and the card screen.
+
+For an open stage, the screen MUST show a "Tools" group under the card list. For a closed stage, the screen MUST NOT show the group. The group MUST hold one row per tool of the stage. The rows are, by stage number:
+
+1. "Weigh-in", which opens the weigh-in screen that `weigh-in` owns.
+2. "Plan", which opens the plan builder at "Weekday plan", as "Set it up" on the plan card does. `regular-eating-plan` owns the plan builder.
+3. "Alternatives list", which opens the alternatives list setup that `urge-toolkit` owns.
+4. "Problem solving", which opens the Problem solving screen that `problem-solving` owns.
+5. "Taking stock", which opens the taking stock session that `weekly-review` owns, as its row in the "Reviews" list opens it.
+6. "Food rules" and "Body image", which open the module screens that `dieting-module` and `body-image-module` own.
+7. "Staying on track", which opens the maintenance plan that `staying-on-track` owns.
+
+A tap on a tool row MUST open that tool's screen. Each tool's own capability owns what its screen shows.
+
+The screen MUST NOT show a progress bar, a percentage, a tick or a count. The one exception is the count inside the stage 2 rule string. The screen MUST show Get support in the navigation bar. `safeguarding` owns the button.
+
+The title and "Tools" MUST be headings for VoiceOver. Each tool row MUST be one accessibility element, with its visible text as its label. Text on the screen MUST use system text styles. That text MUST scale with Dynamic Type.
+
+#### Scenario: The stage 1 screen
+- **WHEN** the start day is Monday 28 September 2026, the current record day is Wednesday 30 September, and the person taps "Getting started" on the Programme screen
+- **THEN** the app pushes a screen titled "Getting started" with the line "Opened in week 1", the stage 1 card list, and a "Tools" group with one row, "Weigh-in"
+
+#### Scenario: A closed stage's screen
+- **WHEN** stage 2 is closed, the person has two recorded days, and taps "Regular eating" on the Programme screen
+- **THEN** the screen's title is "Regular eating", its line reads "Opens after 5 recorded days. You have 2.", it lists the stage 2 cards, and it shows no "Tools" group
+
+#### Scenario: An open stage's screen
+- **WHEN** the start day is Monday 28 September 2026, stage 2 opened on Monday 5 October, and the person taps "Regular eating"
+- **THEN** the screen shows "Regular eating", the line "Opened in week 2", the stage 2 cards, and a "Tools" group with one row, "Plan"
+
+#### Scenario: A tool row
+- **WHEN** stage 2 is open and the person taps "Plan" on the "Regular eating" stage screen
+- **THEN** the plan builder opens at "Weekday plan"
+
+#### Scenario: The stage 1 screen before week 1
+- **WHEN** the person picked tomorrow as the start day and taps "Getting started" today
+- **THEN** the screen shows no line under the title, the stage 1 card list, and a "Tools" group with "Weigh-in"
+
+#### Scenario: A stage that opened before a restart
+- **WHEN** stage 2 opened on Monday 5 October 2026, the person restarted with the start day Monday 4 January 2027, and taps "Regular eating" on Wednesday 6 January
+- **THEN** the screen shows no line under the title, the stage 2 card list, and a "Tools" group with "Plan"
+
+#### Scenario: Get support on the stage screen
+- **WHEN** the person opens the stage screen of any stage
+- **THEN** the navigation bar shows Get support
+
+#### Scenario: VoiceOver on the stage screen
+- **WHEN** a person using VoiceOver opens the "Getting started" stage screen in week 2
+- **THEN** VoiceOver reads "Getting started" as a heading, then "Opened in week 1", then the card titles, then "Tools" as a heading, then "Weigh-in"
 
 ### Requirement: Start week 1 again
 
@@ -757,7 +823,7 @@ The one-tap restart that keeps the plan and lists is "Start week 1 again". The r
 
 ### Requirement: Accessibility of the Programme screen
 
-Each stage row MUST be one accessibility element. The row's label MUST hold the title. Then it MUST hold "Now" when the row carries the marker. Then it MUST hold the rule string when the stage is closed. A comma and a space MUST separate the parts.
+Each stage row MUST be one accessibility element. The row's label MUST hold the title. Then it MUST hold "Now" when the row carries the marker. Then it MUST hold the rule string or "Comes in a later version" when the row shows one. A comma and a space MUST separate the parts.
 
 Every control on the Programme screen and the opening card MUST have a VoiceOver label. The label of a control with visible text MUST equal the visible text. "Open", "Close", "Read", "Set it up", "Yes" and "Start week 1 again" MUST have those labels.
 
@@ -774,6 +840,10 @@ Text on the Programme screen and the opening card MUST use system text styles. T
 #### Scenario: Label of the stage 2 row with its count
 - **WHEN** VoiceOver reads the row of the closed stage "Regular eating" and the person has two recorded days
 - **THEN** it reads "Regular eating, Opens after 5 recorded days. You have 2."
+
+#### Scenario: Label of a row without its tool in the build
+- **WHEN** VoiceOver reads the "Problem solving" row in a build without the stage 4 tool
+- **THEN** it reads "Problem solving, Comes in a later version"
 
 #### Scenario: Largest text size
 - **WHEN** the person sets the largest accessibility text size
