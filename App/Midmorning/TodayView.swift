@@ -1,5 +1,5 @@
 import SwiftUI
-import RecordCore
+import Record
 
 /// The record day's entries as a time-ordered column, like the paper record.
 struct TodayView: View {
@@ -7,8 +7,8 @@ struct TodayView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var day = RecordDay.interval(containing: Date(), calendar: .current)
-    @State private var todayEntries: [Entry] = []
-    @State private var previousEntries: [Entry] = []
+    @State private var todayEntries: [RecordRow] = []
+    @State private var previousEntries: [RecordRow] = []
     @State private var isNight = false
     @State private var showingNewEntry = false
     @State private var scrollTarget: UUID?
@@ -82,7 +82,7 @@ struct TodayView: View {
 /// One row: time, the asterisk when starred, What when not empty. Every row
 /// has the same layout whatever the time since the previous entry.
 struct EntryRow: View {
-    let entry: Entry
+    let entry: RecordRow
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {

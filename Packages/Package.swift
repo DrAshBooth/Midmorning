@@ -8,14 +8,17 @@ let package = Package(
     name: "Midmorning",
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
-        .library(name: "RecordCore", targets: ["RecordCore"]),
+        .library(name: "Record", targets: ["Record"]),
+        .library(name: "Constants", targets: ["Constants"]),
         .library(name: "Content", targets: ["Content"]),
         .executable(name: "content-lock", targets: ["ContentLockTool"]),
         .executable(name: "content-signoff-list", targets: ["ContentSignOffListTool"]),
     ],
     targets: [
-        .target(name: "RecordCore"),
-        .testTarget(name: "RecordCoreTests", dependencies: ["RecordCore"]),
+        .target(name: "Constants"),
+        .target(name: "Record", dependencies: ["Constants"], resources: [.copy("FrozenSchema.json")]),
+        .testTarget(name: "ConstantsTests", dependencies: ["Constants"]),
+        .testTarget(name: "RecordTests", dependencies: ["Record"]),
         // The content spec fixes this package's path, `Packages/Content`,
         // because the content-lock file and the sign-off files live at a
         // literal, spec-named path that tooling reads directly.
