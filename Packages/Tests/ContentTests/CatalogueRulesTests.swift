@@ -76,8 +76,8 @@ final class CatalogueRulesTests: XCTestCase {
 
     /// Scenario: The sign-off list
     func testTheReadmeSignOffListMatchesTheCatalogueIds() throws {
-        let readmeURL = RepositoryRoot.path.appendingPathComponent("openspec/changes/content-pipeline/README.md")
-        let readme = try String(contentsOf: readmeURL, encoding: .utf8)
+        let signOffListURL = RepositoryRoot.path.appendingPathComponent("Packages/Content/SIGNOFF.md")
+        let readme = try String(contentsOf: signOffListURL, encoding: .utf8)
         let listed = signOffListIds(in: readme)
         XCTAssertFalse(listed.isEmpty, "the README's Sign-off list section should not be empty")
         let expected = Set(Shipped.bundle.cards.map(\.id) + Shipped.bundle.strings.map(\.id))

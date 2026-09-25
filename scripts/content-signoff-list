@@ -1,6 +1,7 @@
 #!/bin/bash
-# Prints every catalogue id, sorted, one per line, for the build change
-# README's "Sign-off list" section. Run by hand; not part of ./verify.
+# Prints every catalogue id, sorted, one per line, for the "Sign-off list"
+# section of Packages/Content/SIGNOFF.md. Run by hand and paste the result
+# in; not part of ./verify.
 #
 # Usage: scripts/content-signoff-list
 set -euo pipefail

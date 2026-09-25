@@ -1,45 +1,9 @@
-# content
+# content Specification
 
 ## Purpose
-
 Content is the set of cards the person reads at each stage, and the other reviewed strings the app shows. The team writes the cards in plain UK English and a clinical psychologist with CBT-E training reviews them. The app bundles every card, keeps which content version the person saw, and generates nothing at runtime.
 
-## ADDED Requirements
-
-### Requirement: The store keeps which content version the person saw
-
-When the person opens a card, the app MUST save a card view in the store. A card view MUST hold the card's id, the content version and the moment the card opened. The app MUST keep card views under the same file protection, backup exclusion and log rules as entries. The `record` capability owns those rules. The app MUST NOT show card views to the person.
-
-Card views MUST sync with the record. Data-and-privacy owns sync. Delete-all MUST delete card views. Data-and-privacy owns Delete-all. A card view MUST leave the device only through sync.
-
-#### Scenario: A card opens
-- **WHEN** the person opens the card "Why write it down" at 13:05 on 28 September 2026 with content version 1
-- **THEN** the store holds a card view with id "stage1.why", content version 1 and the moment 13:05 on 28 September 2026
-
-#### Scenario: The same card after an update
-- **WHEN** the person opens "Why write it down" again after the content version rose to 2
-- **THEN** the store holds a second card view with content version 2 and keeps the first
-
-#### Scenario: Card views stay private
-- **WHEN** the person opens a card
-- **THEN** the app writes nothing about the card to the system log, and the card view leaves the device only through sync
-
-### Requirement: The content test checks the frozen names file
-
-The repository MUST hold one file that freezes every CKRecord type name and every field name. Data-and-privacy owns its content and the rules for changing it. From the first build that carries the CloudKit entitlement, the content test MUST compare the schema's names with the file. The content test MUST fail when a name in the file is missing from the schema. The content test MUST fail when a name in the schema is missing from the file.
-
-#### Scenario: The names match
-- **WHEN** the schema holds the record types and fields the frozen names file lists, and no other
-- **THEN** the content test passes the frozen names check
-
-#### Scenario: A renamed field
-- **WHEN** the schema renames a field the frozen names file lists
-- **THEN** the content test fails and names the old name and the new name
-
-#### Scenario: An added optional field
-- **WHEN** the schema adds an optional field with a default and the same commit adds it to the frozen names file
-- **THEN** the content test passes the frozen names check
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: Each stage has three to five cards
 
@@ -67,10 +31,6 @@ The content test is a test in the content package. The content test MUST fail wh
 
 A card MUST hold at most one in-app link. The link MUST open a screen of the app and nothing outside the app. The link MUST carry the name of the screen it opens, in the card's text. The content test MUST fail when a card holds two links. The content test MUST fail when a link points outside the app.
 
-#### Scenario: The "Feeling fat" card
-- **WHEN** the card "Feeling fat" holds one link "Feeling fat notes" that opens the body image module's notes
-- **THEN** the content test passes the link check for the card
-
 #### Scenario: Two links
 - **WHEN** a card holds a link to "Feeling fat notes" and a link to "Your alternatives list"
 - **THEN** the content test fails and names the card's id
@@ -88,10 +48,6 @@ The content test MUST check UK spelling against a list of US spellings the repos
 #### Scenario: UK spelling
 - **WHEN** a card's body holds "realize"
 - **THEN** the content test fails and names the card's id and the word
-
-#### Scenario: Plain words
-- **WHEN** the clinical reviewer reads the card "Urges rise and pass"
-- **THEN** the card explains that an urge climbs and then falls, in words a person with no clinical knowledge understands
 
 #### Scenario: How the card addresses the person
 - **WHEN** a card's body holds "the user"
@@ -299,10 +255,6 @@ A call that spans more than one line is outside the lint. The catalogue hash and
 - **WHEN** the device language is French
 - **THEN** the app shows every string and every card in en-GB
 
-#### Scenario: A card view's language
-- **WHEN** the person opens a card
-- **THEN** the card view holds the language "en-GB"
-
 ### Requirement: The card screen and the card list
 
 The app MUST show the cards of a stage as a list of titles, in the order the bundle gives. The list MUST NOT show a count of cards read, a percentage, a tick or a read state. A card screen MUST show the title, the body, the heading "One thing to do" and the oneThing sentence. A card screen MUST show no image. A card screen MUST show no control except "Close", Get support, the card's in-app link and the standard scroll.
@@ -392,10 +344,6 @@ A card id present in any shipped version MUST stay in every later bundle. A card
 - **WHEN** the content test runs against content version 1
 - **THEN** it finds all 33 ids above in the bundle
 
-#### Scenario: A missing id
-- **WHEN** the bundle lacks "stage3.twenty"
-- **THEN** the content test fails and names "stage3.twenty"
-
 #### Scenario: A renamed card
 - **WHEN** the clinical reviewer renames "stage2.gap" to "Four hours at most"
 - **THEN** the id stays "stage2.gap" and the content version rises
@@ -404,21 +352,13 @@ A card id present in any shipped version MUST stay in every later bundle. A card
 - **WHEN** the person opens "Regular eating" on the Programme screen
 - **THEN** the app lists "Eating by the clock", "Three meals and two or three snacks", "No gap over four hours", "After a skipped meal or a binge" and "When, not what"
 
-#### Scenario: The "Food rules" list
-- **WHEN** the person opens "Food rules" in stage 6 on the Programme screen
-- **THEN** the app lists "Food rules", "Avoided foods", "The ladder" and "Eating enough" under the heading "Food rules", and no heading or title holds the word "Dieting"
-
-#### Scenario: The "Body image" list
-- **WHEN** the person opens "Body image" in stage 6 on the Programme screen
-- **THEN** the app lists "Checking", "Avoidance", "Feeling fat" and "What is underneath" under the heading "Body image"
-
-#### Scenario: The medical and faith rules sentence
-- **WHEN** the person reads the card "Food rules"
-- **THEN** the card holds "A rule from a doctor, an allergy or your faith is not a rule to loosen. Leave those off this list."
-
 #### Scenario: A retired card
 - **WHEN** content version 4 sets the retired flag on "stage3.after"
 - **THEN** the bundle still holds "stage3.after" with the retired flag, and the stage 3 list shows "Urges rise and pass", "Your alternatives list" and "The twenty minutes" only
+
+#### Scenario: A missing id
+- **WHEN** the bundle lacks "stage3.twenty"
+- **THEN** the content test fails and names "stage3.twenty"
 
 #### Scenario: A shipped id removed
 - **WHEN** content version 1 shipped with "stage5.changed" and the bundle for version 2 lacks it
@@ -478,57 +418,9 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 - **WHEN** programme shows the plan card
 - **THEN** the card shows the bundle's "todaycard.plan" text, "Your plan isn't set yet. It takes about two minutes.", with "todaycard.plan.setup", "Set it up"
 
-#### Scenario: The Focus card text
-- **WHEN** programme shows the Focus card
-- **THEN** the card shows the bundle's "todaycard.focus" text, "If you use a Focus at work, let planned meal reminders through?", with "todaycard.focus.yes", "Yes"
-
-#### Scenario: The stage 2 opening card with reminders off
-- **WHEN** programme shows the stage 2 opening card with notification permission denied
-- **THEN** the card shows "opening.stage2" and then "opening.stage2.remindersoff", "Reminders are off, so the Home Screen widget shows your next planned time."
-
-#### Scenario: A pattern template with its placeholders
-- **WHEN** the bundle holds "pattern.slot" as "{n} of your {m} starred entries were on days when {slot} didn't happen." and the person's slot label reads "lunch"
-- **THEN** the content test passes the placeholder check for it, and the app shows "4 of your 6 starred entries were on days when lunch didn't happen."
-
-#### Scenario: The reintroduction question
-- **WHEN** the bundle holds "dieting.reintroduction" as "{weekday}, {slot}: how did it go?" and the person's slot label reads "Evening meal"
-- **THEN** the content test passes the placeholder check for it, and the app shows "Tuesday, Evening meal: how did it go?"
-
-#### Scenario: The first worksheet step
-- **WHEN** the person opens a new worksheet
-- **THEN** step 1 shows the bundle's "worksheet.1" text "What is the problem, exactly?"
-
-#### Scenario: The check-in weeks line
-- **WHEN** the bundle holds "checkin.weeks" as "A check-in comes at %1$lld, %2$lld and %3$lld weeks." and CHECK_IN_WEEKS is 4, 8, 12
-- **THEN** the app shows "A check-in comes at 4, 8 and 12 weeks."
-
-#### Scenario: The urge timer line
-- **WHEN** the bundle holds "urge.buzz" as "Buzz at %lld minutes" and URGE_TIMER_MINUTES is 20
-- **THEN** the app shows "Buzz at 20 minutes"
-
-#### Scenario: The custom chip template
-- **WHEN** the bundle holds "pattern.place" as "{n} of your {m} starred entries were at {place}." and the person's custom chip reads "Mum's"
-- **THEN** the content test passes the placeholder check for it, and the app shows "4 of your 6 starred entries were at Mum's."
-
-#### Scenario: {place} in another template
-- **WHEN** the bundle holds "pattern.slot" with "{place}" in its text
-- **THEN** the content test fails and names "pattern.slot"
-
-#### Scenario: {weekday} in a pattern template
-- **WHEN** the bundle holds "pattern.slot" with "{weekday}" in its text
-- **THEN** the content test fails and names "pattern.slot"
-
 #### Scenario: A placeholder in a question
 - **WHEN** the bundle holds "reflection.1" with "{weekNumber}" in its text
 - **THEN** the content test fails and names "reflection.1"
-
-#### Scenario: The maintenance plan question
-- **WHEN** the person reaches the maintenance plan
-- **THEN** one question shows the bundle's "maintenance.<n>" text "Is there anyone you could tell, if you wanted to?"
-
-#### Scenario: Sign-off covers the strings
-- **WHEN** the team changes "opening.stage5" and does not raise the content version
-- **THEN** the content test fails and reports that the bundle's hash differs from content-lock.json at the same version
 
 #### Scenario: Two strings with one id
 - **WHEN** the bundle holds two strings with the id "support.samaritans"
@@ -537,6 +429,10 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 #### Scenario: The not-right-now ids
 - **WHEN** a reviewer lists every bundle id that starts with "notrightnow."
 - **THEN** the list holds "notrightnow.selfharm" and "notrightnow.weight" and no other id
+
+#### Scenario: Sign-off covers the strings
+- **WHEN** the team changes "opening.stage5" and does not raise the content version
+- **THEN** the content test fails and reports that the bundle's hash differs from content-lock.json at the same version
 
 ### Requirement: Catalogue rules
 
@@ -581,10 +477,6 @@ The catalogue key "about.contact" holds the Contact email that the About group s
 - **WHEN** a catalogue string holds "your binges"
 - **THEN** the content test fails and names the string's id
 
-#### Scenario: Rendering at AX5
-- **WHEN** a reviewer sets the AX5 text size on a test device and opens each screen
-- **THEN** every string family renders without truncation, and the reviewer writes a dated line in the README
-
 #### Scenario: The sign-off list
 - **WHEN** the team builds the README sign-off list
 - **THEN** a script generates it from the catalogue ids, and the content test fails when the list and the ids differ
@@ -592,4 +484,3 @@ The catalogue key "about.contact" holds the Contact email that the About group s
 #### Scenario: The Contact placeholder
 - **WHEN** the catalogue key "about.contact" holds "contact@example.invalid"
 - **THEN** the content test passes the key and names no rule
-

@@ -22,7 +22,7 @@ let package = Package(
         // The content spec fixes this package's path, `Packages/Content`,
         // because the content-lock file and the sign-off files live at a
         // literal, spec-named path that tooling reads directly.
-        .target(name: "Content", path: "Content", resources: [.copy("Resources")]),
+        .target(name: "Content", path: "Content", exclude: ["SIGNOFF.md"], resources: [.copy("Resources")]),
         .testTarget(name: "ContentTests", dependencies: ["Content"], path: "Tests/ContentTests"),
         // scripts/content-lock runs this. It is not part of `swift test`.
         .executableTarget(name: "ContentLockTool", dependencies: ["Content"], path: "Tools/ContentLockTool"),
