@@ -10,7 +10,7 @@ A reminder is a notification the app schedules. Reminders hold the structure of 
 
 There are eight reminder types. Six are the app's own: the planned meal, morning plan, midday, close-the-day, weigh-in day and weekly review reminders. Two come from other capabilities: the worksheet review reminder and the check-in reminder. The Reminders group on the settings screen MUST show a switch for each type under "Which reminders". The `settings` capability lays out that group.
 
-The switch labels are "Planned meals", "Set today's plan", "Midday reminder", "Close the day", "Weigh-in day", "Weekly review", "Worksheet review" and "Check-in". Every switch MUST default to on.
+The switch labels are "Planned meals", "Set today's plan", "Midday reminder", "Close the day", "Weigh-in day reminder", "Weekly review", "Worksheet review" and "Check-in". Every switch MUST default to on.
 
 Each switch is a device setting in `Local.store`, as the `data-and-privacy` capability states. The Reminders group MUST show "Each device sends its own reminders." under the switches. When a switch is off, the scheduler MUST cancel every pending reminder of that type. The scheduler MUST schedule none of that type while the switch is off. The same scheduler MUST schedule every reminder that another capability asks for.
 
@@ -408,7 +408,7 @@ When the onboarding choice is "I won't be weighing", the scheduler MUST NOT sche
 
 #### Scenario: I won't be weighing
 - **WHEN** the person chose "I won't be weighing" at onboarding
-- **THEN** no weigh-in day reminder fires on any day, and the "Weigh-in day" switch stays on
+- **THEN** no weigh-in day reminder fires on any day, and the "Weigh-in day reminder" switch stays on
 
 #### Scenario: A weigh-in day chosen later
 - **WHEN** the person chose "I won't be weighing" and picks Monday on the weigh-in screen on Thursday 1 October

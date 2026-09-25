@@ -40,7 +40,7 @@ The screen MUST show one line above "Make PDF": "The PDF leaves the app when you
 
 ### Requirement: The PDF is formatted like the paper record
 
-The PDF MUST use A4 pages. The first page MUST start with the heading "Record", then the range, for example "28 August to 24 September 2026". The app MUST format the range with the en_GB interval formatter. Under the range the PDF MUST show the line "Self-recorded on a phone. Times and words are the person's own.". Under that line the PDF MUST show the line "* felt like a binge".
+The PDF MUST use A4 pages. The first page MUST start with the heading "Record", then the range, for example "28 August – 24 September 2026". The app MUST format the range with the en_GB interval formatter. The formatter writes a thin space (U+2009) on each side of the en dash. Under the range the PDF MUST show the line "Self-recorded on a phone. Times and words are the person's own.". Under that line the PDF MUST show the line "* felt like a binge".
 
 The PDF MUST then show one line about the day start, "A day runs from %1$@ to %2$@.". The app MUST fill %1$@ with the day start and %2$@ with the minute before it. Both times MUST come from the en_GB formatter. With the day start at 04:00 the line reads "A day runs from 04:00 to 03:59.". `record` owns the day start, which "Day starts at" in the settings screen sets.
 
@@ -54,7 +54,7 @@ The days MUST flow as one column across the pages. The PDF MUST NOT start a new 
 
 #### Scenario: The first page
 - **WHEN** the range is 28 August to 24 September 2026
-- **THEN** the first page reads "Record", "28 August to 24 September 2026", "Self-recorded on a phone. Times and words are the person's own.", "* felt like a binge" and "A day runs from 04:00 to 03:59." in that order, then the first day
+- **THEN** the first page reads "Record", "28 August – 24 September 2026", "Self-recorded on a phone. Times and words are the person's own.", "* felt like a binge" and "A day runs from 04:00 to 03:59." in that order, then the first day
 
 #### Scenario: Two days in order
 - **WHEN** the range is 21 September to 22 September and both days have entries
@@ -162,7 +162,7 @@ The PDF and its file name MUST NOT contain the product name or the person's name
 
 #### Scenario: Metadata
 - **WHEN** a PDF reader shows the document's properties
-- **THEN** the title reads "Record 28 August to 24 September 2026", the Author and Creator fields are empty, and the Producer field holds what the system writes
+- **THEN** the title reads "Record 28 August – 24 September 2026", the Author and Creator fields are empty, and the Producer field holds what the system writes
 
 ### Requirement: Share sheet only
 

@@ -25,6 +25,7 @@ See that change's design and `brain/architecture.md`. This design adds what the 
 - A server. A backend. An account.
 - A generic "module framework". The two modules are two features.
 - Any abstraction for V2.
+- An iPad layout or landscape.
 
 ## Decisions
 
@@ -216,6 +217,12 @@ A file in the repository freezes the record type and field names; the content te
 ### A first TestFlight cut; the specs keep every requirement
 
 `deferred.md` lists every requirement the first cut leaves out with its owning later build change. No spec loses a requirement. The model foundation (names, versions, per-row change moments, settings rows, the Reconciler) is its own build change, 1.2a model-foundation, ahead of 1.2b record-full. Nothing later rewrites a shipped model. Rejected: building in spec order. Sync arrives last and rewrites fifteen shipped changes.
+
+### iPhone layout in portrait only
+
+The app has an iPhone layout in portrait. It runs on iPad in compatibility mode, because App Store Connect cannot withhold an iPhone-only app from iPad. No iPad layout or landscape in V1. `App/Midmorning.xcodeproj/project.pbxproj` sets `TARGETED_DEVICE_FAMILY = 1` and portrait as the only iPhone orientation on both configurations.
+
+Rejected: an iPad layout and landscape. No spec requires them, and each adds a device check per screen. Cost to reverse: low. The settings change in one file, and each screen then needs a device check in the new size.
 
 ## Risks / Trade-offs
 

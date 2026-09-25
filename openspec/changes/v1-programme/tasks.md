@@ -28,7 +28,7 @@ Each build task is one bead epic, and each requirement is one child bead. The ex
 
 - [ ] 3.1 Build change `urge-toolkit` from `urge-toolkit`: the button, the timer, the wave with its tail, "Close" and the open-urge line, the alternatives list, grounding and the urge outcome.
 - [ ] 3.2 Build change `weekly-review` from `weekly-review` and the re-screening and deterioration rules in `safeguarding`: the summary with frozen counts, the two-step self-harm item, reflection and the pinned note. It also holds the weekly review reminder from `reminders`.
-- [ ] 3.2b Build change `taking-stock` from `weekly-review`: taking stock, its questionnaire and the module recommendation. This is the second part of 3.2 and follows the first cut, with 3.4 and 3.5.
+- [ ] 3.2b Build change `taking-stock` from `weekly-review`: taking stock, its questionnaire and the module recommendation. It is the second part of 3.2 and follows it. 3.4 and 3.5 follow 3.2b.
 - [ ] 3.3 Build change `problem-solving` from `problem-solving`: pattern sentences, the suggestion card in the card slot, the worksheet, the "Worksheets" list and the worksheet review reminder.
 - [ ] 3.4 Build change `food-rules` from `dieting-module` (displayed as "Food rules"): the lists, the ladder, reintroductions into the next 7 record days' plans, and the eating enough check with its question.
 - [ ] 3.5 Build change `body-image-module` from `body-image-module`: the cards and Feeling fat notes.

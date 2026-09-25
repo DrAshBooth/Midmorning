@@ -32,7 +32,7 @@ The maintenance plan MUST have four questions, each with a free-text answer. The
 
 The app MUST let the person edit any answer at any time. The app MUST NOT show a placeholder, an example answer or a count of answered questions. The app MUST NOT show the plan as incomplete.
 
-When the person saves, the app MUST close the screen with the system's standard dismissal and show no message. The `content` capability owns the text of the four questions. The maintenance plan is one synced row with its own `changedAt`. An edit MUST write into the winning row. The `data-and-privacy` capability owns the conflict rule.
+When the person taps "Save", the app MUST close the screen with the system's standard dismissal and show no message. The `content` capability owns the text of the four questions. The maintenance plan is one synced row with its own `changedAt`. An edit MUST write into the winning row. The `data-and-privacy` capability owns the conflict rule.
 
 #### Scenario: Answer one question
 - **WHEN** the person types "Eating breakfast even when I didn't want to" under "What helped most?" and saves
@@ -252,7 +252,7 @@ The app MUST NOT write to a device reminder switch at the restart. Each device M
 
 #### Scenario: Cancel
 - **WHEN** the person taps "Start week 1 again" after the finish and then "Cancel"
-- **THEN** the start day, `finishDate` and the check-ins are unchanged, the reduced cadence continues, and a re-screen before the choice keeps its values, as `safeguarding` states in "Re-screening at a restart"
+- **THEN** the start day, `finishDate` and the check-ins are unchanged, and the reduced cadence continues
 
 #### Scenario: Reminders after a restart
 - **WHEN** the switch for the morning plan reminder is on before the finish and the person restarts on Friday 15 January

@@ -48,7 +48,7 @@ The app MUST use these words: "entry", "What", "Today", "felt like a binge", "pl
 
 ### Requirement: Nothing looks like a nutrition app
 
-The app MUST NOT use a plate, fork, apple, scale or tape-measure image anywhere. This includes the app icon, widgets and App Store screenshots. The app MUST NOT show food photography. The app's visual language MUST read as a notes or calendar app. The app MUST NOT reveal what it is for to a person who glances at any screen.
+The app MUST NOT use a plate, fork, apple, scale or tape-measure image anywhere. This includes the app icon, widgets and App Store screenshots. The app MUST NOT show food photography. The app's visual language MUST read as a notes or calendar app. The app MUST NOT reveal what it is for to a person who glances at any screen. The star control's label "felt like a binge" on the new-entry screen is an exception. The urge screen's "I binged" control is the other. `urge-toolkit` owns that control. Each is body text, not a heading or an image.
 
 #### Scenario: The app icon
 - **WHEN** the app icon appears on a lock screen or home screen

@@ -93,7 +93,7 @@ struct EntryRow: View {
                 }
             }
             .font(.body.monospacedDigit())
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.primary)
             if !entry.what.isEmpty {
                 Text(entry.what)
                     .font(.body)

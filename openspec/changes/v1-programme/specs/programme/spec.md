@@ -42,7 +42,7 @@ Each stage adds tools on top of the tools before it. A tool MUST stay open in ev
 
 The app MUST open on Today at every launch, in every stage. Today is home from day 1 because the record is the core. From stage 2, Today also shows the plan beside the record. Regular-eating-plan owns the plan beside the record. The app MUST NOT open on the Programme screen, a card or an opening card.
 
-Record owns the Today navigation bar. That bar holds four controls: the add control, the Programme control, the "Reviews" list control and Get support. The Programme screen MUST be one tap from Today. The "Reviews" list MUST be one tap from Today. Weekly-review owns the list.
+Record owns the Today navigation bar. Record owns the bar's contents. The Programme screen MUST be one tap from Today. The "Reviews" list MUST be one tap from Today. Weekly-review owns the list.
 
 The settings screen MUST be one tap from Today. Get support MUST be in the navigation bar of every screen. Safeguarding owns the button.
 

@@ -304,7 +304,7 @@ Every review MUST show a button labelled "I'm getting worse" after the self-harm
 
 When the person taps the button, the app MUST act at once. The app MUST save the review's answers so far. The app MUST then show the GP suggestion page that `safeguarding` defines.
 
-The app MUST show the page at each tap on the button. The app MUST also show the page when the deterioration rule showed it earlier in the same review.
+The app MUST show the page at each tap, also after the deterioration rule showed it in the same review.
 
 The page's control is "Done". The plan and its reminders MUST stay on. When the page closes, the review MUST show again with its answers. The `safeguarding` capability owns the page, the GP paragraph and the export offer.
 
@@ -369,8 +369,8 @@ The `programme` capability owns the restart. A restart does not delete the stage
 - **THEN** taking stock shows the three questions with empty fields and no text about week 1 answers
 
 #### Scenario: Saved answers on a repeat
-- **WHEN** the person answers three questionnaire questions in the review of week 7, taps the review's "Done" with no module chosen, and opens the review of week 8
-- **THEN** taking stock shows the three saved answers, and both taking-stock rows in the "Reviews" list open that one session
+- **WHEN** the person answers three questionnaire questions in the review of week 7, taps the review's "Done" with no module chosen, opens the review of week 8 and taps its "Done" with no module chosen
+- **THEN** the review of week 8 opens with the three saved answers, and after its "Done" both taking-stock rows in the "Reviews" list open that one session
 
 #### Scenario: Taking stock session not complete
 - **WHEN** the person does not complete the taking stock session in the review of week 7 and the review of week 8 becomes due
@@ -390,11 +390,15 @@ The recommendation MUST read one of: "From your answers, Food rules is the one t
 
 When the person taps either control, the app MUST save the questionnaire answers and the chosen module. At that tap, the app MUST NOT open the module or complete the taking stock session. After the tap, the app MUST show the tapped control as chosen and the other control as not chosen. When the person later taps the other control, the app MUST replace the chosen module with that control's module. The review MUST continue with the reflection questions, the one thing to change, the self-harm item and "I'm getting worse".
 
-"Done" MUST close the review with or without a chosen module, as for any review. When the person first taps the review's "Done" with a chosen module, the app MUST complete the taking stock session. After the review closes, the app MUST open the chosen module, except after a self-harm "Yes" then "Yes" in that review. After that first "Done", the app MUST NOT open a module at a later "Done" on that review.
+"Done" MUST close the review with or without a chosen module, as for any review. When the person first taps the review's "Done" with a chosen module, the app MUST complete the taking stock session. After the review closes, the app MUST open the chosen module. The app MUST NOT open it after a self-harm "Yes" then "Yes" in that review. The app MUST NOT open it when the system or the person closed the app before that "Done". After that first "Done", the app MUST NOT open a module at a later "Done" on that review.
 
 When the person taps the review's "Done" with no chosen module, the app MUST close the review. The app MUST NOT complete the taking stock session at that tap. The "Reviews" list then keeps the taking-stock row. The next review grows into taking stock again, as "Taking stock" states.
 
-The person can answer the self-harm item "Yes" then "Yes" in a review with a chosen module. At the first "Done" with that chosen module, the app MUST then complete the taking stock session. The app MUST NOT open a module at that "Done". The app MUST hold the "Yes" then "Yes" in memory only, until the review closes. When the app closes before "Done", the review can reopen. At that review's "Done" with a chosen module, the app MUST complete the session and MUST NOT open a module. The store MUST keep the chosen module. Stage 6 opens at that completion, or stays open after a restart, as `programme` defines. The chosen module then stays one tap away on the Programme screen.
+The person can answer the self-harm item "Yes" then "Yes" in a review with a chosen module. At the first "Done" with that chosen module, the app MUST then complete the taking stock session. The app MUST NOT open a module at that "Done". The app MUST hold the "Yes" then "Yes" in memory only, until the review closes.
+
+When the system or the person closes the app before "Done", the review can reopen. At that review's "Done" with a chosen module, the app MUST complete the session. The app MUST NOT open a module.
+
+After either "Done", the store MUST keep the chosen module. Stage 6 opens when the session completes, or stays open after a restart, as `programme` defines. The chosen module then stays one tap away on the Programme screen.
 
 The app MUST NOT show a sum of the answers. The store MUST keep the five answers, the recommendation and the chosen module. The `dieting-module` and `body-image-module` capabilities own the module screens.
 
@@ -439,7 +443,7 @@ The app MUST NOT show a sum of the answers. The store MUST keep the five answers
 - **THEN** the store keeps Food rules as the chosen module, the app completes the taking stock session and opens no module, and "Food rules" is one tap away on the Programme screen
 
 #### Scenario: Reopen after the app closed
-- **WHEN** the person taps "Open Food rules" in taking stock, the app closes before "Done", and the person reopens the review and taps the review's "Done"
+- **WHEN** the person taps "Open Food rules" in taking stock, the system closes the app before "Done", and the person reopens the review and taps the review's "Done"
 - **THEN** the taking stock session is complete, the app opens no module, and "Food rules" is one tap away on the Programme screen
 
 #### Scenario: Done with no module chosen

@@ -49,7 +49,7 @@ Added by the second review round, 25 September 2026:
 - "Your record is in iCloud. Get it back on this device?" / "Get it back" / "Start fresh"
 - "Everything is deleted. To remove the app, touch and hold its icon and choose Remove App."
 - "Midmorning cannot open your record on this device."
-- "Reminders are off in iOS Settings." / "Notifications are off for Midmorning. The plan still shows on Today, and the home-screen widget can show your next planned time."
+- "Notifications are off in iOS Settings." / "Notifications are off in iOS Settings. The plan still shows on Today, and the Home Screen widget can show your next planned time."
 - "The PDF leaves the app when you share it. Mail, Files and Messages keep their own copy, and Delete everything does not reach those copies."
 - The "Keep it private" sheet, in full.
 - Rule B: "Your weight has come down since you started. Your plan stays on. It's worth a word with your GP."
@@ -58,6 +58,7 @@ Added by the second review round, 25 September 2026:
 
 Added by the third review round, 25 September 2026:
 
+- "We ask for your height and weight to check this programme is safe for you. The app never shows them again and never sets a goal from them." (onboarding; it also appears at the restart re-screen)
 - "Your plan isn't set yet. It takes about two minutes." / "Set it up"
 - "Opens after %1$lld recorded days. You have %2$lld." and the planned-days form
 - "Start week 1 again"

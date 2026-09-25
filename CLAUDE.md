@@ -82,7 +82,10 @@ in a worktree commits on the worktree branch and closes the children it
 builds. It never runs `git push` or `bd dolt push`; those stay with Ash.
 
 Finding work. Before each dispatch, Ash runs `bd ready -l human` and does
-that work; mm-t10 is the first human step. Agents find work with
+that work; mm-t10 is the first human step. Ash skips mm-t43 and the two
+index beads mm-t43.2 and mm-t43.3 in that list. mm-t43 closes when its
+children close. Each index bead closes when every scenario it lists has
+its dated line. Agents find work with
 `bd ready -t epic -l first-cut --exclude-label human`, and after mm-m1 with
 `bd ready -t epic -l second-cut --exclude-label human`. Until mm-t10 closes,
 the first command returns only mm-t11. Plain `bd ready` also lists
@@ -110,12 +113,17 @@ requirement, the delta MODIFIES it with the full text copied from
 
 After the worktree. Ash merges without squashing, so the commit named in each
 `--reason` stays. Ash archives the change, pushes main and runs
-`bd dolt push`. Ash closes the device-check bead after the device checks, and
+`bd dolt push`. When `openspec archive` aborts with 'ADDED failed ... already exists' or
+'contains scenario(s) not present in the modified block', Ash copies that
+requirement's full text from `openspec/specs` on main into the delta as
+MODIFIED, keeps the change's own scenarios and archives again.
+Ash closes the device-check bead after the device checks, and
 then the epic. Each worktree starts its branch from local HEAD (`worktree.baseRef` is `head`
 in `.claude/settings.json`). If Ash rejects
 a branch, Ash reopens its closed children with `bd reopen`. Parallel worktrees
 edit Today, `Packages/Package.swift` and the content version; Ash sets the
-content version at the merge. Ash closes the milestones and the chores
+content version at the merge with `scripts/content-lock`. Ash closes the
+milestones and the chores
 mm-t44a and mm-t44b. `.claude/worktrees/` is git-ignored, so main stays clean
 while worktrees exist.
 

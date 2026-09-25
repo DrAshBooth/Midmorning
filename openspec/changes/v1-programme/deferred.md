@@ -46,7 +46,7 @@ When Ash archives an owning change, Ash moves its rows to that change's README. 
 | programme | Reading ahead is never blocked | The first cut builds the other scenarios | 3.3 problem-solving | mm-t33.16 |
 | programme | Resume after an absence | The first cut builds the other scenarios | 3.2b taking-stock | mm-t32b.3 |
 | programme | The Focus card after stage 2 opens | No Focus card; the whole requirement waits for 2.5 | 2.5 widgets-and-intents | mm-t25.16 |
-| programme | The Programme screen shows where the person is | The first cut builds the other scenarios | 3.2b taking-stock, 3.4 food-rules, 3.6 staying-on-track | mm-t32b.3, mm-t34.13, mm-t36.15 |
+| programme | The Programme screen shows where the person is | The first cut builds the other scenarios | 3.2b taking-stock, 3.5 body-image-module, 3.6 staying-on-track | mm-t32b.3, mm-t35.12, mm-t36.15 |
 | programme | The card's answer is kept in the record | The first cut builds the other scenarios | 4.1b sync | mm-t41b.11 |
 | programme | The constants live in one value | The first cut builds the other scenarios | 3.1 urge-toolkit | mm-t31.17 |
 | programme | The seven stages and their tools | Rows show their opening rule; no tool opens beyond stage 2 | 3.1 urge-toolkit, 3.2b taking-stock, 3.3 problem-solving, 3.4 food-rules, 3.5 body-image-module, 3.6 staying-on-track | mm-t31.15, mm-t32b.3, mm-t33.16, mm-t34.13, mm-t35.12, mm-t36.15 |

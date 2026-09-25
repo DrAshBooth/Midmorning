@@ -190,13 +190,13 @@ With any answer the store MUST keep `selfHarmAnswered: true` for that review. Th
 
 `programme` owns the restart control, "Start week 1 again", and the start-day choice it opens. A check-in's "Restart the programme?" is a shortcut to the same control. `staying-on-track` places it.
 
-The app MUST count record days from the record day of the last screening. The last screening is onboarding or the latest re-screen at a restart with no exclusion, whichever is later. The app MUST NOT count from the start day or the restart moment.
+The app MUST count record days from the record day of the last screening. The last screening is onboarding or the latest re-screen with no exclusion, whichever is later. A re-screen is the last screening whether or not the person then restarts. The app MUST NOT count from the start day or the restart moment.
 
-The app MUST keep the moment of the last screening in the Profile field `askedAt`, with its own `changedAt`. The field name MUST NOT contain a word about screening, as `data-and-privacy` requires. The app MUST write `askedAt` at onboarding and at each re-screen at a restart with no exclusion. The app MUST NOT write `askedAt` at a weekly review or a check-in. When `askedAt` is later than the device clock, the app MUST re-screen at the next restart, as for more than 84 record days.
+The app MUST keep the moment of the last screening in the Profile field `askedAt`, with its own `changedAt`. The field name MUST NOT contain a word about screening, as `data-and-privacy` requires. The app MUST write `askedAt` at onboarding and at each re-screen with no exclusion. The app MUST NOT write `askedAt` at a weekly review or a check-in. When `askedAt` is later than the device clock, the app MUST re-screen at the next restart, as for more than 84 record days.
 
 Within 84 record days of the last screening, the app MUST NOT ask a screening question at a restart. The app MUST show the start-day choice at once.
 
-More than 84 record days after the last screening, the app MUST re-screen before the start-day choice. The re-screen MUST ask height and weight, with the wording `onboarding` defines. It MUST ask pregnancy, treatment and the self-harm item with both steps. The app MUST NOT ask the age again. The app MUST compute the BMI as `onboarding` defines. The app MUST apply every screening rule except the age rule to the answers.
+More than 84 record days after the last screening, the app MUST re-screen before the start-day choice. The re-screen MUST ask height and weight, with the wording `onboarding` defines. The re-screen MUST show the line that `onboarding` places above the height and weight fields. It MUST ask pregnancy, treatment and the self-harm item with both steps. The app MUST NOT ask the age again. The app MUST compute the BMI as `onboarding` defines. The app MUST apply every screening rule except the age rule to the answers.
 
 The BMI rules, with the caution sheet, apply to the new height and weight. At a re-screen, the app MUST exclude with the self-harm reason after "Yes" and then "Yes". After "Yes" and then "No", the app MUST show the support line as the self-harm item defines. The re-screen MUST then continue.
 
@@ -204,7 +204,7 @@ When no rule excludes, the app MUST replace the height, the onboarding BMI, the 
 
 Every device keeps the re-screen's later write. `data-and-privacy` defines that rule. The app MUST NOT compare creation moments. The app MUST then show the start-day choice.
 
-A re-screen with no exclusion becomes the last screening, also when the person then taps "Cancel" at the start-day choice. After "Cancel", the app MUST keep the new height, the new onboarding BMI, the new caution flag and the new `askedAt`. "Cancel" MUST keep the old start day and MUST NOT restart. Within 84 record days of that re-screen, the app MUST NOT ask a screening question when the person taps "Start week 1 again".
+A re-screen with no exclusion becomes the last screening, also when the person then taps "Cancel" at the start-day choice. After "Cancel", the app MUST keep the new height, the new onboarding BMI, the new caution flag and the new `askedAt`. "Cancel" MUST keep the old start day. "Cancel" MUST NOT restart. Within 84 record days of that re-screen, the app MUST NOT ask a screening question when the person taps "Start week 1 again".
 
 When a rule excludes, the app MUST NOT restart. The app MUST open the not-right-now page with every reason that applies, not the exclusion page. With the weight reason, the app MUST set the synced `remindersPausedAt`, as for Rule A. The app MUST NOT replace the height, the onboarding BMI, the caution flag or `askedAt` when a rule excludes. "Done" on that page MUST return the app to the screen beneath. The record, the plan and every list MUST stay as they were.
 
@@ -407,7 +407,7 @@ After the page the app MUST NOT turn paused reminders on again without the perso
 
 ### Requirement: Get support on every screen
 
-Every screen the app presents full-screen MUST show a control labelled "Get support" in the navigation bar. A sheet that closes in one tap to a screen with the control is exempt. The cover is exempt, because the cover names nothing. Get support MUST appear only after the person authenticates.
+Every screen the app presents full-screen MUST show a control labelled "Get support" in the navigation bar. A sheet that closes in one tap to a screen with the control is exempt. The cover is exempt, because the cover names nothing. Get support MUST appear only after the person authenticates. Decision 80 keeps the three self-harm screens out of this exemption. Decision 30 sets the authentication rule. Ash ruled both on 25 September 2026.
 
 The weekly review, the check-in and the restart re-screen MUST each show Get support in the navigation bar. Each asks the self-harm item. The sheet exemption MUST NOT apply to these three screens. When the app shows one of these screens as a sheet, that sheet MUST show Get support.
 
@@ -445,7 +445,7 @@ The control MUST be present on every onboarding screen and the three safeguardin
 
 ### Requirement: The support sheet
 
-The support sheet MUST have the title "Get support". It MUST list these items in this order:
+The support sheet MUST have the title "Get support". When the sheet opens from Get support, it MUST have a "Close" control in the navigation bar. The inline form in a review or a check-in has no navigation bar and no "Close". It MUST list these items in this order:
 
 - "Beat helpline" with the line "Beat is the UK charity for people who struggle with eating." and four numbers: "England 0808 801 0677", "Scotland 0808 801 0432", "Wales 0808 801 0433", "Northern Ireland 0808 801 0434". Under the numbers: "Opening hours are on Beat's website."
 - "Beat webchat" as a link

@@ -288,7 +288,7 @@ A call that spans more than one line is outside the lint. The catalogue hash and
 
 ### Requirement: The card screen and the card list
 
-The app MUST show the cards of a stage as a list of titles, in the order the bundle gives. The list MUST NOT show a count of cards read, a percentage, a tick or a read state. A card screen MUST show the title, the body, the heading "One thing to do" and the oneThing sentence. A card screen MUST show no image. A card screen MUST show no control except close, Get support, the card's in-app link and the standard scroll.
+The app MUST show the cards of a stage as a list of titles, in the order the bundle gives. The list MUST NOT show a count of cards read, a percentage, a tick or a read state. A card screen MUST show the title, the body, the heading "One thing to do" and the oneThing sentence. A card screen MUST show no image. A card screen MUST show no control except "Close", Get support, the card's in-app link and the standard scroll.
 
 The title MUST be a heading for VoiceOver. "One thing to do" MUST be a heading for VoiceOver. Text on a card MUST use system text styles. Text on a card MUST scale with Dynamic Type. The app MUST let the person open any card any number of times.
 

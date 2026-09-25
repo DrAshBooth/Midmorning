@@ -7,7 +7,8 @@ context: |
   under 20 seconds. The second is a regular eating plan that the app
   reminds the person to follow.
   docs/prd.md is authoritative. When the PRD and a spec conflict, the PRD is
-  correct and the spec is wrong.
+  correct and the spec is wrong, except where a numbered decision in
+  openspec/changes/v1-programme/proposal.md overrules the PRD.
   Stack: Swift and SwiftUI, iOS 17 and later. Pure SwiftPM packages under
   Packages/ hold the models and logic and run their tests with swift test on
   macOS. The Xcode project under App/ holds the UI. SwiftData with CloudKit

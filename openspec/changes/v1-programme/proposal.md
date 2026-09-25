@@ -163,7 +163,7 @@ The data-model review's findings need no decision; the team applies them. Every 
 
 ## Decisions Ash made on 25 September 2026, on the questions round 6 opened
 
-81. When a taking stock review reopens after the app closed, its "Done" completes the session and opens no module.
+81. When a taking stock review reopens after the system or the person closed the app, its "Done" with a chosen module completes the session and opens no module.
 82. Each repeat of taking stock opens the same session with the answers saved so far, from any taking-stock row.
 83. A Feeling fat note follows the entry rule: an edit keeps the time inside the note's own record day.
 

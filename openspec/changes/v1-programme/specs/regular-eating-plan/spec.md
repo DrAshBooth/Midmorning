@@ -8,7 +8,7 @@ The plan is the person's regular eating pattern: which slots happen on a day, an
 
 ### Requirement: The plan builder opens at stage 2
 
-The `programme` capability opens stage 2 after RECORDED_DAYS_FOR_STAGE_2 = 5 recorded days. The app MUST offer the plan builder only when stage 2 is open. Before that, the app MUST let the person open the stage 2 cards. When stage 2 is open, Today MUST show a control that opens the plan builder in one tap. A recorded day is a record day with at least one entry. The recorded days MUST NOT need to be consecutive.
+The `programme` capability opens stage 2 after RECORDED_DAYS_FOR_STAGE_2 = 5 recorded days. The app MUST offer the plan builder only when stage 2 is open. Before that, the app MUST let the person open the stage 2 cards. When stage 2 is open, Today MUST offer "Today's plan" in the current day heading's menu, as `record` states. A recorded day is a record day with at least one entry. The recorded days MUST NOT need to be consecutive.
 
 #### Scenario: Four recorded days
 - **WHEN** the person has four recorded days
@@ -16,7 +16,7 @@ The `programme` capability opens stage 2 after RECORDED_DAYS_FOR_STAGE_2 = 5 rec
 
 #### Scenario: Five recorded days with gaps
 - **WHEN** the person has entries on Monday, Tuesday, Thursday, Saturday and Sunday and no other day
-- **THEN** the plan builder opens from Today in one tap
+- **THEN** the plan builder opens from Today through the day heading's menu
 
 #### Scenario: A day without entries
 - **WHEN** a record day has no entry
@@ -140,7 +140,7 @@ The meal line is the catalogue entry "This day has %1$@ and %2$@. Three meals an
 
 The gap line is the catalogue entry "%1$@ between %2$@ at %3$@ and %4$@ at %5$@.". The placeholders are the gap as a duration, the earlier slot's label, its time, the later slot's label and its time. The app MUST fill the duration and each time through the en_GB formatter. For example: "4 hours 30 minutes between Lunch at 12:30 and Evening meal at 17:00."
 
-The controls MUST be "Save anyway" and "Go back". This is the one exception to the "Cancel" rule in `product-rules`, because "Cancel" would mean the opposite here. When the lines appear, VoiceOver focus MUST move to the first line.
+The controls MUST be "Save anyway" and "Go back". The builder's own "Cancel" discards the edit, as "Place slots in the plan builder" states. Here "Cancel" would mean the opposite, so the controls are "Save anyway" and "Go back". When the lines appear, VoiceOver focus MUST move to the first line.
 
 When the person taps "Save anyway", the app MUST save the day as it is. When the person taps "Go back", the app MUST return to the builder with the day unchanged. The app MUST NOT block a save. The app MUST NOT show a line when the day meets every soft rule.
 
@@ -434,7 +434,7 @@ When the record day ends with the prompt unanswered, the app MUST hide the promp
 
 ### Requirement: The next-planned-meal line
 
-The next planned meal is the earliest planned meal with a time later than the moment in question. When the day has none, the next planned meal is the first planned meal of the next record day's plan or template. The next-planned-meal line is the catalogue entry "%1$@ at %2$@ still happens.", filled with the next planned meal's label and its time through the en_GB formatter, for example "Evening meal at 19:00 still happens.". Today MUST show the line on the next planned meal's row. When no next planned meal exists, the app MUST show no line.
+The next planned meal is the earliest planned meal with a time later than the moment in question. When the day has none, the next planned meal is the first planned meal of the next record day's plan or template. The next-planned-meal line is the catalogue entry "%1$@ at %2$@ still happens.", filled with the next planned meal's label and its time through the en_GB formatter, for example "Evening meal at 19:00 still happens.". Today MUST show the line on the next planned meal's row. When the next planned meal is on the next record day, its row is not on Today. Today MUST then show the line as the last row of the current day section. The line MUST use the text style of a planned meal row. When no next planned meal exists, the app MUST show no line.
 
 When the person answers "Skipped" on the missed planned meal prompt, Today MUST show the line at once. When the person answers "Skipped" on a planned meal reminder, the app applies the queued skip later. It does so when protected data becomes available, as the `reminders` capability states. Today MUST then show the line the first time Today appears after that.
 
@@ -452,7 +452,7 @@ The `urge-toolkit` capability shows the same line after an "I binged" outcome, b
 
 #### Scenario: Skip the last planned meal of the day
 - **WHEN** the person answers "Skipped" for Evening snack at 21:00 and the next day's template has Breakfast at 08:00
-- **THEN** Today shows "Breakfast at 08:00 still happens."
+- **THEN** Today shows "Breakfast at 08:00 still happens." as the last row of the current day section
 
 #### Scenario: A starred entry between planned meals
 - **WHEN** the person saves a starred entry at 14:45, no window contains 14:45, Mid-afternoon is at 16:00, and Today appears at 14:46

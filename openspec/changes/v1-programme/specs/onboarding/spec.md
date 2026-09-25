@@ -137,7 +137,7 @@ The screen MUST ask exactly six questions, in this order:
 
 When the person answers "Yes" to the last question, the screen MUST show a second question under it. That question is "Have you thought about how you would do it?" with "No" and "Yes". `safeguarding` owns both questions' wording and flags the second for the clinical reviewer. The app MUST hide the second question when the person changes the first answer.
 
-Above the height and weight fields the screen MUST show: "We ask for your height and weight once, to check this programme is safe for you. The app never shows them again and never sets a goal from them."
+Above the height and weight fields the screen MUST show: "We ask for your height and weight to check this programme is safe for you. The app never shows them again and never sets a goal from them."
 
 The "Continue" control MUST stay active. When the person taps "Continue" with a question unanswered, the app MUST move VoiceOver focus to the first unanswered question. The app MUST show "Please answer this one." under that question. The app MUST NOT advance.
 

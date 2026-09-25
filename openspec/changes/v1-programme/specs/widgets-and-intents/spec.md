@@ -324,11 +324,11 @@ The Privacy group of the settings screen MUST show "Keep it private". The settin
 
 "To hide Midmorning from Purchases: App Store, your account, Purchases, swipe left, Hide. On iOS 18 and later, Lock App keeps the icon and reminders; Hide App also stops reminders."
 
-The sheet MUST close in one tap. The sheet MUST NOT change any setting. Before release, a reviewer MUST verify the exact labels of each step on every supported iOS version. The reviewer MUST also test Lock App and Hide App on iOS 18 with a reminder pending. The reviewer MUST write both results in the change's README as a dated line.
+The sheet MUST close in one tap on "Close". The sheet MUST NOT change any setting. Before release, a reviewer MUST verify the exact labels of each step on every supported iOS version. The reviewer MUST also test Lock App and Hide App on iOS 18 with a reminder pending. The reviewer MUST write both results in the change's README as a dated line.
 
 #### Scenario: Keep it private
 - **WHEN** the person taps "Keep it private" in the Privacy group
-- **THEN** the sheet shows the text above and nothing else, and closes in one tap
+- **THEN** the sheet shows the text above and nothing else, and closes in one tap on "Close"
 
 #### Scenario: Labels verified
 - **WHEN** a reviewer follows the sheet's steps on each supported iOS version and tests Lock App and Hide App with a reminder pending
