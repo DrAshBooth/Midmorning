@@ -29,6 +29,10 @@ This change adds no full screen, so no "Get support on every screen" line applie
 
 None. Every scenario this change builds maps to a `swift test` target; the epic's device-check bead (mm-t12.30) lists none from this change. `record-full` (1.2b) is the change that next touches the App target's screens and will need its own device checks.
 
+## A break from the skeleton's schema
+
+A store the walking skeleton (`record-entry-on-today`) wrote shows no entries once opened under this change's schema. CoreData silently drops the removed `Entry` entity's data; the app shows no error. Ash ruled on 25 September 2026 (decision 108) that the skeleton was always a throwaway proof of concept and accepted this as a documented break rather than adding a migration stage; a person with a skeleton-era device notes its entries by hand, or accepts losing them, before this build installs. bd issue mm-t12.32 carries the finding and the ruling.
+
 ## Scope note: Where and Context
 
 `ItemVersion` does not yet carry Where or Context. `design.md`'s "`ItemVersion` carries the skeleton's fields now; Where and Context wait for 1.2b" decision states why: `record-full` (1.2b) is the task that names "Where, Context, edit, delete" as its own scope, and the frozen-schema rule lets it add both fields additively without a second schema version.
