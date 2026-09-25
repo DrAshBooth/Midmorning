@@ -66,8 +66,9 @@ struct TodayView: View {
         let now = Date()
         day = RecordDay.interval(containing: now, calendar: .current)
         isNight = RecordDay.isNight(now, calendar: .current)
-        todayEntries = (try? store.entries(in: day)) ?? []
-        previousEntries = (try? store.entries(in: RecordDay.previous(day, calendar: .current))) ?? []
+        let previous = RecordDay.previous(day, calendar: .current)
+        todayEntries = (try? store.entries(dayKey: RecordDay.key(containing: now, calendar: .current))) ?? []
+        previousEntries = (try? store.entries(dayKey: RecordDay.key(containing: previous.start, calendar: .current))) ?? []
     }
 
     private func heading(for interval: DateInterval, night: Bool) -> Text {

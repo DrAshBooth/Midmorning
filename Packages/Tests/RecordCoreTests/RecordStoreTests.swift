@@ -57,11 +57,16 @@ final class RecordStoreTests: XCTestCase {
         XCTAssertEqual(day[3].accessibilityLabel, "13:05, Toast and tea, felt like a binge")
         XCTAssertEqual(day[2].accessibilityLabel, "13:05")
 
-        // The 20:00 London entry reads 20:00 when the viewer is in New York.
+        // Record days are fixed at save from the entry's own offset. A viewer in
+        // New York on the same key sees the same day, and the London entry still
+        // reads 20:00.
+        XCTAssertEqual(day.map(\.dayKey), Array(repeating: "2026-09-24", count: 6))
         var newYork = Calendar(identifier: .gregorian)
         newYork.timeZone = TimeZone(identifier: "America/New_York")!
         let seenFromNewYork = try reopened.entries(recordDayContaining: at(24, 22, 0), calendar: newYork)
-        XCTAssertEqual(seenFromNewYork.map(\.clockTime), ["13:05", "13:05", "20:00", "00:30"], "New York's record day runs from 09:00 London to 09:00 London")
+        XCTAssertEqual(seenFromNewYork.map(\.clockTime), expected.map(\.0), "the same record day from New York, keyed at save")
+        XCTAssertEqual(RecordDay.key(for: at(25, 0, 30), utcOffsetSeconds: londonOffset), "2026-09-24")
+        XCTAssertEqual(RecordDay.key(for: at(25, 0, 30), utcOffsetSeconds: londonOffset, startHour: 0), "2026-09-25", "a day start of 00:00 puts 00:30 on the 25th")
 
         // Clock change: the record day of Saturday 24 October 2026 is 25 hours long.
         let clockChange = RecordDay.interval(containing: at(25, 1, 0, month: 10), calendar: london)

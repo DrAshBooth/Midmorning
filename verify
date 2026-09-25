@@ -6,7 +6,7 @@
 # Do NOT add or remove a check without asking Ash first.
 #
 # Checks:
-#   1. swift test on Packages/Record      (the tested logic; runs on macOS)
+#   1. swift test on Packages             (every module; runs on macOS)
 #   2. xcodebuild of the app              (simulator build; no test run)
 #   3. openspec validate --strict         (every change and spec parses)
 #
@@ -20,7 +20,7 @@ started=$(date +%s)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-swift test --package-path Packages/Record >"$work/swift-test.log" 2>&1 &
+swift test --package-path Packages >"$work/swift-test.log" 2>&1 &
 swift_pid=$!
 
 xcodebuild -project App/Midmorning.xcodeproj -scheme Midmorning \
@@ -45,7 +45,7 @@ report() {
     failed=1
   fi
 }
-report "swift test Record"   "$swift_status"    "$work/swift-test.log"
+report "swift test Packages" "$swift_status"    "$work/swift-test.log"
 report "xcodebuild Midmorning" "$xcode_status"  "$work/xcodebuild.log"
 report "openspec validate"   "$openspec_status" "$work/openspec.log"
 

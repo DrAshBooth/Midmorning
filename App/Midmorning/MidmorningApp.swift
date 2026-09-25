@@ -32,19 +32,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
-/// Where the store file lives: the App Group container, so the widget,
-/// notification actions and App Intents can reach it later.
+/// Where the store file lives: the app's own container. Only the app process
+/// opens the store (decided 25 September 2026). The App Group holds only the
+/// widget snapshot and the action queue, added by later changes.
 enum StoreLocation {
     static let appGroup = "group.uk.midmorning"
 
-    /// Creates `Library/Application Support` in the group container with
+    /// Creates a `Record` directory under Application Support with
     /// NSFileProtectionComplete and backup exclusion, so the store and its
     /// -wal and -shm files inherit both. Returns the store file's URL.
     static func url() throws -> URL {
-        guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) else {
-            throw StoreLocationError.noAppGroupContainer
-        }
-        var directory = container.appendingPathComponent("Library/Application Support", isDirectory: true)
+        let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        var directory = support.appendingPathComponent("Record", isDirectory: true)
         try FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true,
@@ -57,7 +56,4 @@ enum StoreLocation {
         return directory.appendingPathComponent("Record.store")
     }
 
-    enum StoreLocationError: Error {
-        case noAppGroupContainer
-    }
 }

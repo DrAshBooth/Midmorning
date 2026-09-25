@@ -65,7 +65,7 @@ the three checks below and exits non-zero on any failure.
 
 ```bash
 ./verify                                                    # all checks, under 240s
-swift test --package-path Packages/Record                   # the tested logic, on macOS
+swift test --package-path Packages                          # every module, on macOS
 xcodebuild -project App/Midmorning.xcodeproj -scheme Midmorning \
   -destination 'generic/platform=iOS Simulator' build       # the app, simulator only
 openspec validate --all --strict                            # every change and spec

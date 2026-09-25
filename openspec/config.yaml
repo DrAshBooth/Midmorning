@@ -15,9 +15,21 @@ context: |
   first change. Offline-first. No accounts. No server we run. No third-party
   SDKs.
   Defined terms: "entry", "What", "Today", "felt like a binge", "star" and
-  "starred", "record day", "creation moment", "new-entry screen", "the
-  store". Use no synonym for a defined term. Never "log", "meal log", "food
-  diary", "intake", "portion", "calories", "mark", "note", "timestamp".
+  "starred", "record day", "recorded day", "creation moment", "new-entry
+  screen", "the store", "the person", "stage" (open or closed, never
+  unlocked), "opening card", "card slot", "the Today stack", "plan",
+  "slot", "planned meal", "planned day", "the plan beside the record",
+  "reminder" (every scheduled notification), "missed planned meal prompt",
+  "next-planned-meal line", "pinned note", "quiet hours", "weigh-in",
+  "urge", "urge outcome", "alternatives list", "pattern sentence",
+  "worksheet", "weekly review", "taking stock", "check-in", "the cover",
+  "the settings screen", "the iOS Settings app", "Get support", "the
+  not-right-now page", "the GP suggestion", "Delete-all", "export",
+  "Feeling fat notes". Use no synonym for a defined term. Never "log",
+  "meal log", "food diary", "intake", "portion", "calories", "mark",
+  "note" (for a message), "timestamp", "tracker", "streak", "badge",
+  "score", "user", "unlock" (for a stage). Never "record" or "store" as a
+  verb. Every clock time in a string uses the 24-hour clock.
   Never: calories, totals, streaks, colour-coded food, goal weight, BMI after
   onboarding, AI-generated advice at runtime, comparison to other users.
   Done means ./verify exits 0.

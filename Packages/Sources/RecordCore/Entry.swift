@@ -18,14 +18,18 @@ public final class Entry {
     @Attribute(.allowsCloudEncryption) public var feltLikeABinge: Bool = false
     /// The moment the app saved the entry. Never shown to the person.
     @Attribute(.allowsCloudEncryption) public var createdAt: Date = Date()
+    /// The record day the entry belongs to, fixed at save from its own time,
+    /// offset and the day start in force. Never changes after save.
+    @Attribute(.allowsCloudEncryption) public var dayKey: String = ""
 
-    init(id: UUID, time: Date, utcOffsetSeconds: Int, what: String, feltLikeABinge: Bool, createdAt: Date) {
+    init(id: UUID, time: Date, utcOffsetSeconds: Int, what: String, feltLikeABinge: Bool, createdAt: Date, dayKey: String) {
         self.id = id
         self.time = time
         self.utcOffsetSeconds = utcOffsetSeconds
         self.what = what
         self.feltLikeABinge = feltLikeABinge
         self.createdAt = createdAt
+        self.dayKey = dayKey
     }
 }
 
