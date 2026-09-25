@@ -71,4 +71,29 @@ final class LiteralLintTests: XCTestCase {
         let failures = LiteralLint.scanFile(text: source, file: "V.swift", validKeys: [])
         XCTAssertEqual(failures, [])
     }
+
+    /// data-and-privacy spec, "The privacy notice": the backup line is the
+    /// one sentence the requirement quotes verbatim. Scenario "Privacy
+    /// notice" checks the screen holds it; this checks the catalogue holds
+    /// the exact words, so a later edit cannot drift from the requirement
+    /// text without a spec change.
+    func testPrivacyNoticeBackupLineMatchesTheRequirementVerbatim() throws {
+        let catalogue = try XCStringsCatalogue.read(
+            from: RepositoryRoot.appDirectory.appendingPathComponent("Midmorning/Localizable.xcstrings")
+        )
+        XCTAssertEqual(
+            catalogue["settings.privacyNotice.backup.body"],
+            "A backup of your device can hold reminder times until the app cancels them. It never holds your entries."
+        )
+    }
+
+    /// Scenario: Erasure. "WHEN the person reads the section on deleting
+    /// their data THEN it names 'Delete everything' in the settings screen."
+    func testPrivacyNoticeNamesDeleteEverythingInTheErasureSection() throws {
+        let catalogue = try XCStringsCatalogue.read(
+            from: RepositoryRoot.appDirectory.appendingPathComponent("Midmorning/Localizable.xcstrings")
+        )
+        let yourData = try XCTUnwrap(catalogue["settings.privacyNotice.yourData.body"])
+        XCTAssertTrue(yourData.contains("Delete everything"))
+    }
 }

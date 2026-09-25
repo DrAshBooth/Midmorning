@@ -1,72 +1,677 @@
 {
-  "sourceLanguage" : "en-GB",
-  "strings" : {
-    "entry.cancel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en-GB" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
+  "sourceLanguage": "en-GB",
+  "strings": {
+    "entry.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
           }
         }
       }
     },
-    "entry.new.accessibilityLabel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en-GB" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New entry"
+    "entry.new.accessibilityLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New entry"
           }
         }
       }
     },
-    "entry.save" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en-GB" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save"
+    "entry.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
           }
         }
       }
     },
-    "entry.time.accessibilityLabel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en-GB" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Time"
+    "entry.time.accessibilityLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
           }
         }
       }
     },
-    "entry.what" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en-GB" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "What"
+    "entry.what": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What"
           }
         }
       }
     },
-    "today.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en-GB" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Today"
+    "settings.about.appVersion": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App version"
+          }
+        }
+      }
+    },
+    "settings.about.contact": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact"
+          }
+        }
+      }
+    },
+    "settings.about.contentVersion": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content version"
+          }
+        }
+      }
+    },
+    "settings.about.draftBadge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft"
+          }
+        }
+      }
+    },
+    "settings.getSupport": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get support"
+          }
+        }
+      }
+    },
+    "settings.group.about": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "settings.group.privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        }
+      }
+    },
+    "settings.group.record": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        }
+      }
+    },
+    "settings.privacy.deleteEverything": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete everything"
+          }
+        }
+      }
+    },
+    "settings.privacy.deleteEverything.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This deletes your entire record from this device. You cannot undo it."
+          }
+        }
+      }
+    },
+    "settings.privacy.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.analytics.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The team receives only Apple's aggregated App Analytics and crash reports, when you choose to share them with Apple."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.analytics.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What the team receives"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.apple.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple is a recipient of your data when you turn sync on. Apple holds it in Apple's own data centres. Apple cannot read your entries. The team never reads what you write."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.apple.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.backup.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A backup of your device can hold reminder times until the app cancels them. It never holds your entries."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.complaints.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can complain to the Information Commissioner's Office (ICO)."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.complaints.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complaints"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.contact.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contact"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.contact.whoReads": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The team reads this inbox."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.controller.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The team confirms the controller's name and address before release."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.controller.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who controls your data"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.lawfulBasis.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The team confirms the legal basis and the Article 9 condition before release."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.lawfulBasis.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legal basis"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy notice"
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.yourData.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can read your record in the app at any time. To delete your data, use \"Delete everything\" in the settings screen."
+          }
+        }
+      }
+    },
+    "settings.privacyNotice.yourData.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your data"
+          }
+        }
+      }
+    },
+    "settings.record.dayStartsAt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day starts at"
+          }
+        }
+      }
+    },
+    "settings.record.gapBands": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gap bands"
+          }
+        }
+      }
+    },
+    "settings.reminders.eachDeviceCaption": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each device sends its own reminders."
+          }
+        }
+      }
+    },
+    "settings.reminders.explicitWording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Say what each reminder is for"
+          }
+        }
+      }
+    },
+    "settings.reminders.middayCaption": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The midday reminder is at 12:00."
+          }
+        }
+      }
+    },
+    "settings.reminders.pausedLine": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders are paused."
+          }
+        }
+      }
+    },
+    "settings.reminders.quietHours": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiet hours"
+          }
+        }
+      }
+    },
+    "settings.reminders.quietHours.end": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End"
+          }
+        }
+      }
+    },
+    "settings.reminders.quietHours.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        }
+      }
+    },
+    "settings.reminders.remindAgain.15": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15 minutes"
+          }
+        }
+      }
+    },
+    "settings.reminders.remindAgain.30": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 minutes"
+          }
+        }
+      }
+    },
+    "settings.reminders.remindAgainLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remind me again in"
+          }
+        }
+      }
+    },
+    "settings.reminders.switch.closeTheDay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the day"
+          }
+        }
+      }
+    },
+    "settings.reminders.switch.midday": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Midday reminder"
+          }
+        }
+      }
+    },
+    "settings.reminders.switch.plannedMeals": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planned meals"
+          }
+        }
+      }
+    },
+    "settings.reminders.switch.setTodaysPlan": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set today's plan"
+          }
+        }
+      }
+    },
+    "settings.reminders.switch.weeklyReview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly review"
+          }
+        }
+      }
+    },
+    "settings.reminders.switch.weighInDay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-in day reminder"
+          }
+        }
+      }
+    },
+    "settings.reminders.time.closeTheDay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the day time"
+          }
+        }
+      }
+    },
+    "settings.reminders.time.setTodaysPlan": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set today's plan time"
+          }
+        }
+      }
+    },
+    "settings.reminders.time.weeklyReview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly review time"
+          }
+        }
+      }
+    },
+    "settings.reminders.time.weighIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-in reminder time"
+          }
+        }
+      }
+    },
+    "settings.reminders.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders"
+          }
+        }
+      }
+    },
+    "settings.reminders.turnOn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn reminders on"
+          }
+        }
+      }
+    },
+    "settings.reminders.whenHeader": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When"
+          }
+        }
+      }
+    },
+    "settings.reminders.whichHeader": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which reminders"
+          }
+        }
+      }
+    },
+    "settings.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "today.settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "today.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

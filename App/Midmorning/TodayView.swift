@@ -41,6 +41,16 @@ struct TodayView: View {
                     }
                     .accessibilityLabel("entry.new.accessibilityLabel")
                 }
+                // "Programme" and "Reviews" join this bar once their own
+                // build changes land (record spec, "The Today stack",
+                // mm-t12.15, part of `record-full`). Settings builds only
+                // its own "Settings" text control for now (settings spec,
+                // "One screen, one tap from Today").
+                ToolbarItemGroup(placement: .bottomBar) {
+                    NavigationLink("today.settings") {
+                        SettingsView(store: store)
+                    }
+                }
             }
             .sheet(isPresented: $showingNewEntry) {
                 NewEntryView(store: store, day: day) { saved in

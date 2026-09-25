@@ -215,5 +215,9 @@
   {
     "id": "gpsuggestion.gettingworse",
     "text": "You said things are getting worse. That's worth talking through with your GP. Your plan stays on."
+  },
+  {
+    "id": "about.contact",
+    "text": "contact@example.invalid"
   }
 ]
