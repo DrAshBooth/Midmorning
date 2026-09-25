@@ -116,7 +116,7 @@ The new-entry screen MUST show a Context field under Where. Context MUST accept 
 
 When the star is off, the field's label MUST read "Context". When the star is on, the field's label MUST read "What was going on just before?". The app MUST NOT show any other text, icon, colour change or message when the star turns on.
 
-The star control is the system toggle. Its on state MUST use the primary label colour as its tint. The screen MUST show no other colour change when the star turns on.
+The star control is the system toggle. Its on state MUST use the system grey as its tint. The knob then shows in light and dark mode. The screen MUST show no other colour change when the star turns on.
 
 The app MUST trim white space and line breaks from the start and end of Context. The app MUST keep the rest as typed. The app MUST NOT require Context on a starred entry.
 

@@ -8,6 +8,7 @@ struct NewEntryView: View {
     let onSave: (Entry) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @State private var openedAt = Date()
     @State private var time = Date()
     @State private var what = ""
@@ -20,17 +21,32 @@ struct NewEntryView: View {
 
     var body: some View {
         NavigationStack {
+            // Rows sit in the reading order the spec fixes (What, the star,
+            // Time), so the visual order equals the VoiceOver order. Save and
+            // Cancel stay in the navigation bar, which VoiceOver reads first;
+            // decision 106 settles their place.
             Form {
+                LabeledContent {
+                    TextField("", text: $what, axis: .vertical)
+                        .focused($whatIsFocused)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityLabel("What")
+                } label: {
+                    // The field carries the label, so VoiceOver says "What" once.
+                    Text("What").accessibilityHidden(true)
+                }
+                // A neutral system grey, not the default green: the star is
+                // marked, not highlighted. Grey keeps the knob visible in light
+                // and dark mode; the primary colour hid it in dark mode.
+                Toggle("felt like a binge", isOn: $feltLikeABinge)
+                    .tint(Color(uiColor: .systemGray))
+                    // Redaction greys the label but not the switch, so the
+                    // switch hides itself: the app switcher shows no star.
+                    .opacity(scenePhase == .active ? 1 : 0)
                 DatePicker("", selection: $time, in: range, displayedComponents: [.date, .hourAndMinute])
                     .labelsHidden()
                     .accessibilityLabel("Time")
-                LabeledContent("What") {
-                    TextField("", text: $what, axis: .vertical)
-                        .focused($whatIsFocused)
-                        .accessibilityLabel("What")
-                        .multilineTextAlignment(.trailing)
-                }
-                Toggle("felt like a binge", isOn: $feltLikeABinge)
+                    .accessibilityValue(Self.spokenTime(time))
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -41,7 +57,10 @@ struct NewEntryView: View {
                 }
             }
         }
+        // The sheet sits above Today's redaction, so it redacts itself: the
+        // app switcher shows no entry text, no star and no field label.
         .privacySensitive()
+        .redacted(reason: scenePhase == .active ? [] : .privacy)
         .onAppear {
             openedAt = Date()
             time = openedAt
@@ -50,6 +69,14 @@ struct NewEntryView: View {
                 whatIsFocused = true
             }
         }
+    }
+
+    /// The time control's VoiceOver value, for example "Thursday 24 September, 21:35".
+    static func spokenTime(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_GB")
+        f.dateFormat = "EEEE d MMMM, HH:mm"
+        return f.string(from: date)
     }
 
     private func save() {
