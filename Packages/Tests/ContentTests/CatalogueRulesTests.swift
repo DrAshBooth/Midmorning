@@ -104,6 +104,15 @@ final class CatalogueRulesTests: XCTestCase {
         XCTAssertFalse(CatalogueRules.isSentenceCase("contact@example.invalid"))
         XCTAssertTrue(CatalogueRules.isValidContactValue("contact@example.invalid"))
     }
+
+    /// The shipped "about.contact" entry (settings spec, "The About group";
+    /// decision 99): the About group shows this value until mm-t43.17 sets
+    /// the confirmed support email, and either form passes this rule.
+    func testShippedAboutContactHoldsThePlaceholderAndPassesTheRule() {
+        let entry = Shipped.bundle.string(id: "about.contact")
+        XCTAssertEqual(entry?.text, "contact@example.invalid")
+        XCTAssertTrue(CatalogueRules.isValidContactValue(entry!.text))
+    }
 }
 
 /// Extracts the ids from the README's "## Sign-off list" fenced code block.

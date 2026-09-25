@@ -109,9 +109,19 @@ public enum BundleLoader {
         return bundle
     }
 
-    /// Reads the bundle from the package's bundled resources, the path the
-    /// app itself uses.
+    /// Reads the bundle from the package's own resource bundle
+    /// (`Bundle.module`), the path a real, installed app uses. Unlike
+    /// `load(from:)` against `RepositoryRoot`, this needs no source checkout
+    /// on disk, so it works inside a sandboxed app on a device. Finds
+    /// `manifest.json` through `Bundle.module` rather than assuming a
+    /// `Resources` subdirectory exists inside the bundle: `swift build`'s
+    /// macOS bundle nests it under `Contents/Resources`, while Xcode's own
+    /// build of the iOS app flattens every resource to the bundle's root;
+    /// this works under both.
     public static func loadShipped(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> ContentBundle {
-        try load(from: RepositoryRoot.contentResourcesDirectory, environment: environment)
+        guard let manifestURL = Bundle.module.url(forResource: "manifest", withExtension: "json") else {
+            throw BundleLoaderError.fileNotFound("manifest.json")
+        }
+        return try load(from: manifestURL.deletingLastPathComponent(), environment: environment)
     }
 }

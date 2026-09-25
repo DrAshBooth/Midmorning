@@ -73,10 +73,19 @@ struct TodayView: View {
                 }
                 ToolbarItemGroup(placement: .bottomBar) {
                     // `weekly-review` (3.2) supplies the live "is a review
-                    // due" fact; `false` is this build's fixture.
+                    // due" fact; `false` is this build's fixture. "Settings"
+                    // opens the real screen (settings spec, "One screen, one
+                    // tap from Today"); "Programme" and "Reviews" stay no-op
+                    // placeholders until their own build changes land.
                     ForEach(Array(BottomToolbar.items(reviewsDue: false).enumerated()), id: \.offset) { index, item in
                         if index > 0 { Spacer() }
-                        Button {} label: { Text(item) }
+                        if item == "Settings" {
+                            NavigationLink("today.settings") {
+                                SettingsView(store: store)
+                            }
+                        } else {
+                            Button {} label: { Text(item) }
+                        }
                     }
                 }
             }

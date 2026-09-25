@@ -42,4 +42,17 @@ final class BundledCardsTests: XCTestCase {
     func testShippedCardsHoldNoPlaceholder() {
         XCTAssertEqual(ContentChecks.noRuntimePlaceholder(Shipped.bundle.cards), [])
     }
+
+    /// `BundleLoader.loadShipped()` is the path a real, installed app uses:
+    /// `Bundle.module`, not the source checkout. It MUST agree with the
+    /// source directory's bundle, so a device with no source tree still
+    /// reads the same content (settings spec, "The About group": the app
+    /// reads its own content version and draft state through this call).
+    func testLoadShippedReadsFromTheModuleBundleAndMatchesTheSourceDirectory() throws {
+        let fromModuleBundle = try BundleLoader.loadShipped(environment: [:])
+        let fromSourceDirectory = try ContentBundle.load(from: RepositoryRoot.contentResourcesDirectory, environment: [:])
+        XCTAssertEqual(fromModuleBundle.contentVersion, fromSourceDirectory.contentVersion)
+        XCTAssertEqual(fromModuleBundle.bundleHash, fromSourceDirectory.bundleHash)
+        XCTAssertEqual(fromModuleBundle.isDraft, fromSourceDirectory.isDraft)
+    }
 }

@@ -52,6 +52,15 @@ public enum RecordDay {
         calendar.component(.hour, from: moment) < startHour
     }
 
+    /// The key of the record day right after the one that contains `moment`.
+    /// A new "Day starts at" hour takes effect from this key, never from
+    /// `moment`'s own day, so no saved entry's record day moves (settings
+    /// spec, "The Record group").
+    public static func nextDayKey(after moment: Date, calendar: Calendar, startHour: Int = startHour) -> String {
+        let currentInterval = interval(containing: moment, calendar: calendar, startHour: startHour)
+        return key(containing: currentInterval.end, calendar: calendar, startHour: startHour)
+    }
+
     private static func start(onCalendarDateOf date: Date, calendar: Calendar, startHour: Int) -> Date {
         var components = calendar.dateComponents([.year, .month, .day], from: date)
         components.hour = startHour
