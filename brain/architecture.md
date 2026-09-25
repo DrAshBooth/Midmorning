@@ -110,6 +110,15 @@ star, record day, creation moment, new-entry screen, the store. Never log, meal,
 food, diary, intake, calories. No string names a condition, treatment, therapy
 or outcome: that sentence is the MHRA line.
 
+## Work is beads: one epic per build change
+
+Each tasks.md task is a bead epic; each spec requirement is a child bead;
+each deferred.md row has a remainder bead under the change that builds it.
+Children inherit the epic's blocked state, so an unblocked epic is one
+worktree (`claude -w <epic>`) that works its children as a checklist.
+Beads point at spec headings, never line numbers, and live in the shared
+dolt server, pushed with `bd dolt push`. Decided 25 September 2026.
+
 ## Placeholders and gates
 Bundle identifier `uk.midmorning.app`, App Group `group.uk.midmorning` and team
 `42JQW6669W` are placeholders until the first signed build; after the first

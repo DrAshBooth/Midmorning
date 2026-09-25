@@ -113,6 +113,25 @@ Not in V1: weight loss or nutrition of any kind, diagnosis, a human guide, an AI
 
 The data-model review's findings need no decision; the team applies them. Every row carries its own change moment and a deleted flag, and settings are one row per key. The app hard-deletes nothing, and every reference is a key that the reader resolves on read.
 
+## Decisions Ash made on 25 September 2026, after the bead review
+
+42. One worktree per build change; the change's requirement beads are its checklist.
+43. The epic chain loosens: content, the model foundation, settings, onboarding, app lock, the engine, weigh-in and the plan run in parallel where the specs permit.
+44. The notification-action handlers and the action queue are 2.4 work.
+45. Each deferred.md row has a remainder bead under its owning change.
+46. 1.3 builds the settings shell; each feature change adds its own controls.
+47. The external release gates start at once; the string gates wait for every first-cut build change; four gates and one submission task are added.
+48. Re-screening at a restart is 2.1 work; only the check-in shortcut waits for 3.6.
+49. A delete is a kept version with the deleted flag; every reader hides it.
+50. Cut zero is a team-only build of the core loop before the first TestFlight cut.
+51. Beads point at spec headings, not line numbers; v1-programme is archived at v1 complete.
+52. The worktree protocol is a short section in CLAUDE.md.
+53. Beads sync with `bd dolt push` after each batch.
+54. 1.2 splits into 1.2a model-foundation and 1.2b record-full; the string-family requirement splits by owning change.
+55. The product-rules beads are constraints that close at the first cut.
+56. Second-cut work is not blocked; the dispatch command filters by the first-cut label.
+57. Foundation beads are P0, accessibility and never-shows beads P2; every bead carries a size label.
+
 ## Assumptions the specs make where the PRD is silent
 
 Each spec lists its own under its Purpose or in the writer's report. The design lists the ones that shape the data model.

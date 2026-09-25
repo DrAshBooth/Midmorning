@@ -74,3 +74,25 @@ openspec validate --all --strict                            # every change and s
 To run the app: build with a named simulator destination, then install and
 launch `uk.midmorning.app` with `xcrun simctl`. The entry point is
 `App/Midmorning/MidmorningApp.swift`.
+
+## Worktrees and beads
+
+One worktree per epic. Dispatch with `bd ready -t epic -l first-cut`; the
+epic's children are its checklist, P0 first, P2 last. `claude -w <epic-id>`
+opens the worktree. In it: claim the epic, open or continue its openspec
+build change, build one child at a time, run `./verify`, commit on the
+worktree branch, and close each child with `--reason` naming the commit.
+Ash merges the branch, archives the change and closes the epic.
+
+Rules for anything an agent writes: ASD-STE100 for every spec, design,
+task, README line and bead; `product-rules` wins on conflict; a conflict
+between specs goes to `bd human <id>` and the Midmorning Decisions page,
+never a silent choice; `./verify` stays under 240s and gains no check
+without asking Ash. `constraint` and `human` beads are not dispatched.
+
+bd notes: use full ids (`mm-t12.2`, never `mm-t1`); search with
+`bd search --desc-contains` or `bd list -l spec:<name>`; never bare
+`bd list --json`; file follow-ups with
+`bd create --parent <epic> --no-inherit-labels -l requirement,spec:<name>,<cut>`;
+`bd doctor` warnings about the Dolt remote and AGENTS.md are expected.
+Run `scripts/check-beads` by hand to confirm every bead's spec heading exists.

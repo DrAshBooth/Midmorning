@@ -162,7 +162,7 @@ The time control MUST offer times from the start of the entry's record day to th
 
 The edit screen MUST show a control "Delete entry". Today MUST also offer the system's standard swipe to delete on a row. Before it deletes, the app MUST ask once: "Delete this entry?" with the choices "Delete" and "Cancel".
 
-On "Delete" the app MUST delete the entry from the store. After the delete the app MUST show the day with no message, sound or haptic. The app MUST NOT keep a deleted entry in the store. The `data-and-privacy` capability owns how a delete reaches the person's iCloud private database.
+On "Delete" the store MUST write a version of the entry with the deleted flag on, as `data-and-privacy` states. Every reader MUST hide an entry whose winning version is deleted. After the delete the app MUST show the day with no message, sound or haptic. The store MUST keep the deleted version. The `data-and-privacy` capability owns how a delete reaches the person's iCloud private database.
 
 #### Scenario: Delete from the edit screen
 - **WHEN** the person taps "Delete entry" on the 13:05 entry and taps "Delete"
@@ -178,7 +178,7 @@ On "Delete" the app MUST delete the entry from the store. After the delete the a
 
 #### Scenario: Deleted entry after restart
 - **WHEN** the person deletes an entry, closes the app and opens it again
-- **THEN** the entry is not in the store
+- **THEN** no screen, count or export shows the entry, and the store holds its deleted version
 
 ### Requirement: "Didn't record"
 
