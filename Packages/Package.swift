@@ -9,9 +9,21 @@ let package = Package(
     platforms: [.macOS(.v14), .iOS(.v17)],
     products: [
         .library(name: "RecordCore", targets: ["RecordCore"]),
+        .library(name: "Content", targets: ["Content"]),
+        .executable(name: "content-lock", targets: ["ContentLockTool"]),
+        .executable(name: "content-signoff-list", targets: ["ContentSignOffListTool"]),
     ],
     targets: [
         .target(name: "RecordCore"),
         .testTarget(name: "RecordCoreTests", dependencies: ["RecordCore"]),
+        // The content spec fixes this package's path, `Packages/Content`,
+        // because the content-lock file and the sign-off files live at a
+        // literal, spec-named path that tooling reads directly.
+        .target(name: "Content", path: "Content", resources: [.copy("Resources")]),
+        .testTarget(name: "ContentTests", dependencies: ["Content"], path: "Tests/ContentTests"),
+        // scripts/content-lock runs this. It is not part of `swift test`.
+        .executableTarget(name: "ContentLockTool", dependencies: ["Content"], path: "Tools/ContentLockTool"),
+        // scripts/content-signoff-list runs this. It is not part of `swift test`.
+        .executableTarget(name: "ContentSignOffListTool", dependencies: ["Content"], path: "Tools/ContentSignOffListTool"),
     ]
 )

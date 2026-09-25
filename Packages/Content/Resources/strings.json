@@ -1,0 +1,219 @@
+[
+  {
+    "id": "opening.stage2",
+    "text": "You can now plan when to eat. The app reminds you at each planned meal."
+  },
+  {
+    "id": "rule.stage2",
+    "text": "Opens after %1$lld recorded days. You have %2$lld."
+  },
+  {
+    "id": "rule.stage3",
+    "text": "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts"
+  },
+  {
+    "id": "rule.stage4",
+    "text": "Opens after your first urge outcome"
+  },
+  {
+    "id": "rule.stage5",
+    "text": "Opens after six weeks in the programme"
+  },
+  {
+    "id": "rule.stage6",
+    "text": "Opens after taking stock"
+  },
+  {
+    "id": "rule.stage7",
+    "text": "Opens after twelve weeks in the programme"
+  },
+  {
+    "id": "todaycard.plan",
+    "text": "Your plan isn't set yet. It takes about two minutes."
+  },
+  {
+    "id": "todaycard.plan.setup",
+    "text": "Set it up"
+  },
+  {
+    "id": "todaycard.read",
+    "text": "Read"
+  },
+  {
+    "id": "reflection.1",
+    "text": "What did you notice this week?"
+  },
+  {
+    "id": "reflection.2",
+    "text": "What made things harder?"
+  },
+  {
+    "id": "reflection.3",
+    "text": "What helped?"
+  },
+  {
+    "id": "week1.1",
+    "text": "What do you want to be different by week 12?"
+  },
+  {
+    "id": "week1.2",
+    "text": "What is hardest at the moment?"
+  },
+  {
+    "id": "week1.3",
+    "text": "When are the hardest times of day?"
+  },
+  {
+    "id": "gp.default",
+    "text": "I'd like to talk about my eating. I've been having times when I eat a lot and feel out of control. I've been following a self-help programme on my phone and I have a record I can show you. Can we talk about what support there is?"
+  },
+  {
+    "id": "gp.selfharm",
+    "text": "I'd like to talk about my eating. I've been having times when I eat a lot and feel out of control. I've been following a self-help programme on my phone and I have a record I can show you. Can we talk about what support there is? I've been having thoughts of hurting myself and I'd like to talk about that."
+  },
+  {
+    "id": "gp.under18",
+    "text": "I'd like to talk about my eating. Is there someone for people my age I can see?"
+  },
+  {
+    "id": "support.beat.title",
+    "text": "Beat helpline"
+  },
+  {
+    "id": "support.beat.description",
+    "text": "Beat is the UK charity for people who struggle with eating."
+  },
+  {
+    "id": "support.beat.england",
+    "text": "England 0808 801 0677"
+  },
+  {
+    "id": "support.beat.scotland",
+    "text": "Scotland 0808 801 0432"
+  },
+  {
+    "id": "support.beat.wales",
+    "text": "Wales 0808 801 0433"
+  },
+  {
+    "id": "support.beat.ni",
+    "text": "Northern Ireland 0808 801 0434"
+  },
+  {
+    "id": "support.beat.hours",
+    "text": "Opening hours are on Beat's website."
+  },
+  {
+    "id": "support.beatwebchat",
+    "text": "Beat webchat"
+  },
+  {
+    "id": "support.samaritans.title",
+    "text": "Samaritans"
+  },
+  {
+    "id": "support.samaritans.number",
+    "text": "116 123"
+  },
+  {
+    "id": "support.samaritans.line",
+    "text": "Any time, about anything."
+  },
+  {
+    "id": "support.samaritans.welsh",
+    "text": "Samaritans in Welsh: 0808 164 0123."
+  },
+  {
+    "id": "support.lifeline.title",
+    "text": "Lifeline, Northern Ireland"
+  },
+  {
+    "id": "support.lifeline.number",
+    "text": "0808 808 8000"
+  },
+  {
+    "id": "support.lifeline.line",
+    "text": "Any time."
+  },
+  {
+    "id": "support.nhs111.title",
+    "text": "NHS 111"
+  },
+  {
+    "id": "support.nhs111.number",
+    "text": "111"
+  },
+  {
+    "id": "support.nhs111.line",
+    "text": "When you need help and it's not an emergency."
+  },
+  {
+    "id": "support.nhs111.note",
+    "text": "England, Scotland and Wales. In Northern Ireland, call your GP out-of-hours service."
+  },
+  {
+    "id": "support.emergency.title",
+    "text": "999"
+  },
+  {
+    "id": "support.emergency.line",
+    "text": "If you are in danger now."
+  },
+  {
+    "id": "support.gp.title",
+    "text": "Talk to your GP"
+  },
+  {
+    "id": "support.gp.compensation",
+    "text": "Some people make themselves sick, use laxatives, or miss insulin or another medicine after eating. If that happens more than about twice a week, this programme isn't the right tool on its own. Talk to your GP first."
+  },
+  {
+    "id": "exclusion.selfharm",
+    "text": "You said you've had thoughts of hurting yourself. That deserves a person, not a programme. Samaritans are there any time, on 116 123. If you are in danger now, call 999."
+  },
+  {
+    "id": "exclusion.age",
+    "text": "Midmorning is built for adults. Beat's Youthline is for anyone under 18: 0808 801 0711."
+  },
+  {
+    "id": "exclusion.weight",
+    "text": "Your height and weight put you in a range where this programme isn't the right tool for you. This is not a judgement about you. Your GP can look at this with you, and Beat can help you get there."
+  },
+  {
+    "id": "exclusion.pregnancy",
+    "text": "Pregnancy changes what eating needs to look like, and this programme isn't designed for that. Your GP or midwife can help with eating during pregnancy."
+  },
+  {
+    "id": "exclusion.treatment",
+    "text": "The people treating you are the right ones to decide what sits alongside it. Ask them about Midmorning. If they're happy, you can come back and start."
+  },
+  {
+    "id": "notrightnow.selfharm",
+    "text": "You said you've had thoughts of hurting yourself. That deserves a person, not a programme. Samaritans are there any time, on 116 123. If you are in danger now, call 999."
+  },
+  {
+    "id": "notrightnow.weight",
+    "text": "Your weight has fallen to a point where this programme isn't the right tool for you. This is not a judgement about you. This is not a diagnosis. Your GP can look at this with you."
+  },
+  {
+    "id": "gpsuggestion.fallingweight",
+    "text": "Your weight has come down since you started. Your plan stays on. It's worth a word with your GP."
+  },
+  {
+    "id": "gpsuggestion.quickchange",
+    "text": "Your weight has changed quickly over the last four weeks. Your plan stays on. It's worth a word with your GP."
+  },
+  {
+    "id": "gpsuggestion.deterioration",
+    "text": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on.",
+    "plural": {
+      "zero": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on.",
+      "one": "Your starred entries have gone up for %lld week in a row. That's worth talking through with your GP. Your plan stays on.",
+      "other": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on."
+    }
+  },
+  {
+    "id": "gpsuggestion.gettingworse",
+    "text": "You said things are getting worse. That's worth talking through with your GP. Your plan stays on."
+  }
+]

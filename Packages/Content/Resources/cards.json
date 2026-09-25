@@ -1,0 +1,92 @@
+[
+  {
+    "id": "stage1.why",
+    "section": "stage1",
+    "title": "Why write it down",
+    "body": "Writing down what you eat, right after you eat it, is the method itself. This is not a diary for working out totals. It is a record you can look back on, so you and your GP can see the pattern over weeks, not just one bad day.\n\nAn entry takes under twenty seconds. You write the time and a few words about what you ate. Nothing else. You do not need to explain yourself or judge what you wrote.\n\nMost people find it easier to write soon after eating, rather than trying to remember it that evening. The next stage asks you to plan when you eat. This stage only asks you to write down what already happened.",
+    "oneThing": "Write your first entry the next time you eat, whatever it is.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage1.entry",
+    "section": "stage1",
+    "title": "How to make an entry",
+    "body": "An entry has three parts: the time, a few words about what you ate, and the star. You choose whether the star is on. It marks a moment as one where it felt like a binge, and that judgement is yours alone.\n\nWrite the entry as soon as you can after eating, ideally within a few minutes. A late entry is still a good entry; you can set an earlier time if you write it later.\n\n\"Toast and tea\" is a complete entry. You do not need to write anything about amounts. There is no list to choose from and nothing to look up. You just write what you ate, in your own words.",
+    "oneThing": "Write down the next thing you eat within a few minutes of eating it.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage1.star",
+    "section": "stage1",
+    "title": "The star",
+    "body": "The star is the one judgement call in the whole record: did this feel like a binge to you? Nobody else decides. Not a count of what you ate, not how much time passed, not what anyone else would call it.\n\nSome entries are easy to star. Others sit in the middle, and that is fine. Leave the star off when you are not sure. You can always come back and change it later if it feels wrong.\n\nThe star does not change how an entry looks on the page. It is one mark beside the time, nothing more. There is no colour, no message and no comment when you turn it on.",
+    "oneThing": "Trust your own judgement the next time you decide whether to turn the star on.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage1.cycle",
+    "section": "stage1",
+    "title": "How it keeps itself going",
+    "body": "A strict rule, a gap and an urge feed each other, and seeing the loop is the first step out of it.\n\nA strict rule sounds sensible on its own: skip breakfast, cut out a food, eat less today. But a strict rule often means a long gap with nothing eaten. A long gap makes an urge to eat a lot more likely, because your body is asking for fuel it has not had. After a binge, the strict rule often comes back stronger, and the gap starts again.\n\nYour record shows this loop in your own days: a strict rule, then a gap, then an urge, then a binge, then a new strict rule. The next stage breaks the loop at the gap, by planning regular meals and snacks so the gap never gets that long.",
+    "oneThing": "Notice the next time a strict rule comes right before an urge.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage1.weighin",
+    "section": "stage1",
+    "title": "Weighing once a week",
+    "body": "You weigh yourself once a week, on the day you choose, and the app asks for that number then and no other time.\n\nThe app shows a four-week average as a line, with the single points shown more lightly. Weekly swings of a kilo or two are normal and mean nothing on their own; a trend over several weeks is what matters, if anything does.\n\nThere is no target weight here and no colour on the chart. Daily weighing often creeps back in and becomes its own habit to watch for. Once a week, on your chosen day, is enough.",
+    "oneThing": "Choose the day you will weigh in each week.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage2.clock",
+    "section": "stage2",
+    "title": "Eating by the clock",
+    "body": "The last stage showed the loop: a strict rule, a gap, an urge, then a binge. Eating by the clock breaks that loop at the gap.\n\nInstead of waiting until you feel hungry enough, or telling yourself you have earned it, you eat at times you chose in advance: three meals and two or three snacks, with no gap over four hours while you are awake. The choice is made ahead of time, before an urge is anywhere near.\n\nThis can feel strange at first, because it means eating when you are not particularly hungry and, sometimes, when you feel you have already eaten enough today. That is the method working, not a mistake. Regular eating is what closes the gap that the urge needs.",
+    "oneThing": "Sketch tomorrow's plan: three meal times and two or three snack times.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage2.pattern",
+    "section": "stage2",
+    "title": "Three meals and two or three snacks",
+    "body": "Your plan has a simple shape: three meals and two or three snacks across the day, spaced so no gap runs over four hours while you are awake.\n\nYou choose the times. A weekday pattern and a weekend pattern can differ, and you can adjust a day the night before or in the morning, before it starts. The plan does not ask what you eat at each time, only when.\n\nOnce a planned time arrives, the app prompts you. What actually happens, an entry beside the planned time, is between you and the record; the plan just holds the shape of the day.",
+    "oneThing": "Add one more snack time to tomorrow's plan if you currently have only two.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage2.gap",
+    "section": "stage2",
+    "title": "No gap over four hours",
+    "body": "A gap of more than four hours while you are awake is where an urge is most likely to build. The plan is built to keep every gap at four hours or under.\n\nIf you look back at your record, a long gap often sits just before a starred entry. That is not a coincidence; it is how the body responds to being under-fed for hours. Closing the gap, not willpower in the moment, is what the plan is for.\n\nOnce your plan is running, the app can show you where a gap sits, so you can see it before it becomes a problem rather than after.",
+    "oneThing": "Put something in the middle of tomorrow's longest gap.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage2.makingup",
+    "section": "stage2",
+    "title": "After a skipped meal or a binge",
+    "body": "Whether a planned meal gets skipped or a binge happens, the rule is the same: the next planned meal still goes ahead, at its planned time.\n\nThis can feel wrong. The instinct after either one is often to skip the next meal too, to make up for it, or to wait longer before eating again. That instinct keeps the loop going. Eating on time, whatever just happened, is what stops it.\n\nThere is no extra step to take and nothing to make up for beyond that. The plan carries on exactly as it was.",
+    "oneThing": "The next planned meal happens on time, whatever happened after the last one.",
+    "links": [],
+    "retired": false
+  },
+  {
+    "id": "stage2.when",
+    "section": "stage2",
+    "title": "When, not what",
+    "body": "This plan is about when you eat, not what you eat. There is no food to avoid yet, no rule about what counts as a proper meal, and nothing to add up.\n\nLater stages look at particular foods and rules around them, if that turns out to matter for you. For now, the plan only asks you to choose times and keep to them as closely as you can. What you eat at each time is entirely up to you.\n\nIf you already avoid certain foods or follow strict rules about eating, that is worth noticing for later. Right now, the plan does not ask you to change any of it.",
+    "oneThing": "Check your plan for what comes next.",
+    "links": [],
+    "retired": false
+  }
+]

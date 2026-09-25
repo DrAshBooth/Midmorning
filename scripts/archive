@@ -1,0 +1,23 @@
+#!/bin/bash
+# The archive script: runs the content test in the release lane, refuses a
+# Draft bundle, then archives the app. Run by hand for a real release; not
+# part of ./verify, and the team has not wired the Xcode archive scheme yet.
+#
+# "Clinical sign-off per content version": "The archive script MUST refuse
+# to upload a build whose bundle carries the Draft flag." Running the
+# content test with MIDMORNING_RELEASE=1 is that refusal: the content test
+# fails whenever no sign-off file matches the shipped bundle, which is
+# exactly when the bundle would carry the Draft flag.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+echo "content-pipeline: running the content test in the release lane"
+if ! MIDMORNING_RELEASE=1 swift test --package-path Packages --filter ContentTests; then
+  echo "archive: refused. The content test failed in the release lane, most" >&2
+  echo "likely because the bundle carries the Draft flag (no sign-off file" >&2
+  echo "matches the shipped content version)." >&2
+  exit 1
+fi
+
+echo "content-pipeline: content test passed in the release lane; archiving"
+xcodebuild -project App/Midmorning.xcodeproj -scheme Midmorning archive "$@"
