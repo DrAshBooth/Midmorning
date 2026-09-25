@@ -10,6 +10,7 @@ let package = Package(
     products: [
         .library(name: "Record", targets: ["Record"]),
         .library(name: "Constants", targets: ["Constants"]),
+        .library(name: "AppLock", targets: ["AppLock"]),
         .library(name: "Content", targets: ["Content"]),
         .executable(name: "content-lock", targets: ["ContentLockTool"]),
         .executable(name: "content-signoff-list", targets: ["ContentSignOffListTool"]),
@@ -19,6 +20,11 @@ let package = Package(
         .target(name: "Record", dependencies: ["Constants"], resources: [.copy("FrozenSchema.json")]),
         .testTarget(name: "ConstantsTests", dependencies: ["Constants"]),
         .testTarget(name: "RecordTests", dependencies: ["Record"]),
+        // The pure app-lock rules: the cover state machine, the label
+        // function, the lock-grace policy and the seams the App target's
+        // LocalAuthentication and lifecycle code call (app-lock spec).
+        .target(name: "AppLock", dependencies: ["Constants"]),
+        .testTarget(name: "AppLockTests", dependencies: ["AppLock"]),
         // The content spec fixes this package's path, `Packages/Content`,
         // because the content-lock file and the sign-off files live at a
         // literal, spec-named path that tooling reads directly.

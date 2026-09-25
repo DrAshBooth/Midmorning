@@ -72,7 +72,9 @@ public final class RecordStore {
     }
 
     public let container: ModelContainer
-    private let context: ModelContext
+    /// Not `private`: `LocalSettingStore.swift`, in this same target, reads
+    /// and writes `LocalSetting` rows through it.
+    let context: ModelContext
 
     /// Opens the store from the two files in `directory`: `Record.store` and
     /// `Local.store`. Sync is off: both configurations carry

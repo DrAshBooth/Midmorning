@@ -19,7 +19,7 @@ struct MidmorningApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TodayView(store: store)
+            AppLockRootView(store: store)
         }
     }
 }
