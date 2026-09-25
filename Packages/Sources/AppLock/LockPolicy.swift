@@ -1,0 +1,69 @@
+import Foundation
+
+/// The pure rule for "When the app asks": `LockPolicy.shouldAsk` takes the
+/// continuous-clock moment the app entered the background, the current
+/// continuous-clock moment, and the grace period, and decides whether the
+/// app must make the system authentication request. The app's own
+/// `ContinuousClockReading` protocol supplies both moments from
+/// `mach_continuous_time`, which counts through sleep; this function never
+/// reads a clock itself, so a test drives it with fixed numbers.
+public enum LockPolicy {
+    /// Scenario: "Policy with a stub clock" (31 - 0 >= 30 is true, 29 - 0 >=
+    /// 30 is false). Scenario: "Policy with no grace" (1 - 0 >= 0 is true).
+    public static func shouldAsk(enteredBackgroundAt: TimeInterval, now: TimeInterval, grace: TimeInterval) -> Bool {
+        now - enteredBackgroundAt >= grace
+    }
+}
+
+/// A source of continuous-clock seconds, ticks that advance through sleep
+/// (app-lock spec, "When the app asks": "measure the grace period with
+/// `mach_continuous_time`, which counts through sleep, not with the
+/// calendar"). The App target's implementation reads `mach_continuous_time`;
+/// a test supplies a stub.
+public protocol ContinuousClockReading: Sendable {
+    func continuousSeconds() -> TimeInterval
+}
+
+/// A test's stub continuous clock: a fixed or settable reading, never the
+/// real clock.
+public final class StubContinuousClock: ContinuousClockReading, @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: TimeInterval
+
+    public init(_ value: TimeInterval = 0) {
+        self.value = value
+    }
+
+    public func set(_ value: TimeInterval) {
+        lock.lock()
+        self.value = value
+        lock.unlock()
+    }
+
+    public func continuousSeconds() -> TimeInterval {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
+    }
+}
+
+/// The four "Lock after" choices and their labels (app-lock spec, "Lock
+/// after"). `ProgrammeConstants.lockGraceSecondsChoices` holds the same four
+/// values so the settings screen and this function never disagree.
+public enum LockGrace {
+    /// The four choices, in the Privacy group's own order. Mirrors
+    /// `ProgrammeConstants.lockGraceSecondsChoices` (`Constants` package);
+    /// this copy lets the App target's fixture-only Privacy section build
+    /// its picker with no dependency beyond `AppLock`.
+    public static let choices: [Int] = [0, 30, 120, 300]
+
+    public static func label(forSeconds seconds: Int) -> String {
+        switch seconds {
+        case 0: return "At once"
+        case 30: return "30 seconds"
+        case 120: return "2 minutes"
+        case 300: return "5 minutes"
+        default: return "At once"
+        }
+    }
+}

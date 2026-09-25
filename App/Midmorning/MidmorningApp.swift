@@ -19,7 +19,7 @@ struct MidmorningApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TodayView(store: store)
+            AppLockRootView(store: store)
                 // The one place the tint is set: every control below inherits
                 // the accent colour unless it overrides it, as the star
                 // control does with the system grey (product-rules spec,
