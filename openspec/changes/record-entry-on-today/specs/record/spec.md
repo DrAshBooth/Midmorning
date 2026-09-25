@@ -232,8 +232,8 @@ The star MUST NOT depend on colour alone. Text on Today and the new-entry screen
 
 ### Requirement: Review before archive
 
-Before the team archives this change, one person MUST save a starred entry on the built app. That person MUST answer, for each screen: could a person who has just binged read this as judgement? The clinical reviewer, once engaged, MUST repeat this walk before any build reaches a person outside the team.
+Before the team archives `record-entry-on-today`, one person MUST save a starred entry on the built app. That person MUST answer, for each screen: could a person who has just binged read this as judgement? The clinical reviewer, once engaged, MUST repeat this walk before any build reaches a person outside the team.
 
 #### Scenario: Sign-off
-- **WHEN** the change is ready to archive
+- **WHEN** `record-entry-on-today` is ready to archive
 - **THEN** the change's README holds who walked the starred-entry path, on which date, and their answer for each screen

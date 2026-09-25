@@ -40,7 +40,7 @@ Not in V1: weight loss or nutrition of any kind, diagnosis, a human guide, an AI
 - `dieting-module`: food rules, avoided foods, the ladder, reintroductions.
 - `body-image-module`: cards and Feeling fat notes.
 - `staying-on-track`: maintenance plan, reduced cadence, check-ins, restart.
-- `data-and-privacy`: sync, Delete-all, analytics events, what never leaves the device.
+- `data-and-privacy`: sync, Delete-all, what never leaves the device, and the rule that the app holds no analytics of its own.
 - `app-lock`: Face ID lock, when it asks, what it covers.
 - `widgets-and-intents`: Lock Screen and Home Screen widgets, App Intents, Control Centre.
 - `export`: a PDF of any date range like the paper record.
@@ -50,9 +50,9 @@ Not in V1: weight loss or nutrition of any kind, diagnosis, a human guide, an AI
 
 ## Impact
 
-- Every capability becomes its own later build change, in the order tasks.md gives. Each build change takes its requirements from these specs and adds none.
+- tasks.md maps the capabilities to build changes. Each build change takes its requirements from these specs and adds none.
 - `Packages/Record` becomes the model for every entity. New packages hold the plan, the programme engine and the content. The app target keeps only views and platform code.
-- No network in the core loop. iCloud sync and analytics are the only network paths and both are the person's choice.
+- No network in the core loop. iCloud sync is the only network path, and it is the person's choice. The app holds no analytics of its own.
 
 ## Decisions Ash made on 24 September 2026
 
@@ -96,7 +96,7 @@ Not in V1: weight loss or nutrition of any kind, diagnosis, a human guide, an AI
 
 ## Decisions Ash made on 25 September 2026, after the third review round
 
-28. The model foundation moves into the record build change. `deferred.md` lists the first TestFlight cut. The team never deletes a requirement to fit the cut.
+28. The model foundation moves into the record build change. `deferred.md` lists the first TestFlight cut. The team never deletes a requirement to fit the cut. (Decision 54 refines this.)
 29. The first cut leaves sync out, and the sync change builds on CKSyncEngine when the team builds it.
 30. An entry point shows the empty new-entry screen before authentication; Save authenticates.
 31. "Skipped" is on every reminder and needs the device unlocked; the order is snooze, Add, Skipped.
@@ -115,22 +115,22 @@ The data-model review's findings need no decision; the team applies them. Every 
 
 ## Decisions Ash made on 25 September 2026, after the bead review
 
-42. One worktree per build change; the change's requirement beads are its checklist.
-43. The epic chain loosens: content, the model foundation, settings, onboarding, app lock, the engine, weigh-in and the plan run in parallel where the specs permit.
-44. The notification-action handlers and the action queue are 2.4 work.
-45. Each deferred.md row has a remainder bead under its owning change.
-46. 1.3 builds the settings shell; each feature change adds its own controls.
-47. The external release gates start at once; the string gates wait for every first-cut build change; four gates and one submission task are added.
-48. Re-screening at a restart is 2.1 work; only the check-in shortcut waits for 3.6.
-49. A delete is a kept version with the deleted flag; every reader hides it.
+42. Ash dispatches one worktree per build change, and the change's requirement beads are its checklist.
+43. The epic chain is shorter: content, the model foundation, settings, onboarding, app lock, the engine, weigh-in and the plan run in parallel where the specs permit.
+44. The reminders change (2.4) builds the notification-action handlers and the action queue.
+45. A named bead builds each deferred scenario, and the `deferred:` marker gives its id.
+46. The settings change (1.3) builds the settings shell, and each feature change adds its own controls.
+47. The external release gates start at once. The string gates wait for every first-cut build change. Four gates and one submission task join them.
+48. The programme change (2.1) builds re-screening at a restart. Only the check-in shortcut waits for 3.6.
+49. A delete writes a kept version with the deleted flag, and every reader hides it.
 50. Cut zero is a team-only build of the core loop before the first TestFlight cut.
-51. Beads point at spec headings, not line numbers; v1-programme is archived at v1 complete.
-52. The worktree protocol is a short section in CLAUDE.md.
-53. Beads sync with `bd dolt push` after each batch.
-54. 1.2 splits into 1.2a model-foundation and 1.2b record-full; the string-family requirement splits by owning change.
-55. The product-rules beads are constraints that close at the first cut.
-56. Second-cut work is not blocked; the dispatch command filters by the first-cut label.
-57. Foundation beads are P0, accessibility and never-shows beads P2; every bead carries a size label.
+51. Beads point at spec headings, not line numbers. Ash archives v1-programme at v1 complete.
+52. CLAUDE.md holds the worktree protocol in a short section.
+53. Ash pushes the beads with `bd dolt push` after each batch.
+54. The build changes `model-foundation` (1.2a) and `record-full` (1.2b) are separate. The string-family requirement splits into one bead per family.
+55. The product-rules beads are constraints, and Ash closes them at the first cut.
+56. No dependency blocks second-cut work. The dispatch command filters by the first-cut label.
+57. Foundation beads are P0, and accessibility and never-shows beads are P2. Every requirement, remainder and constraint bead carries a size label; the two gate index beads have none.
 
 ## Assumptions the specs make where the PRD is silent
 

@@ -42,7 +42,7 @@ One `ModelContainer` opens two configurations in `Application Support/Record`. `
 
 Rejected: one configuration. A configuration syncs every model in it, so device-only data would sync.
 
-Every synced row carries `changedAt`, an app field, and every row the person can delete carries `deleted` with a moment. The app never hard-deletes a synced row; readers hide deleted rows and their dependants. The `Reconciler` never deletes. It picks one winner per natural key on read. It prunes losing versions 90 days after the later of the device clock and the last sync.
+Every synced row carries `changedAt`, an app field, and every row the person can delete carries `deleted` with a moment. The app never hard-deletes a synced row; readers hide deleted rows and their dependants. The `Reconciler` never deletes a row. It picks one winner per natural key on read. The store deletes a losing version or row only after both 90-day tests pass: the device clock and the latest sync moment.
 
 The reader ignores rows that a clock guard would delete. Ash accepted this on 25 September 2026 from the data-model review. Every hard delete and every whole-row winner rule loses data across two devices.
 
@@ -64,7 +64,7 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 | `Profile` | height, onboarding BMI, caution flag | fixed id | later changedAt per key |
 | `Settings` | one row per key: start day, day start history, slot labels, weigh-in day or none, unit, quiet hours, reminder times, switches that sync, finishDate, finish answers, remindersPausedAt, restart moment | key | later changedAt |
 | `Seen` | card views | id | none |
-| `Place` | (folded into ListItem kind custom place) | | |
+| `Place` | reserved name; holds no rows in v1. Custom places are `ListItem` kind custom place | | |
 | `Device` | install id, joinedDay, lastSeenDay, leftAt | install id | later changedAt |
 
 `Local.store` holds these values:
@@ -95,7 +95,7 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 
 ### Entries are append-only versions
 
-Every save, edit and delete writes an `EntryVersion` (entry id, change moment, deleted flag, the fields). Nothing mutates or deletes a version. `RecordStore` picks one winner per entry id on read: later change moment, then star on, then longer What. A deletion is a version. Distinct ids both survive. The store deletes losing versions and tombstones 90 days after their moment.
+Every save, edit and delete writes an `EntryVersion` (entry id, change moment, deleted flag, the fields). Nothing changes or deletes a version before the retention rule. `RecordStore` picks one winner per entry id on read: later change moment, then star on, then longer What. A deletion is a version. Distinct ids both survive. The store keeps a winning deleted version for ever. It deletes a losing version only after both 90-day tests pass: the device clock and the latest sync moment. After both tests pass, it reduces a winning deleted version to the entry id, `changedAt` and the deleted flag.
 
 Rejected: relying on CloudKit's merge. It merges per field, applies a delete unconditionally and cannot see the app's id. Cost to reverse: high, because the on-read rule is what every reader depends on.
 
@@ -209,18 +209,18 @@ Every rule the specs state as a pure function has a named home, so that a test w
 
 ### Model names, singletons and the account binding
 
-Every `@Model` class has one of fifteen neutral names (Item, ItemVersion, DayState, Template, Day, Answer, Measure, Session, ListItem, Sheet, Review, Profile, Settings, Seen, Place). The Swift API exposes typealiases such as `Entry = Item`. The team renames the `Entry` model in `Packages/Record` before the first build that carries the CloudKit entitlement. `Profile` and `Settings` have one fixed id each.
+Every `@Model` class has one of sixteen neutral names (Item, ItemVersion, DayState, Template, Day, Answer, Measure, Session, ListItem, Sheet, Review, Profile, Settings, Seen, Place, Device). The Swift API exposes typealiases such as `Entry = Item`. The team renames the `Entry` model in `Packages/Record` before the first build that carries the CloudKit entitlement. `Profile` and `Settings` have one fixed id each.
 
 A file in the repository freezes the record type and field names; the content test checks it. When the person turns sync on, `Local.store` keeps a hash of the iCloud account's `userRecordID`. The app never opens a synced container against a different account. A card answer row (card id, answer, moment) lives in `Record.store` so a card shows once across devices.
 
-### A first TestFlight cut, marked not cut
+### A first TestFlight cut; the specs keep every requirement
 
-`deferred.md` lists every requirement the first cut leaves out with its owning later build change. No spec loses a requirement. The model foundation (names, versions, per-row change moments, settings rows, the Reconciler) moves into the record build change so nothing later rewrites a shipped model. Rejected: building in spec order. Sync arrives last and rewrites fifteen shipped changes.
+`deferred.md` lists every requirement the first cut leaves out with its owning later build change. No spec loses a requirement. The model foundation (names, versions, per-row change moments, settings rows, the Reconciler) is its own build change, 1.2a model-foundation, ahead of 1.2b record-full. Nothing later rewrites a shipped model. Rejected: building in spec order. Sync arrives last and rewrites fifteen shipped changes.
 
 ## Risks / Trade-offs
 
 - [SwiftData with CloudKit and many entities] → every relationship optional with an inverse; V1 ships one schema version and store fixtures start at the first TestFlight schema; the `Reconciler` picks winners on read and never deletes.
-- [The on-read winner rule costs a scan] → the store indexes versions by entry id and prunes them after 90 days.
+- [The on-read winner rule costs a scan] → the store indexes versions by entry id and deletes only losing versions, after both 90-day tests pass.
 - [Templates sound robotic] → the clinician writes the templates; the engine only fills numbers.
 - [A person who purges is not screened out] → Ash's decision; screen 1 warns, a stage-2 card explains, and the proposal dates a revisit before beta.
 - [Threshold rules as device function] → Rule A only stops the programme; the rest suggest a GP; a written MHRA opinion is a release gate.

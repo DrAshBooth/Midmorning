@@ -1,9 +1,13 @@
 # Agent Instructions
 
+The worktree protocol and the writing rules are in CLAUDE.md, section
+"Worktrees and beads". Dolt runs in server mode on the shared server
+(127.0.0.1:3308, database `mm`), not in `.beads/dolt/`.
+
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
-> (`.beads/dolt/`); cross-machine sync uses `bd dolt push/pull` (a
+> (here, the shared Dolt server); cross-machine sync uses `bd dolt push/pull` (a
 > git-compatible protocol), stored under `refs/dolt/data` on your git
 > remote — separate from `refs/heads/*` where your code lives.
 > `.beads/issues.jsonl` is a passive export, not the wire protocol.

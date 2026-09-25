@@ -77,22 +77,58 @@ launch `uk.midmorning.app` with `xcrun simctl`. The entry point is
 
 ## Worktrees and beads
 
-One worktree per epic. Dispatch with `bd ready -t epic -l first-cut`; the
-epic's children are its checklist, P0 first, P2 last. `claude -w <epic-id>`
-opens the worktree. In it: claim the epic, open or continue its openspec
-build change, build one child at a time, run `./verify`, commit on the
-worktree branch, and close each child with `--reason` naming the commit.
-Ash merges the branch, archives the change and closes the epic.
+This section is the repository's explicit opt-in for worktree agents. An agent
+in a worktree commits on the worktree branch and closes the children it
+builds. It never runs `git push` or `bd dolt push`; those stay with Ash.
 
-Rules for anything an agent writes: ASD-STE100 for every spec, design,
-task, README line and bead; `product-rules` wins on conflict; a conflict
-between specs goes to `bd human <id>` and the Midmorning Decisions page,
-never a silent choice; `./verify` stays under 240s and gains no check
-without asking Ash. `constraint` and `human` beads are not dispatched.
+Finding work. Before each dispatch, Ash runs `bd ready -l human` and does
+that work; mm-t10 is the first human step. Agents find work with
+`bd ready -t epic -l first-cut --exclude-label human`, and after mm-m1 with
+`bd ready -t epic -l second-cut --exclude-label human`. Until mm-t10 closes,
+the first command returns only mm-t11. Plain `bd ready` also lists
+constraint, human and second-cut beads. Never open a worktree for an epic
+that is in_progress.
 
-bd notes: use full ids (`mm-t12.2`, never `mm-t1`); search with
-`bd search --desc-contains` or `bd list -l spec:<name>`; never bare
-`bd list --json`; file follow-ups with
-`bd create --parent <epic> --no-inherit-labels -l requirement,spec:<name>,<cut>`;
-`bd doctor` warnings about the Dolt remote and AGENTS.md are expected.
-Run `scripts/check-beads` by hand to confirm every bead's spec heading exists.
+In the worktree. `claude -w <epic-id>` opens it. Claim the epic. Open or
+continue its openspec build change. Build one child at a time, P0 first and
+P2 last. A child's acceptance names the scenarios it builds; the change's
+tasks.md lists every other scenario as `deferred: <bead id>`. Run `./verify`.
+The first run in a new worktree is cold and can exceed 240 s; run it again,
+because the warm run is the budget. The change README states the cold time. Commit on the worktree branch, and close
+each child with `--reason` naming the commit. Pass `--type change` to
+`openspec validate` and `openspec show` for a build change, because a build
+change can share its name with a main spec.
+
+After the worktree. Ash merges without squashing, so the commit named in each
+`--reason` stays. Ash archives the change and closes the epic. If Ash rejects
+a branch, Ash reopens its closed children with `bd reopen`. Parallel worktrees
+edit Today, `Packages/Package.swift` and the content version; Ash sets the
+content version at the merge. Ash closes the milestones and the chores
+mm-t44a and mm-t44b. `.claude/worktrees/` is git-ignored, so main stays clean
+while worktrees exist.
+
+The rules checklist. The agent writes a dated yes in the build change README
+for each of the eleven constraint beads (`bd list -l constraint --all`). The
+agent also writes one for safeguarding "Get support on every screen" on each
+full screen that the change adds.
+
+Rules for anything an agent writes: ASD-STE100 for every spec, design, task,
+README line and bead. `product-rules` wins on conflict. `./verify` stays under
+240 s and gains no check without asking Ash. Agents never open a worktree for
+a `constraint` or `human` bead; Ash does the human beads.
+
+A conflict between specs. Label the bead with `bd label add <id> human`. Add
+the conflict and both spec paths with `bd comments add <id> "..."`. Stop work
+on that bead and report to Ash. Never run `bd human respond` on a requirement
+bead, because it closes the bead. Ash reviews flagged beads with
+`bd human list` and puts each decision on the Midmorning Decisions page.
+
+bd commands. Use full ids (`mm-t12.2`, never `mm-t1`). Search descriptions with
+`bd list --desc-contains "<phrase>"` or `bd list -l spec:<name>`. Never run
+bare `bd list --json`. File a follow-up with
+`bd create --parent <epic> --no-inherit-labels -l spec:<name>,<cut>,phase:<n>,size:<S|M|L> --spec-id <path>#<heading>`;
+add the label `requirement` only for a spec requirement. Expected `bd doctor`
+warnings: Dolt remote, AGENTS.md, Dolt Status, Phantom Databases, Git
+Upstream, Shared server, Claude Plugin. `__dolt_remote_info__` on origin is
+not a code branch; never merge or delete it. Run `scripts/check-beads` by hand
+to confirm every bead's spec heading and every `deferred` pointer.

@@ -11,3 +11,6 @@ DerivedData/
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Claude Code worktrees
+.claude/worktrees/

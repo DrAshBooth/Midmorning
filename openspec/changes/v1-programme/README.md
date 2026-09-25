@@ -25,8 +25,6 @@ The clinical lens of the 25 September 2026 review listed these as written for si
 - The alternatives examples.
 - "Skipped, or not recorded yet?" and "Skipped, or was that 14:45?"
 - "Urges rise, peak and fade. Most fade in about 20 minutes. Some take longer."
-- New, Rule B: "Your weight has come down since you started." with "Eating too little between binges keeps the cycle going. Your plan stays on. It's worth a word with your GP."
-- New, purging: "If you make yourself sick, or use laxatives after eating, more than about twice a week, this programme isn't the right tool on its own. Talk to your GP first."
 
 Added by the second review round, 25 September 2026:
 

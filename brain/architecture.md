@@ -112,17 +112,22 @@ or outcome: that sentence is the MHRA line.
 
 ## Work is beads: one epic per build change
 
-Each tasks.md task is a bead epic; each spec requirement is a child bead;
-each deferred.md row has a remainder bead under the change that builds it.
-Children inherit the epic's blocked state, so an unblocked epic is one
-worktree (`claude -w <epic>`) that works its children as a checklist.
-Beads point at spec headings, never line numbers, and live in the shared
-dolt server, pushed with `bd dolt push`. Decided 25 September 2026.
+Each build task in tasks.md is a bead epic, and each spec requirement is a
+child bead. The exceptions are the eleven constraint beads, the requirements
+split across epics, and the string-family requirement, with one bead per
+family. Task 1.0 is a human chore, 4.3 and 4.3b are gate epics, and 4.4 is
+two chores. A deferred.md row for part of a requirement names the bead that
+builds the rest. A row for a whole spec belongs to the owning epic's own
+beads, and a row with several owners moves to a README only with its last
+owner. Children inherit the epic's blocked state, so an unblocked epic gets
+one worktree (`claude -w <epic>`), and the agent in it builds the children in
+checklist order. Beads point at spec headings, never line numbers. They live
+in the shared Dolt server, and Ash pushes them with `bd dolt push`. Decided
+25 September 2026.
 
 ## Placeholders and gates
 Bundle identifier `uk.midmorning.app`, App Group `group.uk.midmorning` and team
 `42JQW6669W` are placeholders until the first signed build; after the first
-TestFlight build they are fixed. Six gates stand before the first build that
-reaches a person outside the team. They are Get support, Delete-all, the Face ID
-lock, a privacy notice, the DPIA and the clinical walk of the starred-entry
-path.
+TestFlight build they are fixed. The release gates are tasks.md 4.3 and the
+bead epic mm-t43. They stand before the first build that reaches a person
+outside the team, and they include the clinical walk of the starred-entry path.

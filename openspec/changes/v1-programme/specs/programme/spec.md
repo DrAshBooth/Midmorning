@@ -154,7 +154,7 @@ The app MUST also open stage 3 by a fallback count of record days. The fallback 
 
 The fallback MUST open the stage at the day start that ends day RECORD_DAYS_FOR_STAGE_3_FALLBACK. The fallback MUST NOT need a recorded day, a planned day or a template. Whichever of the two rules comes first MUST open the stage.
 
-The rule string for stage 3 is "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts. You have %3$lld.", with no full stop. The app MUST fill %1$lld from DAYS_ON_PLAN_FOR_STAGE_3. The app MUST fill %2$lld with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
+The rule string for stage 3 is "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts", with no full stop. The app MUST fill %1$lld from DAYS_ON_PLAN_FOR_STAGE_3. The app MUST fill %2$lld with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
 
 #### Scenario: Seven planned days over ten days
 - **WHEN** seven of the next ten record days are planned days with at least one entry each
@@ -265,7 +265,7 @@ The app MUST let the person open every card of every stage from day 1. The Progr
 The rule strings are, in stage order from stage 2:
 
 - "Opens after %1$lld recorded days. You have %2$lld."
-- "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts. You have %3$lld."
+- "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts"
 - "Opens after your first urge outcome, or a week from now"
 - "Opens %lld weeks after your plan starts"
 - "Opens after taking stock"
