@@ -30,10 +30,10 @@ struct NewEntryView: View {
                     TextField("", text: $what, axis: .vertical)
                         .focused($whatIsFocused)
                         .multilineTextAlignment(.trailing)
-                        .accessibilityLabel("What")
+                        .accessibilityLabel("entry.what")
                 } label: {
                     // The field carries the label, so VoiceOver says "What" once.
-                    Text("What").accessibilityHidden(true)
+                    Text("entry.what").accessibilityHidden(true)
                 }
                 // A neutral system grey, not the default green: the star is
                 // marked, not highlighted. Grey keeps the knob visible in light
@@ -45,15 +45,15 @@ struct NewEntryView: View {
                     .opacity(scenePhase == .active ? 1 : 0)
                 DatePicker("", selection: $time, in: range, displayedComponents: [.date, .hourAndMinute])
                     .labelsHidden()
-                    .accessibilityLabel("Time")
+                    .accessibilityLabel("entry.time.accessibilityLabel")
                     .accessibilityValue(Self.spokenTime(time))
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("entry.cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", action: save)
+                    Button("entry.save", action: save)
                 }
             }
         }

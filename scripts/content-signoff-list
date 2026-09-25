@@ -1,0 +1,8 @@
+#!/bin/bash
+# Prints every catalogue id, sorted, one per line, for the build change
+# README's "Sign-off list" section. Run by hand; not part of ./verify.
+#
+# Usage: scripts/content-signoff-list
+set -euo pipefail
+cd "$(dirname "$0")/.."
+exec swift run --package-path Packages content-signoff-list

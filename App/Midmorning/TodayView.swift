@@ -31,7 +31,7 @@ struct TodayView: View {
                     if let target { proxy.scrollTo(target) }
                 }
             }
-            .navigationTitle("Today")
+            .navigationTitle("today.title")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -39,7 +39,7 @@ struct TodayView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .accessibilityLabel("New entry")
+                    .accessibilityLabel("entry.new.accessibilityLabel")
                 }
             }
             .sheet(isPresented: $showingNewEntry) {
@@ -89,7 +89,7 @@ struct EntryRow: View {
             HStack(spacing: 2) {
                 Text(entry.clockTime)
                 if entry.feltLikeABinge {
-                    Text("*")
+                    Text(verbatim: "*")
                 }
             }
             .font(.body.monospacedDigit())
