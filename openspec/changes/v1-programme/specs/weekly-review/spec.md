@@ -352,7 +352,7 @@ The `programme` capability opens stage 5 in week WEEK_OF_TAKING_STOCK = 6, count
 
 Before the week-1 questions, the app MUST show "Starred entries: %1$lld in week 1, %2$lld in week %3$lld." with the two counts and the review's week number. For each week-1 question, the app MUST show the question and the week-1 answer under it. The app MUST then show an empty field with the heading "And now?".
 
-When no week-1 answers exist, the app MUST ask the three questions with empty fields. The app MUST show no text about the missing answers. Taking stock is one session. The next review can become due before the person completes the taking stock session. The "Reviews" list MUST then keep the taking-stock row. While stage 5 is open, that row MUST open taking stock until the person completes the session. While stage 5 is open and the person has not completed the session, each review that becomes due MUST grow into taking stock again. The questionnaire requirement states that only "Done" with a chosen module completes the session.
+When no week-1 answers exist, the app MUST ask the three questions with empty fields. The app MUST show no text about the missing answers. Taking stock is one session. The next review can become due before the person completes the taking stock session. The "Reviews" list MUST then keep the taking-stock row. While stage 5 is open, that row MUST open taking stock until the person completes the session. While stage 5 is open and the person has not completed the session, each review that becomes due MUST grow into taking stock again. Each repeat MUST open the same session, with the answers saved so far. Each taking-stock row in the "Reviews" list MUST open that one session until the person completes it. The questionnaire requirement states that only "Done" with a chosen module completes the session.
 
 The `programme` capability owns the restart. A restart does not delete the stage 5 opening row. The engine ignores a stage 5 opening earlier than the restart moment. Stage 5 then opens again by the programme's rule from the new start. When stage 5 opens again, the first review due on or after that day MUST grow into taking stock again.
 
@@ -367,6 +367,10 @@ The `programme` capability owns the restart. A restart does not delete the stage
 #### Scenario: No week-1 answers
 - **WHEN** the person never finished the review of week 1 and opens taking stock
 - **THEN** taking stock shows the three questions with empty fields and no text about week 1 answers
+
+#### Scenario: Saved answers on a repeat
+- **WHEN** the person answers three questionnaire questions in the review of week 7, taps the review's "Done" with no module chosen, and opens the review of week 8
+- **THEN** taking stock shows the three saved answers, and both taking-stock rows in the "Reviews" list open that one session
 
 #### Scenario: Taking stock session not complete
 - **WHEN** the person does not complete the taking stock session in the review of week 7 and the review of week 8 becomes due
@@ -390,7 +394,7 @@ When the person taps either control, the app MUST save the questionnaire answers
 
 When the person taps the review's "Done" with no chosen module, the app MUST close the review. The app MUST NOT complete the taking stock session at that tap. The "Reviews" list then keeps the taking-stock row. The next review grows into taking stock again, as "Taking stock" states.
 
-The person can answer the self-harm item "Yes" then "Yes" in a review with a chosen module. At the first "Done" with that chosen module, the app MUST then complete the taking stock session. The app MUST NOT open a module at that "Done". The app MUST hold the "Yes" then "Yes" in memory only, until the review closes. The store MUST keep the chosen module. Stage 6 opens at that completion, or stays open after a restart, as `programme` defines. The chosen module then stays one tap away on the Programme screen.
+The person can answer the self-harm item "Yes" then "Yes" in a review with a chosen module. At the first "Done" with that chosen module, the app MUST then complete the taking stock session. The app MUST NOT open a module at that "Done". The app MUST hold the "Yes" then "Yes" in memory only, until the review closes. When the app closes before "Done", the review can reopen. At that review's "Done" with a chosen module, the app MUST complete the session and MUST NOT open a module. The store MUST keep the chosen module. Stage 6 opens at that completion, or stays open after a restart, as `programme` defines. The chosen module then stays one tap away on the Programme screen.
 
 The app MUST NOT show a sum of the answers. The store MUST keep the five answers, the recommendation and the chosen module. The `dieting-module` and `body-image-module` capabilities own the module screens.
 
@@ -433,6 +437,10 @@ The app MUST NOT show a sum of the answers. The store MUST keep the five answers
 #### Scenario: Self-harm Yes then Yes after a module choice
 - **WHEN** the person taps "Open Food rules" in taking stock, answers the self-harm item "Yes" then "Yes", taps "Done" on the not-right-now page, then taps the review's "Done"
 - **THEN** the store keeps Food rules as the chosen module, the app completes the taking stock session and opens no module, and "Food rules" is one tap away on the Programme screen
+
+#### Scenario: Reopen after the app closed
+- **WHEN** the person taps "Open Food rules" in taking stock, the app closes before "Done", and the person reopens the review and taps the review's "Done"
+- **THEN** the taking stock session is complete, the app opens no module, and "Food rules" is one tap away on the Programme screen
 
 #### Scenario: Done with no module chosen
 - **WHEN** the person answers the questionnaire in the review of week 7, taps neither module control, taps the review's "Done", and the review of week 8 becomes due

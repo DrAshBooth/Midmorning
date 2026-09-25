@@ -74,7 +74,7 @@ The app MUST NOT include a control that saves, counts or times a body check. The
 
 ### Requirement: A Feeling fat note
 
-The app MUST let the person create a note with a time, a "What was happening?" text and a "What was the feeling underneath?" text. The time MUST default to the moment the new note opens. The app MUST let the person edit the time within the previous and current record day. The store MUST write the note's record day key at save from the note's time, as `record` defines.
+The app MUST let the person create a note with a time, a "What was happening?" text and a "What was the feeling underneath?" text. The time MUST default to the moment the new note opens. At creation the time control MUST offer times from the start of the previous record day to the current moment. On an edit the time control MUST offer only times inside the note's own record day. The store MUST write the note's record day key at save from the note's time, as `record` defines.
 
 The note's record day MUST NOT change after save. An edit of the time MUST NOT change it. A note is one synced row with its own `changedAt` and a `deleted` flag with a moment. An edit MUST write into the winning row. The `data-and-privacy` capability owns the conflict rule and retention.
 
@@ -95,8 +95,12 @@ The app MUST let the person edit a note after saving. When the person saves, the
 - **THEN** Feeling fat notes shows the note at 21:10 with the new text
 
 #### Scenario: Time range
-- **WHEN** the person opens the time control on a note
+- **WHEN** the person opens the time control on a new note
 - **THEN** the control offers times from the start of the previous record day to the current moment, and nothing outside that range
+
+#### Scenario: Edit inside the note's record day
+- **WHEN** the person opens a note saved on Friday at 08:30 and opens its time control
+- **THEN** the control offers times inside Friday's record day only, and the note's record day key stays Friday after a save
 
 ### Requirement: Optional link to an entry
 
