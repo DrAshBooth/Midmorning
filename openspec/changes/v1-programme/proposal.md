@@ -196,6 +196,10 @@ The data-model review's findings need no decision; the team applies them. Every 
 
 106. Cancel and Save stay in the navigation bar of the new-entry and edit screens, and VoiceOver reads them before the content. Focus moves to What when the screen opens. "Delete entry" stays last on the edit screen.
 
+## Decision Ash made on 25 September 2026, on the question round 10 opened
+
+107. When a first import succeeds after a failed one, the restored record wins: the app writes the imported profile and settings again, so the restored start day wins. The entries from both periods stay.
+
 Ash closed mm-t10 with a draft of the skeleton's shame walk from simulator screenshots, in place of a walk on the built app. The walk in mm-t12b.1 is the first by a person.
 
 ## Assumptions the specs make where the PRD is silent

@@ -106,7 +106,9 @@ When iCloud reports that storage is full, the app MUST pause sync. The settings 
 
 ### Requirement: The app reads iCloud before onboarding
 
-Before onboarding, when the device has an iCloud account, the app MUST read the private database. It MUST look for a sync zone and for the Erasure zone. The onboarding capability owns the question "Your record is in iCloud. Get it back on this device?" and its controls "Get it back" and "Start fresh". When the person taps "Get it back", the app MUST turn sync on. The app MUST then import the zone. When the first import fails, sync MUST stay on. "Sync now" in the settings screen MUST then start the first import again.
+Before onboarding, when the device has an iCloud account, the app MUST read the private database. It MUST look for a sync zone and for the Erasure zone. The onboarding capability owns the question "Your record is in iCloud. Get it back on this device?" and its controls "Get it back" and "Start fresh". When the person taps "Get it back", the app MUST turn sync on. The app MUST then import the zone. When the first import fails, sync MUST stay on. "Sync now" in the settings screen MUST then start the first import again. The app MUST keep the first-import-failed flag in `Local.store` until a first import completes.
+
+When a first import completes after a failed one, the restored record wins (decision 107). The app MUST write the imported `Profile` fields and `Settings` rows again. Each rewritten row MUST carry the completion moment as its `changedAt`. So the restored start day and answers win over the values written after the failure. The store MUST keep the entries from both periods. Stage-opened rows need no rewrite, because the row with the earliest moment wins.
 
 Until the first import completes or fails, the app MUST NOT write a `Profile` or a `Settings` row. Until then the app MUST NOT write a stage-opened row or a start day. While the first import runs, the app MUST show no card. While it runs, the app MUST write no opening moment.
 
@@ -133,6 +135,10 @@ The app MUST NOT ask the screening questions again after a restore. The exceptio
 #### Scenario: A failed first import
 - **WHEN** the first import after "Get it back" fails, and the person later taps "Sync now" in the settings screen
 - **THEN** the app starts the first import again
+
+#### Scenario: The restored record wins after a retry
+- **WHEN** the first import fails on 1 October, the person taps "Start" and uses the app, and on 3 October "Sync now" imports a record with the start day 7 September
+- **THEN** the store reads the start day 7 September and the imported profile, and Today shows the entries from both periods
 
 #### Scenario: Nothing written during the first import
 - **WHEN** the person taps "Get it back" and the import takes two minutes
@@ -239,7 +245,7 @@ The store MUST sync every value in the "Shared" column of this table through `Re
 | `Settings` rows: the reminder times, the weekly summary sentence opt-outs, the pattern sentence opt-outs | the install id and moment, the completion flag |
 | `Settings` rows: `finishDate`, the finish answers beside it, and `remindersPausedAt` | the sync choice, the iCloud account hash, the last successful sync day |
 | the profile: height, the onboarding BMI, the caution flag, `askedAt` | the launch failure count, the reconcile counts, the crash count, the store creation moment |
-| the stage-opened rows, the card answers, the device rows | the pending offline erase instruction, the first-import-running flag |
+| the stage-opened rows, the card answers, the device rows | the pending offline erase instruction, the first-import-running flag, the first-import-failed flag |
 | | the morning-plan unanswered count, the collapse or expand choice per record day, the snooze counts, the permission line tapped flag |
 
 #### Scenario: Plan on two devices
