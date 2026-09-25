@@ -54,6 +54,13 @@ public final class ItemVersion {
     @Attribute(.allowsCloudEncryption) public var feltLikeABinge: Bool = false
     /// The moment the app saved this version. Never shown to the person.
     @Attribute(.allowsCloudEncryption) public var createdAt: Date = Date()
+    /// A fixed chip ("Home", "Work", "Out", "Travelling") or a custom place's
+    /// text. Empty when the entry has no Where (record spec, "Where chips").
+    /// Added by `record-full`; an older version opens with this empty.
+    @Attribute(.allowsCloudEncryption) public var whereText: String = ""
+    /// Free text, shown under the What (record spec, "The Context field").
+    /// Added by `record-full`; an older version opens with this empty.
+    @Attribute(.allowsCloudEncryption) public var context: String = ""
 
     public init(
         id: UUID = UUID(),
@@ -65,7 +72,9 @@ public final class ItemVersion {
         utcOffsetSeconds: Int,
         what: String,
         feltLikeABinge: Bool,
-        createdAt: Date
+        createdAt: Date,
+        whereText: String = "",
+        context: String = ""
     ) {
         self.id = id
         self.entryId = entryId
@@ -77,6 +86,8 @@ public final class ItemVersion {
         self.what = what
         self.feltLikeABinge = feltLikeABinge
         self.createdAt = createdAt
+        self.whereText = whereText
+        self.context = context
     }
 }
 

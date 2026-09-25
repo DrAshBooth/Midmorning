@@ -1,35 +1,49 @@
 import SwiftUI
 import Record
 
-/// The new-entry screen: What, Where, "felt like a binge", Context, Time,
-/// Save and Cancel. No title. Controls sit in `NewEntryField.order`
-/// (decision 86), so the visual order equals the VoiceOver order.
-struct NewEntryView: View {
-    enum TimeSegment: Hashable { case previous, current }
-
+/// The edit screen: the new-entry screen filled with the entry's values,
+/// with one time segment (the entry's own record day) and "Delete entry"
+/// last (record spec, "Edit an entry"; "Delete an entry").
+struct EditEntryView: View {
     let store: RecordStore
-    let day: DateInterval
+    let entry: RecordRow
     let onSave: (RecordRow) -> Void
+    let onDelete: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
-    @State private var openedAt = Date()
-    @State private var time = Date()
-    @State private var what = ""
+    @State private var time: Date
+    @State private var what: String
     @State private var whereSelection: String?
-    @State private var feltLikeABinge = false
-    @State private var context = ""
+    @State private var feltLikeABinge: Bool
+    @State private var context: String
     @State private var whatIsFocused = false
     @State private var contextIsFocused = false
     @State private var customPlaces: [String] = []
-    @State private var selectedSegment: TimeSegment = .current
     @State private var saveOutcome: SaveOutcome = .saved
+    @State private var showingDeleteConfirm = false
 
-    private var previousDayInterval: DateInterval { RecordDay.previous(day, calendar: .current) }
-    private var segmentInterval: DateInterval { selectedSegment == .previous ? previousDayInterval : day }
+    private let ownDayBounds: DateInterval
+
+    init(store: RecordStore, entry: RecordRow, dayStartHour: Int, onSave: @escaping (RecordRow) -> Void, onDelete: @escaping () -> Void) {
+        self.store = store
+        self.entry = entry
+        self.onSave = onSave
+        self.onDelete = onDelete
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: entry.utcOffsetSeconds) ?? .current
+        self.ownDayBounds = RecordDay.interval(containing: entry.time, calendar: calendar, startHour: dayStartHour)
+        self._time = State(initialValue: entry.time)
+        self._what = State(initialValue: entry.what)
+        self._whereSelection = State(initialValue: entry.whereText.isEmpty ? nil : entry.whereText)
+        self._feltLikeABinge = State(initialValue: entry.feltLikeABinge)
+        self._context = State(initialValue: entry.context)
+    }
+
+    /// The time control MUST NOT offer a time after the current moment.
     private var wheelRange: ClosedRange<Date> {
-        let lower = segmentInterval.start
-        let upper = min(segmentInterval.end, openedAt)
+        let lower = ownDayBounds.start
+        let upper = min(ownDayBounds.end, Date())
         return lower...max(lower, upper)
     }
 
@@ -44,6 +58,12 @@ struct NewEntryView: View {
                     ForEach(NewEntryField.order, id: \.self) { field in
                         fieldView(field)
                     }
+                    Button(role: .destructive) {
+                        showingDeleteConfirm = true
+                    } label: {
+                        Text("entry.delete.button")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
                 .padding()
             }
@@ -56,22 +76,23 @@ struct NewEntryView: View {
                     Button("entry.save", action: save)
                 }
             }
+            .confirmationDialog("entry.delete.confirmTitle", isPresented: $showingDeleteConfirm, titleVisibility: .visible) {
+                Button("entry.delete.action", role: .destructive) {
+                    try? store.delete(entryId: entry.id, deletedAt: Date())
+                    dismiss()
+                    onDelete()
+                }
+                Button("entry.cancel", role: .cancel) {}
+            }
         }
-        // The sheet sits above Today's redaction, so it redacts itself: the
-        // app switcher shows no entry text, no star and no field label.
         .privacySensitive()
         .redacted(reason: scenePhase == .active ? [] : .privacy)
         .onAppear {
-            openedAt = Date()
-            time = min(openedAt, wheelRange.upperBound)
             customPlaces = (try? store.customPlaces()) ?? []
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
                 whatIsFocused = true
             }
-        }
-        .onChange(of: selectedSegment) { _, _ in
-            time = min(max(time, wheelRange.lowerBound), wheelRange.upperBound)
         }
     }
 
@@ -92,13 +113,8 @@ struct NewEntryView: View {
                 customPlaces = (try? store.customPlaces()) ?? []
             }
         case .star:
-            // A neutral system grey, not the default green: the star is
-            // marked, not highlighted. Grey keeps the knob visible in
-            // light and dark mode; the primary colour hid it there.
             Toggle("felt like a binge", isOn: $feltLikeABinge)
                 .tint(Color(uiColor: .systemGray))
-                // Redaction greys the label but not the switch, so the
-                // switch hides itself: the app switcher shows no star.
                 .opacity(scenePhase == .active ? 1 : 0)
         case .context:
             RecordField(
@@ -115,42 +131,25 @@ struct NewEntryView: View {
 
     private var timeControl: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker("", selection: $selectedSegment) {
-                Text(DayHeading.dateOnly(previousDayInterval.start)).tag(TimeSegment.previous)
-                Text(DayHeading.dateOnly(day.start)).tag(TimeSegment.current)
-            }
-            .pickerStyle(.segmented)
-            .accessibilityHidden(true) // the wheel below carries the spoken value
+            Text(DayHeading.dateOnly(ownDayBounds.start))
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             DatePicker("", selection: $time, in: wheelRange, displayedComponents: [.hourAndMinute])
                 .datePickerStyle(.wheel)
                 .labelsHidden()
                 .accessibilityLabel("entry.time.accessibilityLabel")
-                .accessibilityValue(Self.spokenTime(time))
+                .accessibilityValue(NewEntryView.spokenTime(time))
         }
     }
 
-    /// The time control's VoiceOver value, for example "Thursday 24 September, 21:35".
-    static func spokenTime(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_GB")
-        f.dateFormat = "EEEE d MMMM, HH:mm"
-        return f.string(from: date)
-    }
-
     private func save() {
-        let now = Date()
         do {
-            let entry = try store.add(
-                time: min(time, now),
-                what: what,
-                feltLikeABinge: feltLikeABinge,
-                createdAt: now,
-                utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: now),
-                whereText: whereSelection ?? "",
-                context: context
+            let updated = try store.update(
+                entryId: entry.id, time: time, what: what, feltLikeABinge: feltLikeABinge,
+                whereText: whereSelection ?? "", context: context, editedAt: Date()
             )
             dismiss()
-            onSave(entry)
+            onSave(updated)
         } catch {
             saveOutcome = .failed
         }

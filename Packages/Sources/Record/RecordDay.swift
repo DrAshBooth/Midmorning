@@ -40,6 +40,13 @@ public enum RecordDay {
         self.interval(containing: interval.start.addingTimeInterval(-60), calendar: calendar)
     }
 
+    /// The record day after `interval` (record spec, "Earlier record days":
+    /// "The day MUST show controls to move to the previous and the next
+    /// record day").
+    public static func next(_ interval: DateInterval, calendar: Calendar) -> DateInterval {
+        self.interval(containing: interval.end.addingTimeInterval(60), calendar: calendar)
+    }
+
     /// True between 00:00 and 03:59 in the calendar's time zone.
     public static func isNight(_ moment: Date, calendar: Calendar) -> Bool {
         calendar.component(.hour, from: moment) < startHour

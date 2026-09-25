@@ -1,6 +1,6 @@
 {
   "Item": ["id"],
-  "ItemVersion": ["id", "entryId", "changedAt", "deleted", "dayKey", "time", "utcOffsetSeconds", "what", "feltLikeABinge", "createdAt"],
+  "ItemVersion": ["id", "entryId", "changedAt", "deleted", "dayKey", "time", "utcOffsetSeconds", "what", "feltLikeABinge", "createdAt", "whereText", "context"],
   "DayState": ["id", "dateKey", "kind", "value", "changedAt"],
   "Template": ["id", "kind", "slotsJSON", "changedAt"],
   "Day": ["id", "dateKey", "slotsJSON", "windowBeforeMinutes", "windowAfterMinutes", "changedAt", "setAt", "setBy"],
