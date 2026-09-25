@@ -60,6 +60,7 @@ When Ash archives an owning change, Ash moves its rows to that change's README. 
 | reminders | The cap of two other reminders a day | The first cut builds the other scenarios | 3.3 problem-solving | mm-t33.15 |
 | reminders | The scheduler pipeline | The first cut builds the other scenarios | 3.6 staying-on-track | mm-t36.21 |
 | reminders | The weekly review reminder | The first cut builds the other scenarios | 3.6 staying-on-track | mm-t36.15 |
+| safeguarding | Get support on every screen | The first cut builds the other scenarios | 3.6 staying-on-track | mm-t36.8 |
 | safeguarding | Re-screening at a restart | The restart control re-screens; no check-in exists | 3.6 staying-on-track | mm-t36.19 |
 | settings | The Privacy group | Absent until the owning change adds each control | 2.5 widgets-and-intents, 4.1b sync | mm-t25.16, mm-t41b.9 |
 | settings | The Record group | Absent until the owning change adds each control | 3.3 problem-solving, 3.4 food-rules, 3.5 body-image-module | mm-t33.15, mm-t34.14, mm-t35.13 |

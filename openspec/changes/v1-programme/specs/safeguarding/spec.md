@@ -202,7 +202,9 @@ The BMI rules, with the caution sheet, apply to the new height and weight. At a 
 
 When no rule excludes, the app MUST replace the height, the onboarding BMI, the caution flag and `askedAt`. Each is a Profile field with its own `changedAt`.
 
-Every device keeps the restart's later write. `data-and-privacy` defines that rule. The app MUST NOT compare creation moments. The app MUST then show the start-day choice.
+Every device keeps the re-screen's later write. `data-and-privacy` defines that rule. The app MUST NOT compare creation moments. The app MUST then show the start-day choice.
+
+A re-screen with no exclusion becomes the last screening, also when the person then taps "Cancel" at the start-day choice. After "Cancel", the app MUST keep the new height, the new onboarding BMI, the new caution flag and the new `askedAt`. "Cancel" MUST keep the old start day and MUST NOT restart. Within 84 record days of that re-screen, the app MUST NOT ask a screening question when the person taps "Start week 1 again".
 
 When a rule excludes, the app MUST NOT restart. The app MUST open the not-right-now page with every reason that applies, not the exclusion page. With the weight reason, the app MUST set the synced `remindersPausedAt`, as for Rule A. The app MUST NOT replace the height, the onboarding BMI, the caution flag or `askedAt` when a rule excludes. "Done" on that page MUST return the app to the screen beneath. The record, the plan and every list MUST stay as they were.
 
@@ -228,7 +230,7 @@ When a rule excludes, the app MUST NOT restart. The app MUST open the not-right-
 
 #### Scenario: The restart's height wins on another device
 - **WHEN** one device holds the height 170 from onboarding, the person re-screens at 172 cm on a second device, and they sync
-- **THEN** every device reads 172 as the height, because the restart's write has the later `changedAt`
+- **THEN** every device reads 172 as the height, because the re-screen's write has the later `changedAt`
 
 #### Scenario: Underweight at a re-screen
 - **WHEN** the person re-screens more than 84 record days after the last screening and enters 170 cm and 53 kg
@@ -245,6 +247,10 @@ When a rule excludes, the app MUST NOT restart. The app MUST open the not-right-
 #### Scenario: Self-harm Yes then No at a restart
 - **WHEN** the person answers "Yes" and then "No" to the self-harm item at a re-screen
 - **THEN** the re-screen shows "That deserves a person. Samaritans are there any time, on 116 123." with Samaritans first, and continues
+
+#### Scenario: Cancel after a re-screen
+- **WHEN** the height from onboarding is 170 cm, the person re-screens at 172 cm and 65 kg with no exclusion on Monday 5 January, taps "Cancel" at the start-day choice, and taps "Start week 1 again" on Monday 2 March, 56 record days later
+- **THEN** after "Cancel" the store holds 172 as the height, 21.97 as the onboarding BMI, the caution flag off and `askedAt` from 5 January, the start day is unchanged, and on 2 March the app asks no question and shows the start-day choice at once
 
 #### Scenario: askedAt in the future
 - **WHEN** a device clock ran a year ahead at the last re-screen, so `askedAt` is later than the corrected device clock, and the person taps "Start week 1 again"
@@ -298,7 +304,9 @@ When no weigh-in is 28 or more days old, the app MUST NOT apply Rule C. When Rul
 
 DETERIORATION_WEEKS = 3 is a named constant in `ProgrammeConstants`.
 
-When the rule fires, the app MUST show the GP suggestion page with the reason "Your starred entries have gone up for %lld weeks in a row.", filled from DETERIORATION_WEEKS. It reads "Your starred entries have gone up for three weeks in a row." When fewer than four reviews exist, the app MUST NOT apply the rule. Every weekly review MUST offer the choice "I'm getting worse". When the person chooses it, the app MUST show the GP suggestion page at once with the reason "You said things are getting worse." The app MUST show the GP suggestion page at most once per weekly review.
+When the rule fires, the app MUST show the GP suggestion page with the reason "Your starred entries have gone up for %lld weeks in a row.", filled from DETERIORATION_WEEKS. It reads "Your starred entries have gone up for three weeks in a row." When fewer than four reviews exist, the app MUST NOT apply the rule. The app MUST show the page from the rule at most once per weekly review.
+
+Every weekly review MUST offer the button "I'm getting worse". When the person taps it, the app MUST show the GP suggestion page at once. The page shows the reason "You said things are getting worse." The app MUST show the page at each tap, also after the rule showed it in that review.
 
 #### Scenario: Three rising weeks
 - **WHEN** the frozen counts for weeks 2 to 5 are 3, 4, 5 and 6 and the week 5 review opens
@@ -317,12 +325,16 @@ When the rule fires, the app MUST show the GP suggestion page with the reason "Y
 - **THEN** the app shows no GP suggestion page, because 8 is less than twice 5
 
 #### Scenario: I'm getting worse
-- **WHEN** the person chooses "I'm getting worse" at the week 3 review
+- **WHEN** the person taps "I'm getting worse" at the week 3 review
 - **THEN** the app shows the GP suggestion page with "You said things are getting worse."
+
+#### Scenario: Getting worse after the rule fired
+- **WHEN** the deterioration rule showed the GP suggestion page at the week 5 review, the person tapped "Done", and the person then taps "I'm getting worse"
+- **THEN** the app shows the GP suggestion page again with "You said things are getting worse." as its one reason
 
 ### Requirement: The GP suggestion page
 
-The page MUST show the heading "It might help to see your GP". Under it the page MUST show one reason with its line, or two when both apply. The reasons are:
+The page MUST show the heading "It might help to see your GP". Under it the page MUST show one reason with its line, or two when Rules B and C both apply. The reasons are:
 
 - Falling weight: "Your weight has come down since you started." with "Your plan stays on. It's worth a word with your GP."
 - Quick change: "Your weight has changed quickly over the last four weeks." with "Your plan stays on. It's worth a word with your GP."
@@ -333,7 +345,9 @@ A reason's line MUST NOT give a cause for the weight change. The page suggests t
 
 Under the reason the page MUST show: "This is not a diagnosis, and nothing here is closed to you." The page MUST then show "Talk to your GP" with the GP paragraph and its "Copy" control. The page MUST show "Export your record to take with you" as a control that opens `export`. The page MUST show Get support and one control, "Done". "Done" MUST return the app to the screen beneath.
 
-The app MUST NOT pause a reminder, close a tool or hide the record because of this page. The app MUST NOT write to `remindersPausedAt` from this page. The page MUST NOT show a number, a weight value or a count. The app MUST NOT show the page again until a rule fires again.
+The app MUST NOT pause a reminder, close a tool or hide the record because of this page. The app MUST NOT write to `remindersPausedAt` from this page. The page MUST NOT show a number, a weight value or a count.
+
+The app MUST show the page from the deterioration rule at most once per weekly review. The app MUST show the page at each tap on "I'm getting worse", also after the rule showed it. The app MUST NOT show the page again until a rule fires again or the person taps "I'm getting worse".
 
 #### Scenario: From the weigh-in
 - **WHEN** the page opens from Rule C
@@ -395,6 +409,8 @@ After the page the app MUST NOT turn paused reminders on again without the perso
 
 Every screen the app presents full-screen MUST show a control labelled "Get support" in the navigation bar. A sheet that closes in one tap to a screen with the control is exempt. The cover is exempt, because the cover names nothing. Get support MUST appear only after the person authenticates.
 
+The weekly review, the check-in and the restart re-screen MUST each show Get support in the navigation bar. Each asks the self-harm item. The sheet exemption MUST NOT apply to these three screens. When the app shows one of these screens as a sheet, that sheet MUST show Get support.
+
 The control MUST be in the same position on every screen. The control MUST use the text style of the other navigation controls. It MUST have no red, no alert icon and no count.
 
 The control MUST be present on every onboarding screen and the three safeguarding pages. The cover MUST show "Midmorning" and "Unlock" only (`app-lock` owns the cover). One tap on the control MUST open the support sheet. The app MUST NOT hide the control behind a detector, a stage or a setting.
@@ -414,6 +430,18 @@ The control MUST be present on every onboarding screen and the three safeguardin
 #### Scenario: New-entry screen
 - **WHEN** the new-entry screen is open as a sheet over Today
 - **THEN** the sheet has no "Get support" control and "Cancel" returns to Today, where the control is visible
+
+#### Scenario: Weekly review
+- **WHEN** the week 3 review is open as a sheet over Today
+- **THEN** the review shows "Get support" in its navigation bar, and one tap opens the support sheet
+
+#### Scenario: Check-in
+- **WHEN** a check-in is open at its self-harm item
+- **THEN** the check-in shows "Get support" in its navigation bar, and one tap opens the support sheet
+
+#### Scenario: Restart re-screen
+- **WHEN** the restart re-screen is open at its self-harm item
+- **THEN** the re-screen shows "Get support" in its navigation bar, and one tap opens the support sheet
 
 ### Requirement: The support sheet
 

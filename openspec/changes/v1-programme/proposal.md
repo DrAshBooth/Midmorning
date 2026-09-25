@@ -151,6 +151,16 @@ The data-model review's findings need no decision; the team applies them. Every 
 72. In taking stock, the chosen module opens after "Done", so the self-harm item and "I'm getting worse" always come first.
 73. The clinical sign-off of the thresholds follows the builds it certifies. A gate-corrections change (4.3c) applies what the gates ask for before the first upload.
 
+## Decisions Ash made on 25 September 2026, on the questions round 5 opened
+
+74. After a self-harm "Yes" then "Yes" in a taking stock review, "Done" completes taking stock and opens no module. The chosen module stays one tap away on the Programme screen.
+75. "Done" completes taking stock only with a module chosen. Without one, the next review asks taking stock again.
+76. A restart re-screen counts even when the person then taps "Cancel"; "Cancel" only keeps the old start day.
+77. The edit screen's time control covers only the entry's own record day.
+78. On the edit screen, "Delete entry" is the last control that VoiceOver reaches, after Cancel.
+79. A tap on "I'm getting worse" shows the GP suggestion page each time, also after the deterioration rule showed it.
+80. The weekly review, the check-in and the restart re-screen show Get support, because each asks the self-harm item.
+
 ## Assumptions the specs make where the PRD is silent
 
 Each spec lists its own under its Purpose or in the writer's report. The design lists the ones that shape the data model.

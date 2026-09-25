@@ -544,7 +544,7 @@ The screen MUST show "Start week 1 again" under the stage rows, at all times aft
 
 ### Requirement: Start week 1 again
 
-The Programme screen MUST show "Start week 1 again" at all times after onboarding. One tap MUST open the start-day choice with "Today", "Tomorrow" and "Cancel". When the person picks a day, the app MUST set it as the new start day. Week 1 MUST start from it. "Cancel" MUST close the choice and change nothing.
+The Programme screen MUST show "Start week 1 again" at all times after onboarding. One tap MUST open the start-day choice with "Today", "Tomorrow" and "Cancel". When the person picks a day, the app MUST set it as the new start day. Week 1 MUST start from it. "Cancel" MUST close the choice and keep the start day. "Cancel" MUST NOT restart. The app MUST keep the values from a re-screen that ran before the choice, as `safeguarding` states in "Re-screening at a restart".
 
 The app MUST count record days from the record day of the last screening. The `safeguarding` capability defines the last screening. The store keeps its moment in the Profile field `askedAt`. Within 84 record days of the last screening, the app MUST ask nothing else. More than 84 record days after the last screening, the app MUST run safeguarding's re-screening first. The start-day choice MUST come after it.
 

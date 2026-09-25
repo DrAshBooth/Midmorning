@@ -146,15 +146,15 @@ Today MUST show an entry's Where after the What when the Where is not empty. Tod
 
 A tap on a row on Today or on an earlier day MUST open the entry for editing. The edit screen is the new-entry screen filled with the entry's values. The person MUST be able to change the time, the What, the Where, the star and the Context.
 
-The time control MUST offer times from the start of the entry's record day to the current moment. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change.
+The time control MUST offer only times inside the entry's own record day. The app MUST compute that record day's bounds at the entry's UTC offset. The time control MUST NOT offer a time after the current moment. On save the app MUST keep the entry's record day as it was. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day.
 
 #### Scenario: Change the What
 - **WHEN** the person taps the 13:05 entry "Toast and tea", changes What to "Toast, tea and a biscuit" and saves
 - **THEN** Today shows the 13:05 entry with What "Toast, tea and a biscuit" and no other change
 
-#### Scenario: Change the time into the previous record day
-- **WHEN** the current time is 09:00 on Friday 25 September and the person moves a Friday entry to 23:30 on Thursday 24 September
-- **THEN** Today shows the entry under Thursday 24 September at 23:30
+#### Scenario: Change the time inside the entry's record day
+- **WHEN** "Day starts at" is 04:00, the current time is 09:00 on Friday 25 September, and the person opens the Friday 08:30 entry
+- **THEN** the time control offers times from 04:00 to 09:00 on Friday only, and after the person sets 06:45 and saves, Today shows the entry under Friday 25 September at 06:45
 
 #### Scenario: Creation moment stays
 - **WHEN** the person edits an entry with the creation moment 13:08 and saves at 18:00
@@ -378,6 +378,8 @@ Every chip, field and control in this delta MUST have a VoiceOver label. A row's
 
 The app MUST set the new-entry screen's reading order to What, Where, Context, "felt like a binge", Time, Save, Cancel.
 
+The app MUST set the edit screen's reading order to What, Where, Context, "felt like a binge", Time, Save, Cancel. The app MUST then put "Delete entry" last, after Cancel.
+
 The collapse control's label MUST read "Collapse day" when the day is expanded and "Expand day" when it is collapsed. A row MUST offer "Delete" as a VoiceOver action. Every text in this delta MUST use system text styles. Every text in this delta MUST scale with Dynamic Type. A state in this delta MUST NOT depend on colour alone.
 
 #### Scenario: Label of a full row
@@ -391,6 +393,10 @@ The collapse control's label MUST read "Collapse day" when the day is expanded a
 #### Scenario: Reading order with Where and Context
 - **WHEN** the person opens the new-entry screen from "Add an entry" with the star off, and VoiceOver moves from the first element to the last
 - **THEN** VoiceOver focus moves through the What field, the Where chips, the Context field, the "felt like a binge" star, the time control, Save and Cancel, in that order
+
+#### Scenario: Reading order on the edit screen
+- **WHEN** the person taps the 13:05 entry "Toast and tea" on Today, and VoiceOver moves from the first element to the last
+- **THEN** VoiceOver focus moves through the What field, the Where chips, the Context field, the "felt like a binge" star, the time control, Save, Cancel and "Delete entry", in that order
 
 #### Scenario: The band
 - **WHEN** VoiceOver moves over a band

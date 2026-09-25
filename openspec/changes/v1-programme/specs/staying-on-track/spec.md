@@ -252,7 +252,7 @@ The app MUST NOT write to a device reminder switch at the restart. Each device M
 
 #### Scenario: Cancel
 - **WHEN** the person taps "Start week 1 again" after the finish and then "Cancel"
-- **THEN** nothing changes and the reduced cadence continues
+- **THEN** the start day, `finishDate` and the check-ins are unchanged, the reduced cadence continues, and a re-screen before the choice keeps its values, as `safeguarding` states in "Re-screening at a restart"
 
 #### Scenario: Reminders after a restart
 - **WHEN** the switch for the morning plan reminder is on before the finish and the person restarts on Friday 15 January

@@ -188,7 +188,7 @@ When the device clock moves back past a frozen review's due moment, that row is 
 
 At each review the app MUST apply the deterioration rule to the frozen starred counts of the last four weeks. The `safeguarding` capability defines the rule and DETERIORATION_WEEKS = 3. The rule fires when each of the last three counts exceeds the count before it. The latest count MUST also be at least 4 and at least twice the first of the four.
 
-When the rule fires, the app MUST show the GP suggestion page that `safeguarding` defines. The plan and its reminders MUST stay on. The app MUST show the page at most once per review.
+When the rule fires, the app MUST show the GP suggestion page that `safeguarding` defines. The plan and its reminders MUST stay on. The app MUST show the page from the rule at most once per review. A tap on "I'm getting worse" shows the page each time, as the requirement "I'm getting worse" states.
 
 #### Scenario: Three rising weeks
 - **WHEN** the frozen starred counts of weeks 2 to 5 are 2, 3, 4 and 5 and the person opens the review of week 5
@@ -304,6 +304,8 @@ Every review MUST show a button labelled "I'm getting worse" after the self-harm
 
 When the person taps the button, the app MUST act at once. The app MUST save the review's answers so far. The app MUST then show the GP suggestion page that `safeguarding` defines.
 
+The app MUST show the page at each tap on the button. The app MUST also show the page when the deterioration rule showed it earlier in the same review.
+
 The page's control is "Done". The plan and its reminders MUST stay on. When the page closes, the review MUST show again with its answers. The `safeguarding` capability owns the page, the GP paragraph and the export offer.
 
 #### Scenario: Tap it
@@ -321,6 +323,10 @@ The page's control is "Done". The plan and its reminders MUST stay on. When the 
 #### Scenario: Nothing around it
 - **WHEN** the person reads the end of the review
 - **THEN** the person sees "I'm getting worse" as one button and no sentence above or below it
+
+#### Scenario: Getting worse after the rule fired
+- **WHEN** the deterioration rule showed the GP suggestion page in the review of week 5, the person tapped "Done" on the page, and then taps "I'm getting worse"
+- **THEN** the store keeps the answers so far and the app shows the GP suggestion page again
 
 ### Requirement: Week-1 answers
 
@@ -346,7 +352,7 @@ The `programme` capability opens stage 5 in week WEEK_OF_TAKING_STOCK = 6, count
 
 Before the week-1 questions, the app MUST show "Starred entries: %1$lld in week 1, %2$lld in week %3$lld." with the two counts and the review's week number. For each week-1 question, the app MUST show the question and the week-1 answer under it. The app MUST then show an empty field with the heading "And now?".
 
-When no week-1 answers exist, the app MUST ask the three questions with empty fields. The app MUST show no text about the missing answers. Taking stock is one session. The next review can become due before the person completes the taking stock session. The "Reviews" list MUST then keep the taking-stock row. That row MUST open taking stock until the person completes the session. The next review MUST then be a plain review.
+When no week-1 answers exist, the app MUST ask the three questions with empty fields. The app MUST show no text about the missing answers. Taking stock is one session. The next review can become due before the person completes the taking stock session. The "Reviews" list MUST then keep the taking-stock row. While stage 5 is open, that row MUST open taking stock until the person completes the session. While stage 5 is open and the person has not completed the session, each review that becomes due MUST grow into taking stock again. The questionnaire requirement states that only "Done" with a chosen module completes the session.
 
 The `programme` capability owns the restart. A restart does not delete the stage 5 opening row. The engine ignores a stage 5 opening earlier than the restart moment. Stage 5 then opens again by the programme's rule from the new start. When stage 5 opens again, the first review due on or after that day MUST grow into taking stock again.
 
@@ -364,7 +370,7 @@ The `programme` capability owns the restart. A restart does not delete the stage
 
 #### Scenario: Taking stock session not complete
 - **WHEN** the person does not complete the taking stock session in the review of week 7 and the review of week 8 becomes due
-- **THEN** the "Reviews" list shows a row that opens taking stock, and the review of week 8 has no taking stock part
+- **THEN** the "Reviews" list shows a row that opens taking stock, and the review of week 8 grows into taking stock again
 
 #### Scenario: After a restart
 - **WHEN** the person completed the taking stock session in the first run, restarted the programme, and `programme` opens stage 5 again on Monday 8 February
@@ -380,7 +386,11 @@ The recommendation MUST read one of: "From your answers, Food rules is the one t
 
 When the person taps either control, the app MUST save the questionnaire answers and the chosen module. At that tap, the app MUST NOT open the module or complete the taking stock session. After the tap, the app MUST show the tapped control as chosen and the other control as not chosen. When the person later taps the other control, the app MUST replace the chosen module with that control's module. The review MUST continue with the reflection questions, the one thing to change, the self-harm item and "I'm getting worse".
 
-"Done" MUST close the review with or without a chosen module, as for any review. When the person first taps the review's "Done" with a chosen module, the app MUST complete the taking stock session. After the review closes at that tap, the app MUST open the chosen module. After the app opens the chosen module, the app MUST NOT open a module at a later "Done" on that review.
+"Done" MUST close the review with or without a chosen module, as for any review. When the person first taps the review's "Done" with a chosen module, the app MUST complete the taking stock session. After the review closes, the app MUST open the chosen module, except after a self-harm "Yes" then "Yes" in that review. After that first "Done", the app MUST NOT open a module at a later "Done" on that review.
+
+When the person taps the review's "Done" with no chosen module, the app MUST close the review. The app MUST NOT complete the taking stock session at that tap. The "Reviews" list then keeps the taking-stock row. The next review grows into taking stock again, as "Taking stock" states.
+
+The person can answer the self-harm item "Yes" then "Yes" in a review with a chosen module. At the first "Done" with that chosen module, the app MUST then complete the taking stock session. The app MUST NOT open a module at that "Done". The app MUST hold the "Yes" then "Yes" in memory only, until the review closes. The store MUST keep the chosen module. Stage 6 opens at that completion, or stays open after a restart, as `programme` defines. The chosen module then stays one tap away on the Programme screen.
 
 The app MUST NOT show a sum of the answers. The store MUST keep the five answers, the recommendation and the chosen module. The `dieting-module` and `body-image-module` capabilities own the module screens.
 
@@ -419,6 +429,14 @@ The app MUST NOT show a sum of the answers. The store MUST keep the five answers
 #### Scenario: Reopen after the module opened
 - **WHEN** the person completed the taking stock session with Food rules chosen on Monday, reopens the review on Wednesday and taps the review's "Done"
 - **THEN** the review closes and the app opens no module
+
+#### Scenario: Self-harm Yes then Yes after a module choice
+- **WHEN** the person taps "Open Food rules" in taking stock, answers the self-harm item "Yes" then "Yes", taps "Done" on the not-right-now page, then taps the review's "Done"
+- **THEN** the store keeps Food rules as the chosen module, the app completes the taking stock session and opens no module, and "Food rules" is one tap away on the Programme screen
+
+#### Scenario: Done with no module chosen
+- **WHEN** the person answers the questionnaire in the review of week 7, taps neither module control, taps the review's "Done", and the review of week 8 becomes due
+- **THEN** the review closes, the taking stock session stays not complete, the "Reviews" list keeps the taking-stock row, and the review of week 8 grows into taking stock again
 
 ### Requirement: What the review never shows
 
