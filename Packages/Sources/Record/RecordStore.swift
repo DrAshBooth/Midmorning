@@ -560,8 +560,17 @@ public final class RecordStore {
     /// right after `now` — never from `now`'s own record day, so no saved
     /// entry's record day changes.
     public func setDayStartHour(_ hour: Int, now: Date, calendar: Calendar, changedAt: Date = .now) throws {
+        let choices = RecordDay.startHourChoices
         let nextDayKey = RecordDay.nextDayKey(after: now, calendar: calendar, schedule: try dayStartSchedule())
-        try setSettingValue(String(hour), key: DayStartSetting.key(effectiveFromDayKey: nextDayKey), changedAt: changedAt)
+        try setSettingValue(String(min(max(hour, choices.lowerBound), choices.upperBound)), key: DayStartSetting.key(effectiveFromDayKey: nextDayKey), changedAt: changedAt)
+    }
+
+    /// The hour the "Day starts at" row shows: the hour in force from the
+    /// record day after `now`, so the row shows a change at once, although
+    /// the change applies only from the next day start.
+    public func dayStartHourFromNextRecordDay(after now: Date, calendar: Calendar) throws -> Int {
+        let schedule = try dayStartSchedule()
+        return schedule.hour(effectiveOn: RecordDay.nextDayKey(after: now, calendar: calendar, schedule: schedule))
     }
 
     private static let gapBandsKey = "record.gapBands.enabled"

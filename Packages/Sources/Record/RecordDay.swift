@@ -56,6 +56,10 @@ public enum RecordDay {
     /// covers. Read it only through `DayStartSchedule`.
     public static let startHour = 4
 
+    /// The hours "Day starts at" offers: 00:00 to 12:00 (settings spec, "The
+    /// Record group").
+    public static let startHourChoices = 0...12
+
     // MARK: Under a day-start schedule
 
     /// The half-open interval of the record day that contains `moment`,
