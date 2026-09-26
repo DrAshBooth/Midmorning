@@ -79,7 +79,7 @@ final class ProgrammeStoreTests: XCTestCase {
     func testACardOpens() throws {
         let store = try makeStore()
         let opened = Date(timeIntervalSince1970: 1_759_064_700) // 13:05 UTC
-        try store.recordCardSeen(cardId: "stage1.why", contentVersion: 1, seenAt: opened)
+        try store.recordCardSeen(cardId: "stage1.why", contentVersion: 1, language: "en-GB", seenAt: opened)
         let views = try store.cardViews(cardId: "stage1.why")
         XCTAssertEqual(views.count, 1)
         XCTAssertEqual(views.first?.contentVersion, 1)
@@ -89,10 +89,27 @@ final class ProgrammeStoreTests: XCTestCase {
     /// Scenario: The same card after an update.
     func testTheSameCardAfterAnUpdateKeepsBothViews() throws {
         let store = try makeStore()
-        try store.recordCardSeen(cardId: "stage1.why", contentVersion: 1, seenAt: Date(timeIntervalSince1970: 1_759_064_700))
-        try store.recordCardSeen(cardId: "stage1.why", contentVersion: 2, seenAt: Date(timeIntervalSince1970: 1_759_100_000))
+        try store.recordCardSeen(cardId: "stage1.why", contentVersion: 1, language: "en-GB", seenAt: Date(timeIntervalSince1970: 1_759_064_700))
+        try store.recordCardSeen(cardId: "stage1.why", contentVersion: 2, language: "en-GB", seenAt: Date(timeIntervalSince1970: 1_759_100_000))
         let views = try store.cardViews(cardId: "stage1.why")
         XCTAssertEqual(views.count, 2, "the store holds a second card view and keeps the first")
         XCTAssertEqual(Set(views.map(\.contentVersion)), [1, 2])
+    }
+
+    // MARK: mm-t21.30, content spec "Strings live in catalogues"
+
+    /// Scenario: A card view's language. `CardScreenView` passes the
+    /// bundle's own language (`ContentTests.CardViewLanguageTests` proves
+    /// that the shipped bundle is en-GB).
+    func testACardViewsLanguage() throws {
+        let store = try makeStore()
+        try store.recordCardSeen(cardId: "stage1.why", contentVersion: 2, language: "en-GB", seenAt: Date(timeIntervalSince1970: 1_759_064_700))
+        XCTAssertEqual(try store.cardViews(cardId: "stage1.why").first?.language, "en-GB", "the card view holds the language en-GB")
+    }
+
+    /// A row from before the field existed reads en-GB, the one language
+    /// V1 ships.
+    func testAnOlderCardViewReadsTheBaseLanguage() {
+        XCTAssertEqual(Seen(cardId: "stage1.why", seenAt: Date(), contentVersion: 1).language, "en-GB")
     }
 }

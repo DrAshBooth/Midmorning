@@ -9,12 +9,20 @@ public struct ContentBundle: Sendable, Equatable {
     public let cards: [Card]
     public let strings: [StringEntry]
     public var isDraft: Bool
+    /// The language of every card and string in this bundle (content spec,
+    /// "Strings live in catalogues": "The content bundle MUST be per
+    /// language. V1 MUST ship en-GB only."). A card view keeps it.
+    public let language: String
 
-    public init(contentVersion: Int, cards: [Card], strings: [StringEntry], isDraft: Bool = true) {
+    /// The base language, and the one language V1 ships.
+    public static let baseLanguage = "en-GB"
+
+    public init(contentVersion: Int, cards: [Card], strings: [StringEntry], isDraft: Bool = true, language: String = ContentBundle.baseLanguage) {
         self.contentVersion = contentVersion
         self.cards = cards
         self.strings = strings
         self.isDraft = isDraft
+        self.language = language
     }
 
     /// Reads the bundle from a `Resources` directory on disk. `design.md`

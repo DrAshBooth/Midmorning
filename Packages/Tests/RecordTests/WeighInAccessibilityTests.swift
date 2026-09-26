@@ -39,6 +39,22 @@ final class WeighInAccessibilityTests: XCTestCase {
         XCTAssertEqual(Weekday.monday.name, "Monday")
     }
 
+    /// Scenario (weigh-in spec, "The weigh-in day"): VoiceOver reads "Choose
+    /// a weigh-in day, heading", then "Monday" to "Sunday" (mm-t22.25). Every
+    /// weekday list (this screen's two, Settings and onboarding screen 3)
+    /// shows `Weekday.mondayFirst`.
+    func testTheWeekdayListReadsMondayToSunday() throws {
+        XCTAssertEqual(Weekday.mondayFirst.map(\.name), ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+        XCTAssertEqual(Set(Weekday.mondayFirst), Set(Weekday.allCases), "every weekday, once")
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        for file in ["App/Midmorning/WeighIn/WeighInScreenView.swift", "App/Midmorning/SettingsView.swift", "App/Midmorning/Onboarding/Screen3View.swift"] {
+            let text = try String(contentsOf: repoRoot.appendingPathComponent(file), encoding: .utf8)
+            XCTAssertFalse(text.contains("Weekday.allCases"), "\(file) lists the weekdays Monday first")
+            XCTAssertTrue(text.contains("Weekday.mondayFirst"), "\(file) lists the weekdays Monday first")
+        }
+    }
+
     /// Structural: the screen marks "Choose a weigh-in day" as a heading,
     /// and every custom control (the weight field, the stone/pounds fields,
     /// the weigh-in day picker, the unit picker, the chart) carries an

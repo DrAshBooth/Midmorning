@@ -3,6 +3,7 @@ import Record
 import Plan
 import Programme
 import AppLock
+import Constants
 
 /// The record day's entries as a time-ordered column, like the paper
 /// record (record spec, "The Today stack"). The order here is the only
@@ -34,9 +35,10 @@ struct CardRoute: Hashable {
 struct WeighInRoute: Hashable {}
 
 /// The "Reviews" list, and one review by its own week number (weekly-review
-/// spec, "Finish and reopen a review").
+/// spec, "Finish and reopen a review"). `runStartDay` is `nil` for the
+/// current run, or the start day of the earlier run a review belongs to.
 struct ReviewsListRoute: Hashable {}
-struct WeeklyReviewRoute: Hashable { let week: Int }
+struct WeeklyReviewRoute: Hashable { let week: Int; var runStartDay: String? = nil }
 
 struct TodayView: View {
     let store: RecordStore
@@ -97,7 +99,7 @@ struct TodayView: View {
                     Section {
                         if let note = pinnedNoteText {
                             Button {
-                                if let week = weeklyReviewSnapshot?.pinnedNoteWeek { navigationPath.append(WeeklyReviewRoute(week: week)) }
+                                if let review = weeklyReviewSnapshot?.pinnedNoteReview { navigationPath.append(WeeklyReviewRoute(week: review.week, runStartDay: review.runStartDay)) }
                             } label: {
                                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                                     Image(systemName: "pin.fill")
@@ -185,6 +187,11 @@ struct TodayView: View {
                     proxy.scrollTo(target, anchor: .center)
                     scrollTarget = nil
                 }
+                // On the stack's root, not the stack: the root appears
+                // again each time a pushed screen (Programme, a stage, the
+                // plan from a stage, a restart, a review, Settings) pops
+                // back, so Today shows the state that screen wrote.
+                .onAppear(perform: reload)
             }
             .navigationTitle("today.title")
             // "Get support" in the trailing position (safeguarding spec,
@@ -270,16 +277,15 @@ struct TodayView: View {
                 WeighInScreenView(store: store)
             }
             .navigationDestination(for: ReviewsListRoute.self) { _ in
-                ReviewsListView(store: store, openWeek: { week in navigationPath.append(WeeklyReviewRoute(week: week)) })
+                ReviewsListView(store: store, openReview: { review in navigationPath.append(WeeklyReviewRoute(week: review.week, runStartDay: review.runStartDay)) })
             }
             .navigationDestination(for: WeeklyReviewRoute.self) { route in
-                ReviewScreenView(store: store, week: route.week, onDone: { reload() })
+                ReviewScreenView(store: store, week: route.week, runStartDay: route.runStartDay, onDone: { reload() })
             }
             .accessibilityAction(.magicTap) { openNewEntry() }
         }
         .privacySensitive()
         .redacted(reason: scenePhase == .active ? [] : .privacy)
-        .onAppear(perform: reload)
         // A tap on a reminder opens its own screen (reminders spec).
         .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
         .onChange(of: scenePhase) { _, phase in
@@ -529,6 +535,6 @@ struct GapBandRow: View {
             .frame(height: 4)
             .listRowSeparator(.hidden)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: 4))
+            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours))
     }
 }

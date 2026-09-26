@@ -18,7 +18,7 @@ Verify for every task below: `swift test --package-path Packages --filter Conten
 
 - [x] 3.1 Add `App/Midmorning/Localizable.xcstrings` and move the seven skeleton literals ("Today", "New entry", "Time", "What", "Cancel", "Save", "*") in `TodayView.swift` and `NewEntryView.swift` into catalogue keys; `Text(verbatim:)` carries "*". Verify: `xcodebuild -project App/Midmorning.xcodeproj -scheme Midmorning -destination 'generic/platform=iOS Simulator' build` succeeds.
 - [x] 3.2 Add the literal lint: derive the repository root from `#filePath`, scan `App/**/*.swift`, check the six one-line calls, pass `Text(verbatim:)`. Built here: "A literal in code", "A catalogue key", "The verbatim escape", "A call over several lines", "A literal outside the six calls", "A device in another language". Verify: `LiteralLintTests` and `BundledCardsTests.testLiteralLintNamesNoFileInTheShippedApp` pass.
-- [ ] 3.3 Deferred: "A card view's language" (mm-t11.9).
+- [x] 3.3 "A card view's language": mm-t11.9 did not build it. The code review fix mm-t21.30 builds it on 26 September 2026: `Seen.language` (additive; `FrozenSchema.json` in the same commit), `ContentBundle.language`, written from `CardScreenView.load()`. Verify: `RecordTests.ProgrammeStoreTests.testACardViewsLanguage` and `ContentTests.CardViewLanguageTests` pass.
 
 ## 4. mm-t11.8 — Content versions (P0)
 

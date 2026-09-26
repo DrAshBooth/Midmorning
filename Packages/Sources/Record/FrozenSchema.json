@@ -12,7 +12,7 @@
   "Review": {"id": "UUID", "kind": "String", "dueDateKey": "String", "frozenAt": "Date?", "answersJSON": "String", "selfHarmAnswered": "Bool", "pinnedNote": "String", "changedAt": "Date"},
   "Profile": {"id": "UUID", "heightCm": "Double", "onboardingBMI": "Double", "cautionFlag": "Bool", "askedAt": "Date?", "changedAt": "Date"},
   "Settings": {"id": "UUID", "key": "String", "value": "String", "changedAt": "Date"},
-  "Seen": {"id": "UUID", "cardId": "String", "seenAt": "Date", "contentVersion": "Int"},
+  "Seen": {"id": "UUID", "cardId": "String", "seenAt": "Date", "contentVersion": "Int", "language": "String"},
   "Place": {"id": "UUID"},
   "Device": {"id": "UUID", "installId": "UUID", "joinedDay": "String", "lastSeenDay": "String", "leftAt": "Date?", "changedAt": "Date"}
 }

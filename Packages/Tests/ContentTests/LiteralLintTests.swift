@@ -1,9 +1,10 @@
 import XCTest
 @testable import Content
 
-/// "Strings live in catalogues" (mm-t11.11). "A card view's language" is
-/// deferred: mm-t11.9, part of `programme-engine` (2.1), which adds the
-/// card view the store keeps.
+/// "Strings live in catalogues" (mm-t11.11). mm-t21.30 builds "A card
+/// view's language": `CardViewLanguageTests` below, and
+/// `RecordTests.ProgrammeStoreTests.testACardViewsLanguage` for the card
+/// view the store keeps.
 final class LiteralLintTests: XCTestCase {
     /// Scenario: A literal in code
     func testLiteralInCodeFailsAndNamesTheFileAndLine() {

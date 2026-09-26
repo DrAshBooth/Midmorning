@@ -51,9 +51,20 @@ enum DayKeyMath {
     }
 
     /// The wall-clock moment `key`'s record day begins, at `dayStart` hour.
+    /// Sets the hour as a wall-clock field, as `Record`'s `RecordDay` does,
+    /// and does not add elapsed hours to midnight: on a clock-change date
+    /// midnight to 04:00 is 3 or 5 hours, and the record day still starts
+    /// at 04:00.
     static func dayStartMoment(for key: String, dayStart: Int, calendar: Calendar) -> Date {
-        guard let midnight = midnight(key, calendar: calendar) else { return .distantPast }
-        return calendar.date(byAdding: .hour, value: dayStart, to: midnight) ?? midnight
+        guard let p = parts(key) else { return .distantPast }
+        var components = DateComponents()
+        components.year = p.year
+        components.month = p.month
+        components.day = p.day
+        components.hour = dayStart
+        components.minute = 0
+        components.second = 0
+        return calendar.date(from: components) ?? .distantPast
     }
 
     /// The wall-clock moment right after `key`'s record day ends: the day

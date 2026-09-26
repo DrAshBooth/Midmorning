@@ -44,7 +44,7 @@ struct StageScreenView: View {
         .navigationTitle(model?.title ?? stage.title)
         .getSupport()
         .sheet(item: $planBuilderMode) { mode in
-            PlanBuilderView(store: store, mode: mode) {}
+            PlanBuilderView(store: store, mode: mode) { reload() }
         }
         .onAppear(perform: reload)
     }
@@ -73,7 +73,7 @@ struct StageScreenView: View {
             stage: stage, state: snapshot.state, constants: .default, settings: snapshot.settings,
             currentRecordDay: snapshot.currentRecordDay, calendar: snapshot.calendar
         )
-        let bundle = try? BundleLoader.loadShipped()
+        let bundle = ShippedContent.bundle
         cardTitles = (bundle?.activeCards(in: .stage(stage.rawValue)) ?? []).map { ($0.id, $0.title) }
     }
 }

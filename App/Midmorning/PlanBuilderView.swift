@@ -252,7 +252,7 @@ struct PlanBuilderView: View {
 
     private func attemptSave() {
         let facts = orderedMeals.map { PlanMealFact(label: label($0.slotIndex), time: $0.time, kind: Slot.at(index: $0.slotIndex)?.kind ?? .meal) }
-        let lines = SoftRules.lines(orderedMeals: facts, dayStartHour: dayStartHour, maxAwakeGapHours: 4, isFastingDay: isFastingDay)
+        let lines = SoftRules.lines(orderedMeals: facts, dayStartHour: dayStartHour, maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours, isFastingDay: isFastingDay)
         if lines.isEmpty {
             performSave()
         } else {

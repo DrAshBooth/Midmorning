@@ -11,6 +11,10 @@ import Programme
 struct ReviewScreenView: View {
     let store: RecordStore
     let week: Int
+    /// The start day of the run this review belongs to, or `nil` for the
+    /// current run. A review from before a restart passes its own run's
+    /// start day (`ReviewRuns`), so the screen opens that review's row.
+    var runStartDay: String? = nil
     var now: () -> Date = Date.init
     var calendar: Calendar = .current
     var onDone: () -> Void = {}
@@ -28,7 +32,6 @@ struct ReviewScreenView: View {
 
     @State private var notRightNowReasons: [ExclusionReason]?
     @State private var gpSuggestionReasons: [GPSuggestionReason]?
-    @State private var deteriorationCheckedThisSession = false
 
     var body: some View {
         Form {
@@ -128,6 +131,12 @@ struct ReviewScreenView: View {
         .onChange(of: selfHarmSecond) { _, newValue in
             if newValue == .yes { showNotRightNow() }
         }
+        // Step 2 belongs to a step-1 "Yes" only. When step 1 changes away
+        // from "Yes", clear step 2, so a later "Yes" asks step 2 again and
+        // its routing runs again (the same rule `Screen2View` uses).
+        .onChange(of: selfHarmFirst) { _, newValue in
+            if newValue != .yes { selfHarmSecond = nil }
+        }
 
         if !selfHarmAlreadyAnswered, selfHarmFirst == .yes, selfHarmSecond == .no {
             // The support sheet's items, inline, Samaritans first
@@ -140,29 +149,30 @@ struct ReviewScreenView: View {
     // MARK: Actions
 
     private func tapGettingWorse() {
-        saveInProgress()
+        save(.answersSoFar)
         gpSuggestionReasons = [.gettingWorse]
     }
 
     private func showNotRightNow() {
-        saveInProgress()
+        save(.answersSoFar)
         notRightNowReasons = [.selfHarm]
     }
 
     /// Saves the answers gathered so far, with no answer to the self-harm
     /// item required (weekly-review spec, "\"I'm getting worse\"": "The app
-    /// MUST save the review's answers so far.").
-    private func saveInProgress() {
-        _ = WeeklyReviewModel.saveDone(
-            store: store, week: week, startDay: startDay, calendar: calendar,
+    /// MUST save the review's answers so far."). Only `.done` finishes the
+    /// review and replaces the pinned note (`ReviewSave`).
+    private func save(_ mode: ReviewSave.Mode) {
+        _ = WeeklyReviewModel.save(
+            mode, store: store, week: week, startDay: startDay, calendar: calendar,
             reflectionAnswers: reflectionAnswers, oneThingToChange: oneThingToChange,
             weekOneAnswers: week == 1 ? weekOneAnswers : nil,
-            selfHarmFirst: selfHarmFirst, selfHarmSecond: selfHarmSecond, now: now()
+            selfHarmFirst: selfHarmFirst, now: now()
         )
     }
 
     private func tapDone() {
-        saveInProgress()
+        save(.done)
         // reminders spec, "The weekly review reminder": "When the person
         // completes the review before that time, the scheduler MUST cancel
         // the reminder." The scheduler recomputes from scratch, so a
@@ -173,7 +183,7 @@ struct ReviewScreenView: View {
     }
 
     private func load() {
-        startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
+        startDay = runStartDay ?? (try? store.startDayKey()) ?? RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         summary = WeeklyReviewModel.summary(store: store, week: week, startDay: startDay, calendar: calendar)
 
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
@@ -185,27 +195,13 @@ struct ReviewScreenView: View {
             selfHarmAlreadyAnswered = existing.selfHarmAnswered
         }
 
-        checkDeteriorationOnce()
-    }
-
-    /// The deterioration rule fires at most once per review (weekly-review
-    /// spec, "The deterioration rule at the review"): checked once when the
-    /// review opens; "I'm getting worse" can still show the page again at
-    /// any later tap in the same session.
-    private func checkDeteriorationOnce() {
-        guard !deteriorationCheckedThisSession else { return }
-        deteriorationCheckedThisSession = true
-        var counts: [Int] = []
-        for offset in stride(from: 3, through: 0, by: -1) {
-            let checkedWeek = week - offset
-            guard checkedWeek >= 1 else { return }
-            let dueDayKey = ReviewDue.dueDayKey(week: checkedWeek, startDay: startDay, calendar: calendar)
-            guard let row = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey),
-                  let starred = ReviewAnswersPayload.decode(row.answersJSON).frozenCounts?.starred
-            else { return }
-            counts.append(starred)
-        }
-        if DeteriorationRule.fires(lastFrozenStarredCounts: counts) {
+        // The deterioration rule shows its page at most once per review
+        // (weekly-review spec, "The deterioration rule at the review"). The
+        // gate is a flag in the review's own row, not screen state, so a
+        // reopen from Today, the "Reviews" list or the reminder does not
+        // show it again. "I'm getting worse" still shows the page at each
+        // tap.
+        if WeeklyReviewModel.opensWithDeteriorationPage(store: store, week: week, startDay: startDay, calendar: calendar, now: now()) {
             gpSuggestionReasons = [.deterioration]
         }
     }

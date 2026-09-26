@@ -1,6 +1,7 @@
 import Foundation
 import Record
 import Plan
+import Constants
 
 /// One day section's data, computed from the store (record spec, "The Today
 /// stack"; "Collapse a day to a count"; "The gap band"). A value the view
@@ -90,7 +91,7 @@ struct DaySection: Identifiable {
             stage2Open: GapBand.applies(toDayKey: dayKey, stage2OpenedDayKey: stage2OpenedDayKey, switchOn: gapBandsOn),
             dayHasExemptState: hasExemptState,
             isCollapsed: !isExpanded,
-            maxAwakeGapHours: 4
+            maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours
         )
         let plan = PlanBuilderAccess.isOffered(stage2Open: stage2Open)
             ? PlanToday.load(dateKey: dayKey, recordDay: interval, store: store, entries: entries, now: Date(), calendar: .current)

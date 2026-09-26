@@ -21,10 +21,10 @@ enum WeeklyReviewModel {
         let startDay: String
         let calendar: Calendar
         let pinnedNote: String?
-        /// The week whose review is currently pinned, so a tap on the note
-        /// routes to the right review (weekly-review spec, "Edit from
-        /// Today").
-        let pinnedNoteWeek: Int?
+        /// The review whose note is pinned, with its own run's start day,
+        /// so a tap on the note opens that review also after a restart
+        /// (weekly-review spec, "Edit from Today").
+        let pinnedNoteReview: ReviewRunWeek?
         /// `true` from the moment the first weekly review becomes due
         /// (record spec, "The Today stack": "'Reviews', from the moment the
         /// first weekly review becomes due").
@@ -47,10 +47,10 @@ enum WeeklyReviewModel {
         let dueDayKey = dueWeek.map { ReviewDue.dueDayKey(week: $0, startDay: startDay, calendar: calendar) }
         let latestDueWeek = ReviewDue.latestDueWeek(startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar)
         let reviewsControlShows = latestDueWeek != nil
-        let (note, noteWeek) = currentPinnedNoteAndWeek(store: store, startDay: startDay, calendar: calendar)
+        let (note, noteReview) = currentPinnedNoteAndReview(store: store, startDay: startDay, calendar: calendar)
         return Snapshot(
             dueWeek: dueWeek, dueDayKey: dueDayKey, startDay: startDay, calendar: calendar,
-            pinnedNote: note, pinnedNoteWeek: noteWeek, reviewsControlShows: reviewsControlShows,
+            pinnedNote: note, pinnedNoteReview: noteReview, reviewsControlShows: reviewsControlShows,
             latestDueWeek: latestDueWeek
         )
     }
@@ -84,14 +84,21 @@ enum WeeklyReviewModel {
         return latest.pinnedNote.isEmpty ? nil : latest.pinnedNote
     }
 
-    private static func currentPinnedNoteAndWeek(store: RecordStore, startDay: String, calendar: Calendar) -> (String?, Int?) {
+    private static func currentPinnedNoteAndReview(store: RecordStore, startDay: String, calendar: Calendar) -> (String?, ReviewRunWeek?) {
         guard let winners = try? store.reviewRowWinners(kind: .weeklyReview) else { return (nil, nil) }
         guard let latest = winners
             .filter({ ReviewAnswersPayload.decode($0.answersJSON).finished })
             .max(by: { $0.dueDateKey < $1.dueDateKey })
         else { return (nil, nil) }
         guard !latest.pinnedNote.isEmpty else { return (nil, nil) }
-        return (latest.pinnedNote, weekNumber(dueDayKey: latest.dueDateKey, startDay: startDay, calendar: calendar))
+        return (latest.pinnedNote, runWeeks(winners, currentStartDay: startDay, calendar: calendar)[latest.dueDateKey])
+    }
+
+    /// Every stored review's run and week (`ReviewRuns`), so that a review
+    /// from before a restart keeps its own week number.
+    static func runWeeks(_ winners: [RecordStore.ReviewRow], currentStartDay: String, calendar: Calendar) -> [String: ReviewRunWeek] {
+        let rows = winners.map { ReviewRuns.Row(dueDayKey: $0.dueDateKey, runStartDay: ReviewAnswersPayload.decode($0.answersJSON).runStartDay) }
+        return ReviewRuns.runWeeks(rows: rows, currentStartDay: currentStartDay, calendar: calendar)
     }
 
     /// Whether Today MUST hold back the pinned note for the rest of this
@@ -140,7 +147,11 @@ enum WeeklyReviewModel {
 
         let weekDaySet = Set(weekDayKeys)
         let urgeDetails = ((try? store.urgeOutcomeDetails()) ?? []).filter { weekDaySet.contains($0.dayKey) }
-        let weighInDayKey = ((try? store.weighIns()) ?? []).first { weekDaySet.contains($0.dateKey) }?.dateKey
+        let weighInDayChosen: Bool
+        if case .weekday = try? store.weighInDayChoice() { weighInDayChosen = true } else { weighInDayChosen = false }
+        let weighInDayKey = ReviewWeekFacts.weighInDoneDayKey(
+            weighInDayKeys: ((try? store.weighIns()) ?? []).map(\.dateKey), weekDayKeys: weekDayKeys, weighInDayChosen: weighInDayChosen
+        )
 
         var previousWeekFrozenStarred: Int? = nil
         if week > 1 {
@@ -181,66 +192,99 @@ enum WeeklyReviewModel {
         let facts = weekFacts(store: store, week: week, startDay: startDay, calendar: calendar)
         var payload = ReviewAnswersPayload()
         payload.frozenCounts = FrozenReviewCounts.from(facts)
+        payload.runStartDay = startDay
         try? store.upsertReview(kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: now, answersJSON: payload.encoded(), selfHarmAnswered: false, pinnedNote: "", changedAt: now)
     }
 
-    /// Saves "Done" on `week`'s review: merges the person's own answers into
-    /// whatever is already frozen for that key (the frozen counts, when
-    /// present), sets `finished`, and mirrors "the one thing to change"
-    /// onto the row's own `pinnedNote` field.
+    /// Saves `week`'s review: merges the person's own answers into the row
+    /// the store already holds for that key (the frozen counts, when
+    /// present). `ReviewSave` holds the rules: "Done" sets `finished` and
+    /// mirrors "the one thing to change" onto the row's own `pinnedNote`;
+    /// "I'm getting worse" and the self-harm "Yes" then "Yes" save the
+    /// answers so far and change neither. A row that holds
+    /// `selfHarmAnswered: true` keeps it.
     @discardableResult
-    static func saveDone(
-        store: RecordStore, week: Int, startDay: String, calendar: Calendar,
+    static func save(
+        _ mode: ReviewSave.Mode, store: RecordStore, week: Int, startDay: String, calendar: Calendar,
         reflectionAnswers: [String], oneThingToChange: String, weekOneAnswers: [String]?,
-        selfHarmFirst: SelfHarmFirstAnswer?, selfHarmSecond: SelfHarmSecondAnswer?, now: Date
+        selfHarmFirst: SelfHarmFirstAnswer?, now: Date
     ) -> RecordStore.ReviewRow? {
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
         let existing = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey)
-        var payload = existing.map { ReviewAnswersPayload.decode($0.answersJSON) } ?? ReviewAnswersPayload()
-        payload.finished = true
-        payload.reflectionAnswers = reflectionAnswers
-        payload.oneThingToChange = oneThingToChange
-        if week == 1, let weekOneAnswers { payload.weekOneAnswers = weekOneAnswers }
-        let selfHarmAnswered = selfHarmFirst != nil
-        return try? store.upsertReview(
-            kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: existing?.frozenAt, answersJSON: payload.encoded(),
-            selfHarmAnswered: selfHarmAnswered, pinnedNote: oneThingToChange, changedAt: now
+        let values = ReviewSave.values(
+            existing: existing.map(rowValues), mode: mode, week: week, runStartDay: startDay,
+            reflectionAnswers: reflectionAnswers, oneThingToChange: oneThingToChange, weekOneAnswers: weekOneAnswers,
+            selfHarmStepOneAnswered: selfHarmFirst != nil
         )
+        return try? store.upsertReview(
+            kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: existing?.frozenAt, answersJSON: values.answersJSON,
+            selfHarmAnswered: values.selfHarmAnswered, pinnedNote: values.pinnedNote, changedAt: now
+        )
+    }
+
+    /// Whether `week`'s review opens with the GP suggestion page from the
+    /// deterioration rule (weekly-review spec, "The deterioration rule at
+    /// the review"). Reads the frozen starred counts of the review's week
+    /// and the `DETERIORATION_WEEKS` weeks before it. When the page shows,
+    /// writes the flag into the review's own row, so a reopen of the same
+    /// review does not show it again ("at most once per review").
+    static func opensWithDeteriorationPage(store: RecordStore, week: Int, startDay: String, calendar: Calendar, now: Date) -> Bool {
+        let needed = ReviewDeteriorationGate.countsNeeded()
+        guard week >= needed else { return false }
+        var counts: [Int] = []
+        for checkedWeek in (week - needed + 1)...week {
+            let dueDayKey = ReviewDue.dueDayKey(week: checkedWeek, startDay: startDay, calendar: calendar)
+            guard let row = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey),
+                  let starred = ReviewAnswersPayload.decode(row.answersJSON).frozenCounts?.starred
+            else { return false }
+            counts.append(starred)
+        }
+        let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
+        guard let current = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey),
+              ReviewDeteriorationGate.showsPage(lastFrozenStarredCounts: counts, reviewAnswersJSON: current.answersJSON)
+        else { return false }
+        let marked = ReviewSave.deteriorationPageShown(existing: rowValues(current))
+        try? store.upsertReview(
+            kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: current.frozenAt, answersJSON: marked.answersJSON,
+            selfHarmAnswered: marked.selfHarmAnswered, pinnedNote: marked.pinnedNote, changedAt: now
+        )
+        return true
+    }
+
+    private static func rowValues(_ row: RecordStore.ReviewRow) -> ReviewRowValues {
+        ReviewRowValues(answersJSON: row.answersJSON, selfHarmAnswered: row.selfHarmAnswered, pinnedNote: row.pinnedNote)
     }
 
     /// Every finished review, newest first, for the "Reviews" list.
     struct ReviewListRow: Identifiable {
         var id: String { dueDayKey }
         let dueDayKey: String
-        let week: Int
+        /// The review's week and its own run's start day, so a row from
+        /// before a restart opens its own review.
+        let review: ReviewRunWeek
         let text: String
     }
 
     static func reviewsListRows(store: RecordStore, calendar: Calendar) -> [ReviewListRow] {
         let startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: Date(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         let summaryOn = (try? store.weeklySummaryOn()) ?? true
-        let winners = ((try? store.reviewRowWinners(kind: .weeklyReview)) ?? [])
+        let allWinners = (try? store.reviewRowWinners(kind: .weeklyReview)) ?? []
+        let runs = runWeeks(allWinners, currentStartDay: startDay, calendar: calendar)
+        let winners = allWinners
             .filter { ReviewAnswersPayload.decode($0.answersJSON).finished }
             .sorted { $0.dueDateKey > $1.dueDateKey }
         return winners.compactMap { row -> ReviewListRow? in
-            guard let week = weekNumber(dueDayKey: row.dueDateKey, startDay: startDay, calendar: calendar) else { return nil }
-            let range = ReviewDue.weekRange(week: week, startDay: startDay, calendar: calendar)
+            guard let review = runs[row.dueDateKey] else { return nil }
+            let range = ReviewDue.weekRange(week: review.week, startDay: review.runStartDay, calendar: calendar)
             let dateRange = ReviewText.weekDateRangeText(firstDayKey: range.first, lastDayKey: range.last, calendar: calendar)
             let text: String
             if summaryOn, let starred = ReviewAnswersPayload.decode(row.answersJSON).frozenCounts?.starred {
-                text = ReviewContent.rowText(week: week, dateRange: dateRange, starredCount: starred)
+                text = ReviewContent.rowText(week: review.week, dateRange: dateRange, starredCount: starred)
             } else {
-                text = ReviewContent.rowTextWithoutCount(week: week, dateRange: dateRange)
+                text = ReviewContent.rowTextWithoutCount(week: review.week, dateRange: dateRange)
             }
-            return ReviewListRow(dueDayKey: row.dueDateKey, week: week, text: text)
+            return ReviewListRow(dueDayKey: row.dueDateKey, review: review, text: text)
         }
-    }
-
-    private static func weekNumber(dueDayKey: String, startDay: String, calendar: Calendar) -> Int? {
-        for week in 1...52 where ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar) == dueDayKey {
-            return week
-        }
-        return nil
     }
 
     /// The record-day interval `dayKey` names, at `dayStartHour` — the

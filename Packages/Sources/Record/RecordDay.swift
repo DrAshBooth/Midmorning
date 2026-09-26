@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The "Day starts at" rows as one value (data-and-privacy spec, "Slot labels
 /// and the day start are Settings rows"): each change holds an hour and the
@@ -52,9 +53,11 @@ public struct DayStartSchedule: Sendable, Equatable {
 /// before a change to a later start is longer (record spec, "The record
 /// day": a record day "ends one minute before the next day start").
 public enum RecordDay {
-    /// The default day start, for a day key that no "Day starts at" row
-    /// covers. Read it only through `DayStartSchedule`.
-    public static let startHour = 4
+    /// The default day start, DEFAULT_DAY_START_HOUR from
+    /// `ProgrammeConstants` (programme spec, "The constants live in one
+    /// value"), for a day key that no "Day starts at" row covers. Read it
+    /// only through `DayStartSchedule`.
+    public static let startHour = ProgrammeConstants.default.defaultDayStartHour
 
     /// The hours "Day starts at" offers: 00:00 to 12:00 (settings spec, "The
     /// Record group").

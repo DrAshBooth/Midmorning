@@ -153,8 +153,11 @@ public enum StageEngine {
         // except that after a restart stage 5 counts from the NEW start day
         // (programme spec, "Taking stock, the modules and staying on track
         // open by week of regular eating": "After a restart, the app MUST
-        // count weeks of regular eating from the new start day").
-        let stage5Basis = restartAt != nil ? settings.startDay : stage2Day
+        // count weeks of regular eating from the new start day"). "While
+        // stage 2 is closed, stages 5 and 7 MUST stay closed", also after a
+        // restart in week 1, so neither basis exists while stage 2 is
+        // closed.
+        let stage5Basis = regularEatingBasis(stage2Day: stage2Day, restartAt: restartAt, startDay: settings.startDay)
         resolve(.takingStock, computedMoment: stage5Basis.map { weekGateMoment(basis: $0, week: constants.weekOfTakingStock, dayStart: settings.dayStart, calendar: calendar) })
         resolve(.stayingOnTrack, computedMoment: stage2Day.map { weekGateMoment(basis: $0, week: constants.weekOfStayingOnTrack, dayStart: settings.dayStart, calendar: calendar) })
 
@@ -172,9 +175,18 @@ public enum StageEngine {
             stageOpenedDayKey: dayKeys,
             computedOpenings: computed,
             week: week(startDay: settings.startDay, currentRecordDay: currentRecordDay, calendar: calendar),
-            weekOfRegularEating: stage2Day.map { week(startDay: $0, currentRecordDay: currentRecordDay, calendar: calendar) ?? 0 },
+            weekOfRegularEating: stage5Basis.map { week(startDay: $0, currentRecordDay: currentRecordDay, calendar: calendar) ?? 0 },
             recordedDaysCount: recordedDaysCount
         )
+    }
+
+    /// The record day that week 1 of regular eating starts on: stage 2's
+    /// day, or the new start day after a restart. `nil` while stage 2 is
+    /// closed (programme spec, "Taking stock, the modules and staying on
+    /// track open by week of regular eating").
+    static func regularEatingBasis(stage2Day: String?, restartAt: Date?, startDay: String) -> String? {
+        guard let stage2Day else { return nil }
+        return restartAt != nil ? startDay : stage2Day
     }
 
     /// The programme week of `currentRecordDay` counted from `startDay`, or
@@ -220,8 +232,14 @@ public enum StageEngine {
         if !hasTemplate, let stage2Day = state.stageOpenedDayKey[.regularEating] {
             let day10 = DayKeyMath.adding(10, to: stage2Day, calendar: calendar)
             let day3 = DayKeyMath.adding(3, to: stage2Day, calendar: calendar)
-            if !DayKeyMath.isBefore(currentRecordDay, day10), !cardAnswers.contains("plancard.10") {
-                result.append(PendingCard(id: "plancard.10", kind: .plan, becameDueAt: DayKeyMath.dayStartMoment(for: day10, dayStart: settings.dayStart, calendar: calendar)))
+            // From day 10 only the second card can show, so a person whose
+            // first load is on day 10 or later and who closes it does not
+            // get the day-3 card next ("Each of the two cards returns no
+            // more after either control.").
+            if !DayKeyMath.isBefore(currentRecordDay, day10) {
+                if !cardAnswers.contains("plancard.10") {
+                    result.append(PendingCard(id: "plancard.10", kind: .plan, becameDueAt: DayKeyMath.dayStartMoment(for: day10, dayStart: settings.dayStart, calendar: calendar)))
+                }
             } else if !DayKeyMath.isBefore(currentRecordDay, day3), !cardAnswers.contains("plancard.3") {
                 result.append(PendingCard(id: "plancard.3", kind: .plan, becameDueAt: DayKeyMath.dayStartMoment(for: day3, dayStart: settings.dayStart, calendar: calendar)))
             }

@@ -26,19 +26,37 @@ public struct ReviewAnswersPayload: Sendable, Equatable, Codable {
     public var oneThingToChange: String
     /// The three week-1 answers, only ever set on week 1's own review.
     public var weekOneAnswers: [String]?
+    /// The start day of the run this review belongs to (weekly-review spec,
+    /// "Finish and reopen a review": "Each review has its own due day as its
+    /// key, so after a restart the list can show two runs."). A restart
+    /// replaces the start day setting, so the row keeps its own run's start
+    /// day to give its week number. `nil` on a row from before this field
+    /// existed; `ReviewRuns` then finds the run from the other rows.
+    /// Optional, so that an older payload still decodes.
+    public var runStartDay: String?
+    /// `true` once the deterioration rule showed the GP suggestion page in
+    /// this review (weekly-review spec, "The deterioration rule at the
+    /// review": "The app MUST show the page from the rule at most once per
+    /// review."). The flag is in the row, so it holds across a reopen and
+    /// across devices. Optional, so that an older payload still decodes.
+    public var deteriorationPageShown: Bool?
 
     public init(
         finished: Bool = false,
         frozenCounts: FrozenReviewCounts? = nil,
         reflectionAnswers: [String] = ["", "", ""],
         oneThingToChange: String = "",
-        weekOneAnswers: [String]? = nil
+        weekOneAnswers: [String]? = nil,
+        runStartDay: String? = nil,
+        deteriorationPageShown: Bool? = nil
     ) {
         self.finished = finished
         self.frozenCounts = frozenCounts
         self.reflectionAnswers = reflectionAnswers
         self.oneThingToChange = oneThingToChange
         self.weekOneAnswers = weekOneAnswers
+        self.runStartDay = runStartDay
+        self.deteriorationPageShown = deteriorationPageShown
     }
 
     public static let empty = ReviewAnswersPayload()

@@ -15,7 +15,7 @@ struct Screen3View: View {
     @State private var weighInDayInvalid = false
     @AccessibilityFocusState private var weighInDayFocused: Bool
 
-    private let weekdays: [Programme.Weekday] = Programme.Weekday.allCases
+    private let weekdays: [Programme.Weekday] = Programme.Weekday.mondayFirst
 
     var body: some View {
         NavigationStack {
