@@ -80,21 +80,17 @@ enum PlanToday {
     }
 
     private static func nextLine(slotIndex: Int, time: String, label: String) -> String {
-        NextPlannedMeal.line(for: PlanMealFact(label: label, time: time, kind: Slot.at(index: slotIndex)?.kind ?? .meal))
+        NextPlannedMeal.line(for: PlanMealFact(label: label, time: time, kind: Slot.at(index: slotIndex)?.kind ?? .meal)).string
     }
 
     @MainActor
     private static func label(for slotIndex: Int, store: RecordStore) -> String {
-        SlotLabel.effective(stored: try? store.slotLabel(index: slotIndex), defaultLabel: Slot.at(index: slotIndex)?.defaultLabel ?? "")
+        SlotLabelText.effective(index: slotIndex, stored: try? store.slotLabel(index: slotIndex))
     }
 
     @MainActor
-    private static func quietHours(store: RecordStore) -> PlanQuietHours {
-        PlanQuietHours(
-            isOn: (try? store.quietHoursOn()) ?? true,
-            start: (try? store.quietHoursStart()) ?? "22:00",
-            end: (try? store.quietHoursEnd()) ?? "07:00"
-        )
+    private static func quietHours(store: RecordStore) -> QuietHours {
+        (try? store.quietHours()) ?? RecordStore.Defaults.quietHours
     }
 
     private static func matchedEntryText(_ entry: RecordRow) -> MatchedEntryText {

@@ -4,12 +4,11 @@ import XCTest
 @testable import Programme
 
 /// Proves the composition of `StageEngine`'s pending-card output with
-/// `Record`'s `TodayCardSlot`, the seam the App target wires (programme
-/// spec, "No opening card after a binge in the same record day", mm-t21.12,
-/// and "Two stage 1 cards come to Today"'s own starred-entry scenario,
-/// mm-t21.13). `TodayCardSlotTests` already proves the generic barring rule
-/// over fixture facts; this proves `Programme`'s own output feeds it
-/// correctly.
+/// `TodayCardSlot` over real record-day intervals, the seam the App target
+/// wires (programme spec, "No opening card after a binge in the same record
+/// day", mm-t21.12, and "Two stage 1 cards come to Today"'s own
+/// starred-entry scenario, mm-t21.13). `TodayCardSlotTests` proves the
+/// barring rule by itself.
 final class PendingCardsCompositionTests: XCTestCase {
     private var london: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
@@ -19,16 +18,6 @@ final class PendingCardsCompositionTests: XCTestCase {
 
     private func at(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
         london.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
-    }
-
-    private func map(_ card: PendingCard) -> TodayCardFact {
-        let kind: TodayCardFact.Kind
-        switch card.kind {
-        case .opening: kind = .opening
-        case .stage1: kind = .stage1
-        case .plan: kind = .plan
-        }
-        return TodayCardFact(kind: kind, becameDueAt: card.becameDueAt)
     }
 
     /// Scenario: The fifth recorded day ends with a starred entry.
@@ -48,7 +37,6 @@ final class PendingCardsCompositionTests: XCTestCase {
         XCTAssertTrue(state.isOpen(.regularEating), "the stage opens at once")
 
         let pending = StageEngine.pendingCards(state: state, facts: facts, cardAnswers: [], stagesWithToolInBuild: [1, 2], hasTemplate: true, currentRecordDay: sameDayKey, settings: settings, calendar: london)
-            .map(map)
 
         let sameDayInterval = RecordDay.interval(containing: sameDayNow, calendar: london, schedule: .standard)
         XCTAssertNil(TodayCardSlot.next(pending: pending, starredEntryOrOutcomeAt: starredMoment, currentRecordDay: sameDayInterval), "no opening card that record day")
@@ -72,7 +60,7 @@ final class PendingCardsCompositionTests: XCTestCase {
         let sameDayNow = at(2026, 10, 2, 21, 5)
         let sameDayKey = RecordDay.key(containing: sameDayNow, calendar: london, schedule: .standard)
         let state = StageEngine.state(facts: facts, openings: [], settings: settings, constants: .default, now: sameDayNow, restartAt: nil, currentRecordDay: sameDayKey, calendar: london)
-        let pending = StageEngine.pendingCards(state: state, facts: facts, cardAnswers: [], stagesWithToolInBuild: [1, 2], hasTemplate: true, currentRecordDay: sameDayKey, settings: settings, calendar: london).map(map)
+        let pending = StageEngine.pendingCards(state: state, facts: facts, cardAnswers: [], stagesWithToolInBuild: [1, 2], hasTemplate: true, currentRecordDay: sameDayKey, settings: settings, calendar: london)
 
         let sameDayInterval = RecordDay.interval(containing: sameDayNow, calendar: london, schedule: .standard)
         XCTAssertNil(TodayCardSlot.next(pending: pending, starredEntryOrOutcomeAt: starredMoment, currentRecordDay: sameDayInterval), "no card that record day")

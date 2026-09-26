@@ -26,10 +26,10 @@ struct WhereChipsView: View {
         VStack(alignment: .leading, spacing: 8) {
             FlowLayout(spacing: 8) {
                 ForEach(WhereChip.fixed, id: \.rawValue) { chip in
-                    chipButton(chip.rawValue)
+                    chipButton(chip.rawValue, label: chip.label.string)
                 }
                 ForEach(customPlaces, id: \.self) { place in
-                    chipButton(place)
+                    chipButton(place, label: place)
                 }
                 if pendingPlace == nil {
                     Button {
@@ -73,12 +73,13 @@ struct WhereChipsView: View {
     }
 
     @ViewBuilder
-    private func chipButton(_ text: String) -> some View {
-        let isSelected = selection == text
+    /// `value` is the Where the entry saves; `label` is the chip's text.
+    private func chipButton(_ value: String, label: String) -> some View {
+        let isSelected = selection == value
         let button = Button {
-            selection = WhereSelection.afterTap(current: selection, tapped: text)
+            selection = WhereSelection.afterTap(current: selection, tapped: value)
         } label: {
-            Text(text)
+            Text(label)
                 .fontWeight(isSelected ? .semibold : .regular)
         }
         .accessibilityAddTraits(isSelected ? .isSelected : [])

@@ -75,8 +75,8 @@ struct TodayView: View {
     @State private var isShowingCloseTheDay = false
 
     /// The live stage 2 state (programme spec, "Stage 2 opens after five
-    /// recorded days"); `GapBand`, `PlanBuilderAccess` and `DaySection` all
-    /// read this same value.
+    /// recorded days"); the plan builder and `DaySection` both read this
+    /// same value.
     private var stage2Open: Bool { programmeSnapshot?.state.isOpen(.regularEating) ?? false }
 
     /// The record day stage 2 opened, or `nil` while it is closed: the gap
@@ -217,16 +217,15 @@ struct TodayView: View {
                     // spec, "The Today stack").
                     ForEach(Array(BottomToolbar.items(reviewsDue: weeklyReviewSnapshot?.reviewsControlShows ?? false).enumerated()), id: \.offset) { index, item in
                         if index > 0 { Spacer() }
-                        if item == "Settings" {
+                        switch item {
+                        case .settings:
                             NavigationLink("today.settings") {
                                 SettingsView(store: store)
                             }
-                        } else if item == "Programme" {
-                            Button(item) { navigationPath.append(ProgrammeRoute.screen) }
-                        } else if item == "Reviews" {
-                            Button(item) { navigationPath.append(ReviewsListRoute()) }
-                        } else {
-                            Button {} label: { Text(item) }
+                        case .programme:
+                            Button("today.programme") { navigationPath.append(ProgrammeRoute.screen) }
+                        case .reviews:
+                            Button("today.reviews") { navigationPath.append(ReviewsListRoute()) }
                         }
                     }
                 }
@@ -339,11 +338,11 @@ struct TodayView: View {
                 showingNewEntry = true
             },
             skipPlannedMeal: { slotIndex in
-                try? store.setPlannedMealAnswer("Skipped", dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
+                try? store.setPlannedMealSkipped(dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
                 reload()
             },
             openEarlierDays: isCurrent && earlierDaysAvailable ? { navigationPath.append(EarlierDaysRoute.list) } : nil,
-            openPlanBuilder: isCurrent && PlanBuilderAccess.isOffered(stage2Open: stage2Open) ? { planBuilderMode = $0 } : nil
+            openPlanBuilder: isCurrent && stage2Open ? { planBuilderMode = $0 } : nil
         )
     }
 
@@ -401,8 +400,8 @@ struct TodayView: View {
     /// time, or after 17:00 in stage 1.
     private func closeTheDayShows(_ section: DaySection) -> Bool {
         CloseTheDayRule.controlShows(
-            nowClockTime: ReminderClock.string(from: Date(), calendar: .current),
-            dayStartMinute: ReminderClock.dayStartMinute(of: section.interval.start, calendar: .current),
+            nowClockTime: ClockTime.string(from: Date(), calendar: .current),
+            dayStartMinute: ClockTime.minutesOfDay(of: section.interval.start, calendar: .current),
             stage2Open: stage2Open,
             plannedMealTimes: section.plan?.rows.map(\.time) ?? []
         )
@@ -472,7 +471,7 @@ struct TodayView: View {
         previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open, stage2OpenedDayKey: stage2OpenedDayKey)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
         hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
-        anyReminderSwitchOn = RecordStore.ReminderSwitch.allCases.contains { (try? store.reminderSwitchOn($0)) ?? true }
+        anyReminderSwitchOn = RecordStore.ReminderSwitch.allCases.contains { (try? store.reminderSwitchOn($0)) ?? RecordStore.Defaults.reminderSwitchOn }
         NotificationPermissionAccess.read { notificationPermission = $0 }
 
         let starredToday = currentSection?.entries.contains { $0.feltLikeABinge } ?? false
@@ -522,7 +521,7 @@ struct EntryRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(entry.accessibilityLabel)
+        .accessibilityLabel(entry.accessibilityLabel.string)
     }
 }
 
@@ -535,6 +534,6 @@ struct GapBandRow: View {
             .frame(height: 4)
             .listRowSeparator(.hidden)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours))
+            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours).string)
     }
 }

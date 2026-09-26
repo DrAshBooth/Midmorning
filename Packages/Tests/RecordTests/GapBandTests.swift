@@ -62,7 +62,8 @@ final class GapBandTests: XCTestCase {
     /// mm-pr9, and record spec "Accessibility of the additions": the band's
     /// VoiceOver label, filled from MAX_AWAKE_GAP_HOURS.
     func testAccessibilityLabelFillsTheConstant() {
-        XCTAssertEqual(GapBand.accessibilityLabel(maxAwakeGapHours: 4), "Gap of more than 4 hours")
+        XCTAssertEqual(GapBand.accessibilityLabel(maxAwakeGapHours: 4).english, "Gap of more than 4 hours")
+        XCTAssertEqual(GapBand.accessibilityLabel(maxAwakeGapHours: 1).english, "Gap of more than 1 hour")
     }
 
     /// A collapsed day shows no band, whatever its gaps.

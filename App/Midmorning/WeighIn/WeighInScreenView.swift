@@ -252,11 +252,8 @@ struct WeighInScreenView: View {
     private func reload() {
         currentDayKey = RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
 
-        switch try? store.weighInDayChoice() {
-        case .weekday(let weekday): weighInWeekday = weekday
-        case .wontBeWeighing, nil: weighInWeekday = nil
-        }
-        unit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? "kg") ?? .kg
+        weighInWeekday = (try? store.weighInDayChoice())?.weekday
+        unit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? RecordStore.Defaults.weighInUnit) ?? .kg
 
         let rows = (try? store.weighIns()) ?? []
         series = RollingAverage.series(rows.map { WeighInFact(dayKey: $0.dateKey, weightKg: $0.weightKg) }, calendar: calendar)

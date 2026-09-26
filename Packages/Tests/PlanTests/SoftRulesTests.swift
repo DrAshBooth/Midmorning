@@ -7,7 +7,7 @@ final class SoftRulesTests: XCTestCase {
     /// Scenario: Too few meals and snacks.
     func testTooFewMealsAndSnacks() {
         let line = SoftRules.mealLine(mealCount: 2, snackCount: 1)
-        XCTAssertEqual(line, "This day has 2 meals and 1 snack. Three meals and two or three snacks keep the gaps short. Save anyway?")
+        XCTAssertEqual(line?.english, "This day has 2 meals and 1 snack. Three meals and two or three snacks keep the gaps short. Save anyway?")
     }
 
     /// Scenario: Save anyway — a store write, not a pure-function scenario;
@@ -24,7 +24,7 @@ final class SoftRulesTests: XCTestCase {
     /// Scenario: No meals at all.
     func testNoMealsAtAll() {
         let line = SoftRules.mealLine(mealCount: 0, snackCount: 2)
-        XCTAssertEqual(line, "This day has no meals and 2 snacks. Three meals and two or three snacks keep the gaps short. Save anyway?")
+        XCTAssertEqual(line?.english, "This day has no meals and 2 snacks. Three meals and two or three snacks keep the gaps short. Save anyway?")
     }
 
     /// Scenario: Go back — a builder-navigation fact; the store is untouched,
@@ -40,7 +40,7 @@ final class SoftRulesTests: XCTestCase {
     func testAGapOverFourHours() {
         let meals = [PlanMealFact(label: "Lunch", time: "12:30", kind: .meal), PlanMealFact(label: "Evening meal", time: "17:00", kind: .meal)]
         let lines = SoftRules.gapLines(orderedMeals: meals, dayStartHour: 4, maxAwakeGapHours: 4, isFastingDay: false)
-        XCTAssertEqual(lines, ["4 hours 30 minutes between Lunch at 12:30 and Evening meal at 17:00."])
+        XCTAssertEqual(lines.map(\.english), ["4 hours 30 minutes between Lunch at 12:30 and Evening meal at 17:00."])
     }
 
     /// Scenario: Two broken rules.
@@ -48,7 +48,7 @@ final class SoftRulesTests: XCTestCase {
         let meals = [PlanMealFact(label: "Breakfast", time: "08:00", kind: .meal), PlanMealFact(label: "Lunch", time: "13:00", kind: .meal)]
         let lines = SoftRules.lines(orderedMeals: meals, dayStartHour: 4, maxAwakeGapHours: 4, isFastingDay: false)
         XCTAssertEqual(lines.count, 2, "the meal line and the gap line, as two paragraphs")
-        XCTAssertTrue(lines[0].hasPrefix("This day has"), "the meal line comes first")
+        XCTAssertTrue(lines[0].english.hasPrefix("This day has"), "the meal line comes first")
     }
 
     /// Scenario: A gap of exactly four hours.
@@ -62,7 +62,7 @@ final class SoftRulesTests: XCTestCase {
     func testARenamedSlotCountsByItsKind() {
         // "Mid-afternoon" renamed to "Cake" is still a snack.
         let line = SoftRules.mealLine(mealCount: 2, snackCount: 1)
-        XCTAssertEqual(line, "This day has 2 meals and 1 snack. Three meals and two or three snacks keep the gaps short. Save anyway?", "renamed labels never change the kind count")
+        XCTAssertEqual(line?.english, "This day has 2 meals and 1 snack. Three meals and two or three snacks keep the gaps short. Save anyway?", "renamed labels never change the kind count")
     }
 
     /// Scenario: A long gap on a fasting day.
@@ -70,12 +70,18 @@ final class SoftRulesTests: XCTestCase {
         let meals = [PlanMealFact(label: "Lunch", time: "12:30", kind: .meal), PlanMealFact(label: "Evening meal", time: "17:00", kind: .meal)]
         let lines = SoftRules.lines(orderedMeals: meals, dayStartHour: 4, maxAwakeGapHours: 4, isFastingDay: true)
         XCTAssertEqual(lines.count, 1, "no gap line, the meal line still applies")
-        XCTAssertTrue(lines[0].hasPrefix("This day has 2 meals"))
+        XCTAssertTrue(lines[0].english.hasPrefix("This day has 2 meals"))
+    }
+
+    /// Each count takes its own plural form: zero, one and other (mm-t11.39).
+    func testEachCountTakesItsPluralForm() {
+        XCTAssertEqual(SoftRules.mealLine(mealCount: 1, snackCount: 0)?.english, "This day has 1 meal and no snacks. Three meals and two or three snacks keep the gaps short. Save anyway?")
+        XCTAssertEqual(SoftRules.mealLine(mealCount: 4, snackCount: 3)?.english, "This day has 4 meals and 3 snacks. Three meals and two or three snacks keep the gaps short. Save anyway?")
     }
 
     /// Scenario: A day that meets every rule.
     func testADayThatMeetsEveryRuleShowsNoLine() {
-        let meals = Slot.all.map { PlanMealFact(label: $0.defaultLabel, time: $0.defaultTime, kind: $0.kind) }
+        let meals = Slot.all.map { PlanMealFact(label: $0.defaultLabel.english, time: $0.defaultTime, kind: $0.kind) }
         let lines = SoftRules.lines(orderedMeals: meals, dayStartHour: 4, maxAwakeGapHours: 4, isFastingDay: false)
         XCTAssertEqual(lines, [])
     }

@@ -19,8 +19,8 @@ final class StartDayChoiceTests: XCTestCase {
 
     func testDefault() {
         let now = date(2026, 9, 24, 14, 0) // Thursday 24 September, 14:00
-        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: .standard), "Today, Thursday 24 September")
-        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: .standard), "Tomorrow, Friday 25 September")
+        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: .standard).english, "Today, Thursday 24 September")
+        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: .standard).english, "Tomorrow, Friday 25 September")
     }
 
     func testTomorrowKeepsFridayAsTheStartDay() {
@@ -30,15 +30,15 @@ final class StartDayChoiceTests: XCTestCase {
 
     func testAfterMidnight() {
         let now = date(2026, 9, 25, 1, 0) // Friday 01:00, default day start 04:00
-        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: .standard), "Today, Thursday 24 September")
-        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: .standard), "Tomorrow, Friday 25 September")
+        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: .standard).english, "Today, Thursday 24 September")
+        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: .standard).english, "Tomorrow, Friday 25 September")
     }
 
     func testDayBoundaryLineWithDefaultDayStart() {
-        XCTAssertEqual(DayBoundaryLine.text(startHour: 4), "A day runs from 04:00 to 03:59.")
+        XCTAssertEqual(DayBoundaryLine.text(startHour: 4).english, "A day runs from 04:00 to 03:59.")
     }
 
     func testDayBoundaryLineFollowsTheSetting() {
-        XCTAssertEqual(DayBoundaryLine.text(startHour: 5), "A day runs from 05:00 to 04:59.")
+        XCTAssertEqual(DayBoundaryLine.text(startHour: 5).english, "A day runs from 05:00 to 04:59.")
     }
 }

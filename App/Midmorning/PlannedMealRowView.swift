@@ -29,7 +29,7 @@ struct PlannedMealRowView: View {
                 Text(nextLine).font(.body)
             }
             if let prompt = row.prompt {
-                Text(MissedMealPrompt.line(for: prompt, timeText: clockTimeText))
+                Text(MissedMealPrompt.line(for: prompt, timeText: clockTimeText).string)
                     .font(.body)
                 promptButtons
             }
@@ -40,7 +40,7 @@ struct PlannedMealRowView: View {
             slotLabel: row.label, time: row.time,
             matchedEntryAccessibilityLabel: row.matchedEntry?.accessibilityLabel,
             isSkipped: isSkipped, prompt: row.prompt, timeText: clockTimeText
-        ))
+        ).string)
         .accessibilityCustomActions(for: row, onAddIt: onAddIt, onSkip: onSkip)
     }
 

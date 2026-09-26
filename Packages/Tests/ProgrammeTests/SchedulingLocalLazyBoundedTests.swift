@@ -95,7 +95,7 @@ final class SchedulingLocalLazyBoundedTests: XCTestCase {
 
     /// The 60-request cap, farthest days first.
     func test60RequestCapDropsTheFarthestDaysFirst() {
-        let manyMeals = (0..<10).map { PlannedMealFact(slotIndex: $0, time: ReminderClock.string(hour: 6 + $0, minute: 0), matchedBeforeReminderTime: false) }
+        let manyMeals = (0..<10).map { PlannedMealFact(slotIndex: $0, time: ClockTime.string(hour: 6 + $0, minute: 0), matchedBeforeReminderTime: false) }
         let days = (0..<8).map { plannedDay($0, meals: manyMeals, others: false) }
         let requests = Scheduler.requests(days: days, settings: settings(), calendar: calendar, constants: .default)
         XCTAssertLessThanOrEqual(requests.count, ProgrammeConstants.default.maxPendingReminderRequests)

@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The review's opening summary: one plain sentence per part, in this fixed
 /// order (weekly-review spec, "The summary built from the record"; "What the
@@ -74,9 +75,9 @@ public enum ReviewSummary {
         }
         guard let best else { return nil }
         let weekday = ReviewText.weekdayName(dayKey: best.dayKey, calendar: calendar)
-        let from = ReminderClock.string(from: best.first, calendar: calendar)
-        let to = ReminderClock.string(from: best.second, calendar: calendar)
-        return "Longest gap between entries: \(ReviewText.durationText(best.duration)), on \(weekday), from \(from) to \(to)."
+        let from = ClockTime.string(from: best.first, calendar: calendar)
+        let to = ClockTime.string(from: best.second, calendar: calendar)
+        return "Longest gap between entries: \(DurationText.string(seconds: best.duration)), on \(weekday), from \(from) to \(to)."
     }
 
     private static func urgeLine(_ facts: ReviewWeekFacts) -> String? {
@@ -107,18 +108,6 @@ public enum ReviewText {
         formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "EEEE"
         return formatter.string(from: midnight)
-    }
-
-    /// "6 hours 20 minutes" — whole hours and minutes, en_GB word forms, no
-    /// separating comma.
-    public static func durationText(_ seconds: TimeInterval) -> String {
-        let totalMinutes = Int((seconds / 60).rounded())
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        var parts: [String] = []
-        if hours > 0 { parts.append("\(hours) \(hours == 1 ? "hour" : "hours")") }
-        if minutes > 0 || hours == 0 { parts.append("\(minutes) \(minutes == 1 ? "minute" : "minutes")") }
-        return parts.joined(separator: " ")
     }
 
     /// "12–18 October" — the en_GB day-and-month range, the year left out,

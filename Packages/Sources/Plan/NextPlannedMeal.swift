@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The next-planned-meal line (regular-eating-plan spec, "The next-planned-
 /// meal line"): the earliest planned meal later than the moment in question,
@@ -19,7 +20,7 @@ public enum NextPlannedMeal {
 
     /// "%1$@ at %2$@ still happens.", filled with the planned meal's label
     /// and time through the en_GB formatter.
-    public static func line(for meal: PlanMealFact) -> String {
-        "\(meal.label) at \(meal.time) still happens."
+    public static func line(for meal: PlanMealFact) -> CatalogueText {
+        .key("plan.nextPlannedMeal", .verbatim(meal.label), .verbatim(meal.time))
     }
 }

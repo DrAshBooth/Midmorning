@@ -16,8 +16,7 @@ struct DaySection: Identifiable {
     let isExpanded: Bool
     let gapBandIndexesBefore: [Int]
     /// `nil` before stage 2 (regular-eating-plan spec, "The plan builder
-    /// opens at stage 2"): `PlanBuilderAccess.isOffered(stage2Open:)` gates
-    /// this the same fixture-fact way `GapBand` reads `stage2Open`.
+    /// opens at stage 2"): the live `stage2Open` fact gates it.
     let plan: PlanDaySection?
 
     var heading: String {
@@ -25,10 +24,12 @@ struct DaySection: Identifiable {
         return DayHeading.text(for: interval.start, night: night)
     }
 
-    var stateLine: String? {
-        if states.contains(.didntRecord) { return "Didn't record" }
-        if states.contains(.paused) { return role == .current ? nil : "Paused" }
-        if states.contains(.fasting) { return "Fasting" }
+    /// "Didn't record", "Paused" (not on the current day, where "Paused for
+    /// today" shows) or "Fasting".
+    var stateLine: CatalogueText? {
+        if states.contains(.didntRecord) { return .key("today.stateLine.didntRecord") }
+        if states.contains(.paused) { return role == .current ? nil : .key("today.stateLine.paused") }
+        if states.contains(.fasting) { return .key("today.stateLine.fasting") }
         return nil
     }
 
@@ -85,7 +86,7 @@ struct DaySection: Identifiable {
         let kept = try? store.collapseChoice(dateKey: dayKey)
         let isExpanded = entries.isEmpty || CollapseDefault.isExpanded(role: role, kept: kept ?? nil)
         let hasExemptState = states.contains(.didntRecord) || states.contains(.paused) || states.contains(.fasting)
-        let gapBandsOn = (try? store.gapBandsOn()) ?? true
+        let gapBandsOn = (try? store.gapBandsOn()) ?? RecordStore.Defaults.gapBandsOn
         let gapIndexes = GapBand.indexesBeforeBand(
             sortedTimes: entries.map(\.time),
             stage2Open: GapBand.applies(toDayKey: dayKey, stage2OpenedDayKey: stage2OpenedDayKey, switchOn: gapBandsOn),
@@ -93,7 +94,7 @@ struct DaySection: Identifiable {
             isCollapsed: !isExpanded,
             maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours
         )
-        let plan = PlanBuilderAccess.isOffered(stage2Open: stage2Open)
+        let plan = stage2Open
             ? PlanToday.load(dateKey: dayKey, recordDay: interval, store: store, entries: entries, now: Date(), calendar: .current)
             : nil
         return DaySection(id: dayKey, interval: interval, role: role, entries: entries, states: states, isExpanded: isExpanded, gapBandIndexesBefore: gapIndexes, plan: plan)

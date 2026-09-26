@@ -172,13 +172,13 @@ final class PlanStoreTests: XCTestCase {
         XCTAssertNil(try store.slotLabel(index: 1))
         try store.setSlotLabel("Elevenses", index: 1, changedAt: .now)
         XCTAssertEqual(try store.slotLabel(index: 1), "Elevenses")
-        XCTAssertEqual(Plan.SlotLabel.effective(stored: try store.slotLabel(index: 1), defaultLabel: "Mid-morning"), "Elevenses")
+        XCTAssertEqual(Plan.SlotLabel.effective(stored: try store.slotLabel(index: 1), defaultLabel: Plan.Slot.all[1].defaultLabel).english, "Elevenses")
     }
 
     func testAnEmptyLabelRevertsToTheDefaultThroughTheStore() throws {
         let store = try makeTemporaryStore()
         try store.setSlotLabel("Elevenses", index: 1, changedAt: at(2026, 9, 26, 9))
         try store.setSlotLabel("", index: 1, changedAt: at(2026, 9, 26, 9, 30))
-        XCTAssertEqual(Plan.SlotLabel.effective(stored: try store.slotLabel(index: 1), defaultLabel: "Mid-morning"), "Mid-morning")
+        XCTAssertEqual(Plan.SlotLabel.effective(stored: try store.slotLabel(index: 1), defaultLabel: Plan.Slot.all[1].defaultLabel).english, "Mid-morning")
     }
 }

@@ -25,8 +25,9 @@ final class RenameSlotTests: XCTestCase {
     /// Scenario: An empty label.
     func testAnEmptyLabelRevertsToTheDefault() {
         XCTAssertEqual(SlotLabel.outcome(forSavedText: "   "), .revertToDefault)
-        XCTAssertEqual(SlotLabel.effective(stored: nil, defaultLabel: "Mid-morning"), "Mid-morning")
-        XCTAssertEqual(SlotLabel.effective(stored: "", defaultLabel: "Mid-morning"), "Mid-morning")
+        XCTAssertEqual(SlotLabel.effective(stored: nil, defaultLabel: Slot.all[1].defaultLabel).english, "Mid-morning")
+        XCTAssertEqual(SlotLabel.effective(stored: "", defaultLabel: Slot.all[1].defaultLabel).english, "Mid-morning")
+        XCTAssertEqual(SlotLabel.productNameMessage.english, "That is the app's name. Choose another word.")
     }
 
     /// Scenario: A rename is not a plan edit. A rename never touches a

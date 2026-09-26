@@ -90,7 +90,7 @@ private struct ReminderRouteOpening: ViewModifier {
             showingNewEntry = true
         case .todaysPlan:
             let stage2Open = ProgrammeModel.load(store: store, now: now, calendar: .current).state.isOpen(.regularEating)
-            if PlanBuilderAccess.isOffered(stage2Open: stage2Open) {
+            if stage2Open {
                 planBuilderMode = .day(dateKey: currentDayKey, titleKey: "plan.today", isCurrentDay: true)
             }
         case .closeTheDay(let dayKey):

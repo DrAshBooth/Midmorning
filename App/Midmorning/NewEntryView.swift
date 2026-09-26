@@ -44,7 +44,7 @@ struct NewEntryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     if case .failed = saveOutcome {
-                        Text(SaveOutcome.failureMessage)
+                        Text(SaveOutcome.failureMessage.string)
                             .foregroundStyle(.secondary)
                     }
                     ForEach(NewEntryField.order, id: \.self) { field in
@@ -122,17 +122,17 @@ struct NewEntryView: View {
             // A neutral system grey, not the default green: the star is
             // marked, not highlighted. Grey keeps the knob visible in
             // light and dark mode; the primary colour hid it there.
-            Toggle("felt like a binge", isOn: $feltLikeABinge)
+            Toggle("entry.feltLikeABinge", isOn: $feltLikeABinge)
                 .tint(Color(uiColor: .systemGray))
                 // Redaction greys the label but not the switch, so the
                 // switch hides itself: the app switcher shows no star.
                 .opacity(scenePhase == .active ? 1 : 0)
         case .context:
             RecordField(
-                label: Text(ContextLabel.text(starOn: feltLikeABinge)),
+                label: Text(ContextLabel.text(starOn: feltLikeABinge).string),
                 text: $context,
                 isFocused: $contextIsFocused,
-                accessibilityLabelText: ContextLabel.text(starOn: feltLikeABinge),
+                accessibilityLabelText: ContextLabel.text(starOn: feltLikeABinge).string,
                 onSaveFromKeyboard: save
             )
         case .time:

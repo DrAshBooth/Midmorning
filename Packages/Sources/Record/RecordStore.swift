@@ -1,5 +1,7 @@
 import Foundation
 import SwiftData
+import Constants
+import Plan
 
 /// One entry as Today reads it: the winning `ItemVersion` of one `Item`,
 /// reduced to the fields a screen needs. Not a stored type; `RecordStore`
@@ -59,13 +61,13 @@ public extension RecordRow {
     /// additions"): the time, then the What, the Where and the Context when
     /// each is not empty, then "felt like a binge" when the star is on. A
     /// comma and a space separate the parts that are present.
-    var accessibilityLabel: String {
-        var parts = [clockTime]
-        if !what.isEmpty { parts.append(what) }
-        if !whereText.isEmpty { parts.append(whereText) }
-        if !context.isEmpty { parts.append(context) }
-        if feltLikeABinge { parts.append("felt like a binge") }
-        return parts.joined(separator: ", ")
+    var accessibilityLabel: CatalogueText {
+        var parts: [CatalogueText] = [.verbatim(clockTime)]
+        if !what.isEmpty { parts.append(.verbatim(what)) }
+        if !whereText.isEmpty { parts.append(.verbatim(whereText)) }
+        if !context.isEmpty { parts.append(.verbatim(context)) }
+        if feltLikeABinge { parts.append(.key("entry.feltLikeABinge")) }
+        return .list(parts)
     }
 
     static func clockTime(for time: Date, utcOffsetSeconds: Int) -> String {
@@ -574,142 +576,6 @@ public final class RecordStore {
         return schedule.hour(effectiveOn: RecordDay.nextDayKey(after: now, calendar: calendar, schedule: schedule))
     }
 
-    private static let gapBandsKey = "record.gapBands.enabled"
-
-    /// "Gap bands" (on, syncs).
-    public func gapBandsOn() throws -> Bool {
-        try (settingValue(key: Self.gapBandsKey) ?? "true") == "true"
-    }
-
-    public func setGapBandsOn(_ on: Bool, changedAt: Date = .now) throws {
-        try setSettingValue(on ? "true" : "false", key: Self.gapBandsKey, changedAt: changedAt)
-    }
-
-    private static let weeklySummaryKey = "record.weeklySummary.enabled"
-
-    /// "Weekly summary" (on, syncs; settings spec, "The Record group").
-    /// Weekly-review reads this to decide whether a review shows its summary
-    /// part (weekly-review spec, "The weekly summary is opt-out": the
-    /// reflection questions, the self-harm item and "I'm getting worse" stay
-    /// regardless).
-    public func weeklySummaryOn() throws -> Bool {
-        try (settingValue(key: Self.weeklySummaryKey) ?? "true") == "true"
-    }
-
-    public func setWeeklySummaryOn(_ on: Bool, changedAt: Date = .now) throws {
-        try setSettingValue(on ? "true" : "false", key: Self.weeklySummaryKey, changedAt: changedAt)
-    }
-
-    // MARK: - The Reminders group (settings spec, "The Reminders group")
-
-    /// Every switch is a device setting, on by default.
-    public enum ReminderSwitch: String, CaseIterable, Sendable {
-        case plannedMeals, setTodaysPlan, midday, closeTheDay, weighInDay, weeklyReview
-    }
-
-    public func reminderSwitchOn(_ kind: ReminderSwitch) throws -> Bool {
-        try (localSettingValue(key: "reminder.\(kind.rawValue).enabled") ?? "true") == "true"
-    }
-
-    public func setReminderSwitch(_ on: Bool, _ kind: ReminderSwitch) throws {
-        try setLocalSettingValue(on ? "true" : "false", key: "reminder.\(kind.rawValue).enabled")
-    }
-
-    /// A reminder time syncs, unlike its switch. Each ships with its own
-    /// default.
-    public enum ReminderTime: String, CaseIterable, Sendable {
-        case setTodaysPlan, closeTheDay, weighIn, weeklyReview
-
-        public var defaultHourAndMinute: (hour: Int, minute: Int) {
-            switch self {
-            case .setTodaysPlan: return (7, 30)
-            case .closeTheDay: return (21, 45)
-            case .weighIn: return (7, 30)
-            case .weeklyReview: return (18, 0)
-            }
-        }
-
-        /// The default time as "HH:mm".
-        public var defaultTime: String {
-            String(format: "%02d:%02d", defaultHourAndMinute.hour, defaultHourAndMinute.minute)
-        }
-    }
-
-    public func reminderTime(_ kind: ReminderTime) throws -> String {
-        try settingValue(key: "reminder.\(kind.rawValue).time") ?? kind.defaultTime
-    }
-
-    public func setReminderTime(_ time: String, _ kind: ReminderTime, changedAt: Date = .now) throws {
-        try setSettingValue(time, key: "reminder.\(kind.rawValue).time", changedAt: changedAt)
-    }
-
-    /// "Say what each reminder is for", the explicit-wording setting (off,
-    /// device).
-    public func explicitWordingOn() throws -> Bool {
-        try (localSettingValue(key: "reminder.explicitWording.enabled") ?? "false") == "true"
-    }
-
-    public func setExplicitWordingOn(_ on: Bool) throws {
-        try setLocalSettingValue(on ? "true" : "false", key: "reminder.explicitWording.enabled")
-    }
-
-    /// "Remind me again in": 15 or 30 minutes, default 15 (device).
-    public func remindAgainMinutes() throws -> Int {
-        try localSettingValue(key: "reminder.snoozeMinutes").flatMap(Int.init) ?? 15
-    }
-
-    public func setRemindAgainMinutes(_ minutes: Int) throws {
-        try setLocalSettingValue(String(minutes), key: "reminder.snoozeMinutes")
-    }
-
-    /// "Quiet hours" with a start and an end (22:00 to 07:00, on). The
-    /// switch and the two times all sync.
-    public func quietHoursOn() throws -> Bool {
-        try (settingValue(key: "reminder.quietHours.enabled") ?? "true") == "true"
-    }
-
-    public func setQuietHoursOn(_ on: Bool, changedAt: Date = .now) throws {
-        try setSettingValue(on ? "true" : "false", key: "reminder.quietHours.enabled", changedAt: changedAt)
-    }
-
-    public func quietHoursStart() throws -> String {
-        try settingValue(key: "reminder.quietHours.start") ?? "22:00"
-    }
-
-    public func setQuietHoursStart(_ time: String, changedAt: Date = .now) throws {
-        try setSettingValue(time, key: "reminder.quietHours.start", changedAt: changedAt)
-    }
-
-    public func quietHoursEnd() throws -> String {
-        try settingValue(key: "reminder.quietHours.end") ?? "07:00"
-    }
-
-    public func setQuietHoursEnd(_ time: String, changedAt: Date = .now) throws {
-        try setSettingValue(time, key: "reminder.quietHours.end", changedAt: changedAt)
-    }
-
-    private static let remindersPausedAtKey = "remindersPausedAt"
-
-    /// `nil` once reminders are not paused: a fresh store, or after "Turn
-    /// reminders on" writes the cleared row.
-    public func remindersPausedAt() throws -> Date? {
-        try settingValue(key: Self.remindersPausedAtKey).flatMap { ISO8601DateFormatter().date(from: $0) }
-    }
-
-    /// Sets `remindersPausedAt`. Not-right-now (`safeguarding`) calls this;
-    /// this store only carries the row and the read.
-    public func pauseReminders(at date: Date, changedAt: Date = .now) throws {
-        try setSettingValue(ISO8601DateFormatter().string(from: date), key: Self.remindersPausedAtKey, changedAt: changedAt)
-    }
-
-    /// "Turn reminders on": clears `remindersPausedAt` with a new, later row
-    /// (settings spec, "The Reminders group": "the app clears
-    /// `remindersPausedAt`"). The scheduler recomputing the schedule is
-    /// `reminders`' (2.4) own work; this store only clears the flag.
-    public func turnRemindersOn(changedAt: Date = .now) throws {
-        try setSettingValue("", key: Self.remindersPausedAtKey, changedAt: changedAt)
-    }
-
     // MARK: - Profile: the one-time BMI (onboarding spec, "What onboarding
     // keeps and what it never keeps"; safeguarding spec, "Re-screening at a
     // restart")
@@ -763,6 +629,12 @@ public final class RecordStore {
     public enum WeighInDayChoice: Sendable, Equatable {
         case weekday(Int)
         case wontBeWeighing
+
+        /// The chosen weekday, or `nil` for "I won't be weighing".
+        public var weekday: Int? {
+            if case .weekday(let weekday) = self { return weekday }
+            return nil
+        }
     }
 
     private static let weighInDaySettingKey = "onboarding.weighInDay"
@@ -802,11 +674,11 @@ public final class RecordStore {
 
     /// The completion flag: `false` until "Start" sets it (onboarding spec, "Finish").
     public func onboardingCompleted() throws -> Bool {
-        try (localSettingValue(key: Self.onboardingCompletedKey) ?? "false") == "true"
+        try localBoolSetting(key: Self.onboardingCompletedKey, default: false)
     }
 
     public func setOnboardingCompleted(_ completed: Bool) throws {
-        try setLocalSettingValue(completed ? "true" : "false", key: Self.onboardingCompletedKey)
+        try setLocalBoolSetting(completed, key: Self.onboardingCompletedKey)
     }
 
     private static let syncOnKey = "onboarding.syncOn"
@@ -815,11 +687,11 @@ public final class RecordStore {
     /// record"). `false` — off — in the first cut, always, because "Your
     /// record" shows one control, "This device only".
     public func syncOn() throws -> Bool {
-        try (localSettingValue(key: Self.syncOnKey) ?? "false") == "true"
+        try localBoolSetting(key: Self.syncOnKey, default: false)
     }
 
     public func setSyncOn(_ on: Bool) throws {
-        try setLocalSettingValue(on ? "true" : "false", key: Self.syncOnKey)
+        try setLocalBoolSetting(on, key: Self.syncOnKey)
     }
 
     // MARK: - Plan: templates, days and planned-meal answers (regular-eating-
@@ -934,6 +806,11 @@ public final class RecordStore {
         try persist()
     }
 
+    /// The "Skipped" answer, from Today, an earlier day or a reminder action.
+    public func setPlannedMealSkipped(dateKey: String, slotIndex: Int, changedAt: Date) throws {
+        try setPlannedMealAnswer(PlannedMealAnswer.skipped, dateKey: dateKey, slotIndex: slotIndex, changedAt: changedAt)
+    }
+
     /// The stored override of a slot's label, or `nil` when the slot shows
     /// its default label (regular-eating-plan spec, "Rename a slot in the
     /// plan builder").
@@ -1008,7 +885,7 @@ public final class RecordStore {
     /// group"). Read from the weigh-in screen and from the settings screen,
     /// so both agree at once.
     public func weighInUnit() throws -> String {
-        try settingValue(key: Self.weighInUnitKey) ?? "kg"
+        try settingValue(key: Self.weighInUnitKey) ?? Defaults.weighInUnit
     }
 
     public func setWeighInUnit(_ unit: String, changedAt: Date = .now) throws {
@@ -1061,11 +938,6 @@ public final class RecordStore {
         return try context.fetch(descriptor)
     }
 
-    /// The device's own latest row for (`kind`, `dueDateKey`), whatever its
-    /// freeze state — the row a local edit or a later freeze writes into
-    /// (mirrors `weighIn(dateKey:)`'s own "the winner this device already
-    /// wrote" read, since a still-unfrozen row is never a `ReviewReconciler`
-    /// winner).
     /// The winning row for (`kind`, `dueDateKey`): the frozen row with the
     /// earliest freeze moment, or `nil` when none is frozen yet ("Freeze
     /// waits for sync": an unfrozen row is never a winner).
@@ -1339,11 +1211,11 @@ public final class RecordStore {
     /// reminders spec, "Reminder types and their switches": "The app MUST
     /// keep that tap as a device flag in `Local.store`.").
     public func hasTappedNotificationsDeniedLineOnce() throws -> Bool {
-        try (localSettingValue(key: "reminder.deniedLineTapped") ?? "false") == "true"
+        try localBoolSetting(key: "reminder.deniedLineTapped", default: false)
     }
 
     public func setHasTappedNotificationsDeniedLineOnce(_ tapped: Bool) throws {
-        try setLocalSettingValue(tapped ? "true" : "false", key: "reminder.deniedLineTapped")
+        try setLocalBoolSetting(tapped, key: "reminder.deniedLineTapped")
     }
 
     /// Applies every queued action to the store, in order, then answers with
@@ -1362,7 +1234,7 @@ public final class RecordStore {
         for action in kept {
             switch action.kind {
             case .skipped:
-                try setPlannedMealAnswer("Skipped", dateKey: action.dayKey, slotIndex: action.slotIndex, changedAt: action.moment)
+                try setPlannedMealSkipped(dateKey: action.dayKey, slotIndex: action.slotIndex, changedAt: action.moment)
             case .snooze:
                 try setSnoozeCount(action.snoozeCount, dateKey: action.dayKey, slotIndex: action.slotIndex)
                 try setSnoozeTapMoment(action.moment, dateKey: action.dayKey, slotIndex: action.slotIndex)

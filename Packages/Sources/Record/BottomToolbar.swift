@@ -4,7 +4,11 @@ import Foundation
 /// "Programme", "Reviews" only from the moment the first weekly review
 /// becomes due, then "Settings".
 public enum BottomToolbar {
-    public static func items(reviewsDue: Bool) -> [String] {
-        reviewsDue ? ["Programme", "Reviews", "Settings"] : ["Programme", "Settings"]
+    public enum Item: Sendable, Hashable {
+        case programme, reviews, settings
+    }
+
+    public static func items(reviewsDue: Bool) -> [Item] {
+        reviewsDue ? [.programme, .reviews, .settings] : [.programme, .settings]
     }
 }

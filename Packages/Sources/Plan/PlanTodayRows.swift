@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// One entry of the record day, as the planned meal rows on Today need it:
 /// its id, its time and its star. `Plan` never sees a whole `Record` entry
@@ -15,19 +16,6 @@ public struct PlanDayEntry: Sendable, Equatable {
     }
 
     public var fact: PlanEntryFact { PlanEntryFact(id: id, time: time) }
-}
-
-/// The quiet hours settings, as "HH:mm" text.
-public struct PlanQuietHours: Sendable, Equatable {
-    public let isOn: Bool
-    public let start: String
-    public let end: String
-
-    public init(isOn: Bool, start: String, end: String) {
-        self.isOn = isOn
-        self.start = start
-        self.end = end
-    }
 }
 
 /// One planned meal row's facts for Today, before the app adds the slot
@@ -64,7 +52,7 @@ public struct PlanTodayRows: Sendable, Equatable {
         match: PlanDayMatch,
         entries: [PlanDayEntry],
         answers: [Int: String],
-        quietHours: PlanQuietHours,
+        quietHours: QuietHours,
         recordDay: DateInterval,
         now: Date,
         calendar: Calendar
@@ -81,14 +69,12 @@ public struct PlanTodayRows: Sendable, Equatable {
             let nextTime = later.first.flatMap { match.window(for: $0.slotIndex)?.time }
             let matchedEntryId = match.matches[meal.slotIndex]
             let answer = answers[meal.slotIndex] ?? ""
-            let isSkipped = answer == "Skipped"
+            let isSkipped = answer == PlannedMealAnswer.skipped
 
             let hasLaterEntry = later.contains { match.matches[$0.slotIndex] != nil }
                 || (nextTime.map { t in entries.contains { $0.time >= t } } ?? false)
             let laterSlotAnswered = later.contains { !(answers[$0.slotIndex] ?? "").isEmpty }
-            let windowEndsInQuietHours = quietHours.isOn && QuietHours.contains(
-                time: clockText(window.interval.end, calendar: calendar), start: quietHours.start, end: quietHours.end
-            )
+            let windowEndsInQuietHours = quietHours.contains(ClockTime.string(from: window.interval.end, calendar: calendar))
             // First cut: the prompt always takes the "Skipped" and "Add it"
             // form. mm-t33.14 passes `MissedMealPrompt.candidateEntry` here
             // when it builds "That was it" (mm-t23.22).
@@ -151,7 +137,7 @@ public struct PlanTodayRows: Sendable, Equatable {
             }
         }
 
-        for meal in ordered where answers[meal.slotIndex] == "Skipped" && match.matches[meal.slotIndex] == nil {
+        for meal in ordered where answers[meal.slotIndex] == PlannedMealAnswer.skipped && match.matches[meal.slotIndex] == nil {
             if let time = match.window(for: meal.slotIndex)?.time {
                 point(after: time, excluding: nil)
             }
@@ -160,10 +146,5 @@ public struct PlanTodayRows: Sendable, Equatable {
             point(after: entry.time, excluding: match.slotIndex(matching: entry.id))
         }
         return (targets, pointsToNextDay)
-    }
-
-    private static func clockText(_ date: Date, calendar: Calendar) -> String {
-        let c = calendar.dateComponents([.hour, .minute], from: date)
-        return PlanTime.string(hour: c.hour ?? 0, minute: c.minute ?? 0)
     }
 }

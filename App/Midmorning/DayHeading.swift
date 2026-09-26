@@ -1,5 +1,6 @@
 import Foundation
 import Record
+import Constants
 
 /// The weekday-and-date text every day heading and time-control segment
 /// uses (record spec, "Today's appearance"; "The new-entry screen's
@@ -26,7 +27,7 @@ enum DayHeading {
     /// current day between 00:00 and the day start (record spec, "Today's
     /// appearance").
     static func text(for date: Date, night: Bool) -> String {
-        dateOnly(date) + (night ? ", night" : "")
+        night ? CatalogueText.key("today.heading.night", .verbatim(dateOnly(date))).string : dateOnly(date)
     }
 
     /// "Thursday 24 September" from a record day key ("2026-09-24"), for the

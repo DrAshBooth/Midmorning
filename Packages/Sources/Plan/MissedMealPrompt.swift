@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// One planned meal's own facts for the missed-planned-meal-prompt rule
 /// (regular-eating-plan spec, "A missed planned meal gets one prompt"),
@@ -86,12 +87,12 @@ public enum MissedMealPrompt {
 
     /// The prompt's own text, `timeText` filling "was that %@?" through the
     /// caller's en_GB time formatter.
-    public static func line(for form: Form, timeText: (Date) -> String) -> String {
+    public static func line(for form: Form, timeText: (Date) -> String) -> CatalogueText {
         switch form {
         case .skippedOrNotRecorded:
-            return "Skipped, or not recorded yet?"
+            return .key("plan.missedPrompt.notRecordedYet")
         case .skippedOrWasThat(let candidateTime):
-            return "Skipped, or was that \(timeText(candidateTime))?"
+            return .key("plan.missedPrompt.wasThat", .verbatim(timeText(candidateTime)))
         }
     }
 

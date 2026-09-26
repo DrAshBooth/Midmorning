@@ -5,12 +5,11 @@ import Content
 import AppLock
 import Programme
 import Export
+import Constants
 
 /// The settings screen: one screen, one tap from Today (settings spec, "One
 /// screen, one tap from Today"). Shows its groups in the spec's order:
-/// Reminders, Record, Weigh-in, Privacy, About; `plain system styling`
-/// throughout, until `record-full` (1.2b) lands `Appearance.swift` and the
-/// shared accent colour asset.
+/// Reminders, Record, Weigh-in, Privacy, About.
 struct SettingsView: View {
     let store: RecordStore
     /// data-and-privacy spec, "Delete-all". Defaults to the real seam built
@@ -59,7 +58,7 @@ struct SettingsView: View {
                 // setter, so opening the screen writes no row (mm-t13.13).
                 Picker("settings.record.dayStartsAt", selection: dayStartHourSelection) {
                     ForEach(RecordDay.startHourChoices, id: \.self) { hour in
-                        Text(verbatim: String(format: "%02d:00", hour)).tag(hour)
+                        Text(verbatim: ClockTime.string(hour: hour, minute: 0)).tag(hour)
                     }
                 }
                 Toggle(ReviewContent.weeklySummarySwitchLabel, isOn: Binding(
@@ -170,13 +169,10 @@ struct SettingsView: View {
         if let hour = try? store.dayStartHourFromNextRecordDay(after: Date(), calendar: .current) {
             dayStartHour = hour
         }
-        gapBandsOn = (try? store.gapBandsOn()) ?? true
-        weeklySummaryOn = (try? store.weeklySummaryOn()) ?? true
-        switch try? store.weighInDayChoice() {
-        case .weekday(let weekday): weighInWeekday = weekday
-        case .wontBeWeighing, nil: weighInWeekday = nil
-        }
-        weighInUnit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? "kg") ?? .kg
+        gapBandsOn = (try? store.gapBandsOn()) ?? RecordStore.Defaults.gapBandsOn
+        weeklySummaryOn = (try? store.weeklySummaryOn()) ?? RecordStore.Defaults.weeklySummaryOn
+        weighInWeekday = (try? store.weighInDayChoice())?.weekday
+        weighInUnit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? RecordStore.Defaults.weighInUnit) ?? .kg
         if let bundle = try? BundleLoader.loadShipped() {
             contentInfo = bundle
             contactEmail = bundle.string(id: "about.contact")?.text ?? ""

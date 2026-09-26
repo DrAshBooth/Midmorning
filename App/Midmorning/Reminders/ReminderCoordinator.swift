@@ -112,8 +112,8 @@ enum ReminderCoordinator {
             }
             let ids = DeliveredReminderRemoval.idsToRemove(
                 delivered: enriched, currentRecordDayKey: currentKey,
-                nowClockTime: ReminderClock.string(from: now, calendar: calendar),
-                dayStartMinute: ReminderClock.dayStartMinute(of: currentInterval.start, calendar: calendar)
+                nowClockTime: ClockTime.string(from: now, calendar: calendar),
+                dayStartMinute: ClockTime.minutesOfDay(of: currentInterval.start, calendar: calendar)
             )
             DeliveredReminderCleanup.remove(ids: ids)
         }
@@ -216,11 +216,7 @@ enum ReminderCoordinator {
     /// (design.md: "The same scheduler MUST schedule every reminder that
     /// another capability asks for").
     private static func weighInDayCandidates(store: RecordStore, dayKeys: [String], calendar: Calendar) -> [ReminderCandidate] {
-        let weighInWeekday: Int?
-        switch try? store.weighInDayChoice() {
-        case .weekday(let weekday): weighInWeekday = weekday
-        case .wontBeWeighing, nil: weighInWeekday = nil
-        }
+        let weighInWeekday = (try? store.weighInDayChoice())?.weekday
         let time = (try? store.reminderTime(.weighIn)) ?? RecordStore.ReminderTime.weighIn.defaultTime
         return WeighInReminderRule.candidates(
             weighInWeekday: weighInWeekday, dayKeys: dayKeys, time: time,
@@ -235,26 +231,27 @@ enum ReminderCoordinator {
     ) -> SchedulerDay {
         let dayStartHour = (try? store.dayStartHour(effectiveOn: dayKey)) ?? RecordDay.startHour
         let plannedMealFacts = resolvedPlannedMeals(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: isCurrentDay, dayStartHour: dayStartHour, calendar: calendar, constants: constants)
-        let slotLabels = Dictionary(uniqueKeysWithValues: (0..<6).compactMap { index -> (Int, String)? in
-            guard let label = try? store.slotLabel(index: index), !label.isEmpty else { return nil }
-            return (index, label)
+        // reminders spec, "Discreet text by default": "The slot's label is
+        // the person's label for that slot, or the default."
+        let slotLabels = Dictionary(uniqueKeysWithValues: Slot.all.map { slot in
+            (slot.index, SlotLabelText.effective(index: slot.index, stored: try? store.slotLabel(index: slot.index)))
         })
 
         let entries = isCurrentDay ? ((try? store.entries(dayKey: dayKey)) ?? []) : []
         let states = (try? store.dayStates(dateKey: dayKey)) ?? []
-        let hasEntryBeforeMidday = entries.contains { clockMinutes($0.time, calendar: calendar) < 12 * 60 }
-        let hasEntryAfter17 = entries.contains { clockMinutes($0.time, calendar: calendar) >= 17 * 60 }
-        let hasPlannedMealBeforeMidday = plannedMealFacts.contains { ReminderClock.minutesOfDay($0.time) < 12 * 60 }
+        let hasEntryBeforeMidday = entries.contains { ClockTime.minutesOfDay(of: $0.time, calendar: calendar) < 12 * 60 }
+        let hasEntryAfter17 = entries.contains { ClockTime.minutesOfDay(of: $0.time, calendar: calendar) >= 17 * 60 }
+        let hasPlannedMealBeforeMidday = plannedMealFacts.contains { ClockTime.minutesOfDay($0.time) < 12 * 60 }
 
         let midday = MiddayFacts(hasEntryBeforeMidday: hasEntryBeforeMidday, hasPlannedMealBeforeMidday: hasPlannedMealBeforeMidday, isFasting: states.contains(.fasting))
 
-        let lastPlannedMeal = plannedMealFacts.max { ReminderClock.minutesOfDay($0.time) < ReminderClock.minutesOfDay($1.time) }
+        let lastPlannedMeal = plannedMealFacts.max { ClockTime.minutesOfDay($0.time) < ClockTime.minutesOfDay($1.time) }
         let closeTheDay = CloseTheDayFacts(
             stage2Open: stage2Open,
             hasEntryAfter17: hasEntryAfter17,
             lastPlannedMealTime: lastPlannedMeal?.time,
             lastPlannedMealMatched: lastPlannedMeal?.matchedBeforeReminderTime ?? false,
-            hasEntryAtOrAfterLastPlannedMealTime: lastPlannedMeal.map { meal in entries.contains { clockMinutes($0.time, calendar: calendar) >= ReminderClock.minutesOfDay(meal.time) } } ?? false
+            hasEntryAtOrAfterLastPlannedMealTime: lastPlannedMeal.map { meal in entries.contains { ClockTime.minutesOfDay(of: $0.time, calendar: calendar) >= ClockTime.minutesOfDay(meal.time) } } ?? false
         )
 
         let templatesExist = !(((try? store.templateSlotsJSON(.weekday)) ?? "[]") == "[]" && ((try? store.templateSlotsJSON(.weekend)) ?? "[]") == "[]")
@@ -342,7 +339,7 @@ enum ReminderCoordinator {
         var result: [Int: (windowEnd: String, recordedOrAnswered: Bool)] = [:]
         for window in windows {
             let recorded = settled.first { $0.slotIndex == window.slotIndex }?.recordedOrAnswered ?? false
-            result[window.slotIndex] = (ReminderClock.string(from: window.interval.end, calendar: calendar), recorded)
+            result[window.slotIndex] = (ClockTime.string(from: window.interval.end, calendar: calendar), recorded)
         }
         return result
     }
@@ -426,13 +423,9 @@ enum ReminderCoordinator {
 
     // MARK: Store reads
 
-    private static func clockMinutes(_ date: Date, calendar: Calendar) -> Int {
-        let components = calendar.dateComponents([.hour, .minute], from: date)
-        return (components.hour ?? 0) * 60 + (components.minute ?? 0)
-    }
-
     private static func schedulerSettings(store: RecordStore, notificationPermissionGranted: Bool) -> SchedulerSettings {
-        func on(_ kind: RecordStore.ReminderSwitch) -> Bool { (try? store.reminderSwitchOn(kind)) ?? true }
+        func on(_ kind: RecordStore.ReminderSwitch) -> Bool { (try? store.reminderSwitchOn(kind)) ?? RecordStore.Defaults.reminderSwitchOn }
+        let quietHours = (try? store.quietHours()) ?? RecordStore.Defaults.quietHours
         let switches: [ReminderKind: Bool] = [
             .plannedMeal: on(.plannedMeals),
             .morningPlan: on(.setTodaysPlan),
@@ -444,14 +437,14 @@ enum ReminderCoordinator {
         return SchedulerSettings(
             switches: switches,
             remindersPausedAt: try? store.remindersPausedAt(),
-            explicitWordingOn: (try? store.explicitWordingOn()) ?? false,
+            explicitWordingOn: (try? store.explicitWordingOn()) ?? RecordStore.Defaults.explicitWordingOn,
             morningPlanTime: (try? store.reminderTime(.setTodaysPlan)) ?? RecordStore.ReminderTime.setTodaysPlan.defaultTime,
             closeTheDayTime: (try? store.reminderTime(.closeTheDay)) ?? RecordStore.ReminderTime.closeTheDay.defaultTime,
-            quietHoursOn: (try? store.quietHoursOn()) ?? true,
-            quietHoursStart: (try? store.quietHoursStart()) ?? "22:00",
-            quietHoursEnd: (try? store.quietHoursEnd()) ?? "07:00",
+            quietHoursOn: quietHours.isOn,
+            quietHoursStart: quietHours.start,
+            quietHoursEnd: quietHours.end,
             notificationPermissionGranted: notificationPermissionGranted,
-            snoozeMinutes: (try? store.remindAgainMinutes()) ?? ProgrammeConstants.default.snoozeMinutes
+            snoozeMinutes: (try? store.remindAgainMinutes()) ?? RecordStore.Defaults.remindAgainMinutes
         )
     }
 

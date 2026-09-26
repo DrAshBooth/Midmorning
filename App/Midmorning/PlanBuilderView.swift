@@ -39,14 +39,12 @@ struct PlanBuilderView: View {
     @State private var storedLabels: [Int: String] = [:]
     @State private var dayStartHour = RecordDay.startHour
     @State private var isFastingDay = false
-    @State private var quietOn = true
-    @State private var quietStart = "22:00"
-    @State private var quietEnd = "07:00"
+    @State private var quietHours = RecordStore.Defaults.quietHours
     @State private var lockedSlots: Set<Int> = []
     @State private var renamingSlot: Int?
     @State private var renameText = ""
-    @State private var renameMessage: String?
-    @State private var softRuleLines: [String] = []
+    @State private var renameMessage: CatalogueText?
+    @State private var softRuleLines: [CatalogueText] = []
     @State private var isShowingSoftRuleCheck = false
 
     private var orderedMeals: [PlannedMeal] { PlanOrdering.sorted(meals, dayStartHour: dayStartHour) }
@@ -54,7 +52,7 @@ struct PlanBuilderView: View {
     private var unplacedSlots: [Slot] { Slot.all.filter { !placedSlotIndexes.contains($0.index) } }
 
     private func label(_ slotIndex: Int) -> String {
-        SlotLabel.effective(stored: storedLabels[slotIndex], defaultLabel: Slot.at(index: slotIndex)?.defaultLabel ?? "")
+        SlotLabelText.effective(index: slotIndex, stored: storedLabels[slotIndex])
     }
 
     var body: some View {
@@ -97,7 +95,7 @@ struct PlanBuilderView: View {
             .sheet(item: renamingSlotBinding) { renaming in
                 renameSheet(for: renaming.index)
             }
-            .confirmationDialog(Text(softRuleLines.joined(separator: "\n\n")), isPresented: $isShowingSoftRuleCheck, titleVisibility: .visible) {
+            .confirmationDialog(Text(softRuleLines.map(\.string).joined(separator: "\n\n")), isPresented: $isShowingSoftRuleCheck, titleVisibility: .visible) {
                 Button("plan.saveAnyway") { performSave() }
                 Button("plan.goBack", role: .cancel) {}
             }
@@ -126,7 +124,7 @@ struct PlanBuilderView: View {
                     Text(meal.time)
                 } else {
                     DatePicker(
-                        PlanBuilderAccessibility.timeControlLabel(slotLabel: slotLabel),
+                        PlanBuilderAccessibility.timeControlLabel(slotLabel: slotLabel).string,
                         selection: timeBinding(for: meal.slotIndex),
                         displayedComponents: .hourAndMinute
                     )
@@ -135,16 +133,16 @@ struct PlanBuilderView: View {
             if let gap = gapLine(after: meal) {
                 Text(gap).font(.footnote).foregroundStyle(.secondary)
             }
-            if QuietHours.contains(time: meal.time, start: quietStart, end: quietEnd), quietOn {
-                Text(QuietHours.reminderNotSentMessage).font(.footnote).foregroundStyle(.secondary)
+            if quietHours.contains(meal.time) {
+                Text("settings.reminders.quietHoursNotSent").font(.footnote).foregroundStyle(.secondary)
             }
             HStack {
                 Button("plan.rename") { beginRename(meal.slotIndex) }
-                    .accessibilityLabel(PlanBuilderAccessibility.renameControlLabel(slotLabel: slotLabel))
+                    .accessibilityLabel(PlanBuilderAccessibility.renameControlLabel(slotLabel: slotLabel).string)
                 if !locked {
                     Spacer()
                     Button(role: .destructive) { remove(meal.slotIndex) } label: {
-                        Text(PlanBuilderAccessibility.removeControlLabel(slotLabel: slotLabel))
+                        Text(PlanBuilderAccessibility.removeControlLabel(slotLabel: slotLabel).string)
                     }
                 }
             }
@@ -160,14 +158,14 @@ struct PlanBuilderView: View {
         let next = orderedMeals[index + 1]
         let gap = PlanOrdering.minutesAfterDayStart(time: next.time, dayStartHour: dayStartHour)
             - PlanOrdering.minutesAfterDayStart(time: meal.time, dayStartHour: dayStartHour)
-        return PlanDuration.string(minutes: gap)
+        return DurationText.string(minutes: gap)
     }
 
     private func timeBinding(for slotIndex: Int) -> Binding<Date> {
         Binding(
             get: { ClockTime.date(from: meals.first { $0.slotIndex == slotIndex }?.time ?? "00:00") },
             set: { newValue in
-                let text = ClockTime.text(from: newValue)
+                let text = ClockTime.string(from: newValue)
                 meals = PlanCodec.placing(slotIndex, at: text, in: meals)
             }
         )
@@ -194,7 +192,7 @@ struct PlanBuilderView: View {
                         set: { renameText = SlotLabel.truncated($0) }
                     ))
                     if let renameMessage {
-                        Text(renameMessage).foregroundStyle(.secondary)
+                        Text(renameMessage.string).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -293,7 +291,7 @@ struct PlanBuilderView: View {
                 let answers = (try? store.plannedMealAnswers(dateKey: dateKey)) ?? [:]
                 let entries = (try? store.entries(dayKey: dateKey)) ?? []
                 let matches = plan.match(entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) }, recordDay: recordDay, calendar: .current).matches
-                lockedSlots = Set(meals.map(\.slotIndex).filter { !PlanEditing.canChangeOrDelete(hasMatchedEntry: matches[$0] != nil, hasSkippedAnswer: answers[$0] == "Skipped") })
+                lockedSlots = Set(meals.map(\.slotIndex).filter { !PlanEditing.canChangeOrDelete(hasMatchedEntry: matches[$0] != nil, hasSkippedAnswer: answers[$0] == PlannedMealAnswer.skipped) })
             } else {
                 lockedSlots = []
             }
@@ -301,8 +299,6 @@ struct PlanBuilderView: View {
             meals = PlanCodec.decode((try? store.templateSlotsJSON(kind)) ?? "[]")
         }
         for slot in Slot.all { storedLabels[slot.index] = try? store.slotLabel(index: slot.index) }
-        quietOn = (try? store.quietHoursOn()) ?? true
-        quietStart = (try? store.quietHoursStart()) ?? "22:00"
-        quietEnd = (try? store.quietHoursEnd()) ?? "07:00"
+        quietHours = (try? store.quietHours()) ?? RecordStore.Defaults.quietHours
     }
 }

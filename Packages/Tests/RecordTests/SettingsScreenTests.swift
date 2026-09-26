@@ -167,11 +167,4 @@ final class SettingsScreenTests: XCTestCase {
         try store.setWeighInDayChoice(.weekday(6))
         XCTAssertEqual(try store.weighInDayChoice(), .weekday(6))
     }
-
-    // MARK: - The Privacy group: "Delete everything" calls a stub seam
-
-    func testStubDeleteAllSeamDoesNothingAndNeverThrows() {
-        let seam: DeleteAllSeam = StubDeleteAllSeam()
-        XCTAssertNoThrow(try seam.deleteEverything())
-    }
 }

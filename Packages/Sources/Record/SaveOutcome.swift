@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The new-entry and edit screens' save outcome, as a pure value (design.md,
 /// "Pure seams the packages expose": "Screen models are values... Views
@@ -11,5 +12,6 @@ public enum SaveOutcome: Sendable, Equatable {
     case saved
     case failed
 
-    public static let failureMessage = "Could not save. Try again."
+    /// "Could not save. Try again."
+    public static let failureMessage: CatalogueText = .key("entry.saveFailed")
 }

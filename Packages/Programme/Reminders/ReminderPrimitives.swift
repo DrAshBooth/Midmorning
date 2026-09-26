@@ -1,62 +1,6 @@
 import Foundation
 import Constants
 
-/// "HH:mm" clock-time text and arithmetic, independent of the device locale
-/// (reminders spec, "Discreet text by default": the body is the time
-/// through the en_GB formatter, 24-hour clock). `Plan.PlanTime` is the same
-/// shape for the `Plan` target; `Programme` never imports `Plan` (design.md,
-/// "One umbrella package, five targets"), so this is its own copy, the same
-/// duplication `Plan.QuietHours` already accepts ahead of this capability.
-public enum ReminderClock {
-    public static func string(hour: Int, minute: Int) -> String {
-        String(format: "%02d:%02d", hour, minute)
-    }
-
-    public static func parse(_ time: String) -> (hour: Int, minute: Int)? {
-        let parts = time.split(separator: ":")
-        guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]) else { return nil }
-        return (hour, minute)
-    }
-
-    public static func minutesOfDay(_ time: String) -> Int {
-        guard let (hour, minute) = parse(time) else { return 0 }
-        return hour * 60 + minute
-    }
-
-    public static func string(from date: Date, calendar: Calendar) -> String {
-        let parts = calendar.dateComponents([.hour, .minute], from: date)
-        return string(hour: parts.hour ?? 0, minute: parts.minute ?? 0)
-    }
-
-    /// `time` ("HH:mm") inside the record day that starts at `dayStart`, or
-    /// `nil` when `time` does not parse. A clock time earlier than the day
-    /// start's own clock time falls after midnight, so it goes on the next
-    /// calendar date (regular-eating-plan spec, "A planned meal after
-    /// midnight"; reminders spec, "Scheduling is local, lazy and bounded",
-    /// scenario "A later day start").
-    public static func date(atTime time: String, on dayStart: Date, calendar: Calendar) -> Date? {
-        guard let (hour, minute) = parse(time),
-              let sameDate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: dayStart)
-        else { return nil }
-        guard sameDate < dayStart else { return sameDate }
-        return calendar.date(byAdding: .day, value: 1, to: sameDate)
-    }
-
-    /// The minutes from the day start's clock time to `time`, from 0 to
-    /// 1439. Use this, not `minutesOfDay`, to order or compare two clock
-    /// times of one record day: a time after midnight comes after a time
-    /// in the evening.
-    public static func minutesSinceDayStart(_ time: String, dayStartMinute: Int) -> Int {
-        ((minutesOfDay(time) - dayStartMinute) % 1440 + 1440) % 1440
-    }
-
-    /// The clock minute of `dayStart` (for example 240 for 04:00).
-    public static func dayStartMinute(of dayStart: Date, calendar: Calendar) -> Int {
-        let parts = calendar.dateComponents([.hour, .minute], from: dayStart)
-        return (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-    }
-}
-
 /// The eight reminder types (reminders spec, "Reminder types and their
 /// switches"). `reminders` (2.4) owns the planned meal, morning plan,
 /// midday and close-the-day types; the weigh-in day, weekly review,
@@ -166,39 +110,6 @@ public struct ReminderRequest: Sendable, Equatable {
         self.interruptionLevel = interruptionLevel
         self.category = category
         self.threadIdentifier = threadIdentifier
-    }
-}
-
-/// Whether a clock time falls inside quiet hours (reminders spec, "Quiet
-/// hours"). The canonical definition this capability owns; `Plan.QuietHours`
-/// stays regular-eating-plan's own interim copy ahead of this change.
-public enum ReminderQuietHours {
-    public static let reminderNotSentMessage = "This time is in quiet hours. The reminder will not be sent."
-
-    /// False when `start` equals `end` (reminders spec: "When the start
-    /// equals the end, quiet hours are off").
-    public static func isOn(start: String, end: String) -> Bool {
-        start != end
-    }
-
-    /// The range the scheduler and the snooze rule read: the person's own
-    /// range while the "Quiet hours" switch is on, or an "off" range (the
-    /// start equal to the end) while it is off. This is the one place that
-    /// holds the on/off rule.
-    public static func effectiveRange(on: Bool, start: String, end: String) -> (start: String, end: String) {
-        on ? (start, end) : (start, start)
-    }
-
-    /// True for `time` inside the half-open range from `start`, included, to
-    /// `end`, excluded, wrapping past midnight when `end` is earlier than
-    /// `start`. Always false when quiet hours are off.
-    public static func contains(time: String, start: String, end: String) -> Bool {
-        guard isOn(start: start, end: end) else { return false }
-        let t = ReminderClock.minutesOfDay(time)
-        let s = ReminderClock.minutesOfDay(start)
-        let e = ReminderClock.minutesOfDay(end)
-        if s <= e { return t >= s && t < e }
-        return t >= s || t < e
     }
 }
 

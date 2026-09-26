@@ -34,7 +34,7 @@ final class NotificationActionsAreEntryPointsTests: XCTestCase {
         let now = calendar.date(from: DateComponents(year: 2026, month: 10, day: 6, hour: 13, minute: 5))!
         let info = ReminderUserInfo(dayKey: "2026-10-06", slotIndex: 2, plannedTime: "13:00", nextPlannedTime: nil, snoozeCount: 0, quietHoursStart: "22:00", quietHoursEnd: "07:00", snoozeMinutes: 15)
         guard case .scheduleAt(let when) = SnoozeDecision.decide(userInfo: info, now: now, calendar: calendar) else { return XCTFail() }
-        XCTAssertEqual(ReminderClock.string(from: when, calendar: calendar), "13:20")
+        XCTAssertEqual(ClockTime.string(from: when, calendar: calendar), "13:20")
         XCTAssertFalse(PlannedMealReminderAction.snooze.opensAppInForeground)
         XCTAssertFalse(PlannedMealReminderAction.snooze.requiresDeviceUnlock)
     }

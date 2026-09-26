@@ -28,10 +28,9 @@ let package = Package(
         .target(name: "Record", dependencies: ["Constants", "Plan"], resources: [.copy("FrozenSchema.json")]),
         .testTarget(name: "ConstantsTests", dependencies: ["Constants"]),
         // Also depends on `Programme` (test-only; `Record` itself never
-        // does) so a test can prove the composition of `Programme`'s
-        // pending-card output with `Record`'s `TodayCardSlot` — the seam
-        // `programme-engine` (2.1) wires in the App target
-        // (`v1-programme/design.md`, "Programme takes value facts").
+        // does) so a test can drive `Programme`'s rules over a real store,
+        // the way the App target wires them (`v1-programme/design.md`,
+        // "Programme takes value facts").
         .testTarget(name: "RecordTests", dependencies: ["Record", "Programme", "Export", "AppLock", "RecordTestSupport"]),
         // The shared test helper for a temporary `RecordStore` whose
         // directory the test's teardown removes (mm-t12.38). Only test
@@ -49,10 +48,9 @@ let package = Package(
         // LocalAuthentication and lifecycle code call (app-lock spec).
         .target(name: "AppLock", dependencies: ["Constants"]),
         .testTarget(name: "AppLockTests", dependencies: ["AppLock"]),
-        // The safeguarding rules and (from later changes) the stage engine,
-        // week counting, the weekly review builder, pattern sentences, the
-        // scheduler and the analytics summary builder (design.md, "One
-        // umbrella package, five targets"). `Programme` takes value facts
+        // The safeguarding rules, the stage engine, week counting, the
+        // weekly review builder, the weigh-in rules and the reminder
+        // scheduler (design.md, "One umbrella package, five targets"). `Programme` takes value facts
         // and imports `Constants` only, never `Record` or `Plan`, so every
         // rule here is a pure function a test drives with fixed inputs.
         .target(name: "Programme", dependencies: ["Constants"], path: "Programme"),
