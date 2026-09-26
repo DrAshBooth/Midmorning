@@ -66,6 +66,13 @@ sheet needs no store, so it works even on the two screens that show before
 or without one. `onboarding-and-safeguarding` (1.4) supplies the real sheet
 without moving any of the four controls.
 
+26 September 2026 (mm-t41.22): the "waiting for protected data" screen is
+the cover, not a screen with Get support. It shows "Midmorning" only. The
+app-lock spec, "The cover", states that the cover does not show Get
+support. The safeguarding spec, "Get support on every screen", exempts the
+cover and shows Get support only after authentication. The other three
+screens keep their "Get support" control.
+
 ## The rules checklist
 
 Every item below is a dated yes for 26 September 2026, written by the agent
