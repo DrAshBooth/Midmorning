@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The programme's seven stages, in the fixed order the app MUST hold them
 /// (programme spec, "The seven stages and their tools"). Each stage adds
@@ -21,15 +22,18 @@ public enum Stage: Int, Sendable, CaseIterable, Comparable {
     /// In stage order, as "Order on the Programme screen" lists them.
     public static let orderedByStage: [Stage] = [.gettingStarted, .regularEating, .alternatives, .problemSolving, .takingStock, .modules, .stayingOnTrack]
 
-    public var title: String {
+    /// The stage's name, a key in the app's string catalogue (content spec,
+    /// "Strings live in catalogues"). The Programme screen, the stage screen
+    /// and the opening card show it.
+    public var title: CatalogueText {
         switch self {
-        case .gettingStarted: return "Getting started"
-        case .regularEating: return "Regular eating"
-        case .alternatives: return "Alternatives"
-        case .problemSolving: return "Problem solving"
-        case .takingStock: return "Taking stock"
-        case .modules: return "Modules"
-        case .stayingOnTrack: return "Staying on track"
+        case .gettingStarted: return .key("programme.stage.gettingStarted")
+        case .regularEating: return .key("programme.stage.regularEating")
+        case .alternatives: return .key("programme.stage.alternatives")
+        case .problemSolving: return .key("programme.stage.problemSolving")
+        case .takingStock: return .key("programme.stage.takingStock")
+        case .modules: return .key("programme.stage.modules")
+        case .stayingOnTrack: return .key("programme.stage.stayingOnTrack")
         }
     }
 

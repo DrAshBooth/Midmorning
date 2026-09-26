@@ -60,6 +60,7 @@ public enum StageRuleText {
 
     /// The row text for a build that lacks `stage`'s own tool (decision
     /// 102, programme spec, "The Programme screen shows where the person
-    /// is"): replaces the rule string and the "Now" marker alike.
-    public static let comesInALaterVersion = "Comes in a later version"
+    /// is"): replaces the rule string and the "Now" marker alike. A key in
+    /// the app's string catalogue.
+    public static let comesInALaterVersion: CatalogueText = .key("programme.comesInALaterVersion")
 }

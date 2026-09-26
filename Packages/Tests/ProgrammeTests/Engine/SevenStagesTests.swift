@@ -8,7 +8,7 @@ import Constants
 final class SevenStagesTests: XCTestCase {
     /// Scenario: Order on the Programme screen.
     func testOrderOnPagesTheProgrammeScreen() {
-        XCTAssertEqual(Stage.orderedByStage.map(\.title), [
+        XCTAssertEqual(Stage.orderedByStage.map(\.title.english), [
             "Getting started", "Regular eating", "Alternatives", "Problem solving",
             "Taking stock", "Modules", "Staying on track",
         ])

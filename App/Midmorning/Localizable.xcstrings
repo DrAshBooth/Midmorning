@@ -986,6 +986,163 @@
         }
       }
     },
+    "programme.stage.gettingStarted": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getting started"
+          }
+        }
+      }
+    },
+    "programme.stage.regularEating": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regular eating"
+          }
+        }
+      }
+    },
+    "programme.stage.alternatives": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternatives"
+          }
+        }
+      }
+    },
+    "programme.stage.problemSolving": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problem solving"
+          }
+        }
+      }
+    },
+    "programme.stage.takingStock": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taking stock"
+          }
+        }
+      }
+    },
+    "programme.stage.modules": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modules"
+          }
+        }
+      }
+    },
+    "programme.stage.stayingOnTrack": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staying on track"
+          }
+        }
+      }
+    },
+    "programme.week %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Week %lld"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Week %lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Week %lld"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "programme.startsTomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts tomorrow"
+          }
+        }
+      }
+    },
+    "programme.openedInWeek %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Opened in week %lld"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Opened in week %lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Opened in week %lld"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "programme.comesInALaterVersion": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comes in a later version"
+          }
+        }
+      }
+    },
     "screening.height.centimetres": {
       "extractionState": "manual",
       "localizations": {

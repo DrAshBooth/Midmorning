@@ -17,25 +17,25 @@ final class AccessibilityOfTheProgrammeScreenTests: XCTestCase {
     /// Scenario: Label of the stage with the marker.
     func testLabelOfTheStageWithTheMarker() {
         let r = row(for: .regularEating, open: [.gettingStarted, .regularEating])
-        XCTAssertEqual(r.accessibilityLabel, "Regular eating, Now")
+        XCTAssertEqual(r.accessibilityLabel.english, "Regular eating, Now")
     }
 
     /// Scenario: Label of a closed stage.
     func testLabelOfAClosedStage() {
         let r = row(for: .alternatives, open: [.gettingStarted, .regularEating])
-        XCTAssertEqual(r.accessibilityLabel, "Alternatives, Opens after 7 days on your plan, or 2 weeks after your plan starts")
+        XCTAssertEqual(r.accessibilityLabel.english, "Alternatives, Opens after 7 days on your plan, or 2 weeks after your plan starts")
     }
 
     /// Scenario: Label of the stage 2 row with its count.
     func testLabelOfTheStage2RowWithItsCount() {
         let r = row(for: .regularEating, open: [.gettingStarted], recordedDaysCount: 2)
-        XCTAssertEqual(r.accessibilityLabel, "Regular eating, Opens after 5 recorded days. You have 2.")
+        XCTAssertEqual(r.accessibilityLabel.english, "Regular eating, Opens after 5 recorded days. You have 2.")
     }
 
     /// Scenario: Label of a row without its tool in the build.
     func testLabelOfARowWithoutItsToolInTheBuild() {
         let r = row(for: .problemSolving, open: [.gettingStarted, .regularEating, .alternatives, .problemSolving], stagesWithToolInBuild: [1, 2])
-        XCTAssertEqual(r.accessibilityLabel, "Problem solving, Comes in a later version")
+        XCTAssertEqual(r.accessibilityLabel.english, "Problem solving, Comes in a later version")
     }
 
     /// Every control's label equals its visible text — asserted directly on

@@ -15,7 +15,7 @@ struct ProgrammeScreenView: View {
         List {
             if let screen {
                 Section {
-                    Text(screen.weekLine).font(.title2.bold())
+                    Text(screen.weekLine.string).font(.title2.bold())
                 }
                 Section {
                     ForEach(screen.rows, id: \.stage) { row in
@@ -63,13 +63,13 @@ private struct StageRowContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Text(row.title).font(.body)
+                Text(row.title.string).font(.body)
                 if row.isNow {
                     Text("programme.now").font(.body.bold())
                 }
             }
             if row.comesInALaterVersion {
-                Text(StageRuleText.comesInALaterVersion).font(.footnote).foregroundStyle(.secondary)
+                Text(StageRuleText.comesInALaterVersion.string).font(.footnote).foregroundStyle(.secondary)
             } else if let ruleString = row.ruleString {
                 Text(ruleString).font(.footnote).foregroundStyle(.secondary)
             } else {
@@ -79,6 +79,6 @@ private struct StageRowContent: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(row.accessibilityLabel)
+        .accessibilityLabel(row.accessibilityLabel.string)
     }
 }

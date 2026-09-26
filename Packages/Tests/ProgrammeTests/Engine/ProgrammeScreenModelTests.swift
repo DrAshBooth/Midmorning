@@ -36,7 +36,7 @@ final class ProgrammeScreenModelTests: XCTestCase {
     func testDay1() {
         let s = state(openStages: [1], now: moment(2026, 9, 28), currentRecordDay: dayKey(2026, 9, 28))
         let screen = ProgrammeScreenBuilder.build(state: s, constants: .default, restartAt: nil, stagesWithToolInBuild: fullBuild)
-        XCTAssertEqual(screen.weekLine, "Week 1")
+        XCTAssertEqual(screen.weekLine.english, "Week 1")
         XCTAssertTrue(screen.rows.first { $0.stage == .gettingStarted }!.isNow)
         for row in screen.rows.dropFirst() {
             XCTAssertNotNil(row.ruleString, "\(row.stage) shows its rule string")
@@ -50,7 +50,7 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let s = StageEngine.state(facts: facts, openings: [], settings: defaultSettings, constants: .default, now: moment(2026, 10, 13), restartAt: nil, currentRecordDay: dayKey(2026, 10, 13), calendar: engineTestCalendar)
         XCTAssertEqual(s.week, 3)
         let screen = ProgrammeScreenBuilder.build(state: s, constants: .default, restartAt: nil, stagesWithToolInBuild: fullBuild)
-        XCTAssertEqual(screen.weekLine, "Week 3")
+        XCTAssertEqual(screen.weekLine.english, "Week 3")
         XCTAssertTrue(screen.rows.first { $0.stage == .gettingStarted }!.isNow)
         XCTAssertEqual(screen.rows.first { $0.stage == .regularEating }!.ruleString, "Opens after 5 recorded days. You have 3.")
     }
@@ -63,7 +63,7 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let s = StageEngine.state(facts: facts, openings: [], settings: defaultSettings, constants: .default, now: moment(2026, 11, 16), restartAt: nil, currentRecordDay: dayKey(2026, 11, 16), calendar: engineTestCalendar)
         XCTAssertEqual(s.week, 8)
         let screen = ProgrammeScreenBuilder.build(state: s, constants: .default, restartAt: nil, stagesWithToolInBuild: fullBuild)
-        XCTAssertEqual(screen.weekLine, "Week 8")
+        XCTAssertEqual(screen.weekLine.english, "Week 8")
         XCTAssertEqual(screen.rows.first { $0.stage == .regularEating }!.ruleString, "Opens after 5 recorded days. You have 4.")
         XCTAssertEqual(screen.rows.first { $0.stage == .takingStock }!.ruleString, "Opens 6 weeks after your plan starts")
     }
@@ -119,8 +119,8 @@ final class ProgrammeScreenModelTests: XCTestCase {
     func testTheStage1Screen() {
         let s = state(openStages: [1], now: moment(2026, 9, 30), currentRecordDay: dayKey(2026, 9, 30))
         let screen = StageScreenBuilder.build(stage: .gettingStarted, state: s, constants: .default, settings: ProgrammeSettings(startDay: dayKey(2026, 9, 28), dayStart: 4), currentRecordDay: dayKey(2026, 9, 30), calendar: engineTestCalendar)
-        XCTAssertEqual(screen.title, "Getting started")
-        XCTAssertEqual(screen.line, "Opened in week 1")
+        XCTAssertEqual(screen.title.english, "Getting started")
+        XCTAssertEqual(screen.line?.english, "Opened in week 1")
         XCTAssertEqual(screen.tools.map(\.label.english), ["Weigh-in"])
     }
 
@@ -130,8 +130,8 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let facts = ProgrammeFacts(entries: entries.map { EntryFact(id: $0, dayKey: $0, starred: false, savedAt: moment(2026, 10, 1, 9)) })
         let s = StageEngine.state(facts: facts, openings: [], settings: defaultSettings, constants: .default, now: moment(2026, 10, 3), restartAt: nil, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar)
         let screen = StageScreenBuilder.build(stage: .regularEating, state: s, constants: .default, settings: defaultSettings, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar)
-        XCTAssertEqual(screen.title, "Regular eating")
-        XCTAssertEqual(screen.line, "Opens after 5 recorded days. You have 2.")
+        XCTAssertEqual(screen.title.english, "Regular eating")
+        XCTAssertEqual(screen.line?.english, "Opens after 5 recorded days. You have 2.")
         XCTAssertTrue(screen.tools.isEmpty)
     }
 
@@ -141,7 +141,7 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let openings = [StageOpenedRecord(stage: 1, moment: moment(2026, 9, 28)), StageOpenedRecord(stage: 2, moment: moment(2026, 10, 5, 9))]
         let s = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: settings, constants: .default, now: moment(2026, 10, 20), restartAt: nil, currentRecordDay: dayKey(2026, 10, 20), calendar: engineTestCalendar)
         let screen = StageScreenBuilder.build(stage: .regularEating, state: s, constants: .default, settings: settings, currentRecordDay: dayKey(2026, 10, 20), calendar: engineTestCalendar)
-        XCTAssertEqual(screen.line, "Opened in week 2")
+        XCTAssertEqual(screen.line?.english, "Opened in week 2")
         XCTAssertEqual(screen.tools.map(\.label.english), ["Plan"])
     }
 
@@ -179,5 +179,22 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let screen = StageScreenBuilder.build(stage: .regularEating, state: s, constants: .default, settings: settings, currentRecordDay: dayKey(2027, 1, 6), calendar: engineTestCalendar)
         XCTAssertNil(screen.line)
         XCTAssertEqual(screen.tools.map(\.label.english), ["Plan"])
+    }
+
+    /// Before week 1 the week line reads "Starts tomorrow". The week line,
+    /// the row titles and the "Now" marker are catalogue keys (mm-t11.46),
+    /// and each count has its plural forms.
+    func testTheWeekLineBeforeWeek1AndTheRowWords() {
+        let screen = ProgrammeScreenBuilder.build(state: directState(open: [.gettingStarted], week: nil), constants: .default, restartAt: nil, stagesWithToolInBuild: firstCutBuild)
+        XCTAssertEqual(screen.weekLine.english, "Starts tomorrow")
+        XCTAssertEqual(screen.rows.map(\.title.english), [
+            "Getting started", "Regular eating", "Alternatives", "Problem solving",
+            "Taking stock", "Modules", "Staying on track",
+        ])
+        XCTAssertEqual(screen.rows[0].accessibilityLabel.english, "Getting started, Now")
+        XCTAssertEqual(screen.rows[2].accessibilityLabel.english, "Alternatives, Comes in a later version")
+        XCTAssertEqual(StageRuleText.comesInALaterVersion.english, "Comes in a later version")
+        let week12 = ProgrammeScreenBuilder.build(state: directState(open: [.gettingStarted], week: 12), constants: .default, restartAt: nil, stagesWithToolInBuild: firstCutBuild)
+        XCTAssertEqual(week12.weekLine.english, "Week 12")
     }
 }
