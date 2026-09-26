@@ -28,7 +28,7 @@ final class Stage3OpensTests: XCTestCase {
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 5, 9))]
         let s = StageEngine.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 19, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 19), calendar: engineTestCalendar)
         XCTAssertEqual(s.stageOpenedMoment[.alternatives], moment(2026, 10, 19, 4))
-        XCTAssertTrue(s.computedOpenings.contains(StageOpenedRecord(stage: 3, moment: moment(2026, 10, 19, 4))))
+        XCTAssertTrue(s.computedOpenings.contains(StageOpenedRecord(stage: 3, moment: moment(2026, 10, 19, 4), dayKey: dayKey(2026, 10, 19))))
     }
 
     /// Scenario: Seven planned days before the two weeks.

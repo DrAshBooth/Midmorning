@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import SwiftData
 @testable import Record
 import RecordTestSupport
 
@@ -12,13 +13,15 @@ import RecordTestSupport
 final class ProgrammeStoreTests: XCTestCase {
     // MARK: mm-t21.20, "The app keeps the stage state"
 
-    /// Scenario: The opening stays in the store.
+    /// Scenario: The opening stays in the store. The row also keeps the
+    /// record-day key of the day on which the stage opened (r14-03,
+    /// mm-t21.37).
     func testTheOpeningStaysInTheStore() throws {
         let store = try makeTemporaryStore()
         let opened = Date(timeIntervalSince1970: 1_760_000_000)
-        try store.recordStageOpened(3, at: opened)
+        try store.recordStageOpened(3, at: opened, dayKey: "2025-10-09")
         let rows = try store.stageOpenedRows()
-        XCTAssertEqual(rows, [RecordStore.StageOpenedRow(stage: 3, moment: opened)])
+        XCTAssertEqual(rows, [RecordStore.StageOpenedRow(stage: 3, moment: opened, dayKey: "2025-10-09")])
     }
 
     /// Scenario: Restart of the app. A second `RecordStore` over the same
@@ -27,9 +30,21 @@ final class ProgrammeStoreTests: XCTestCase {
     func testRestartOfTheAppKeepsTheStageOpenedRow() throws {
         let directory = try makeTemporaryDirectory()
         let opened = Date(timeIntervalSince1970: 1_760_000_000)
-        try RecordStore(directory: directory).recordStageOpened(3, at: opened)
+        try RecordStore(directory: directory).recordStageOpened(3, at: opened, dayKey: "2025-10-09")
         let reopened = try RecordStore(directory: directory)
-        XCTAssertEqual(try reopened.stageOpenedRows(), [RecordStore.StageOpenedRow(stage: 3, moment: opened)])
+        XCTAssertEqual(try reopened.stageOpenedRows(), [RecordStore.StageOpenedRow(stage: 3, moment: opened, dayKey: "2025-10-09")])
+    }
+
+    /// r14-03 (mm-t21.37): a `StageOpened` row that the app wrote before
+    /// the key existed has an empty `dateKey`. The store reads it with no
+    /// key, so the engine finds the day from the moment.
+    func testAnOldStageOpenedRowHasNoDayKey() throws {
+        let store = try makeTemporaryStore()
+        let opened = Date(timeIntervalSince1970: 1_760_000_000)
+        let received = ModelContext(store.container)
+        received.insert(Answer(kind: StageOpenedReconciler.kind, cardId: "2", value: "", changedAt: opened))
+        try received.save()
+        XCTAssertEqual(try store.stageOpenedRows(), [RecordStore.StageOpenedRow(stage: 2, moment: opened, dayKey: nil)])
     }
 
     /// Scenario: Delete-all. A fresh store — the same directory a real

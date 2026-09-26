@@ -64,17 +64,70 @@ final class WeekOpeningsTests: XCTestCase {
         XCTAssertNil(s.weekOfRegularEating)
     }
 
-    /// After that restart, stage 2 opens; the weeks of regular eating then
-    /// count from the new start day (spec: "After a restart, the app MUST
-    /// count weeks of regular eating from the new start day").
-    func testAfterARestartTheWeekOfRegularEatingCountsFromTheNewStartDay() {
+    /// After that restart, stage 2 opens later. The weeks of regular eating
+    /// then count from the later of the new start day and stage 2's day,
+    /// here stage 2's day, so taking stock comes after five full weeks of
+    /// regular eating (r14-02, mm-t21.36). Before r14-02 the engine counted
+    /// from the new start day and opened stage 5 on 5 November, after four
+    /// weeks of regular eating.
+    func testAfterARestartBeforeStage2TheWeekOfRegularEatingCountsFromStage2sDay() {
         let restartAt = moment(2026, 10, 1, 9)
         let settings = ProgrammeSettings(startDay: dayKey(2026, 10, 1), dayStart: 4)
         let stage2 = StageOpenedRecord(stage: 2, moment: moment(2026, 10, 8, 9))
-        let s = StageEngine.state(facts: ProgrammeFacts(), openings: [stage2], settings: settings, constants: .default, now: moment(2026, 11, 5, 9), restartAt: restartAt, currentRecordDay: dayKey(2026, 11, 5), calendar: engineTestCalendar)
-        XCTAssertEqual(s.weekOfRegularEating, 6, "5 November is in week 6 from 1 October")
-        XCTAssertTrue(s.isOpen(.takingStock))
-        XCTAssertEqual(s.stageOpenedMoment[.takingStock], moment(2026, 11, 5, 4))
+
+        let on5November = StageEngine.state(facts: ProgrammeFacts(), openings: [stage2], settings: settings, constants: .default, now: moment(2026, 11, 5, 9), restartAt: restartAt, currentRecordDay: dayKey(2026, 11, 5), calendar: engineTestCalendar)
+        XCTAssertEqual(on5November.weekOfRegularEating, 5, "5 November is in week 5 from 8 October")
+        XCTAssertFalse(on5November.isOpen(.takingStock))
+        XCTAssertTrue(on5November.computedOpenings.allSatisfy { $0.stage != Stage.takingStock.rawValue })
+
+        let on12November = StageEngine.state(facts: ProgrammeFacts(), openings: [stage2], settings: settings, constants: .default, now: moment(2026, 11, 12, 5), restartAt: restartAt, currentRecordDay: dayKey(2026, 11, 12), calendar: engineTestCalendar)
+        XCTAssertEqual(on12November.weekOfRegularEating, 6, "12 November is in week 6 from 8 October")
+        XCTAssertTrue(on12November.isOpen(.takingStock))
+        XCTAssertEqual(on12November.stageOpenedMoment[.takingStock], moment(2026, 11, 12, 4))
+    }
+
+    /// r14-02 (mm-t21.36): when stage 2 opens more than five weeks after
+    /// the new start day, stage 5 does not open at the same moment as
+    /// stage 2. It opens five full weeks after stage 2's day.
+    func testAfterARestartALateStage2DoesNotOpenStage5AtTheSameMoment() {
+        let restartAt = moment(2026, 10, 1, 9)
+        let settings = ProgrammeSettings(startDay: dayKey(2026, 10, 1), dayStart: 4)
+        let stage2 = StageOpenedRecord(stage: 2, moment: moment(2026, 11, 20, 9))
+
+        let atStage2 = StageEngine.state(facts: ProgrammeFacts(), openings: [stage2], settings: settings, constants: .default, now: moment(2026, 11, 20, 10), restartAt: restartAt, currentRecordDay: dayKey(2026, 11, 20), calendar: engineTestCalendar)
+        XCTAssertTrue(atStage2.isOpen(.regularEating))
+        XCTAssertFalse(atStage2.isOpen(.takingStock), "stage 5 waits for five full weeks of regular eating")
+        XCTAssertEqual(atStage2.weekOfRegularEating, 1)
+
+        let fiveWeeksLater = StageEngine.state(facts: ProgrammeFacts(), openings: [stage2], settings: settings, constants: .default, now: moment(2026, 12, 25, 5), restartAt: restartAt, currentRecordDay: dayKey(2026, 12, 25), calendar: engineTestCalendar)
+        XCTAssertEqual(fiveWeeksLater.stageOpenedMoment[.takingStock], moment(2026, 12, 25, 4))
+    }
+
+    /// r14-02 (mm-t21.36): the basis is the later of the two days. Stage 2
+    /// opened before the restart, so the new start day is the later day.
+    func testTheBasisIsTheLaterOfTheNewStartDayAndStage2sDay() {
+        XCTAssertEqual(StageEngine.regularEatingBasis(stage2Day: dayKey(2026, 10, 5), restartAt: nil, startDay: dayKey(2027, 1, 4)), dayKey(2026, 10, 5), "no restart: stage 2's day")
+        XCTAssertEqual(StageEngine.regularEatingBasis(stage2Day: dayKey(2026, 10, 5), restartAt: moment(2027, 1, 4, 9), startDay: dayKey(2027, 1, 4)), dayKey(2027, 1, 4), "stage 2 before the restart: the new start day")
+        XCTAssertEqual(StageEngine.regularEatingBasis(stage2Day: dayKey(2026, 10, 8), restartAt: moment(2026, 10, 1, 9), startDay: dayKey(2026, 10, 1)), dayKey(2026, 10, 8), "stage 2 after the restart: stage 2's day")
+        XCTAssertNil(StageEngine.regularEatingBasis(stage2Day: nil, restartAt: moment(2026, 10, 1, 9), startDay: dayKey(2026, 10, 1)), "stage 2 closed: no basis")
+    }
+
+    /// r14-02 (mm-t21.36): stage 7 is also a week-based stage. After a
+    /// restart before stage 7 opens, stage 7 counts its weeks of regular
+    /// eating from the same basis as stage 5.
+    func testAfterARestartStage7CountsFromTheSameBasis() {
+        let openings = [
+            StageOpenedRecord(stage: 2, moment: moment(2026, 10, 5, 9)),
+            StageOpenedRecord(stage: 5, moment: moment(2026, 11, 9, 4)),
+        ]
+        let restartAt = moment(2026, 11, 23, 9)
+        let settings = ProgrammeSettings(startDay: dayKey(2026, 11, 23), dayStart: 4)
+
+        let on7December = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: settings, constants: .default, now: moment(2026, 12, 7, 5), restartAt: restartAt, currentRecordDay: dayKey(2026, 12, 7), calendar: engineTestCalendar)
+        XCTAssertFalse(on7December.isOpen(.stayingOnTrack), "week 10 from stage 2's day is not week 10 from the new start day")
+
+        let week10FromTheNewStartDay = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: settings, constants: .default, now: moment(2027, 1, 25, 5), restartAt: restartAt, currentRecordDay: dayKey(2027, 1, 25), calendar: engineTestCalendar)
+        XCTAssertEqual(week10FromTheNewStartDay.stageOpenedMoment[.stayingOnTrack], moment(2027, 1, 25, 4))
     }
 
     /// Scenario: Taking stock after a restart.

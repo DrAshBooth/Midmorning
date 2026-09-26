@@ -11,17 +11,20 @@ public struct ProgrammeState: Sendable, Equatable {
     /// when one survives the ignore rules, otherwise the moment the engine
     /// computed.
     public var stageOpenedMoment: [Stage: Date]
-    /// The record-day key that contains each open stage's moment, in the
-    /// engine's own `calendar` and the settings' `dayStart`.
+    /// The record day on which each open stage opened: the key the stored
+    /// row holds, or, for a row with no key and for a computed opening, the
+    /// record-day key that contains the stage's moment, in the engine's own
+    /// `calendar` and the settings' `dayStart` (r14-03, mm-t21.37).
     public var stageOpenedDayKey: [Stage: String]
     /// Every opening the engine computed because no valid stored row
-    /// covered it. The app MUST write each one to the store.
+    /// covered it, each with its record-day key. The app MUST write each
+    /// one to the store, with its key.
     public var computedOpenings: [StageOpenedRecord]
     /// The programme week from the start day, or `nil` before week 1.
     public var week: Int?
     /// The week of regular eating from the record day stage 2 opened (or,
-    /// after a restart, from the new start day), or `nil` while stage 2 is
-    /// closed.
+    /// after a restart, from the later of the new start day and that day),
+    /// or `nil` while stage 2 is closed.
     public var weekOfRegularEating: Int?
     /// The total distinct recorded days so far, for the stage 2 rule
     /// string's "You have %2$lld" (programme spec, "Reading ahead is never
@@ -76,35 +79,50 @@ public enum StageEngine {
         calendar: Calendar
     ) -> ProgrammeState {
         var moment: [Stage: Date] = [:]
+        // The record day of each opening whose key the engine knows: the
+        // key a stored row holds, or the key the engine gives a computed
+        // opening. A stage that is not here uses the conversion in
+        // `dayKey(of:)` (r14-03, mm-t21.37).
+        var knownDayKey: [Stage: String] = [:]
         var computed: [StageOpenedRecord] = []
 
         func ignoreRestart(_ stage: Stage) -> Bool { stage == .takingStock }
 
-        func storedMoment(_ stage: Stage) -> Date? {
+        func storedOpening(_ stage: Stage) -> StageOpenedRecord? {
             openings
                 .filter { $0.stage == stage.rawValue }
                 .filter { $0.moment <= now }
                 .filter { !ignoreRestart(stage) || restartAt == nil || $0.moment >= restartAt! }
-                .min { $0.moment < $1.moment }?
-                .moment
+                .min { $0.moment < $1.moment }
+        }
+
+        func recordDayKey(containing date: Date) -> String {
+            DayKeyMath.recordDayKey(containing: date, dayStart: settings.dayStart, calendar: calendar)
         }
 
         func resolve(_ stage: Stage, computedMoment: Date?) {
-            if let stored = storedMoment(stage) {
-                moment[stage] = stored
+            if let stored = storedOpening(stage) {
+                moment[stage] = stored.moment
+                if let key = stored.dayKey, DayKeyMath.parts(key) != nil { knownDayKey[stage] = key }
             } else if let computedMoment, computedMoment <= now {
+                let key = recordDayKey(containing: computedMoment)
                 moment[stage] = computedMoment
-                computed.append(StageOpenedRecord(stage: stage.rawValue, moment: computedMoment))
+                knownDayKey[stage] = key
+                computed.append(StageOpenedRecord(stage: stage.rawValue, moment: computedMoment, dayKey: key))
             }
         }
 
+        /// The key the row holds, or, for an old row with no key, the
+        /// record day that contains the stored moment with the day start in
+        /// force now.
         func dayKey(of stage: Stage) -> String? {
-            moment[stage].map { DayKeyMath.recordDayKey(containing: $0, dayStart: settings.dayStart, calendar: calendar) }
+            knownDayKey[stage] ?? moment[stage].map(recordDayKey(containing:))
         }
 
         // Stage 1: always open, from the start day (programme spec, "The
         // stage screen": "For stage 1, that record day is the start day.").
         moment[.gettingStarted] = DayKeyMath.dayStartMoment(for: settings.startDay, dayStart: settings.dayStart, calendar: calendar)
+        knownDayKey[.gettingStarted] = settings.startDay
 
         // Stage 2: the moment the Nth distinct recorded day got its first
         // entry (programme spec, "Stage 2 opens after five recorded days").
@@ -147,17 +165,18 @@ public enum StageEngine {
         }
         resolve(.problemSolving, computedMoment: stage4Computed)
 
-        // Stages 5 and 7: by week of regular eating from stage 2's day,
-        // except that after a restart stage 5 counts from the NEW start day
-        // (programme spec, "Taking stock, the modules and staying on track
-        // open by week of regular eating": "After a restart, the app MUST
-        // count weeks of regular eating from the new start day"). "While
+        // Stages 5 and 7: by week of regular eating from stage 2's day.
+        // After a restart, both count from the later of the new start day
+        // and stage 2's day, so taking stock always comes after five full
+        // weeks of regular eating (programme spec, "Taking stock, the
+        // modules and staying on track open by week of regular eating";
+        // r14-02, mm-t21.36). A stored stage 7 row stays open across a
+        // restart; only a stage 5 row before the restart is ignored. "While
         // stage 2 is closed, stages 5 and 7 MUST stay closed", also after a
-        // restart in week 1, so neither basis exists while stage 2 is
-        // closed.
-        let stage5Basis = regularEatingBasis(stage2Day: stage2Day, restartAt: restartAt, startDay: settings.startDay)
-        resolve(.takingStock, computedMoment: stage5Basis.map { weekGateMoment(basis: $0, week: constants.weekOfTakingStock, dayStart: settings.dayStart, calendar: calendar) })
-        resolve(.stayingOnTrack, computedMoment: stage2Day.map { weekGateMoment(basis: $0, week: constants.weekOfStayingOnTrack, dayStart: settings.dayStart, calendar: calendar) })
+        // restart in week 1, so no basis exists while stage 2 is closed.
+        let basis = regularEatingBasis(stage2Day: stage2Day, restartAt: restartAt, startDay: settings.startDay)
+        resolve(.takingStock, computedMoment: basis.map { weekGateMoment(basis: $0, week: constants.weekOfTakingStock, dayStart: settings.dayStart, calendar: calendar) })
+        resolve(.stayingOnTrack, computedMoment: basis.map { weekGateMoment(basis: $0, week: constants.weekOfStayingOnTrack, dayStart: settings.dayStart, calendar: calendar) })
 
         // Stage 6: when the person completes taking stock (programme spec,
         // "Taking stock, the modules and staying on track open by week of
@@ -173,18 +192,19 @@ public enum StageEngine {
             stageOpenedDayKey: dayKeys,
             computedOpenings: computed,
             week: week(startDay: settings.startDay, currentRecordDay: currentRecordDay, calendar: calendar),
-            weekOfRegularEating: stage5Basis.map { week(startDay: $0, currentRecordDay: currentRecordDay, calendar: calendar) ?? 0 },
+            weekOfRegularEating: basis.map { week(startDay: $0, currentRecordDay: currentRecordDay, calendar: calendar) ?? 0 },
             recordedDaysCount: recordedDaysCount
         )
     }
 
     /// The record day that week 1 of regular eating starts on: stage 2's
-    /// day, or the new start day after a restart. `nil` while stage 2 is
-    /// closed (programme spec, "Taking stock, the modules and staying on
-    /// track open by week of regular eating").
+    /// day, or, after a restart, the later of the new start day and stage
+    /// 2's day (r14-02, mm-t21.36). `nil` while stage 2 is closed (programme
+    /// spec, "Taking stock, the modules and staying on track open by week
+    /// of regular eating"). Day keys sort as plain strings (`DayKeyMath`).
     static func regularEatingBasis(stage2Day: String?, restartAt: Date?, startDay: String) -> String? {
         guard let stage2Day else { return nil }
-        return restartAt != nil ? startDay : stage2Day
+        return restartAt != nil ? max(startDay, stage2Day) : stage2Day
     }
 
     /// The programme week of `currentRecordDay` counted from `startDay`, or

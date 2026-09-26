@@ -30,7 +30,7 @@ final class PureStageEngineTests: XCTestCase {
             now: moment(2026, 10, 3, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar
         )
         XCTAssertTrue(state.isOpen(.regularEating))
-        XCTAssertEqual(state.computedOpenings, [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 3, 9))])
+        XCTAssertEqual(state.computedOpenings, [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 3, 9), dayKey: dayKey(2026, 10, 3))])
     }
 
     /// Scenario: The scan is bounded.
