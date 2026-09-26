@@ -1,12 +1,9 @@
-# regular-eating-plan
+# regular-eating-plan Specification
 
 ## Purpose
-
 The plan is the person's regular eating pattern: which slots happen on a day, and at what time. The app helps the person decide when to eat, never what. Today shows the plan beside the record, so the person sees each planned meal, the entry beside it, or a gap.
 
-## ADDED Requirements
-
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: The plan builder opens at stage 2
 
@@ -216,10 +213,6 @@ A change to a template MUST apply to record days that start after the change. A 
 - **WHEN** the person last opened the app at 20:00 on Monday and opens it at 09:00 on Thursday
 - **THEN** the app copies the templates onto Tuesday, Wednesday and Thursday, and Tuesday and Wednesday are not planned days
 
-#### Scenario: A Day row arrives by import
-- **WHEN** the first import brings a Day row for Tuesday from another device, and the app then materialises Tuesday
-- **THEN** the app keeps the imported Day row, creates no second row for Tuesday and writes no `changedAt`
-
 ### Requirement: Edit tonight for tomorrow, or this morning for today
 
 The builder MUST let the person edit the current record day's plan under "Today's plan". The builder MUST let the person edit the next record day's plan under "Tomorrow's plan". An edit to a day MUST change that day only. An edit to a day MUST NOT change its template. "Save" on an edit sets that day's plan, as the planned day requirement states.
@@ -401,14 +394,6 @@ When the record day ends with the prompt unanswered, the app MUST hide the promp
 #### Scenario: An unmatched entry after the window
 - **WHEN** the current time is 15:00, Lunch at 13:00 is missed, Mid-afternoon is at 16:00, and an entry at 14:45 matches nothing
 - **THEN** Today shows "Skipped, or was that 14:45?" on the Lunch row with "Skipped" and "That was it"
-
-#### Scenario: That was it
-- **WHEN** the person taps "That was it" on the Lunch prompt that names 14:45
-- **THEN** the 14:45 entry matches Lunch, the Lunch row shows "13:00", "14:45" and the entry's What, and Today hides the prompt
-
-#### Scenario: That was it, then a later window moves over the entry
-- **WHEN** "That was it" matched the 14:45 entry to Lunch at 13:00, and the person moves Mid-afternoon from 16:00 to 15:30 at 15:20
-- **THEN** the 14:45 entry stays matched to Lunch, and Mid-afternoon has no matched entry
 
 #### Scenario: Two missed planned meals
 - **WHEN** the current time is 18:00, Lunch at 13:00 and Mid-afternoon at 16:00 are both missed, and the day has no other entry

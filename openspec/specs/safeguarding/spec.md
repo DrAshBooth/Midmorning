@@ -1,261 +1,9 @@
-# safeguarding
+# safeguarding Specification
 
 ## Purpose
-
 Safeguarding carries the duty of care that a guide would carry in a guided programme. It decides who the programme is not for, at onboarding and during the programme, and shows the pages that say so with warmth. It keeps a route to outside help on every screen after the person unlocks. It never diagnoses, never reads what the person writes, and never locks the person out of their record.
 
-## ADDED Requirements
-
-### Requirement: Re-screening at every weekly review and check-in
-
-Every weekly review and every check-in MUST ask the self-harm item with both steps. `weekly-review` and `staying-on-track` place the item. "Done" MUST be available with any answer, including no answer. When the person answers "Yes" and then "No", the app MUST show the support line under the item. Under the line the app MUST show the support sheet's items inline, with Samaritans first. The review MUST continue.
-
-When the person answers "Yes" and then "Yes", the app MUST show the not-right-now page at once. The page shows the self-harm reason.
-
-When the person answers "No" or "I'd rather not say", the review MUST continue with no other response. "Done" MUST close the review or the check-in with the item answered or not. The app MUST NOT move focus to the item. The app MUST NOT show a count of questions left. When the person taps "Done" or leaves without an answer, the store MUST keep `selfHarmAnswered: false` for that review. The next review MUST ask again.
-
-With any answer the store MUST keep `selfHarmAnswered: true` for that review. The store MUST NOT keep the answer. The app MUST NOT show a count of answers or a history of them. The app MUST NOT cancel or pause a reminder because of any answer.
-
-#### Scenario: Thoughts with a method at review
-- **WHEN** the person answers "Yes" and then "Yes" at the week 3 review
-- **THEN** the app shows the not-right-now page with the self-harm reason and the scheduler keeps every reminder
-
-#### Scenario: Thoughts without a method at review
-- **WHEN** the person answers "Yes" and then "No" at the week 3 review
-- **THEN** the review shows "That deserves a person. Samaritans are there any time, on 116 123." with Samaritans first, and continues
-
-#### Scenario: No at review
-- **WHEN** the person answers "No" at the week 3 review
-- **THEN** the review continues with no message
-
-#### Scenario: Review left open
-- **WHEN** the person closes the week 3 review before the item and opens the week 4 review
-- **THEN** the week 4 review asks the item
-
-#### Scenario: Done without an answer
-- **WHEN** the person taps "Done" at the week 3 review with the self-harm item unanswered
-- **THEN** the review closes, the row holds `selfHarmAnswered: false`, and the week 4 review asks the item
-
-#### Scenario: The store after a review
-- **WHEN** a reviewer inspects the week 3 review row after any answer
-- **THEN** the row holds `selfHarmAnswered: true` and no answer
-
-### Requirement: Re-screening at a restart
-
-`programme` owns the restart control, "Start week 1 again", and the start-day choice it opens. A check-in's "Restart the programme?" is a shortcut to the same control. `staying-on-track` places it.
-
-The app MUST count record days from the record day of the last screening. The last screening is onboarding or the latest re-screen with no exclusion, whichever is later. A re-screen is the last screening whether or not the person then restarts. The app MUST NOT count from the start day or the restart moment.
-
-The app MUST keep the moment of the last screening in the Profile field `askedAt`, with its own `changedAt`. The field name MUST NOT contain a word about screening, as `data-and-privacy` requires. The app MUST write `askedAt` at onboarding and at each re-screen with no exclusion. The app MUST NOT write `askedAt` at a weekly review or a check-in. When `askedAt` is later than the device clock, the app MUST re-screen at the next restart, as for more than 84 record days.
-
-Within 84 record days of the last screening, the app MUST NOT ask a screening question at a restart. The app MUST show the start-day choice at once.
-
-More than 84 record days after the last screening, the app MUST re-screen before the start-day choice. The re-screen MUST ask height and weight, with the wording `onboarding` defines. The re-screen MUST show the line that `onboarding` places above the height and weight fields. It MUST ask pregnancy, treatment and the self-harm item with both steps. The app MUST NOT ask the age again. The app MUST compute the BMI as `onboarding` defines. The app MUST apply every screening rule except the age rule to the answers.
-
-The BMI rules, with the caution sheet, apply to the new height and weight. At a re-screen, the app MUST exclude with the self-harm reason after "Yes" and then "Yes". After "Yes" and then "No", the app MUST show the support line as the self-harm item defines. The re-screen MUST then continue.
-
-When no rule excludes, the app MUST replace the height, the onboarding BMI, the caution flag and `askedAt`. Each is a Profile field with its own `changedAt`.
-
-Every device keeps the re-screen's later write. `data-and-privacy` defines that rule. The app MUST NOT compare creation moments. The app MUST then show the start-day choice.
-
-A re-screen with no exclusion becomes the last screening, also when the person then taps "Cancel" at the start-day choice. After "Cancel", the app MUST keep the new height, the new onboarding BMI, the new caution flag and the new `askedAt`. "Cancel" MUST keep the old start day. "Cancel" MUST NOT restart. Within 84 record days of that re-screen, the app MUST NOT ask a screening question when the person taps "Start week 1 again".
-
-When a rule excludes, the app MUST NOT restart. The app MUST open the not-right-now page with every reason that applies, not the exclusion page. With the weight reason, the app MUST set the synced `remindersPausedAt`, as for Rule A. The app MUST NOT replace the height, the onboarding BMI, the caution flag or `askedAt` when a rule excludes. "Done" on that page MUST return the app to the screen beneath. The record, the plan and every list MUST stay as they were.
-
-#### Scenario: Restart a year later
-- **WHEN** the last screening was at onboarding on Monday 5 January and the person taps "Start week 1 again" on 20 January the next year
-- **THEN** the app asks height, weight, pregnancy, treatment and the self-harm item, and not the age
-
-#### Scenario: Restart within 84 record days
-- **WHEN** the last screening was at onboarding on Monday 5 January and the person taps "Start week 1 again" on Monday 2 March, 56 record days later
-- **THEN** the app asks no question and shows the start-day choice at once
-
-#### Scenario: Restart on the 84th record day
-- **WHEN** the last screening was at onboarding on Monday 5 January and the person taps "Start week 1 again" on Monday 30 March, 84 record days later
-- **THEN** the app asks no question and shows the start-day choice at once
-
-#### Scenario: Restart from a check-in
-- **WHEN** the last screening was at onboarding on Monday 5 January, the person finished on Wednesday 25 March and taps "Restart" at the check-in on Wednesday 22 April, 107 record days after that screening
-- **THEN** the app re-screens before the start-day choice
-
-#### Scenario: New BMI
-- **WHEN** the person re-screens at 170 cm and 65 kg and no rule excludes
-- **THEN** the store holds 170 and 22.49 as the height and the onboarding BMI, and the start-day choice opens
-
-#### Scenario: The restart's height wins on another device
-- **WHEN** one device holds the height 170 from onboarding, the person re-screens at 172 cm on a second device, and they sync
-- **THEN** every device reads 172 as the height, because the re-screen's write has the later `changedAt`
-
-#### Scenario: Underweight at a re-screen
-- **WHEN** the person re-screens more than 84 record days after the last screening and enters 170 cm and 53 kg
-- **THEN** the app does not restart, opens the not-right-now page with the weight reason and sets `remindersPausedAt`, and the store keeps the earlier height, onboarding BMI and `askedAt`
-
-#### Scenario: Excluded at a restart
-- **WHEN** the person answers "Yes" to the pregnancy question at a re-screen
-- **THEN** the app opens the not-right-now page with the exclusion page's pregnancy paragraph, and after "Done" the record and the plan are as they were
-
-#### Scenario: Self-harm Yes then Yes at a restart
-- **WHEN** the person answers "Yes" and then "Yes" to the self-harm item at a re-screen
-- **THEN** the app opens the not-right-now page with the self-harm reason, does not restart, and the scheduler keeps every reminder
-
-#### Scenario: Self-harm Yes then No at a restart
-- **WHEN** the person answers "Yes" and then "No" to the self-harm item at a re-screen
-- **THEN** the re-screen shows "That deserves a person. Samaritans are there any time, on 116 123." with Samaritans first, and continues
-
-#### Scenario: Cancel after a re-screen
-- **WHEN** the height from onboarding is 170 cm, the person re-screens at 172 cm and 65 kg with no exclusion on Monday 5 January, taps "Cancel" at the start-day choice, and taps "Start week 1 again" on Monday 2 March, 56 record days later
-- **THEN** after "Cancel" the store holds 172 as the height, 21.97 as the onboarding BMI, the caution flag off and `askedAt` from 5 January, the start day is unchanged, and on 2 March the app asks no question and shows the start-day choice at once
-
-#### Scenario: askedAt in the future
-- **WHEN** a device clock ran a year ahead at the last re-screen, so `askedAt` is later than the corrected device clock, and the person taps "Start week 1 again"
-- **THEN** the app re-screens before the start-day choice
-
-#### Scenario: Restarts less than 84 record days apart
-- **WHEN** the person re-screens with no exclusion at a restart on Monday 5 January, restarts on Friday 6 March, 60 record days later, and restarts on Sunday 5 April, 90 record days after the re-screen
-- **THEN** the app asks no question on 6 March, and on 5 April, 30 record days after the last restart, it re-screens before the start-day choice
-
-### Requirement: The underweight check
-
-The app MUST run the underweight check each time the person saves a weigh-in. The app MUST NOT run the check when no weigh-in exists. With "I won't be weighing" chosen at onboarding, no weigh-in exists until the person picks a weigh-in day and saves one. `onboarding` and `weigh-in` define that choice.
-
-The check MUST use the rolling average that `weigh-in` computes, the height, the onboarding BMI and the caution flag. The app MUST compute the implied BMI as the rolling average in kilograms divided by the height in metres squared. Rule A applies when the implied BMI is below 18.5. When Rule A applies, the app MUST show the not-right-now page with the weight reason. Of Rules A to C, only Rule A shows the not-right-now page.
-
-Rule B applies when the implied BMI is below 19.5 and at least 1.0 below the onboarding BMI. When Rule B applies, the app MUST show the GP suggestion page with the falling weight reason. Rule C compares the rolling average with the rolling average at the latest weigh-in 28 or more days earlier. Rule C applies when the current value is 5% or more below that earlier value. With the caution flag set, Rule C MUST use 3% in place of 5%. When Rule C applies, the app MUST show the GP suggestion page with the quick change reason.
-
-When no weigh-in is 28 or more days old, the app MUST NOT apply Rule C. When Rule A applies with another rule, the app MUST show the not-right-now page only. When Rules B and C both apply, the page MUST show both reasons. The app MUST NOT show the implied BMI, the onboarding BMI or the height. The app MUST run the check at most once per saved weigh-in.
-
-#### Scenario: Rule A
-- **WHEN** the height is 170 cm and the rolling average is 53.0 kg, an implied BMI of 18.34
-- **THEN** the app shows the not-right-now page with the weight reason
-
-#### Scenario: Rule B
-- **WHEN** the onboarding BMI is 20.76, the height is 170 cm and the rolling average is 56.0 kg, an implied BMI of 19.38
-- **THEN** the app shows the GP suggestion page with "Your weight has come down since you started."
-
-#### Scenario: Rule C
-- **WHEN** the rolling average was 70.0 kg at the weigh-in 28 days earlier and is 66.0 kg now
-- **THEN** the app shows the GP suggestion page with "Your weight has changed quickly over the last four weeks."
-
-#### Scenario: Rule C with the caution flag
-- **WHEN** the caution flag is set, the onboarding BMI is 18.9, the height is 170 cm, the rolling average was 56.0 kg 28 days earlier and is 54.2 kg now
-- **THEN** the app shows the GP suggestion page with the quick change reason
-
-#### Scenario: No rule applies
-- **WHEN** the onboarding BMI is 24.2, the height is 170 cm, the rolling average was 70.0 kg 28 days earlier and is 68.5 kg now
-- **THEN** the app shows no page
-
-#### Scenario: No weigh-in
-- **WHEN** the person chose "I won't be weighing" and reaches the week 6 review with no weigh-in saved
-- **THEN** the app runs no underweight check and shows no page from it
-
-### Requirement: The deterioration rule
-
-`weekly-review` freezes each week's starred count into its Review row at review time. At each weekly review the app MUST read the frozen counts of the last four reviews, the current one last. The rule fires when three conditions hold:
-
-- each of the last three counts exceeds the count before it
-- the latest count is at least 4
-- the latest count is at least twice the first of the four
-
-DETERIORATION_WEEKS = 3 is a named constant in `ProgrammeConstants`.
-
-When the rule fires, the app MUST show the GP suggestion page with the reason "Your starred entries have gone up for %lld weeks in a row.", filled from DETERIORATION_WEEKS. It reads "Your starred entries have gone up for three weeks in a row." When fewer than four reviews exist, the app MUST NOT apply the rule. The app MUST show the page from the rule at most once per weekly review.
-
-Every weekly review MUST offer the button "I'm getting worse". When the person taps it, the app MUST show the GP suggestion page at once. The page shows the reason "You said things are getting worse." The app MUST show the page at each tap, also after the rule showed it in that review.
-
-#### Scenario: Three rising weeks
-- **WHEN** the frozen counts for weeks 2 to 5 are 3, 4, 5 and 6 and the week 5 review opens
-- **THEN** the app shows the GP suggestion page with "Your starred entries have gone up for three weeks in a row."
-
-#### Scenario: Two rising weeks
-- **WHEN** the frozen counts for weeks 2 to 5 are 4, 4, 5 and 6 and the week 5 review opens
-- **THEN** the app shows no GP suggestion page
-
-#### Scenario: Rising from a low count
-- **WHEN** the frozen counts for weeks 2 to 5 are 0, 1, 2 and 3 and the week 5 review opens
-- **THEN** the app shows no GP suggestion page, because the latest count is below 4
-
-#### Scenario: Rising but not doubled
-- **WHEN** the frozen counts for weeks 2 to 5 are 5, 6, 7 and 8 and the week 5 review opens
-- **THEN** the app shows no GP suggestion page, because 8 is less than twice 5
-
-#### Scenario: I'm getting worse
-- **WHEN** the person taps "I'm getting worse" at the week 3 review
-- **THEN** the app shows the GP suggestion page with "You said things are getting worse."
-
-#### Scenario: Getting worse after the rule fired
-- **WHEN** the deterioration rule showed the GP suggestion page at the week 5 review, the person tapped "Done", and the person then taps "I'm getting worse"
-- **THEN** the app shows the GP suggestion page again with "You said things are getting worse." as its one reason
-
-### Requirement: Regulatory release gates
-
-The team MUST hold a written MHRA classification opinion before it gives any build to a person outside the team. A TestFlight build counts as such a build. A regulatory reviewer MUST review every claim before launch. The reviewer MUST write a dated line in the change's README. The App Store subtitle MUST be "12-week binge eating programme". App Store Connect accepts at most 30 characters in a subtitle. The first line of the App Store description MUST be "A 12-week self-help programme for people who binge eat." Decision 98 sets both strings. Ash ruled it on 25 September 2026.
-
-The App Store category MUST be Lifestyle. The review notes MUST carry the justification for that category: "a structured self-help programme, not a tracker, and holds no HealthKit data". `data-and-privacy` owns the review notes and the demo video that walks every stage on a device.
-
-The App Store listing MUST be available on the United Kingdom storefront only. The organisation in App Store Connect and the copyright field MUST name one legal entity. The privacy notice's controller and the DPIA's controller MUST name the same entity. `data-and-privacy` owns the other release gates: the DPIA, the privacy notice and the age rating.
-
-The change's README MUST hold the clinical reviewer's dated sign-off of the screening thresholds. The team MUST NOT give a build to a person outside the team before that sign-off. The sign-off MUST name 18.5, 19.0, Rules A to C and the deterioration rule. The sign-off MUST cover the wording and the routing of both self-harm questions.
-
-The team MUST answer the age rating questionnaire truthfully. The team MUST raise the minimum age to 18+. The app MUST NOT request the Declared Age Range entitlement in V1. The typed age is the gate.
-
-The team MUST declare an accessibility label in App Store Connect only after a device check of that label. The check MUST have a dated screenshot in the README. The team MUST NOT declare a label from a simulator check alone.
-
-A cohort runs while any person outside the team has a TestFlight build. During a cohort the team MUST ship a new build at least every 45 days. The team MUST NOT let a tester's build reach 75 days. The change's README MUST hold a dated line per build with its expiry. A build MUST NOT raise the minimum iOS version during a running cohort. The tester invitation MUST state the expiry rule and the exit: export, then "Delete everything".
-
-The team MUST invite every tester by email. The team MUST NOT create a public TestFlight link. Test Information in App Store Connect MUST hold four items. They are the privacy notice URL, a contact email, the onboarding walk and the crash-log line that `data-and-privacy` defines.
-
-#### Scenario: No opinion yet
-- **WHEN** the team has no written MHRA classification opinion
-- **THEN** the team gives no TestFlight or App Store build to anyone outside the team
-
-#### Scenario: The subtitle
-- **WHEN** a reviewer reads the App Store listing
-- **THEN** the subtitle is "12-week binge eating programme", which has 30 characters, and the first line of the description is "A 12-week self-help programme for people who binge eat."
-
-#### Scenario: Storefront
-- **WHEN** a reviewer checks the App Store availability
-- **THEN** the app is available in the United Kingdom and in no other storefront
-
-#### Scenario: Category
-- **WHEN** a reviewer reads the App Store listing and the review notes
-- **THEN** the category is Lifestyle and the review notes carry "a structured self-help programme, not a tracker, and holds no HealthKit data"
-
-#### Scenario: Build cadence
-- **WHEN** a tester outside the team installed a TestFlight build 45 days ago and no newer build exists
-- **THEN** the team ships a new build that day, and the README gains a dated line with the new build's expiry
-
-#### Scenario: Minimum iOS version
-- **WHEN** a cohort is running and a build would raise the minimum iOS version
-- **THEN** the team does not ship that build until the cohort ends
-
-#### Scenario: The invitation
-- **WHEN** a reviewer reads the tester invitation
-- **THEN** it states that a build expires, the 45-day rule, and the exit: export, then "Delete everything"
-
-#### Scenario: One legal entity
-- **WHEN** a reviewer compares the organisation in App Store Connect, the copyright field, the privacy notice and the DPIA
-- **THEN** all four name the same legal entity
-
-#### Scenario: Thresholds signed off
-- **WHEN** the team prepares the first build for a person outside the team
-- **THEN** the README holds the clinical reviewer's dated sign-off naming 18.5, 19.0, Rules A to C, the deterioration rule and both self-harm questions
-
-#### Scenario: Age rating
-- **WHEN** a reviewer reads the age rating questionnaire and the entitlements
-- **THEN** the minimum age is 18+ and no Declared Age Range entitlement is present
-
-#### Scenario: Accessibility label without a screenshot
-- **WHEN** a device check of VoiceOver has no dated screenshot in the README
-- **THEN** the team does not declare the VoiceOver label in App Store Connect
-
-#### Scenario: Testers by email
-- **WHEN** the team invites a tester
-- **THEN** the team sends the invitation to the tester's email address and no public TestFlight link exists
-
-#### Scenario: Test Information
-- **WHEN** a reviewer reads Test Information in App Store Connect
-- **THEN** it holds the privacy notice URL, a contact email, the onboarding walk and the crash-log line
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: Screening rules for age, pregnancy and treatment
 
@@ -349,10 +97,6 @@ In place of a question, the app MUST tell the person in two places. Onboarding s
 - **WHEN** a reviewer lists every question at onboarding
 - **THEN** none names vomiting, laxatives or compensation
 
-#### Scenario: Weekly review
-- **WHEN** a reviewer lists every question at a weekly review
-- **THEN** none names vomiting, laxatives or compensation
-
 #### Scenario: The store
 - **WHEN** a reviewer lists every field in the store's model
 - **THEN** no field holds compensation
@@ -444,9 +188,9 @@ With the weight reason, the app MUST set the synced `remindersPausedAt` to the c
 
 After the page the app MUST NOT turn paused reminders on again without the person's tap. `reminders` owns the settings screen controls that turn them on again. "Done" MUST return the app to the screen beneath. After the page the record, every open tool and export MUST stay available. The app MUST NOT show the page again until a rule fires again.
 
-#### Scenario: Self-harm reason
-- **WHEN** the page opens from the self-harm item at a weekly review
-- **THEN** it shows the heading, the self-harm reason, the self-harm GP paragraph, the export control, the record line, "Your plan and its reminders stay on. You can turn them off in Settings.", Get support and "Done"
+#### Scenario: The record stays
+- **WHEN** the person taps "Done" and then taps the control that opens the new-entry screen
+- **THEN** the new-entry screen opens and the person can save an entry
 
 #### Scenario: Weight reason
 - **WHEN** the page opens from the underweight check
@@ -460,13 +204,13 @@ After the page the app MUST NOT turn paused reminders on again without the perso
 - **WHEN** the page opened from the self-harm item at a weekly review at 12:00 and a planned meal is at 13:00
 - **THEN** the scheduler delivers the planned meal reminder at 13:00
 
-#### Scenario: The record stays
-- **WHEN** the person taps "Done" and then taps the control that opens the new-entry screen
-- **THEN** the new-entry screen opens and the person can save an entry
-
 #### Scenario: Reminders back on
 - **WHEN** the person turns reminders on in the settings screen after the page
 - **THEN** the scheduler schedules the next planned meal reminder
+
+#### Scenario: Self-harm reason
+- **WHEN** the page opens from the self-harm item at a weekly review
+- **THEN** it shows the heading, the self-harm reason, the self-harm GP paragraph, the export control, the record line, "Your plan and its reminders stay on. You can turn them off in Settings.", Get support and "Done"
 
 #### Scenario: Two reasons at a re-screen
 - **WHEN** a re-screen gives the self-harm reason and the weight reason
@@ -509,10 +253,6 @@ The control MUST be present on every onboarding screen and the three safeguardin
 #### Scenario: Weekly review
 - **WHEN** the week 3 review is open as a sheet over Today
 - **THEN** the review shows "Get support" in its navigation bar, and one tap opens the support sheet
-
-#### Scenario: Check-in
-- **WHEN** a check-in is open at its self-harm item
-- **THEN** the check-in shows "Get support" in its navigation bar, and one tap opens the support sheet
 
 #### Scenario: Restart re-screen
 - **WHEN** the restart re-screen is open at its self-harm item
@@ -655,4 +395,3 @@ The app can make a negative statement: "It is not therapy." The app can describe
 #### Scenario: A forbidden form
 - **WHEN** a card draft reads "for bingers"
 - **THEN** the sentence fails and the card does not ship
-

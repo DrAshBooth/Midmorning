@@ -1,90 +1,9 @@
-# onboarding
+# onboarding Specification
 
 ## Purpose
+Onboarding is the four screens the person passes once, before the programme starts. It says what Midmorning is and is not, and collects the screening answers that safeguarding judges. It keeps the person's commitment, says where the record lives, and asks for permissions. In the first cut the record lives on this device only. The iCloud choice, and the offer to get a record back from iCloud, come with the later sync change that data-and-privacy names. It takes under three minutes and creates no account.
 
-Onboarding is the four screens the person passes once, before the programme starts. It says what Midmorning is and is not, and collects the screening answers that `safeguarding` judges. It keeps the person's commitment, says where the record lives, and asks for permissions. In the first cut the record lives on this device only. The iCloud choice, and the offer to get a record back from iCloud, come with the later sync change that `data-and-privacy` names. It takes under three minutes and creates no account.
-
-## ADDED Requirements
-
-### Requirement: Restore before onboarding
-
-The later sync change that `data-and-privacy` names builds this requirement. Until that change ships, the app MUST NOT read iCloud before onboarding. It MUST show "What this is and isn't" at once.
-
-From the sync change, when the device has an iCloud account, the app MUST read the private database before onboarding. It MUST look for a sync zone and the Erasure zone. `data-and-privacy` defines both zones and what an Erasure marker means. When a sync zone exists, the app MUST show "Your record is in iCloud. Get it back on this device?" with "Get it back" and "Start fresh". When the device has no account, no sync zone exists or the read fails, the app MUST skip the question. It MUST show "What this is and isn't".
-
-After "Get it back" the app MUST turn sync on. The app MUST then start the first import. The app MUST then show screen 1 and screen 4. The app MUST skip screens 2 and 3. On screen 4 the "Your record" section MUST show "This device and my iCloud" as chosen.
-
-While the first import runs, the "Your record" section MUST show one line under its controls: "Getting your record back from iCloud." Screen 4 MUST keep "Start" disabled until the first import completes or fails. When the import completes, the app MUST hide the line and make "Start" active. When the import fails, the line MUST read "Could not get your record back. Try again in Settings." The app MUST then make "Start" active.
-
-The app MUST NOT write a Profile row, a Settings row or a StageOpened row until the first import completes. The start day is a Settings row, so the app MUST NOT write it either. The imported Profile supplies the height, the onboarding BMI, the caution flag and `askedAt`. The app MUST NOT ask the screening questions after "Get it back".
-
-After "Start fresh" the app MUST show "What this is and isn't" with sync off. The app MUST NOT change the record in iCloud after "Start fresh".
-
-#### Scenario: First cut
-- **WHEN** the app opens for the first time after install, before the sync change ships
-- **THEN** the app shows "What this is and isn't" with no question and reads nothing from iCloud
-
-#### Scenario: Record in iCloud
-- **WHEN** the app opens for the first time after install, the device has an iCloud account and a sync zone exists
-- **THEN** the app shows "Your record is in iCloud. Get it back on this device?" with "Get it back" and "Start fresh"
-
-#### Scenario: Get it back
-- **WHEN** the person taps "Get it back"
-- **THEN** sync is on, the app shows "What this is and isn't", then "Permissions" with "This device and my iCloud" chosen, and no screening question
-
-#### Scenario: Nothing written before the import completes
-- **WHEN** the person taps "Get it back" and the first import has not completed
-- **THEN** the store holds no Profile row, Settings row or StageOpened row that this device wrote, and no start day
-
-#### Scenario: Screen 4 while the import runs
-- **WHEN** the person taps "Get it back", taps "Continue" on screen 1, and the first import is still running
-- **THEN** screen 4 shows "Getting your record back from iCloud." under "Your record", "Start" is disabled, and a tap on "Start" does nothing
-
-#### Scenario: The import completes on screen 4
-- **WHEN** screen 4 shows "Getting your record back from iCloud." and the first import completes
-- **THEN** the app hides the line, "Start" is active, and a tap on "Start" shows Today with the imported entries
-
-#### Scenario: The import fails on screen 4
-- **WHEN** screen 4 shows "Getting your record back from iCloud." and the first import fails
-- **THEN** the line reads "Could not get your record back. Try again in Settings.", and "Start" is active
-
-#### Scenario: Start fresh
-- **WHEN** the person taps "Start fresh"
-- **THEN** the app shows "What this is and isn't", sync is off and the record in iCloud is unchanged
-
-#### Scenario: No sync zone
-- **WHEN** the app opens for the first time after install, the device has an iCloud account and no sync zone exists
-- **THEN** the app shows "What this is and isn't" with no question
-
-#### Scenario: No network before onboarding
-- **WHEN** the app opens for the first time after install in airplane mode
-- **THEN** the app shows "What this is and isn't" with no question
-
-### Requirement: Screen 4: the iCloud choice
-
-The later sync change that `data-and-privacy` names builds this requirement. It replaces the one-choice section that "Screen 4: your record" defines. Until that change ships, the app MUST NOT show the iCloud choice.
-
-From the sync change, the section MUST show: "Your record, plan and weigh-ins are private and sensitive. Choose where they live." The section MUST NOT say "health information" beside the iCloud choice. The section MUST show two controls, "This device only" and "This device and my iCloud". The app MUST NOT preselect either control, except after "Get it back". Under "This device and my iCloud" the section MUST show: "A lost or new device gets your record back. Apple cannot read what you write. Apple can see that the app stores something once a day. You can change this in Settings. Anyone who can sign in to your Apple Account on another device can read your record there, and Midmorning appears in your iCloud settings."
-
-The app MUST keep the choice as the sync choice in Local.store. Sync MUST stay off until the person chooses "This device and my iCloud" or "Get it back". `data-and-privacy` owns sync and the settings screen control that changes the choice. The app MUST NOT need an iCloud account to show the section. When the person chooses "This device and my iCloud" with no iCloud account, the app MUST keep the choice. The store syncs when an account exists.
-
-#### Scenario: The section opens from the sync change
-- **WHEN** "Permissions" opens after the sync change ships
-- **THEN** "Your record" shows the two controls, neither selected, and the five sentences under "This device and my iCloud"
-
-#### Scenario: This device only
-- **WHEN** the person chooses "This device only" and taps "Start"
-- **THEN** Local.store holds the sync choice as off and the store syncs nothing
-
-#### Scenario: This device and my iCloud
-- **WHEN** the person chooses "This device and my iCloud" and taps "Start"
-- **THEN** Local.store holds the sync choice as on and the store starts sync under the rules `data-and-privacy` defines
-
-#### Scenario: No choice yet
-- **WHEN** the person taps "Start" with neither control chosen
-- **THEN** the screen stays, VoiceOver focus moves to "Your record", and "Please answer this one." shows under the two controls
-
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: Four screens, once, in order
 
@@ -103,10 +22,6 @@ Every control on the four screens MUST have a VoiceOver label. Every text on the
 #### Scenario: Second launch
 - **WHEN** the person completed onboarding on Thursday and opens the app on Friday
 - **THEN** the app shows Today, as `programme` defines the home screen, and no onboarding screen
-
-#### Scenario: After Delete-all
-- **WHEN** the person runs Delete-all and opens the app again
-- **THEN** the app shows "What this is and isn't" with every field empty
 
 #### Scenario: No network
 - **WHEN** the device is in airplane mode
@@ -281,14 +196,6 @@ With "I won't be weighing" chosen, the scheduler MUST NOT schedule a weigh-in da
 - **WHEN** the person taps "Sunday" and completes onboarding
 - **THEN** the store keeps Sunday as the weigh-in day
 
-#### Scenario: I won't be weighing
-- **WHEN** the person taps "I won't be weighing" and completes onboarding
-- **THEN** the store keeps the choice, the scheduler holds no weigh-in day reminder, and the weigh-in screen shows "Choose a weigh-in day"
-
-#### Scenario: Review without a weigh-in part
-- **WHEN** the person chose "I won't be weighing" and opens the week 1 review
-- **THEN** the review shows no weigh-in part
-
 #### Scenario: Default quiet hours
 - **WHEN** the person changes nothing under "Quiet hours" and completes onboarding
 - **THEN** the store keeps quiet hours on, from 22:00 to 07:00
@@ -372,10 +279,6 @@ When the person denies notifications, the app MUST complete onboarding with ever
 #### Scenario: Lock sentence on a Touch ID device
 - **WHEN** "Permissions" opens on a device with Touch ID enrolled
 - **THEN** the app lock section shows "Lock with Touch ID" and "Midmorning asks for Touch ID or your passcode when it opens."
-
-#### Scenario: Widget skipped
-- **WHEN** the person never taps "Show me how" and taps "Start"
-- **THEN** onboarding completes
 
 ### Requirement: What onboarding keeps and what it never keeps
 
