@@ -148,7 +148,10 @@ private struct HostWindowReader: UIViewRepresentable {
     }
 }
 
-/// Puts the cover window over the view's own window.
+/// Puts the cover window over the view's own window, and makes the system
+/// authentication request by itself at launch and after each return from
+/// the background that locks the app (requirement "When the app asks",
+/// mm-t15.17). "Unlock" stays on the cover for the retry after a cancel.
 private struct AppLockCoverModifier: ViewModifier {
     @ObservedObject var controller: AppLockController
     let store: RecordStore
@@ -181,23 +184,25 @@ private struct AppLockCoverModifier: ViewModifier {
                 ))
             })
             .onAppear {
-                if scenePhase == .active { noteDevice() }
+                if scenePhase == .active { askIfDue() }
             }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { noteDevice() }
+                if phase == .active { askIfDue() }
             }
     }
 
     /// The device can lose its passcode while the app runs; then the app
-    /// lock is off (mm-t15.16).
-    private func noteDevice() {
+    /// lock is off (mm-t15.16). The request itself waits for a new task,
+    /// so the scene-phase handler and the enrolment check run first.
+    private func askIfDue() {
         controller.noteDeviceBiometry(BiometryDetector.current())
+        Task { await controller.requestAuthenticationIfDue() }
     }
 }
 
 extension View {
     /// The app-lock cover for a phase of `AppLockRootView` that shows the
-    /// record.
+    /// record: the running app and safe mode.
     func appLockCover(
         controller: AppLockController,
         store: RecordStore,

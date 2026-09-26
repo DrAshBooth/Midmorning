@@ -2,8 +2,8 @@ import XCTest
 @testable import AppLock
 
 /// `AppLockLaunch`: the launch state from `Local.store` and the device's
-/// `Biometry`. The App target builds its controller from it
-/// (`AppLockControllerFactory`).
+/// `Biometry`. The running app and safe mode both build their controller
+/// from it (`AppLockControllerFactory`, App target).
 final class AppLockLaunchTests: XCTestCase {
     // MARK: Requirement: The app lock is on by default
 
@@ -43,6 +43,22 @@ final class AppLockLaunchTests: XCTestCase {
         let state = AppLockLaunch.state(enabled: "false", faceOrTouchOnly: nil, lockAfterSeconds: nil, biometry: .faceID)
         XCTAssertFalse(state.appLockEnabled)
         XCTAssertEqual(state.coverMode, .none)
+    }
+
+    // MARK: Requirement: When the app asks (safe mode, mm-t42.21)
+
+    /// mm-t42.21: safe mode builds its controller from the same values, so
+    /// its launch state is locked when `appLock.enabled` is not "false".
+    @MainActor
+    func testTheSafeModeLaunchStateIsLockedUnlessTheLockIsOff() {
+        let noRow = AppLockLaunch.state(settings: InMemoryAppLockSettings(), biometry: .faceID)
+        XCTAssertEqual(noRow.coverMode, .locked)
+
+        let on = AppLockLaunch.state(settings: InMemoryAppLockSettings([AppLockSettingsKeys.enabled: "true"]), biometry: .faceID)
+        XCTAssertEqual(on.coverMode, .locked)
+
+        let off = AppLockLaunch.state(settings: InMemoryAppLockSettings([AppLockSettingsKeys.enabled: "false"]), biometry: .faceID)
+        XCTAssertEqual(off.coverMode, .none)
     }
 
     // MARK: Requirement: Lock after / Face ID only or Touch ID only

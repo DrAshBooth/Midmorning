@@ -13,9 +13,10 @@ struct AppLockRootView: View {
         case waitingForProtectedData
         case running(RecordStore, AppLockController)
         /// data-and-privacy spec, "Launch safety": the third consecutive
-        /// launch with an uncleared marker. Skips onboarding gating, the
-        /// app lock cover and the reminder scheduler; shows only Export and
-        /// Get support (`mm-t42.13`, proved end to end by `mm-t42.20`).
+        /// launch with an uncleared marker. Skips onboarding gating and the
+        /// reminder scheduler; shows only Export and Get support
+        /// (`mm-t42.13`, proved end to end by `mm-t42.20`), under the app
+        /// lock cover (`SafeModeRootView`, mm-t42.21).
         case safeMode(RecordStore)
         case deleted(DeletedScreen.Kind)
         case failedToOpen
@@ -38,7 +39,11 @@ struct AppLockRootView: View {
                     onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
                 )
             case .safeMode(let store):
-                SafeModeView(store: store)
+                SafeModeRootView(
+                    store: store,
+                    onEverythingDeleted: { phase = .deleted(.everything) },
+                    onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
+                )
             case .deleted(let kind):
                 DeletedScreen(kind: kind)
             case .failedToOpen:

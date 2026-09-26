@@ -19,6 +19,12 @@ public final class AppLockController: ObservableObject {
     /// `nil` in a test that does not check persistence.
     private let settings: AppLockSettingsStoring?
 
+    /// Requirement "When the app asks": true after a locked launch, and
+    /// after each return from the background that leaves the app locked,
+    /// until `requestAuthenticationIfDue()` uses it. The lock control does
+    /// not set it: after that tap, only "Unlock" asks.
+    public private(set) var authenticationRequestDue: Bool
+
     public init(
         state: AppLifecycleState,
         authenticator: AuthenticationPerforming,
@@ -29,12 +35,44 @@ public final class AppLockController: ObservableObject {
         self.authenticator = authenticator
         self.deleteAllSeam = deleteAllSeam
         self.settings = settings
+        self.authenticationRequestDue = state.isLocked && state.appLockEnabled
     }
 
     /// Every scene-phase, protected-data and pending-route change goes
     /// through here, so `state` only ever changes by `AppLifecycle.reduce`.
     public func handle(_ event: AppLifecycleEvent) {
+        let wasBackground = state.scenePhase == .background
         state = AppLifecycle.reduce(state, event: event)
+        switch event {
+        case .didBecomeActive:
+            // Scenarios "Return after the grace period" and "Device locked
+            // within the grace period": the cover and the request. A return
+            // from the inactive state (Notification Centre, or the system
+            // authentication request itself) does not set it, so a cancel
+            // does not start a second request.
+            if wasBackground, state.isLocked, state.appLockEnabled {
+                authenticationRequestDue = true
+            }
+        case .authenticationSucceeded:
+            authenticationRequestDue = false
+        default:
+            break
+        }
+    }
+
+    /// Requirement "When the app asks": "With the app lock on, the app MUST
+    /// make the system authentication request at every launch. The app
+    /// MUST ask again when it returns from the background after the grace
+    /// period." The App target calls this each time the scene becomes
+    /// active. It makes one request at most for each launch or return. With
+    /// a pending route, or after an enrolment change, the cover shows no
+    /// "Unlock", so this makes no request.
+    @discardableResult
+    public func requestAuthenticationIfDue() async -> Bool {
+        guard authenticationRequestDue else { return false }
+        authenticationRequestDue = false
+        guard state.coverMode == .locked else { return false }
+        return await tapUnlock()
     }
 
     /// "Unlock" on the cover. Requirement: "The cover" — "'Unlock' MUST
@@ -55,6 +93,7 @@ public final class AppLockController: ObservableObject {
         state.appLockEnabled = appLockEnabled
         state.isLocked = false
         state.enrolmentChanged = false
+        authenticationRequestDue = false
     }
 
     /// Requirement "The app lock is on by default": "When the device has no
@@ -69,6 +108,7 @@ public final class AppLockController: ObservableObject {
         state.appLockEnabled = false
         state.isLocked = false
         state.enrolmentChanged = false
+        authenticationRequestDue = false
     }
 
     /// "Delete everything" on the cover authenticates only; the caller

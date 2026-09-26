@@ -86,6 +86,15 @@ struct CoverView: View {
         .task(id: showsUnlock) {
             focusedControl = showsUnlock ? .unlock : .deleteFromThisDevice
         }
+        // The system authentication request makes the app inactive. When
+        // the app is active again and the cover is still up, the request
+        // closed without success: focus goes back to "Unlock". This also
+        // covers the request the app makes by itself at launch (mm-t15.17).
+        .onChange(of: controller.state.scenePhase) { _, phase in
+            if phase == .active {
+                focusedControl = showsUnlock ? .unlock : .deleteFromThisDevice
+            }
+        }
         .confirmationDialog(
             "applock.deleteEverything.confirm.title",
             isPresented: $isShowingDeleteEverythingConfirmation,

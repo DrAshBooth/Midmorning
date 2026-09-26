@@ -22,7 +22,8 @@ struct RecordStoreAppLockSettings: AppLockSettingsStoring {
 
 /// Builds the one `AppLockController` a phase of `AppLockRootView` uses,
 /// from `Local.store` and the device's `Biometry` (app-lock spec, "The app
-/// lock is on by default").
+/// lock is on by default"). The running phase and safe mode both call
+/// this, so both start from the same saved values (mm-t42.21).
 @MainActor
 enum AppLockControllerFactory {
     static func make(store: RecordStore) -> AppLockController {
@@ -60,5 +61,42 @@ enum AppLockEnrolmentCheck {
             return
         }
         controller.noteEnrolmentState(current: current, kept: kept)
+    }
+}
+
+/// The app lock's lifecycle events for a phase that has no other scene
+/// work: safe mode (mm-t42.21). `RunningRootView` sends the same events
+/// from its own scene-phase handler, which also runs the reminder
+/// scheduler.
+private struct AppLockLifecycleModifier: ViewModifier {
+    let store: RecordStore
+    @ObservedObject var controller: AppLockController
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear { AppLockEnrolmentCheck.run(controller: controller, store: store) }
+            .onChange(of: scenePhase) { _, phase in
+                switch phase {
+                case .active:
+                    controller.handle(.didBecomeActive(now: MachContinuousClock().continuousSeconds()))
+                    AppLockEnrolmentCheck.run(controller: controller, store: store)
+                case .inactive:
+                    controller.handle(.didBecomeInactive)
+                case .background:
+                    controller.handle(.didEnterBackground(now: MachContinuousClock().continuousSeconds()))
+                @unknown default:
+                    break
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataWillBecomeUnavailableNotification)) { _ in
+                controller.handle(.protectedDataWillBecomeUnavailable)
+            }
+    }
+}
+
+extension View {
+    func appLockLifecycle(controller: AppLockController, store: RecordStore) -> some View {
+        modifier(AppLockLifecycleModifier(store: store, controller: controller))
     }
 }
