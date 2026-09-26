@@ -3,7 +3,9 @@ import AppLock
 
 /// The screen the app-lock spec's "The cover" requirement defines: shown the
 /// moment the app is inactive or locked, over every other screen, Get
-/// support included, because the cover names nothing.
+/// support included, because the cover names nothing. `AppLockCoverWindow`
+/// shows it in a window of its own, above every sheet and full-screen
+/// cover of the app's own window (mm-t15.15).
 ///
 /// `AppLockController.state.coverMode` decides what shows:
 /// - `.none`: nothing; the real screen shows.

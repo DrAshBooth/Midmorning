@@ -218,28 +218,19 @@ private struct RunningRootView: View {
             // can never disagree about the lock state (mm-t13.9).
             .environmentObject(controller)
             .environmentObject(deletionNotifier)
-            .overlay {
-                CoverView(controller: controller, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
-            }
+            // The cover, in a window of its own over every sheet and
+            // full-screen cover (app-lock spec, "The cover"). It also shows
+            // the new-entry screen of a pending route ("A new entry before
+            // authentication"): the notification action "Add" posts
+            // `.reminderAddActionTapped`, which requests the route, and
+            // `AppLifecycleState.coverMode` reads `.none` while it waits.
+            .appLockCover(controller: controller, store: store, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
             .onAppear {
                 deletionNotifier.onEverythingDeleted = onEverythingDeleted
                 checkEnrolmentStateIfNeeded()
                 // design.md, "The scheduler is a pure function over a
                 // rolling horizon": recomputed on activation.
                 ReminderCoordinator.recomputeAndApply(store: store)
-            }
-            // A pending route always wins over the cover (app-lock spec, "A
-            // new entry before authentication"): the notification action
-            // "Add" posts `.reminderAddActionTapped`, which requests the
-            // route; `AppLifecycleState.coverMode` already reads `.none`
-            // while a route is pending, so the cover steps aside on its own.
-            .fullScreenCover(isPresented: Binding(
-                get: { controller.state.pendingRoute == .newEntry },
-                set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
-            )) {
-                NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
-                    controller.handle(.pendingRouteResolved)
-                }
             }
             // A tap on the weigh-in day reminder (reminders spec, "The
             // weigh-in day reminder"). No pending-route bypass: unlike
