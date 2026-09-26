@@ -69,6 +69,7 @@ let package = Package(
             .copy("Resources/cards.json"),
             .copy("Resources/strings.json"),
             .copy("Resources/content-lock.json"),
+            .copy("Resources/signed-catalogue-keys.json"),
         ]),
         // Also depends on `Programme` (test-only) so a test can prove that
         // each signed-off Swift constant equals its bundle copy (ruling

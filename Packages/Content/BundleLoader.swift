@@ -47,9 +47,11 @@ public enum BundleLoaderError: Error, CustomStringConvertible {
 
 /// Reads the content bundle from `Resources/*.json`. The app calls
 /// `loadShipped()`, which reads the package's bundled copy through
-/// `Bundle.module`. The content test and `scripts/content-lock` call
-/// `load(from:)` directly against the source `Resources` directory, so a
-/// change to a JSON file is visible before the next build copies it.
+/// `Bundle.module`. The content test, `scripts/content-lock` and
+/// `scripts/content-signoff-list` call `loadSource()`, which reads the source
+/// `Resources` directory and the signed keys of the app's
+/// `Localizable.xcstrings`, so a change to a JSON file or to a signed
+/// catalogue string is visible before the next build copies it.
 public enum BundleLoader {
     public static func parseSection(_ raw: String) throws -> Card.Section {
         if raw.hasPrefix("stage"), let n = Int(raw.dropFirst("stage".count)) {
@@ -67,10 +69,20 @@ public enum BundleLoader {
         }
     }
 
+    /// The source bundle with the signed keys of the app's own string
+    /// catalogue: the bundle whose hash `content-lock.json` holds and the
+    /// clinical reviewer signs off (ruling r13-01).
+    public static func loadSource(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> ContentBundle {
+        try load(from: RepositoryRoot.contentResourcesDirectory, catalogue: RepositoryRoot.appCatalogueURL, environment: environment)
+    }
+
     /// Reads the bundle from a `Resources` directory on disk (source, not
-    /// the built resource bundle). `environment` is the process environment
-    /// the sign-off check reads `MIDMORNING_RELEASE` from.
-    public static func load(from directory: URL, environment: [String: String] = ProcessInfo.processInfo.environment) throws -> ContentBundle {
+    /// the built resource bundle). With `catalogue`, the bundle also holds
+    /// the en-GB entries of that `.xcstrings` file whose keys the
+    /// directory's `signed-catalogue-keys.json` names, and its hash covers
+    /// them. `environment` is the process environment the sign-off check
+    /// reads `MIDMORNING_RELEASE` from.
+    public static func load(from directory: URL, catalogue: URL? = nil, environment: [String: String] = ProcessInfo.processInfo.environment) throws -> ContentBundle {
         let decoder = JSONDecoder()
 
         let manifestURL = directory.appendingPathComponent("manifest.json")
@@ -103,7 +115,13 @@ public enum BundleLoader {
         let stringFiles = try decoder.decode([StringEntryFile].self, from: stringsData)
         let strings = stringFiles.map { StringEntry(id: $0.id, text: $0.text, plural: $0.plural) }
 
-        var bundle = ContentBundle(contentVersion: manifest.contentVersion, cards: cards, strings: strings, isDraft: true)
+        var signedCatalogue: [String: XCStringsCatalogue.Entry] = [:]
+        if let catalogue {
+            let signedKeys = try SignedCatalogueKeys.read(from: directory)
+            signedCatalogue = signedKeys.signedEntries(of: try XCStringsCatalogue.readEntries(from: catalogue))
+        }
+
+        var bundle = ContentBundle(contentVersion: manifest.contentVersion, cards: cards, strings: strings, signedCatalogue: signedCatalogue, isDraft: true)
         let signOff = SignOff.matching(bundle: bundle, in: directory)
         bundle.isDraft = (signOff == nil)
         return bundle
@@ -118,10 +136,20 @@ public enum BundleLoader {
     /// macOS bundle nests it under `Contents/Resources`, while Xcode's own
     /// build of the iOS app flattens every resource to the bundle's root;
     /// this works under both.
+    ///
+    /// The installed app has no copy of `Localizable.xcstrings` as JSON, so
+    /// it cannot compute the part of the hash that covers the signed
+    /// catalogue keys. The sign-off check here reads `content-lock.json`
+    /// instead: the content test proves that the lock holds the full hash
+    /// at this content version, and the release lane proves that a sign-off
+    /// file matches that hash.
     public static func loadShipped(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> ContentBundle {
         guard let manifestURL = Bundle.module.url(forResource: "manifest", withExtension: "json") else {
             throw BundleLoaderError.fileNotFound("manifest.json")
         }
-        return try load(from: manifestURL.deletingLastPathComponent(), environment: environment)
+        let directory = manifestURL.deletingLastPathComponent()
+        var bundle = try load(from: directory, environment: environment)
+        bundle.isDraft = SignOff.matching(contentVersion: bundle.contentVersion, lockIn: directory) == nil
+        return bundle
     }
 }

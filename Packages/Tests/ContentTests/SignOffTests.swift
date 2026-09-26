@@ -102,6 +102,26 @@ final class SignOffTests: XCTestCase {
         try "[]".write(to: dir.appendingPathComponent("strings.json"), atomically: true, encoding: .utf8)
     }
 
+    /// Ruling r13-01: the installed app cannot hash the signed catalogue
+    /// keys, so it clears the Draft flag when a sign-off file holds the hash
+    /// that `content-lock.json` holds at the same content version.
+    func testTheAppMatchesASignOffThroughTheLock() throws {
+        try withTempDirectory { dir in
+            try ContentLock(contentVersion: 3, bundleHash: "full-hash").write(to: dir)
+            XCTAssertNil(SignOff.matching(contentVersion: 3, lockIn: dir), "no sign-off file yet")
+            let signOff = SignOff(
+                contentVersion: 3, bundleHash: "full-hash", date: "2026-09-26",
+                reviewerName: "Dr Reviewer", reviewerRole: "Clinical psychologist, CBT-E trained",
+                reviewedIds: ["a"], toneAnswers: ["a": "no"]
+            )
+            try write(signOff, to: dir)
+            XCTAssertEqual(SignOff.matching(contentVersion: 3, lockIn: dir), signOff)
+            XCTAssertNil(SignOff.matching(contentVersion: 4, lockIn: dir), "the lock is for another version")
+            try ContentLock(contentVersion: 3, bundleHash: "another-hash").write(to: dir)
+            XCTAssertNil(SignOff.matching(contentVersion: 3, lockIn: dir), "the sign-off is for another hash")
+        }
+    }
+
     func testShippedBundleIsDraftUnderVerify() {
         // `./verify` runs `swift test` with no MIDMORNING_RELEASE set, so
         // the shipped bundle, which has no matching sign-off file yet,

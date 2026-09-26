@@ -80,8 +80,8 @@ final class CatalogueRulesTests: XCTestCase {
         let readme = try String(contentsOf: signOffListURL, encoding: .utf8)
         let listed = signOffListIds(in: readme)
         XCTAssertFalse(listed.isEmpty, "the README's Sign-off list section should not be empty")
-        let expected = Set(Shipped.bundle.cards.map(\.id) + Shipped.bundle.strings.map(\.id))
-        XCTAssertEqual(Set(listed), expected)
+        // Ruling r13-01: the list also holds the signed catalogue keys.
+        XCTAssertEqual(listed, Shipped.bundle.signOffIds)
     }
 
     /// Scenario: The Contact placeholder

@@ -4,7 +4,9 @@ import Foundation
 // scripts/content-lock <version>: writes Packages/Content/Resources/
 // content-lock.json for the bundle as it is on disk. The content spec
 // requires "A commit that raises the content version MUST update the lock
-// in the same commit"; this tool is how the team does that.
+// in the same commit"; this tool is how the team does that. The hash covers
+// the cards, the bundle strings and the keys of Localizable.xcstrings that
+// signed-catalogue-keys.json names (ruling r13-01).
 
 let arguments = CommandLine.arguments
 guard arguments.count == 2, let version = Int(arguments[1]) else {
@@ -14,7 +16,7 @@ guard arguments.count == 2, let version = Int(arguments[1]) else {
 
 do {
     let directory = RepositoryRoot.contentResourcesDirectory
-    let bundle = try ContentBundle.load(from: directory)
+    let bundle = try BundleLoader.loadSource()
     guard bundle.contentVersion == version else {
         FileHandle.standardError.write(Data(
             "content-lock: manifest.json holds version \(bundle.contentVersion), not \(version). Raise it there first.\n".utf8
