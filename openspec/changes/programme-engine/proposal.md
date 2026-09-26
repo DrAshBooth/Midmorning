@@ -77,3 +77,10 @@ gate from this one place.
 - `Programme`'s pending-card output (`PendingCard`) is its own value type,
   not `Record`'s `TodayCardFact`, because `Programme` cannot import
   `Record`. The App target maps one to the other one for one.
+- The engine's own namespace is `StageEngine`, not `Programme`: a type
+  named the same as its own module collides with the module name for every
+  external `Programme.<Type>` qualified reference (Swift resolves the bare
+  identifier to the type, not the module). `App/Midmorning/Onboarding/
+  Screen3View.swift`'s own `Programme.Weekday` broke this way; `xcodebuild`
+  caught it, `swift test` did not, because the ambiguity only exists from
+  outside the `Programme` module.
