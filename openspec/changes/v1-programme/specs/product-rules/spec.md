@@ -108,11 +108,15 @@ Every control MUST have a hit area of at least 44 by 44 points. Two controls MUS
 
 Every date the app formats MUST use the locale en_GB, the Gregorian calendar and the record's zone. The app MUST NOT use the device locale. Every formatter MUST take the locale and the calendar as parameters. Every clock time MUST use the 24-hour clock.
 
-Every string MUST say "device", not "iPhone", except where iOS itself uses the word. The app MUST capitalise Apple screen names: Lock Screen, Home Screen, Control Centre, Notification Centre, Recents. A VoiceOver label for a control with visible text MUST equal that text.
+Every string MUST say "device", not "iPhone", except where iOS itself uses the word. The app MUST capitalise Apple screen names: Lock Screen, Home Screen, Control Centre, Notification Centre, Recents. A VoiceOver label for a control with visible text MUST equal that text, or start with that text and add words after it. For example, the plan builder's "Rename" control has the VoiceOver label "Rename Lunch". Voice Control then finds each control by its visible text. Ash ruled this on 26 September 2026 (r13-08).
 
 #### Scenario: A formatted date in a test
 - **WHEN** a test formats 28 September 2026 with the London calendar
 - **THEN** the result is "Monday 28 September" on any machine
+
+#### Scenario: A label that starts with the visible text
+- **WHEN** VoiceOver focuses the plan builder's "Rename" control of the Lunch slot
+- **THEN** it reads "Rename Lunch", and Voice Control finds the control when the person says "Tap Rename"
 
 ### Requirement: Offline and private by default
 
@@ -145,6 +149,8 @@ These MUST use the primary text colour and MUST NOT use the accent colour:
 - the line of the weigh-in chart
 - the pinned note and its pin glyph
 
+Validation text is a message that tells the person that an answer is missing or outside its range. Examples are "Please answer this one." and "Enter a weight of 30 kg or more.". Validation text MUST use the primary or the secondary text colour on every screen. It MUST NOT use red, systemRed or any other colour. This rule also applies under the self-harm question and to every height and weight message. When validation text appears, the app MUST move VoiceOver focus to the field or the question that it names. The app MUST also post the text as a VoiceOver announcement. Ash ruled this on 26 September 2026 (r13-15).
+
 Every list MUST use the plain list style. A list section MUST NOT have a fill. Every sheet MUST be the system sheet at the large detent. The app MUST NOT set a custom corner radius, a shadow or a background image. Every transition MUST be the system's standard transition.
 
 Every glyph the app adds MUST be an SF Symbol. The app MUST use only four symbols: plus, pin, lock and chevron. A system control keeps its own glyphs.
@@ -176,3 +182,7 @@ Every text field MUST fill the width of its row. Its label MUST sit above it. It
 #### Scenario: Dark mode follows the system
 - **WHEN** the person turns on dark mode in Control Centre while Today is open
 - **THEN** Today shows in dark mode at once, with the same text and the same controls
+
+#### Scenario: Validation text
+- **WHEN** the person taps "Continue" on "A few questions first" with the self-harm question unanswered
+- **THEN** "Please answer this one." shows in the primary or the secondary text colour and not in red, VoiceOver focus moves to the question, and VoiceOver announces the message
