@@ -14,9 +14,9 @@ enum AppLockSettingsKeys {
 
 /// Wraps Today with the app-lock cover, so every screen in the window sits
 /// behind it (requirement: "The cover"). Reads the app lock's own settings
-/// from `Local.store` at launch; `PrivacyAppLockControls` (this change's
-/// fixture-only Privacy section) writes them back once a settings screen
-/// embeds it (mm-t13's wiring bead).
+/// from `Local.store` at launch, then shares the one `AppLockController` it
+/// builds with every screen under Today through the environment (mm-t13.9),
+/// so `SettingsView`'s Privacy section and the cover always agree.
 @MainActor
 struct AppLockRootView: View {
     let store: RecordStore
@@ -43,6 +43,11 @@ struct AppLockRootView: View {
 
     var body: some View {
         TodayView(store: store)
+            // The one real `AppLockController`, shared with every screen
+            // under Today (`SettingsView`'s Privacy section reads it through
+            // `@EnvironmentObject`), so the switch there and the cover below
+            // can never disagree about the lock state (mm-t13.9).
+            .environmentObject(controller)
             .overlay {
                 CoverView(controller: controller, onEverythingDeleted: {})
             }
