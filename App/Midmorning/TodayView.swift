@@ -77,6 +77,10 @@ struct TodayView: View {
     /// read this same value.
     private var stage2Open: Bool { programmeSnapshot?.state.isOpen(.regularEating) ?? false }
 
+    /// The record day stage 2 opened, or `nil` while it is closed: the gap
+    /// bands show from that day on (record spec, "The gap band").
+    private var stage2OpenedDayKey: String? { programmeSnapshot?.state.stageOpenedDayKey[.regularEating] }
+
     /// The pinned note Today shows, or `nil` while a starred entry or an "I
     /// binged" outcome holds it back for the rest of this record day
     /// (weekly-review spec, "The one thing to change and the pinned note",
@@ -135,7 +139,7 @@ struct TodayView: View {
                     if let previousSection, !previousSection.entries.isEmpty {
                         Section(header: dayHeadingView(previousSection)) {
                             if previousSection.isExpanded {
-                                daySectionRows(previousSection, showBands: false)
+                                daySectionRows(previousSection)
                             } else {
                                 collapsedCountRow(previousSection)
                             }
@@ -219,7 +223,7 @@ struct TodayView: View {
                 EarlierDaysListView(store: store)
             }
             .navigationDestination(for: String.self) { dayKey in
-                EarlierDayDetailView(store: store, initialDayKey: dayKey, navigationPath: $navigationPath)
+                EarlierDayDetailView(store: store, initialDayKey: dayKey, stage2OpenedDayKey: stage2OpenedDayKey, navigationPath: $navigationPath)
             }
             .navigationDestination(for: ProgrammeRoute.self) { _ in
                 ProgrammeScreenView(store: store)
@@ -286,7 +290,7 @@ struct TodayView: View {
     // MARK: Day sections
 
     @ViewBuilder
-    private func daySectionRows(_ section: DaySection, showBands: Bool = true) -> some View {
+    private func daySectionRows(_ section: DaySection) -> some View {
         if let stateLine = section.stateLine {
             Text(stateLine)
                 .font(.body)
@@ -325,7 +329,7 @@ struct TodayView: View {
                     .contentShape(Rectangle())
                     .onTapGesture { if let entry = row.matchedEntry { editingEntry = entry } }
                 }
-                if showBands, let entryIndex = entryIndex(of: item, in: section.entries), section.gapBandIndexesBefore.contains(entryIndex) {
+                if let entryIndex = entryIndex(of: item, in: section.entries), section.gapBandIndexesBefore.contains(entryIndex) {
                     GapBandRow()
                 }
             }
@@ -481,8 +485,8 @@ struct TodayView: View {
         let previous = RecordDay.previous(day, calendar: .current)
         let currentKey = RecordDay.key(containing: now, calendar: .current)
         let previousKey = RecordDay.key(containing: previous.start, calendar: .current)
-        currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open)
-        previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
+        currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open, stage2OpenedDayKey: stage2OpenedDayKey)
+        previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open, stage2OpenedDayKey: stage2OpenedDayKey)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
         hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
 

@@ -44,12 +44,16 @@ struct EarlierDaysListView: View {
 /// entry here.
 struct EarlierDayDetailView: View {
     let store: RecordStore
+    /// The record day stage 2 opened, or `nil` while stage 2 is closed: the
+    /// plan and the gap bands show from that day on.
+    let stage2OpenedDayKey: String?
     @Binding var navigationPath: NavigationPath
     @State private var dayKey: String
     @State private var section: DaySection?
 
-    init(store: RecordStore, initialDayKey: String, navigationPath: Binding<NavigationPath>) {
+    init(store: RecordStore, initialDayKey: String, stage2OpenedDayKey: String?, navigationPath: Binding<NavigationPath>) {
         self.store = store
+        self.stage2OpenedDayKey = stage2OpenedDayKey
         self._navigationPath = navigationPath
         self._dayKey = State(initialValue: initialDayKey)
     }
@@ -119,6 +123,7 @@ struct EarlierDayDetailView: View {
         calendar.timeZone = .current
         let date = DayHeading.dayKeyDate(dayKey) ?? Date()
         let interval = RecordDay.interval(containing: date.addingTimeInterval(12 * 3600), calendar: calendar)
-        section = DaySection.load(dayKey: dayKey, interval: interval, role: .earlier, store: store, stage2Open: false)
+        let planShows = stage2OpenedDayKey.map { dayKey >= $0 } ?? false
+        section = DaySection.load(dayKey: dayKey, interval: interval, role: .earlier, store: store, stage2Open: planShows, stage2OpenedDayKey: stage2OpenedDayKey)
     }
 }
