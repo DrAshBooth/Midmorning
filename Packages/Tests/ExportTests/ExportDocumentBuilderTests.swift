@@ -62,6 +62,15 @@ final class ExportDocumentBuilderTests: XCTestCase {
         XCTAssertEqual(document.days.map(\.heading), ["Monday 21 September 2026", "Tuesday 22 September 2026"])
     }
 
+    /// Scenario: A range of one day.
+    func testARangeOfOneDayHoldsThatDayAndNoOther() {
+        let day = ExportDayInput(dayKey: "2026-09-21", entries: [row(time: "08:00", dayKey: "2026-09-21")], states: [])
+        let request = ExportBuildRequest(fromDayKey: "2026-09-21", toDayKey: "2026-09-21", includeContext: true, dayStartHour: 4)
+        let document = ExportDocumentBuilder.build(request: request, days: [day])
+        XCTAssertEqual(document.days.count, 1)
+        XCTAssertEqual(document.days[0].dayKey, "2026-09-21")
+    }
+
     // MARK: Entry after midnight
 
     /// Scenario: Entry after midnight.

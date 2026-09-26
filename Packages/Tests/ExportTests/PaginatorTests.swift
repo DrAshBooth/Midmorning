@@ -29,6 +29,18 @@ final class PaginatorTests: XCTestCase {
         XCTAssertEqual(pages.count, 1)
     }
 
+    /// Scenario: Days flow on one page.
+    func testThreeDaysWithTwoEntriesEachFlowOnOnePage() {
+        let entry = ExportEntryLine(clockTime: "08:00", starred: false, what: "Entry", whereText: "", context: "")
+        let days = (21...23).map { day in
+            ExportDayBlock(dayKey: "2026-09-\(day)", heading: "Day \(day)", didntRecord: false, paused: false, entries: [entry, entry])
+        }
+        let document = ExportDocument(rangeText: "21 September\u{2009}–\u{2009}23 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: days, weighInLines: [])
+        let pages = Paginator.paginate(document: document, pageHeight: 1000) { _ in 20 }
+        XCTAssertEqual(pages.count, 1, "three short days must flow onto the same page, one after another")
+        XCTAssertEqual(pages[0].lines.filter(\.isDayHeading).count, 3)
+    }
+
     /// Scenario: No UIKit in the package. A source-level check (macOS has no
     /// UIKit at all, so this is also enforced simply by `swift test`
     /// compiling this target on macOS in the first place).
