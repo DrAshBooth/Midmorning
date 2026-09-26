@@ -9,7 +9,8 @@ import XCTest
 /// `week1`, `review` and `corrupt`) and gives this bundle two paths:
 /// `APP_DATA`, the app's data container, and `STORES`, the seeded stores.
 /// Before each launch a test puts one seeded store into the container, so
-/// every test starts from a known record.
+/// every test starts from a known record. It also gives `CONTENT_DRAFT`,
+/// the draft state that `testDraftShowsAboveTheCardTitle` expects.
 final class AutomatedChecks: XCTestCase {
     let app = XCUIApplication(bundleIdentifier: "uk.midmorning.app")
     private let environment = ProcessInfo.processInfo.environment
@@ -921,25 +922,35 @@ final class AutomatedChecks: XCTestCase {
         XCTAssertTrue(element(labelled: "Week 1").waitForExistence(timeout: 5), "the Programme screen shows \"Week 1\"")
     }
 
-    /// mm-t21.24, comment of mm-t21.29: the content bundle that the build
-    /// ships has no sign-off file, so it is a draft. Settings, About, shows
-    /// "Draft" beside the content version, and a stage 1 card opened from
-    /// the "Getting started" screen shows "Draft" above the card title.
-    /// Today's "Read" opens the same card screen (`CardScreenView`); the
-    /// `week1` store is on the first recorded day, when Today shows no
-    /// stage 1 card. When the bundle gets its sign-off, both places show no
-    /// "Draft", and this check checks that. `ProgrammeScreenTextTests`
-    /// proves the rule from the bundle.
+    /// mm-t21.24, comment of mm-t21.29: a content bundle with no sign-off
+    /// file is a draft. Settings, About, shows "Draft" beside the content
+    /// version, and a stage 1 card opened from the "Getting started" screen
+    /// shows "Draft" above the card title. Today's "Read" opens the same
+    /// card screen (`CardScreenView`); the `week1` store is on the first
+    /// recorded day, when Today shows no stage 1 card.
+    ///
+    /// The script gives the expected state in `CONTENT_DRAFT`: "1" when
+    /// `Packages/Content/Resources` holds no sign-off file for the content
+    /// version, "0" when it holds one. The test does not find the state
+    /// from the screen, so a build that loses "Draft" in both places fails.
+    /// `ProgrammeScreenTextTests` proves the rule from the bundle.
     func testDraftShowsAboveTheCardTitle() throws {
+        guard let expected = environment["CONTENT_DRAFT"], ["0", "1"].contains(expected) else {
+            XCTFail("CONTENT_DRAFT is not set: run this check with tools/skeleton-checks/automated-checks.sh")
+            return
+        }
+        let isDraft = expected == "1"
         try launchOnToday("week1")
         tapToolbar("Settings")
         assertScreen("Settings")
         let contentVersion = element(labelled: "Content version")
         XCTAssertTrue(scrollTo(contentVersion), "About shows the content version")
         let aboutDraft = app.staticTexts["Draft"].firstMatch
-        let isDraft = aboutDraft.exists
         if isDraft {
+            XCTAssertTrue(aboutDraft.waitForExistence(timeout: 3), "About shows \"Draft\" for a bundle with no sign-off")
             XCTAssertEqual(aboutDraft.frame.midY, contentVersion.frame.midY, accuracy: 12, "\"Draft\" shows beside the content version")
+        } else {
+            XCTAssertFalse(aboutDraft.exists, "About shows no \"Draft\" for a signed bundle")
         }
         goBack()
         assertScreen("Today")
@@ -957,7 +968,7 @@ final class AutomatedChecks: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 5), "the card screen shows the card title")
         let cardDraft = app.scrollViews.staticTexts["Draft"].firstMatch
         if isDraft {
-            XCTAssertTrue(cardDraft.exists, "the card screen shows \"Draft\"")
+            XCTAssertTrue(cardDraft.waitForExistence(timeout: 3), "the card screen shows \"Draft\" for a bundle with no sign-off")
             XCTAssertLessThanOrEqual(cardDraft.frame.maxY, title.frame.minY, "\"Draft\" shows above the card title")
         } else {
             XCTAssertFalse(cardDraft.exists, "a signed bundle shows no \"Draft\"")

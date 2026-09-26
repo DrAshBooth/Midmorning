@@ -99,12 +99,23 @@ needs an epic that Ash has not merged yet, the agent tests it over fixture
 facts. A wiring bead (label `wiring`) in the later epic runs it end to end. A
 README may map an App-target scenario as "structural" only when its line names
 the file and the line that build the scenario, and the epic's device-check bead
-holds a line for the same scenario. Run `./verify`.
+holds a line for the same scenario. A navigation, text or manifest check is not
+a device check (ruling r13-19): map its scenario to a test in
+`Packages/Tests/AutomatedDeviceChecksTests`, which `./verify` runs, or in
+`tools/skeleton-checks/HarnessUITests/AutomatedChecks.swift`, not to
+"structural". Run each new UI test by name with
+`tools/skeleton-checks/automated-checks.sh <test>`. Run `./verify`.
 The first run in a new worktree is cold and can exceed 240 s; run it again,
 because the warm run is the budget. The change README states the cold time.
 When a child's tests pass, commit on the worktree branch and close the child
 with `--reason` naming the commit. List each pending device check in the epic's
-device-check bead (label `device-check`); Ash does the checks. Pass
+device-check bead (label `device-check`); Ash does the checks. A navigation, text
+or manifest check goes into those tests, not onto the device-check bead. A device
+check is for what needs a device or a person, for example VoiceOver, the largest
+text size, contrast, real notifications or a change of the clock. Until Ash
+answers decision r16-01, a flow check (a sequence of actions, then what the app
+shows or keeps) stays a device check. `openspec/changes/v1-programme/tasks.md`
+and `tools/skeleton-checks/README.md` hold the full rule. Pass
 `--type change` to `openspec validate` and `openspec show` for a build
 change, because a build change can share its name with a main spec. The
 change's delta ADDs each requirement that `openspec/specs` does not hold yet,

@@ -19,11 +19,69 @@ enum ScreenText {
     }
 
     /// The source of one App file, by its path under `App/Midmorning`, with
-    /// each run of spaces, tabs and line breaks changed to one space. A
-    /// check that matches this text does not fail when a reformat changes
-    /// the indentation or the line breaks.
+    /// no comments, and with each run of spaces, tabs and line breaks
+    /// changed to one space. A check that matches this text does not fail
+    /// when a reformat changes the indentation or the line breaks. It fails
+    /// when the code loses a call and only a comment keeps its words.
     static func source(_ path: String) throws -> String {
-        normalised(try String(contentsOf: AppFiles.appSources.appendingPathComponent(path), encoding: .utf8))
+        normalised(withoutComments(try String(contentsOf: AppFiles.appSources.appendingPathComponent(path), encoding: .utf8)))
+    }
+
+    /// `swift` with each `//` comment (`///` included) and each `/* */`
+    /// comment removed. A comment becomes one space. String literals stay,
+    /// so a URL such as "https://…" stays whole. The scan knows single-line
+    /// and multi-line (`"""`) literals and nested block comments; it does
+    /// not parse string interpolation, which is enough for the App files.
+    static func withoutComments(_ swift: String) -> String {
+        let characters = Array(swift)
+        let count = characters.count
+        var result = ""
+        result.reserveCapacity(count)
+        var index = 0
+        func isPair(_ first: Character, _ second: Character) -> Bool {
+            index + 1 < count && characters[index] == first && characters[index + 1] == second
+        }
+        func isTripleQuote() -> Bool {
+            index + 2 < count && characters[index] == "\"" && characters[index + 1] == "\"" && characters[index + 2] == "\""
+        }
+        /// Copies one character of a literal; a backslash takes the next
+        /// character with it, so an escaped quote does not end the literal.
+        func copyLiteralCharacter() {
+            if characters[index] == "\\", index + 1 < count {
+                result.append(characters[index])
+                index += 1
+            }
+            result.append(characters[index])
+            index += 1
+        }
+        while index < count {
+            if isPair("/", "/") {
+                while index < count, !characters[index].isNewline { index += 1 }
+                result.append(" ")
+            } else if isPair("/", "*") {
+                var depth = 0
+                repeat {
+                    if isPair("/", "*") { depth += 1; index += 2 }
+                    else if isPair("*", "/") { depth -= 1; index += 2 }
+                    else { index += 1 }
+                } while depth > 0 && index < count
+                result.append(" ")
+            } else if isTripleQuote() {
+                result.append("\"\"\"")
+                index += 3
+                while index < count, !isTripleQuote() { copyLiteralCharacter() }
+                if index < count { result.append("\"\"\""); index += 3 }
+            } else if characters[index] == "\"" {
+                result.append("\"")
+                index += 1
+                while index < count, characters[index] != "\"", !characters[index].isNewline { copyLiteralCharacter() }
+                if index < count { result.append(characters[index]); index += 1 }
+            } else {
+                result.append(characters[index])
+                index += 1
+            }
+        }
+        return result
     }
 
     /// `text` with each run of white space changed to one space.
