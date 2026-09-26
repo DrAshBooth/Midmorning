@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The new-entry and edit screens' control order (record spec, "The
 /// new-entry screen's controls"; "Accessibility of the additions"). The view
@@ -13,10 +14,11 @@ public enum NewEntryField: Sendable, CaseIterable {
 }
 
 /// The Context field's label, which the star toggles (record spec, "The
-/// Context field").
+/// Context field"): "Context", or "What was going on just before?" while
+/// the star is on.
 public enum ContextLabel {
-    public static func text(starOn: Bool) -> String {
-        starOn ? "What was going on just before?" : "Context"
+    public static func text(starOn: Bool) -> CatalogueText {
+        .key(starOn ? "entry.context.starred" : "entry.context")
     }
 }
 

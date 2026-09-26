@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// What a planned meal row shows beside the record (regular-eating-plan
 /// spec, "Today shows the plan beside the record"). A pure decision from
@@ -54,20 +55,20 @@ public enum PlannedMealAccessibility {
     public static func label(
         slotLabel: String,
         time: String,
-        matchedEntryAccessibilityLabel: String?,
+        matchedEntryAccessibilityLabel: CatalogueText?,
         isSkipped: Bool,
         prompt: MissedMealPrompt.Form?,
         timeText: (Date) -> String
-    ) -> String {
-        var parts = [slotLabel, time]
+    ) -> CatalogueText {
+        var parts: [CatalogueText] = [.verbatim(slotLabel), .verbatim(time)]
         if let matchedEntryAccessibilityLabel {
             parts.append(matchedEntryAccessibilityLabel)
         } else if isSkipped {
-            parts.append("Skipped")
+            parts.append(.key("plan.skipped"))
         }
         if let prompt {
             parts.append(MissedMealPrompt.line(for: prompt, timeText: timeText))
         }
-        return parts.joined(separator: ", ")
+        return .list(parts)
     }
 }

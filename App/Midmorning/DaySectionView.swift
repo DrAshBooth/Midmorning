@@ -1,6 +1,7 @@
 import SwiftUI
 import Record
 import Plan
+import Constants
 
 /// What a day section's heading and rows ask their screen to do. Today and
 /// an earlier day each fill one, so a day shows with the same rules on both
@@ -122,7 +123,7 @@ struct DaySectionRows: View {
     var body: some View {
         if section.isExpanded {
             if let stateLine = section.stateLine {
-                Text(stateLine)
+                Text(stateLine.string)
                     .font(.body)
                     .listRowSeparator(.hidden)
             }
@@ -163,7 +164,8 @@ struct DaySectionRows: View {
 
     private var collapsedCountRow: some View {
         let count = section.entries.count
-        let text = count == 1 ? "1 entry" : "\(count) entries"
+        // record spec, "Collapse a day to a count": "1 entry" or "N entries".
+        let text = CatalogueText.key("today.collapsed.entries %lld", .count(count)).string
         return Text(text)
             .onTapGesture { actions.setExpanded(true) }
     }

@@ -54,8 +54,8 @@ final class RecordStoreTests: XCTestCase {
 
         // Labels.
         let day = try reopened.entries(recordDayContaining: at(24, 13, 30), calendar: london)
-        XCTAssertEqual(day[3].accessibilityLabel, "13:05, Toast and tea, felt like a binge")
-        XCTAssertEqual(day[2].accessibilityLabel, "13:05")
+        XCTAssertEqual(day[3].accessibilityLabel.english, "13:05, Toast and tea, felt like a binge")
+        XCTAssertEqual(day[2].accessibilityLabel.english, "13:05")
 
         // Record days are fixed at save from the entry's own offset. A viewer in
         // New York on the same key sees the same day, and the London entry still

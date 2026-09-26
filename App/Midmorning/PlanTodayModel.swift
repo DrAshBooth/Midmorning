@@ -80,12 +80,12 @@ enum PlanToday {
     }
 
     private static func nextLine(slotIndex: Int, time: String, label: String) -> String {
-        NextPlannedMeal.line(for: PlanMealFact(label: label, time: time, kind: Slot.at(index: slotIndex)?.kind ?? .meal))
+        NextPlannedMeal.line(for: PlanMealFact(label: label, time: time, kind: Slot.at(index: slotIndex)?.kind ?? .meal)).string
     }
 
     @MainActor
     private static func label(for slotIndex: Int, store: RecordStore) -> String {
-        SlotLabel.effective(stored: try? store.slotLabel(index: slotIndex), defaultLabel: Slot.at(index: slotIndex)?.defaultLabel ?? "")
+        SlotLabelText.effective(index: slotIndex, stored: try? store.slotLabel(index: slotIndex))
     }
 
     @MainActor

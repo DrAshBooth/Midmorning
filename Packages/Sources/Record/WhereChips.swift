@@ -1,6 +1,9 @@
 import Foundation
+import Constants
 
-/// The Where control's four fixed chips (record spec, "Where chips").
+/// The Where control's four fixed chips (record spec, "Where chips"). The
+/// raw value is the Where an entry saves, a stored value; the chip shows
+/// `label`, from the catalogue.
 public enum WhereChip: String, CaseIterable, Sendable {
     case home = "Home"
     case work = "Work"
@@ -8,6 +11,16 @@ public enum WhereChip: String, CaseIterable, Sendable {
     case travelling = "Travelling"
 
     public static let fixed: [WhereChip] = [.home, .work, .out, .travelling]
+
+    /// The chip's text: "Home", "Work", "Out" or "Travelling".
+    public var label: CatalogueText {
+        switch self {
+        case .home: return .key("entry.where.home")
+        case .work: return .key("entry.where.work")
+        case .out: return .key("entry.where.out")
+        case .travelling: return .key("entry.where.travelling")
+        }
+    }
 }
 
 /// Orders the custom Where chips, most recently used first, capped at

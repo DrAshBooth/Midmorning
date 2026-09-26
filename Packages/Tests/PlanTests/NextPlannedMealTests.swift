@@ -15,7 +15,7 @@ final class NextPlannedMealTests: XCTestCase {
     func testSkipLunch() {
         let next = NextPlannedMeal.find(orderedTodayMeals: [lunch, midAfternoon], afterMinutesIntoDay: minutes("13:00"), dayStartHour: dayStartHour, firstOfNextDay: nil)
         XCTAssertEqual(next, midAfternoon)
-        XCTAssertEqual(NextPlannedMeal.line(for: next!), "Mid-afternoon at 16:00 still happens.")
+        XCTAssertEqual(NextPlannedMeal.line(for: next!).english, "Mid-afternoon at 16:00 still happens.")
     }
 
     /// Scenario: Skip lunch from the reminder.
@@ -29,7 +29,7 @@ final class NextPlannedMealTests: XCTestCase {
         let eveningSnack = PlanMealFact(label: "Evening snack", time: "21:00", kind: .snack)
         let next = NextPlannedMeal.find(orderedTodayMeals: [eveningSnack], afterMinutesIntoDay: minutes("21:00"), dayStartHour: dayStartHour, firstOfNextDay: breakfastTomorrow)
         XCTAssertEqual(next, breakfastTomorrow)
-        XCTAssertEqual(NextPlannedMeal.line(for: next!), "Breakfast at 08:00 still happens.")
+        XCTAssertEqual(NextPlannedMeal.line(for: next!).english, "Breakfast at 08:00 still happens.")
     }
 
     /// Scenario: A starred entry between planned meals.

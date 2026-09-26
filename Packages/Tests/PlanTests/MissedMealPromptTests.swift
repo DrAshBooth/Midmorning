@@ -23,7 +23,8 @@ final class MissedMealPromptTests: XCTestCase {
         let meal = lunch(windowEnd: at(14, 30))
         let state = MissedMealPrompt.active(meals: [meal], now: at(14, 30), recordDayHasEnded: false)
         XCTAssertEqual(state?.form, .skippedOrNotRecorded)
-        XCTAssertEqual(MissedMealPrompt.line(for: state!.form, timeText: { _ in "" }), "Skipped, or not recorded yet?")
+        XCTAssertEqual(MissedMealPrompt.line(for: state!.form, timeText: { _ in "" }).english, "Skipped, or not recorded yet?")
+        XCTAssertEqual(MissedMealPrompt.line(for: .skippedOrWasThat(candidateTime: Date()), timeText: { _ in "14:45" }).english, "Skipped, or was that 14:45?")
     }
 
     /// Scenario: Add it — the new-entry screen opens with the planned meal's

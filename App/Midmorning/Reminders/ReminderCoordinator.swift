@@ -231,9 +231,10 @@ enum ReminderCoordinator {
     ) -> SchedulerDay {
         let dayStartHour = (try? store.dayStartHour(effectiveOn: dayKey)) ?? RecordDay.startHour
         let plannedMealFacts = resolvedPlannedMeals(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: isCurrentDay, dayStartHour: dayStartHour, calendar: calendar, constants: constants)
-        let slotLabels = Dictionary(uniqueKeysWithValues: (0..<6).compactMap { index -> (Int, String)? in
-            guard let label = try? store.slotLabel(index: index), !label.isEmpty else { return nil }
-            return (index, label)
+        // reminders spec, "Discreet text by default": "The slot's label is
+        // the person's label for that slot, or the default."
+        let slotLabels = Dictionary(uniqueKeysWithValues: Slot.all.map { slot in
+            (slot.index, SlotLabelText.effective(index: slot.index, stored: try? store.slotLabel(index: slot.index)))
         })
 
         let entries = isCurrentDay ? ((try? store.entries(dayKey: dayKey)) ?? []) : []

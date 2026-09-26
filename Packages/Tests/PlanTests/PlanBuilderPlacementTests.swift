@@ -17,7 +17,7 @@ final class PlanBuilderPlacementTests: XCTestCase {
     func testPlaceARenamedSlotStillUsesTheSlotsDefaultTime() {
         let slot = Slot.at(index: 1)!
         let label = SlotLabel.effective(stored: "Elevenses", defaultLabel: slot.defaultLabel)
-        XCTAssertEqual(label, "Elevenses")
+        XCTAssertEqual(label.english, "Elevenses")
         let placed = PlanCodec.placing(slot.index, at: slot.defaultTime, in: [])
         XCTAssertEqual(placed, [PlannedMeal(slotIndex: 1, time: "10:30")])
     }

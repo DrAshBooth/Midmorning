@@ -24,10 +24,12 @@ struct DaySection: Identifiable {
         return DayHeading.text(for: interval.start, night: night)
     }
 
-    var stateLine: String? {
-        if states.contains(.didntRecord) { return "Didn't record" }
-        if states.contains(.paused) { return role == .current ? nil : "Paused" }
-        if states.contains(.fasting) { return "Fasting" }
+    /// "Didn't record", "Paused" (not on the current day, where "Paused for
+    /// today" shows) or "Fasting".
+    var stateLine: CatalogueText? {
+        if states.contains(.didntRecord) { return .key("today.stateLine.didntRecord") }
+        if states.contains(.paused) { return role == .current ? nil : .key("today.stateLine.paused") }
+        if states.contains(.fasting) { return .key("today.stateLine.fasting") }
         return nil
     }
 

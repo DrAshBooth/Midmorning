@@ -40,7 +40,7 @@ final class SlotsAndPlannedMealsTests: XCTestCase {
     // MARK: Slot table
 
     func testTheSixSlotsAndTheirDefaults() {
-        XCTAssertEqual(Slot.all.map(\.defaultLabel), ["Breakfast", "Mid-morning", "Lunch", "Mid-afternoon", "Evening meal", "Evening snack"])
+        XCTAssertEqual(Slot.all.map(\.defaultLabel.english), ["Breakfast", "Mid-morning", "Lunch", "Mid-afternoon", "Evening meal", "Evening snack"])
         XCTAssertEqual(Slot.all.map(\.kind), [.meal, .snack, .meal, .snack, .meal, .snack])
         XCTAssertEqual(Slot.all.map(\.defaultTime), ["08:00", "10:30", "13:00", "16:00", "19:00", "21:00"])
     }

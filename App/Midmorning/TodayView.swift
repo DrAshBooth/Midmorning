@@ -521,7 +521,7 @@ struct EntryRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(entry.accessibilityLabel)
+        .accessibilityLabel(entry.accessibilityLabel.string)
     }
 }
 
@@ -534,6 +534,6 @@ struct GapBandRow: View {
             .frame(height: 4)
             .listRowSeparator(.hidden)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours))
+            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours).string)
     }
 }

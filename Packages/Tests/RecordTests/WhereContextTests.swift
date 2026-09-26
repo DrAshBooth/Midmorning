@@ -88,8 +88,9 @@ final class WhereContextTests: XCTestCase {
 
     /// Scenario: Star on changes one label, and Scenario: Star off.
     func testStarTogglesOnlyTheContextLabel() {
-        XCTAssertEqual(ContextLabel.text(starOn: false), "Context")
-        XCTAssertEqual(ContextLabel.text(starOn: true), "What was going on just before?")
+        XCTAssertEqual(ContextLabel.text(starOn: false).english, "Context")
+        XCTAssertEqual(ContextLabel.text(starOn: true).english, "What was going on just before?")
+        XCTAssertEqual(WhereChip.fixed.map(\.label.english), WhereChip.fixed.map(\.rawValue), "each chip shows the Where it saves")
     }
 
     /// Scenario: Starred entry with an empty Context.
@@ -149,14 +150,14 @@ final class WhereContextTests: XCTestCase {
     func testEntryWithWhereAndContext() throws {
         let store = try makeStore()
         let row = try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Home", context: "Row with my sister")
-        XCTAssertEqual(row.accessibilityLabel, "13:05, Toast and tea, Home, Row with my sister")
+        XCTAssertEqual(row.accessibilityLabel.english, "13:05, Toast and tea, Home, Row with my sister")
     }
 
     /// Scenario: Entry with an empty What and a Where.
     func testEntryWithAnEmptyWhatAndAWhere() throws {
         let store = try makeStore()
         let row = try store.add(time: london(13, 5), what: "", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Out")
-        XCTAssertEqual(row.accessibilityLabel, "13:05, Out")
+        XCTAssertEqual(row.accessibilityLabel.english, "13:05, Out")
     }
 
     // MARK: Accessibility of the additions
@@ -165,13 +166,13 @@ final class WhereContextTests: XCTestCase {
     func testLabelOfAFullRow() throws {
         let store = try makeStore()
         let row = try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: true, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Home", context: "Row with my sister")
-        XCTAssertEqual(row.accessibilityLabel, "13:05, Toast and tea, Home, Row with my sister, felt like a binge")
+        XCTAssertEqual(row.accessibilityLabel.english, "13:05, Toast and tea, Home, Row with my sister, felt like a binge")
     }
 
     /// Scenario: Label of a row with Where only.
     func testLabelOfARowWithWhereOnly() throws {
         let store = try makeStore()
         let row = try store.add(time: london(13, 5), what: "", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Out")
-        XCTAssertEqual(row.accessibilityLabel, "13:05, Out")
+        XCTAssertEqual(row.accessibilityLabel.english, "13:05, Out")
     }
 }

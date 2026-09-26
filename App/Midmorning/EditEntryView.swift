@@ -63,7 +63,7 @@ struct EditEntryView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     if case .failed = saveOutcome {
-                        Text(SaveOutcome.failureMessage)
+                        Text(SaveOutcome.failureMessage.string)
                             .foregroundStyle(.secondary)
                     }
                     ForEach(NewEntryField.order, id: \.self) { field in
@@ -128,15 +128,15 @@ struct EditEntryView: View {
                 customPlaces = (try? store.customPlaces()) ?? []
             }
         case .star:
-            Toggle("felt like a binge", isOn: $feltLikeABinge)
+            Toggle("entry.feltLikeABinge", isOn: $feltLikeABinge)
                 .tint(Color(uiColor: .systemGray))
                 .opacity(scenePhase == .active ? 1 : 0)
         case .context:
             RecordField(
-                label: Text(ContextLabel.text(starOn: feltLikeABinge)),
+                label: Text(ContextLabel.text(starOn: feltLikeABinge).string),
                 text: $context,
                 isFocused: $contextIsFocused,
-                accessibilityLabelText: ContextLabel.text(starOn: feltLikeABinge),
+                accessibilityLabelText: ContextLabel.text(starOn: feltLikeABinge).string,
                 onSaveFromKeyboard: save
             )
         case .time:

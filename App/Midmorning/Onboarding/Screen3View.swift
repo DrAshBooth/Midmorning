@@ -23,8 +23,8 @@ struct Screen3View: View {
             Form {
                 Section(header: Text(Screen3Content.startDayQuestion)) {
                     Picker(Screen3Content.startDayQuestion, selection: $answers.startDayChoice) {
-                        Text(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: dayStartSchedule)).tag(StartDayChoice.Choice.today)
-                        Text(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: dayStartSchedule)).tag(StartDayChoice.Choice.tomorrow)
+                        Text(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: dayStartSchedule).string).tag(StartDayChoice.Choice.today)
+                        Text(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: dayStartSchedule).string).tag(StartDayChoice.Choice.tomorrow)
                     }
                     .pickerStyle(.inline)
                 }
@@ -39,7 +39,7 @@ struct Screen3View: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(Screen3Content.exampleVoiceOverLabel)
-                    Text(DayBoundaryLine.text(startHour: dayStartHour))
+                    Text(DayBoundaryLine.text(startHour: dayStartHour).string)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

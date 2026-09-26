@@ -61,13 +61,13 @@ public extension RecordRow {
     /// additions"): the time, then the What, the Where and the Context when
     /// each is not empty, then "felt like a binge" when the star is on. A
     /// comma and a space separate the parts that are present.
-    var accessibilityLabel: String {
-        var parts = [clockTime]
-        if !what.isEmpty { parts.append(what) }
-        if !whereText.isEmpty { parts.append(whereText) }
-        if !context.isEmpty { parts.append(context) }
-        if feltLikeABinge { parts.append("felt like a binge") }
-        return parts.joined(separator: ", ")
+    var accessibilityLabel: CatalogueText {
+        var parts: [CatalogueText] = [.verbatim(clockTime)]
+        if !what.isEmpty { parts.append(.verbatim(what)) }
+        if !whereText.isEmpty { parts.append(.verbatim(whereText)) }
+        if !context.isEmpty { parts.append(.verbatim(context)) }
+        if feltLikeABinge { parts.append(.key("entry.feltLikeABinge")) }
+        return .list(parts)
     }
 
     static func clockTime(for time: Date, utcOffsetSeconds: Int) -> String {

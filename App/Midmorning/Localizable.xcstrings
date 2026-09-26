@@ -1695,6 +1695,440 @@
           }
         }
       }
+    },
+    "entry.feltLikeABinge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "felt like a binge"
+          }
+        }
+      }
+    },
+    "entry.context": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Context"
+          }
+        }
+      }
+    },
+    "entry.context.starred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What was going on just before?"
+          }
+        }
+      }
+    },
+    "entry.saveFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not save. Try again."
+          }
+        }
+      }
+    },
+    "entry.where.home": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home"
+          }
+        }
+      }
+    },
+    "entry.where.work": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work"
+          }
+        }
+      }
+    },
+    "entry.where.out": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Out"
+          }
+        }
+      }
+    },
+    "entry.where.travelling": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travelling"
+          }
+        }
+      }
+    },
+    "today.stateLine.didntRecord": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Didn't record"
+          }
+        }
+      }
+    },
+    "today.stateLine.paused": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        }
+      }
+    },
+    "today.stateLine.fasting": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fasting"
+          }
+        }
+      }
+    },
+    "plan.missedPrompt.notRecordedYet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped, or not recorded yet?"
+          }
+        }
+      }
+    },
+    "plan.missedPrompt.wasThat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped, or was that %@?"
+          }
+        }
+      }
+    },
+    "plan.nextPlannedMeal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at %2$@ still happens."
+          }
+        }
+      }
+    },
+    "plan.softRules.mealLine": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This day has %1$@ and %2$@. Three meals and two or three snacks keep the gaps short. Save anyway?"
+          }
+        }
+      }
+    },
+    "plan.softRules.gapLine": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ between %2$@ at %3$@ and %4$@ at %5$@."
+          }
+        }
+      }
+    },
+    "plan.rename.productName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That is the app's name. Choose another word."
+          }
+        }
+      }
+    },
+    "plan.slot.breakfast": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Breakfast"
+          }
+        }
+      }
+    },
+    "plan.slot.midMorning": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mid-morning"
+          }
+        }
+      }
+    },
+    "plan.slot.lunch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lunch"
+          }
+        }
+      }
+    },
+    "plan.slot.midAfternoon": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mid-afternoon"
+          }
+        }
+      }
+    },
+    "plan.slot.eveningMeal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evening meal"
+          }
+        }
+      }
+    },
+    "plan.slot.eveningSnack": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evening snack"
+          }
+        }
+      }
+    },
+    "plan.builder.timeControl": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ time"
+          }
+        }
+      }
+    },
+    "plan.builder.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
+          }
+        }
+      }
+    },
+    "plan.builder.rename": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename %@"
+          }
+        }
+      }
+    },
+    "today.gapBand.accessibilityLabel %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Gap of more than %lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Gap of more than %lld hours"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "today.collapsed.entries %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld entry"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld entries"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "plan.softRules.meals %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "no meals"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meal"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meals"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "plan.softRules.snacks %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "no snacks"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld snack"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld snacks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "onboarding.startDay.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today, %@"
+          }
+        }
+      }
+    },
+    "onboarding.startDay.tomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tomorrow, %@"
+          }
+        }
+      }
+    },
+    "onboarding.dayBoundary": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A day runs from %1$@ to %2$@."
+          }
+        }
+      }
+    },
+    "today.heading.night": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, night"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

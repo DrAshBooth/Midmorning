@@ -22,12 +22,12 @@ public enum StartDayChoice {
 
     /// "Today, %@" / "Tomorrow, %@", with the date from the en_GB formatter,
     /// for example "Today, Thursday 24 September".
-    public static func label(for choice: Choice, now: Date, calendar: Calendar, schedule: DayStartSchedule) -> String {
+    public static func label(for choice: Choice, now: Date, calendar: Calendar, schedule: DayStartSchedule) -> CatalogueText {
         let key = dayKey(for: choice, now: now, calendar: calendar, schedule: schedule)
-        let formatted = formattedDate(fromDayKey: key, calendar: calendar)
+        let formatted = CatalogueText.verbatim(formattedDate(fromDayKey: key, calendar: calendar))
         switch choice {
-        case .today: return "Today, \(formatted)"
-        case .tomorrow: return "Tomorrow, \(formatted)"
+        case .today: return .key("onboarding.startDay.today", formatted)
+        case .tomorrow: return .key("onboarding.startDay.tomorrow", formatted)
         }
     }
 
@@ -51,9 +51,9 @@ public enum StartDayChoice {
 /// in three sentences"), filled from the day-start hour in force, on the
 /// 24-hour clock.
 public enum DayBoundaryLine {
-    public static func text(startHour: Int) -> String {
+    public static func text(startHour: Int) -> CatalogueText {
         let endHour = (startHour + 23) % 24
-        return "A day runs from \(Self.clock(startHour)) to \(Self.clock(endHour, minute: 59))."
+        return .key("onboarding.dayBoundary", .verbatim(Self.clock(startHour)), .verbatim(Self.clock(endHour, minute: 59)))
     }
 
     private static func clock(_ hour: Int, minute: Int = 0) -> String {

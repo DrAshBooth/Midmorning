@@ -122,6 +122,6 @@ final class EditDeleteTests: XCTestCase {
 
     /// The exact failure text (record spec, "A save that fails").
     func testFailureMessageText() {
-        XCTAssertEqual(SaveOutcome.failureMessage, "Could not save. Try again.")
+        XCTAssertEqual(SaveOutcome.failureMessage.english, "Could not save. Try again.")
     }
 }

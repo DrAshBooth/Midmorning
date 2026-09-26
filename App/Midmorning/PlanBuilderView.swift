@@ -43,8 +43,8 @@ struct PlanBuilderView: View {
     @State private var lockedSlots: Set<Int> = []
     @State private var renamingSlot: Int?
     @State private var renameText = ""
-    @State private var renameMessage: String?
-    @State private var softRuleLines: [String] = []
+    @State private var renameMessage: CatalogueText?
+    @State private var softRuleLines: [CatalogueText] = []
     @State private var isShowingSoftRuleCheck = false
 
     private var orderedMeals: [PlannedMeal] { PlanOrdering.sorted(meals, dayStartHour: dayStartHour) }
@@ -52,7 +52,7 @@ struct PlanBuilderView: View {
     private var unplacedSlots: [Slot] { Slot.all.filter { !placedSlotIndexes.contains($0.index) } }
 
     private func label(_ slotIndex: Int) -> String {
-        SlotLabel.effective(stored: storedLabels[slotIndex], defaultLabel: Slot.at(index: slotIndex)?.defaultLabel ?? "")
+        SlotLabelText.effective(index: slotIndex, stored: storedLabels[slotIndex])
     }
 
     var body: some View {
@@ -95,7 +95,7 @@ struct PlanBuilderView: View {
             .sheet(item: renamingSlotBinding) { renaming in
                 renameSheet(for: renaming.index)
             }
-            .confirmationDialog(Text(softRuleLines.joined(separator: "\n\n")), isPresented: $isShowingSoftRuleCheck, titleVisibility: .visible) {
+            .confirmationDialog(Text(softRuleLines.map(\.string).joined(separator: "\n\n")), isPresented: $isShowingSoftRuleCheck, titleVisibility: .visible) {
                 Button("plan.saveAnyway") { performSave() }
                 Button("plan.goBack", role: .cancel) {}
             }
@@ -124,7 +124,7 @@ struct PlanBuilderView: View {
                     Text(meal.time)
                 } else {
                     DatePicker(
-                        PlanBuilderAccessibility.timeControlLabel(slotLabel: slotLabel),
+                        PlanBuilderAccessibility.timeControlLabel(slotLabel: slotLabel).string,
                         selection: timeBinding(for: meal.slotIndex),
                         displayedComponents: .hourAndMinute
                     )
@@ -138,11 +138,11 @@ struct PlanBuilderView: View {
             }
             HStack {
                 Button("plan.rename") { beginRename(meal.slotIndex) }
-                    .accessibilityLabel(PlanBuilderAccessibility.renameControlLabel(slotLabel: slotLabel))
+                    .accessibilityLabel(PlanBuilderAccessibility.renameControlLabel(slotLabel: slotLabel).string)
                 if !locked {
                     Spacer()
                     Button(role: .destructive) { remove(meal.slotIndex) } label: {
-                        Text(PlanBuilderAccessibility.removeControlLabel(slotLabel: slotLabel))
+                        Text(PlanBuilderAccessibility.removeControlLabel(slotLabel: slotLabel).string)
                     }
                 }
             }
@@ -192,7 +192,7 @@ struct PlanBuilderView: View {
                         set: { renameText = SlotLabel.truncated($0) }
                     ))
                     if let renameMessage {
-                        Text(renameMessage).foregroundStyle(.secondary)
+                        Text(renameMessage.string).foregroundStyle(.secondary)
                     }
                 }
             }

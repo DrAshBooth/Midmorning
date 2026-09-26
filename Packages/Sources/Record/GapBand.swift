@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The gap band between two consecutive entries of a record day (record
 /// spec, "The gap band"). A pure function over the day's entry times and its
@@ -46,7 +47,7 @@ public enum GapBand {
     /// The band's VoiceOver label (record spec, "Accessibility of the
     /// additions"): "Gap of more than %lld hours", filled from
     /// `maxAwakeGapHours`.
-    public static func accessibilityLabel(maxAwakeGapHours: Int) -> String {
-        "Gap of more than \(maxAwakeGapHours) hours"
+    public static func accessibilityLabel(maxAwakeGapHours: Int) -> CatalogueText {
+        .key("today.gapBand.accessibilityLabel %lld", .count(maxAwakeGapHours))
     }
 }

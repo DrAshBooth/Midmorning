@@ -15,11 +15,12 @@ public enum SlotKind: String, Sendable, Equatable, Codable {
 public struct Slot: Sendable, Equatable {
     public let index: Int
     public let kind: SlotKind
-    public let defaultLabel: String
+    /// The default label, from the catalogue.
+    public let defaultLabel: CatalogueText
     public let defaultHour: Int
     public let defaultMinute: Int
 
-    public init(index: Int, kind: SlotKind, defaultLabel: String, defaultHour: Int, defaultMinute: Int) {
+    public init(index: Int, kind: SlotKind, defaultLabel: CatalogueText, defaultHour: Int, defaultMinute: Int) {
         self.index = index
         self.kind = kind
         self.defaultLabel = defaultLabel
@@ -35,12 +36,12 @@ public struct Slot: Sendable, Equatable {
     /// Mid-morning 10:30, Lunch 13:00, Mid-afternoon 16:00, Evening meal
     /// 19:00 and Evening snack 21:00.
     public static let all: [Slot] = [
-        Slot(index: 0, kind: .meal, defaultLabel: "Breakfast", defaultHour: 8, defaultMinute: 0),
-        Slot(index: 1, kind: .snack, defaultLabel: "Mid-morning", defaultHour: 10, defaultMinute: 30),
-        Slot(index: 2, kind: .meal, defaultLabel: "Lunch", defaultHour: 13, defaultMinute: 0),
-        Slot(index: 3, kind: .snack, defaultLabel: "Mid-afternoon", defaultHour: 16, defaultMinute: 0),
-        Slot(index: 4, kind: .meal, defaultLabel: "Evening meal", defaultHour: 19, defaultMinute: 0),
-        Slot(index: 5, kind: .snack, defaultLabel: "Evening snack", defaultHour: 21, defaultMinute: 0),
+        Slot(index: 0, kind: .meal, defaultLabel: .key("plan.slot.breakfast"), defaultHour: 8, defaultMinute: 0),
+        Slot(index: 1, kind: .snack, defaultLabel: .key("plan.slot.midMorning"), defaultHour: 10, defaultMinute: 30),
+        Slot(index: 2, kind: .meal, defaultLabel: .key("plan.slot.lunch"), defaultHour: 13, defaultMinute: 0),
+        Slot(index: 3, kind: .snack, defaultLabel: .key("plan.slot.midAfternoon"), defaultHour: 16, defaultMinute: 0),
+        Slot(index: 4, kind: .meal, defaultLabel: .key("plan.slot.eveningMeal"), defaultHour: 19, defaultMinute: 0),
+        Slot(index: 5, kind: .snack, defaultLabel: .key("plan.slot.eveningSnack"), defaultHour: 21, defaultMinute: 0),
     ]
 
     public static func at(index: Int) -> Slot? { all.first { $0.index == index } }
