@@ -215,7 +215,7 @@ The app MUST pass the unrounded BMI to `safeguarding`. The app MUST NOT show the
 
 The limits are the named constants MIN_HEIGHT_CM = 100, MAX_HEIGHT_CM = 250 and MIN_WEIGHT_KG = 30 in `ProgrammeConstants`. The height field MUST accept MIN_HEIGHT_CM to MAX_HEIGHT_CM, or the same range in feet and inches. The weight field MUST accept MIN_WEIGHT_KG and above, or the same in stone and pounds, with no upper bound. When the height is outside its range, the field MUST show "Enter a height between %1$@ and %2$@." The app fills the two placeholders with the lower and the upper limit, in the chosen unit. When the weight is below MIN_WEIGHT_KG, the field MUST show "Enter a weight of %@ or more." The app fills the placeholder with the limit, in the chosen unit.
 
-Each limit MUST come from strings with one count each, as the catalogue rules in `content` require. These strings are "%lld cm" and "%lld kg", and for the imperial units "%lld ft" with "%lld in", and "%lld st" with "%lld lb". The app joins the two parts of an imperial limit with one space. With "cm" chosen, the height message reads "Enter a height between 100 cm and 250 cm." With "ft in" chosen, it reads "Enter a height between 3 ft 4 in and 8 ft 2 in." With "kg" chosen, the weight message reads "Enter a weight of 30 kg or more." With "st lb" chosen, it reads "Enter a weight of 4 st 11 lb or more."
+Each limit MUST come from strings with one count each, as the catalogue rules in `content` require. These strings are "%lld", "%lld cm" and "%lld kg", and for the imperial units "%lld ft" with "%lld in", and "%lld st" with "%lld lb". The app joins the two parts of an imperial limit with one space. With "cm" chosen, the app fills the lower height limit from "%lld" and the upper height limit from "%lld cm". So the height message reads "Enter a height between 100 and 250 cm." With "ft in" chosen, it reads "Enter a height between 3 ft 4 in and 8 ft 2 in." With "kg" chosen, the weight message reads "Enter a weight of 30 kg or more." With "st lb" chosen, it reads "Enter a weight of 4 st 11 lb or more."
 
 The app MUST compute each imperial limit from its cm or kg constant, with the conversions above. The app MUST NOT hold an imperial limit as a constant of its own. The app MUST round each imperial limit inward, to a whole inch or a whole pound. It rounds the lower height limit and the weight limit up, and it rounds the upper height limit down. So the field accepts every value that the message shows. The app then splits the inches into feet and inches, and the pounds into stone and pounds. Ash ruled this on 26 September 2026 (r13-11).
 
@@ -237,7 +237,7 @@ Each message MUST use the primary or the secondary text colour, never red, as `p
 
 #### Scenario: Height outside the range
 - **WHEN** the person enters 90 cm and taps "Continue"
-- **THEN** the height field shows "Enter a height between 100 cm and 250 cm." and the screen stays
+- **THEN** the height field shows "Enter a height between 100 and 250 cm." and the screen stays
 
 #### Scenario: Height outside the range in ft in
 - **WHEN** the person chooses "ft in", enters 3 ft 2 in and taps "Continue"

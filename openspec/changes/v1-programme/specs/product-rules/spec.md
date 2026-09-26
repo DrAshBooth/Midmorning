@@ -116,7 +116,7 @@ Every string MUST say "device", not "iPhone", except where iOS itself uses the w
 
 #### Scenario: A label that starts with the visible text
 - **WHEN** VoiceOver focuses the plan builder's "Rename" control of the Lunch slot
-- **THEN** it reads "Rename Lunch", and Voice Control finds the control when the person says "Tap Rename"
+- **THEN** it reads "Rename Lunch". When the person says "Tap Rename", Voice Control acts on that control, or it shows a number on each "Rename" control so that the person can choose one
 
 ### Requirement: Offline and private by default
 
@@ -128,7 +128,7 @@ Every screen in the core loop MUST work with no network. The app MUST NOT need a
 
 ### Requirement: No AI at runtime
 
-The app MUST NOT call a language model or any generative service at runtime. Every card, question and sentence MUST be bundled text with the clinical reviewer's sign-off.
+The app MUST NOT call a language model or any generative service at runtime. Every card, question and sentence MUST be text that the app carries, in the content bundle or in a string catalogue. The clinical reviewer's sign-off MUST cover the content bundle and the signed catalogue keys, as `content` states in "Content versions". The clinical reviewer MUST review the other interface text before release. Ash ruled this on 26 September 2026 (r13-01).
 
 #### Scenario: A pattern sentence
 - **WHEN** the app builds a pattern sentence from the record

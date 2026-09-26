@@ -17,13 +17,14 @@ Ash ruled on 26 September 2026 on the Midmorning Decisions page. This change wri
 
 ## What Changes
 
-- `content`: "Content versions" names the signed catalogue keys and `Packages/Content/Resources/signed-catalogue-keys.json`. "Strings live in catalogues" drops the claim that the hash covers every catalogue call. "Every bundled string family has ids" adds the Swift-constant test, the one-count rule strings and the fixed rule strings. "Catalogue rules" adds the one-count rule, the sign-off list source and the VoiceOver label rule.
-- `onboarding`: "Screen 2: the screening questions" and "The one-time BMI" give the neutral colour and the announcement. "The one-time BMI" gives the ft in and st lb messages and how the app rounds them.
-- `programme`: the stage 2 and stage 3 rule strings come from one-count strings. The restart sentence and the StageOpened record day key change the engine.
+- `content`: "Content versions" names the signed catalogue keys and `Packages/Content/Resources/signed-catalogue-keys.json`. It adds a test that each reminder key matches a prefix. "Strings live in catalogues" drops the claim that the hash covers every catalogue call. "Every bundled string family has ids" adds the Swift-constant test, the one-count rule strings and the fixed rule strings. Signed-off text has a bundle copy or a signed catalogue key. The onboarding screen 1 lines and the treatment question wait for decision mm-t11.47. "Catalogue rules" adds the one-count rule, the sign-off list source and the VoiceOver label rule.
+- `onboarding`: "Screen 2: the screening questions" and "The one-time BMI" give the neutral colour and the announcement. "The one-time BMI" gives the ft in and st lb messages and how the app rounds them. The cm message stays "Enter a height between 100 and 250 cm.".
+- `programme`: the stage 2 and stage 3 rule strings come from one-count strings. The restart sentence and the StageOpened record day key change the engine. "Start week 1 again" and the engine's restart scenario name the later of the new start day and the day stage 2 opened.
 - `safeguarding`: the deterioration reason reads "Your starred entries have gone up each week lately."
 - `weekly-review`: the week-1 rule allows the save before "Done". The Reviews row, the starred part and the urge part come from one-count strings. The starred line of "Taking stock", which is in `v1-programme` only, also comes from one-count strings.
 - `regular-eating-plan`: the "Rename" control keeps its visible text and its longer VoiceOver label.
-- `product-rules`: the VoiceOver label rule and the validation text rule change. This change edits `openspec/changes/v1-programme/specs/product-rules/spec.md` directly, because product-rules lives only there.
+- `product-rules`: the VoiceOver label rule and the validation text rule change. "No AI at runtime" says that the sign-off covers the bundle and the signed catalogue keys, and that the clinical reviewer reviews the other interface text before release. This change edits `openspec/changes/v1-programme/specs/product-rules/spec.md` directly, because product-rules lives only there.
+- `urge-toolkit`: "What the toolkit never shows" shows the urge part with its counts filled in. This change edits the copy in `v1-programme` directly, because urge-toolkit lives only there.
 
 Each changed requirement also has a copy in `openspec/changes/v1-programme/specs`. This change applies the same edits to each copy.
 
@@ -38,6 +39,7 @@ Each changed requirement also has a copy in `openspec/changes/v1-programme/specs
 - `weekly-review`
 - `regular-eating-plan`
 - `product-rules` (in `v1-programme` only)
+- `urge-toolkit` (in `v1-programme` only)
 
 ## Impact
 

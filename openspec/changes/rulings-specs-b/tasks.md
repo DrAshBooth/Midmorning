@@ -20,6 +20,7 @@ Each task changes one requirement and its copy in `openspec/changes/v1-programme
 - [x] 3.2 Modify programme "Taking stock, the modules and staying on track open by week of regular eating" for r14-02. Run `openspec validate rulings-specs-b --type change --strict`.
 - [x] 3.3 Modify programme "Reading ahead is never blocked" for r13-12: the stage 2 and stage 3 rules come from one-count strings. Run `openspec validate rulings-specs-b --type change --strict`.
 - [x] 3.4 Modify programme "A pure stage engine with stored openings as input" for r14-03: the row holds its record day key. Run `openspec validate rulings-specs-b --type change --strict`.
+- [x] 3.5 Modify programme "Start week 1 again" and the restart scenario of "A pure stage engine with stored openings as input" for r14-02: name the later of the two days. Run `openspec validate rulings-specs-b --type change --strict`.
 
 ## 4. safeguarding
 
@@ -41,3 +42,20 @@ Each task changes one requirement and its copy in `openspec/changes/v1-programme
 
 - [x] 7.1 Edit product-rules "Dates and times in strings" in v1-programme for r13-08: a label can start with the visible text. Run `openspec validate --all --strict`.
 - [x] 7.2 Edit product-rules "Appearance" in v1-programme for r13-15: validation text uses a neutral text colour. Run `openspec validate --all --strict`.
+- [x] 7.3 Edit product-rules "No AI at runtime" in v1-programme for r13-01: the sign-off covers the bundle and the signed catalogue keys. Run `openspec validate --all --strict`.
+
+## 8. urge-toolkit
+
+- [x] 8.1 Edit urge-toolkit "What the toolkit never shows" in v1-programme for r13-12: show the urge part with its counts filled in. Run `openspec validate --all --strict`.
+
+## 9. Follow-ups
+
+This change does not build code. These beads hold the work that follows from it.
+
+- Scenario "A reminder key with no prefix" is deferred: mm-t11.49. That bead also adds the "settings.reminders." and "today.reminders." prefixes (r13-01).
+- mm-t33.19 builds the pattern templates from strings with one count each (r13-12).
+- mm-t31.20 builds the urge wave value from strings with one count each (r13-12).
+- mm-t36.23 builds the check-in weeks of the finish text from strings with one count each (r13-12).
+- mm-t11.48 builds the Reviews row, the starred part and the urge part from the strings that weekly-review names (r13-12).
+- Ash decides mm-t11.47: where the onboarding screen 1 lines and the treatment question live (r13-02).
+- mm-t23.15 holds the device check for "Tap Rename" with Voice Control (r13-08).

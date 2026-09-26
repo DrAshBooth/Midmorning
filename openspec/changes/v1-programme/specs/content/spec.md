@@ -211,9 +211,9 @@ The content bundle MUST carry one content version, an integer that starts at 1. 
 
 The signed catalogue keys are the keys of the string catalogue that hold record, safeguarding and reminder text. That is the text that the `record`, `safeguarding` and `reminders` capabilities own. The repository MUST hold `Packages/Content/Resources/signed-catalogue-keys.json`. That file MUST list the key prefixes of those three families. A catalogue key is signed when it starts with a prefix from that file. The canonical JSON MUST hold the en-GB text of each signed key, with its plural forms.
 
-The bundle hash, the content-lock tool and `scripts/content-signoff-list` MUST read the prefixes from that one file. They MUST NOT hold a second copy of the list. When the team adds a key to one of the three families, the team MUST make sure that a prefix in the file matches the key.
+The bundle hash, the content-lock tool and `scripts/content-signoff-list` MUST read the prefixes from that one file. They MUST NOT hold a second copy of the list. A catalogue key that holds reminder text MUST have the segment "reminders" in its name, for example "reminders.title.midday" or "settings.reminders.pausedLine". A segment is a part of the key that full stops separate. The content test MUST fail when a key with the segment "reminders" matches no prefix in the file. The test MUST name that key. When the team adds a record or safeguarding key, the review MUST check that a prefix in the file matches the key.
 
-Every other catalogue key holds interface text, for example the label of a control that names no record, safeguarding or reminder content. The bundle hash, the content version and the sign-off file MUST NOT cover interface text. The clinical reviewer still reviews interface text before release, as `product-rules` requires. Ash ruled this on 26 September 2026 (r13-01).
+A catalogue key that no prefix matches holds interface text, for example the label of a control that names no record, safeguarding or reminder content. The bundle hash, the content version and the sign-off file MUST NOT cover such a key. A prefix can also match some interface text, for example a switch label in the reminder settings. That text is then signed too. The clinical reviewer still reviews all interface text before release, as `product-rules` requires in "No AI at runtime". Ash ruled this on 26 September 2026 (r13-01).
 
 The repository MUST hold `Packages/Content/Resources/content-lock.json`. The lock MUST hold two fields, contentVersion and bundleHash. The content test MUST fail when the bundle's hash differs from the lock's and the bundle's version equals the lock's. A commit that raises the content version MUST update the lock in the same commit.
 
@@ -236,8 +236,12 @@ The app MUST know the content version it carries. When the app updates and the c
 - **THEN** the content test passes the lock check, and the sign-off list does not hold "common.cancel"
 
 #### Scenario: One list of prefixes
-- **WHEN** the team adds the prefix "weighIn." to signed-catalogue-keys.json
-- **THEN** the bundle hash covers the "weighIn." keys, the content-lock tool writes the new hash, scripts/content-signoff-list prints those keys, and no other list of prefixes needs a change
+- **WHEN** the team adds the prefix "today.reminders." to signed-catalogue-keys.json
+- **THEN** the bundle hash covers the "today.reminders." keys, the content-lock tool writes the new hash, scripts/content-signoff-list prints those keys, and no other list of prefixes needs a change
+
+#### Scenario: A reminder key with no prefix
+- **WHEN** the string catalogue holds the key "today.reminders.denied" and no prefix in signed-catalogue-keys.json matches it
+- **THEN** the content test fails and names "today.reminders.denied"
 
 #### Scenario: A title changes
 - **WHEN** the team renames the card with id "stage1.star" from "The star" to "Felt like a binge"
@@ -444,7 +448,7 @@ The content bundle MUST hold these families of reviewed strings, each string wit
 
 - Cards: the ids in the card catalogue.
 - Opening sentences: "opening.stage2" to "opening.stage7". Programme owns the text. "opening.stage2.remindersoff" is the line the stage 2 opening card adds when notification permission is denied: "Reminders are off, so the Home Screen widget shows your next planned time."
-- Rule strings: "rule.stage2" to "rule.stage7", and more ids that start with "rule.stage2." or "rule.stage3.". Programme owns the text. The stage 2 rule and the stage 3 rule each show two counts, so each comes from strings with one count each. The stage 2 rule is "rule.stage2", "Opens after %lld recorded days.", then a second string, "You have %lld.". The stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts" with the default constants.
+- Rule strings: "rule.stage2" to "rule.stage7", and more ids that start with "rule.stage2." or "rule.stage3.". Programme owns the text. The stage 2 rule and the stage 3 rule each show two counts, so each comes from strings with one count each. The stage 2 rule is "rule.stage2", "Opens after %lld recorded days.", then "rule.stage2.count", "You have %lld.". The stage 3 rule is "rule.stage3", "Opens after %1$@, or %2$@ after your plan starts". The app fills it from "rule.stage3.days", "%lld days on your plan", and "rule.stage3.weeks", "%lld weeks". With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts".
 - Today card strings: "todaycard.plan", "Your plan isn't set yet. It takes about two minutes."; "todaycard.plan.setup", "Set it up"; "todaycard.focus", "If you use a Focus at work, let planned meal reminders through?"; "todaycard.focus.yes", "Yes"; "todaycard.read", "Read". Programme owns the text and when each card shows.
 - Pattern templates: "pattern.<name>". Problem-solving owns the text. A slot template reads "{n} of your {m} starred entries were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} starred entries were at {place}."
 - The reintroduction question: "dieting.reintroduction", "{weekday}, {slot}: how did it go?". Dieting-module owns the text.
@@ -461,11 +465,11 @@ The content bundle MUST hold these families of reviewed strings, each string wit
 - The exclusion page reasons: "exclusion.selfharm", "exclusion.age", "exclusion.weight", "exclusion.pregnancy" and "exclusion.treatment". Safeguarding owns the text.
 - The not-right-now pages: "notrightnow.selfharm" and "notrightnow.weight". Safeguarding owns the text. For the pregnancy and treatment reasons, the page shows "exclusion.pregnancy" and "exclusion.treatment". The bundle MUST NOT hold "notrightnow.pregnancy" or "notrightnow.treatment".
 - The GP suggestion pages: "gpsuggestion.<reason>". Safeguarding owns the text.
-- The other signed-off text that the Programme package holds as Swift constants. This is the screening questions and their answers, the height and weight limit messages, the onboarding text, the headings and fixed lines of the safeguarding pages, and the review questions, controls and summary sentences. Safeguarding, onboarding and weekly-review own this text.
+- The other signed-off text that the Programme package shows: the screening questions and their answers, the onboarding text, the headings and fixed lines of the safeguarding pages, and the review questions, controls and summary sentences. Safeguarding, onboarding and weekly-review own this text. Each of these strings MUST have a bundle copy, or the app MUST read it from a signed catalogue key, as "Content versions" defines. The height and weight limit messages are signed catalogue keys. Decision mm-t11.47 sets where two parts of this text live. These are the lines of onboarding screen 1 that hold "CBT" or "therapy", and the screening question "Are you getting help from a clinic or a therapist for your eating at the moment?". Those strings wait for that decision. Until Ash rules, they need no bundle copy and no signed catalogue key.
 
 These strings MUST follow the same version, sign-off, tone and forbidden-list rules as the cards. Every string with a count MUST follow the catalogue rules below. Every string MUST hold at most one %lld placeholder.
 
-The Programme package also holds some of these strings as Swift constants, and the app can show that copy. For each such constant, the bundle MUST hold the same text under the string's id. A test MUST compare each Swift constant with its bundle string, both filled with the same values. The test MUST fail when the two differ, and it MUST name the id. The sign-off, the tone rules, the forbidden list and the catalogue rules read the bundle copy. Ash ruled this on 26 September 2026 (r13-02).
+The Programme package also holds some of these strings as Swift constants, and the app can show that copy. For each such constant, the bundle MUST hold the same text under the string's id. The strings that wait for decision mm-t11.47 are the one exception. A test MUST compare each Swift constant with its bundle string, both filled with the same values. The test MUST fail when the two differ, and it MUST name the id. The sign-off, the tone rules, the forbidden list and the catalogue rules read the bundle copy. Text that the app reads from a signed catalogue key is not a Swift constant, and it needs no bundle copy. Ash ruled this on 26 September 2026 (r13-02).
 
 Programme owns every fill: the gate value from ProgrammeConstants, the recorded-day count of the stage 2 rule, and the days and the weeks of the stage 3 rule. A rule string of one sentence MUST NOT end with a full stop. The two strings of the stage 2 rule are the exception: each is one sentence, and each ends with a full stop.
 
@@ -569,7 +573,7 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 
 #### Scenario: The not-right-now ids
 - **WHEN** a reviewer lists every bundle id that starts with "notrightnow."
-- **THEN** the list holds "notrightnow.selfharm" and "notrightnow.weight", and no "notrightnow.pregnancy" or "notrightnow.treatment"
+- **THEN** the list holds "notrightnow.selfharm" and "notrightnow.weight" and no other id
 
 ### Requirement: Catalogue rules
 

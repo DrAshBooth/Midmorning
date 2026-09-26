@@ -12,7 +12,7 @@ The app MUST also open stage 3 by a fallback count of record days. The fallback 
 
 The fallback MUST open the stage at the day start that ends day RECORD_DAYS_FOR_STAGE_3_FALLBACK. The fallback MUST NOT need a recorded day, a planned day or a template. Whichever of the two rules comes first MUST open the stage.
 
-The rule string for stage 3 is "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts", with no full stop. It shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The app MUST fill %1$lld from DAYS_ON_PLAN_FOR_STAGE_3. The app MUST fill %2$lld with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
+With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts", with no full stop. It shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The rule string is "Opens after %1$@, or %2$@ after your plan starts". The app MUST fill %1$@ from "%lld days on your plan", with DAYS_ON_PLAN_FOR_STAGE_3 as the count. The app MUST fill %2$@ from "%lld weeks", with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7 as the count. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
 
 #### Scenario: Seven planned days over ten days
 - **WHEN** seven of the next ten record days are planned days with at least one entry each
@@ -100,16 +100,16 @@ The app MUST let the person open every card of every stage from day 1. The Progr
 
 The rule strings are, in stage order from stage 2:
 
-- "Opens after %1$lld recorded days. You have %2$lld."
-- "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts"
+- "Opens after %lld recorded days." then "You have %lld."
+- "Opens after %1$@, or %2$@ after your plan starts", filled from "%lld days on your plan" and "%lld weeks"
 - "Opens after your first urge outcome, or a week from now"
 - "Opens %lld weeks after your plan starts"
 - "Opens after taking stock"
 - "Opens %lld weeks after your plan starts"
 
-Each rule string with a count MUST carry plural forms. The stage 2 and stage 3 rule strings each show two counts, so each MUST come from strings with one count each. Content owns the catalogue rules. The app MUST fill the gate value in each rule string from ProgrammeConstants. The stage 2 rule string shows the count toward the gate. The app MUST fill its %2$lld with the count of recorded days the stage 2 rule counts.
+Each string with a count MUST carry plural forms. A string holds at most one count, so the stage 2 rule and the stage 3 rule each come from more than one string. Content owns the catalogue rules. The app MUST fill each gate value from ProgrammeConstants. The stage 2 rule also shows the count toward the gate. The app MUST fill the %lld of "You have %lld." with the count of recorded days that the stage 2 rule counts. The app MUST show the two stage 2 strings joined by one space.
 
-The app MUST show the count in the same text style as every row. The screen MUST show no bar, tick or graphic for it. A rule string of one sentence MUST NOT end with a full stop. The stage 2 rule string is two sentences, and each ends with a full stop.
+The app MUST show the count in the same text style as every row. The screen MUST show no bar, tick or graphic for it. A rule string of one sentence MUST NOT end with a full stop. The stage 2 rule is two sentences from two strings, and each ends with a full stop.
 
 #### Scenario: A closed stage's row
 - **WHEN** stage 2 is closed and the person has two recorded days
@@ -122,6 +122,42 @@ The app MUST show the count in the same text style as every row. The screen MUST
 #### Scenario: A gate changes
 - **WHEN** the team sets RECORDED_DAYS_FOR_STAGE_2 to 3 and the person has one recorded day
 - **THEN** stage 2 opens after 3 recorded days and its rule string reads "Opens after 3 recorded days. You have 1."
+
+### Requirement: Start week 1 again
+
+The Programme screen MUST show "Start week 1 again" at all times after onboarding. One tap MUST open the start-day choice with "Today", "Tomorrow" and "Cancel". When the person picks a day, the app MUST set it as the new start day. Week 1 MUST start from it. "Cancel" MUST close the choice and keep the start day. "Cancel" MUST NOT restart. The app MUST keep the values from a re-screen that ran before the choice, as `safeguarding` states in "Re-screening at a restart".
+
+The app MUST count record days from the record day of the last screening. The `safeguarding` capability defines the last screening. The store keeps its moment in the Profile field `askedAt`. Within 84 record days of the last screening, the app MUST ask nothing else. More than 84 record days after the last screening, the app MUST run safeguarding's re-screening first. The start-day choice MUST come after it.
+
+The restart MUST keep every entry, plan, list, worksheet, weigh-in and maintenance plan. Every open stage MUST stay open. The restart MUST NOT delete or write any StageOpened row.
+
+The restart MUST write the restart moment to its Settings key. The engine reads it as restartAt. The engine then ignores a stage 5 opening earlier than that moment, as the stage engine rule states. The "Now" marker then moves as the Programme screen rule states.
+
+Staying-on-track's "Restart the programme?" at a check-in is a shortcut to this control. Staying-on-track states what a restart does to the finish, the check-ins and the reminders.
+
+#### Scenario: Restart today
+- **WHEN** the person taps "Start week 1 again" on Friday 15 January 2027, 40 record days after the last screening, and picks "Today"
+- **THEN** the app asks nothing else, the start day is Friday 15 January, the Programme screen shows "Week 1", and every entry, plan, list and worksheet stays
+
+#### Scenario: Restart tomorrow
+- **WHEN** the person taps "Start week 1 again" on Friday 15 January 2027 and picks "Tomorrow"
+- **THEN** the start day is Saturday 16 January, and the app treats Friday as before week 1
+
+#### Scenario: Cancel
+- **WHEN** the person taps "Start week 1 again" and then "Cancel"
+- **THEN** the start day is unchanged
+
+#### Scenario: A restart in week 1
+- **WHEN** the person taps "Start week 1 again" on the third day after onboarding and picks "Today"
+- **THEN** the start day is that day, and the recorded days before it still count toward stage 2
+
+#### Scenario: More than 84 record days after the last screening
+- **WHEN** the last screening was at onboarding on Monday 28 September 2026, the person restarted with no re-screen on Monday 30 November, 63 record days later, and taps "Start week 1 again" on Tuesday 22 December, 85 record days after that screening and 22 record days after that restart
+- **THEN** the app runs the re-screening that safeguarding defines before the start-day choice
+
+#### Scenario: Stages after a restart
+- **WHEN** stages 1 to 7 are open and the person restarts with the start day Monday 4 January 2027
+- **THEN** the store keeps every StageOpened row, stages 1 to 4, 6 and 7 stay open, and stage 5 is closed until week 6 of regular eating, counted from the new start day, because that day is later than the record day on which stage 2 opened
 
 ### Requirement: A pure stage engine with stored openings as input
 
@@ -181,7 +217,7 @@ The engine MUST read only facts dated after the last opening moment in the store
 
 #### Scenario: A stage 5 opening before the restart
 - **WHEN** the store holds a stage 5 opening at 04:00 on Monday 9 November 2026 and restartAt is 09:00 on Monday 4 January 2027
-- **THEN** the engine ignores that opening and computes stage 5 from the new start day
+- **THEN** the engine ignores that opening and computes stage 5 from the later of the new start day and the record day on which stage 2 opened
 
 #### Scenario: The opening row holds its record day
 - **WHEN** the person saves the entry that makes the fifth recorded day at 04:30 on Friday 9 October 2026, with the day start 04:00

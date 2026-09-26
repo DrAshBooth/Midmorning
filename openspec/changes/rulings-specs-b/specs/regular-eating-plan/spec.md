@@ -18,7 +18,7 @@ A rename MUST NOT change the slot's kind, its slot index, its default time or it
 
 #### Scenario: The Rename label
 - **WHEN** VoiceOver focuses the "Rename" control of the Lunch slot
-- **THEN** VoiceOver reads "Rename Lunch", the row shows "Rename" only, and Voice Control finds the control when the person says "Tap Rename"
+- **THEN** VoiceOver reads "Rename Lunch", and the row shows "Rename" only. When the person says "Tap Rename", Voice Control acts on that control, or it shows a number on each "Rename" control so that the person can choose one
 
 #### Scenario: Twenty-one characters
 - **WHEN** the person types "Second breakfast time" into the field

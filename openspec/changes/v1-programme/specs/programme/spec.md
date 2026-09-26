@@ -275,7 +275,7 @@ The app MUST also open stage 3 by a fallback count of record days. The fallback 
 
 The fallback MUST open the stage at the day start that ends day RECORD_DAYS_FOR_STAGE_3_FALLBACK. The fallback MUST NOT need a recorded day, a planned day or a template. Whichever of the two rules comes first MUST open the stage.
 
-The rule string for stage 3 is "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts", with no full stop. It shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The app MUST fill %1$lld from DAYS_ON_PLAN_FOR_STAGE_3. The app MUST fill %2$lld with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
+With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts", with no full stop. It shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The rule string is "Opens after %1$@, or %2$@ after your plan starts". The app MUST fill %1$@ from "%lld days on your plan", with DAYS_ON_PLAN_FOR_STAGE_3 as the count. The app MUST fill %2$@ from "%lld weeks", with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7 as the count. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
 
 #### Scenario: Seven planned days over ten days
 - **WHEN** seven of the next ten record days are planned days with at least one entry each
@@ -389,16 +389,16 @@ The app MUST let the person open every card of every stage from day 1. The Progr
 
 The rule strings are, in stage order from stage 2:
 
-- "Opens after %1$lld recorded days. You have %2$lld."
-- "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts"
+- "Opens after %lld recorded days." then "You have %lld."
+- "Opens after %1$@, or %2$@ after your plan starts", filled from "%lld days on your plan" and "%lld weeks"
 - "Opens after your first urge outcome, or a week from now"
 - "Opens %lld weeks after your plan starts"
 - "Opens after taking stock"
 - "Opens %lld weeks after your plan starts"
 
-Each rule string with a count MUST carry plural forms. The stage 2 and stage 3 rule strings each show two counts, so each MUST come from strings with one count each. Content owns the catalogue rules. The app MUST fill the gate value in each rule string from ProgrammeConstants. The stage 2 rule string shows the count toward the gate. The app MUST fill its %2$lld with the count of recorded days the stage 2 rule counts.
+Each string with a count MUST carry plural forms. A string holds at most one count, so the stage 2 rule and the stage 3 rule each come from more than one string. Content owns the catalogue rules. The app MUST fill each gate value from ProgrammeConstants. The stage 2 rule also shows the count toward the gate. The app MUST fill the %lld of "You have %lld." with the count of recorded days that the stage 2 rule counts. The app MUST show the two stage 2 strings joined by one space.
 
-The app MUST show the count in the same text style as every row. The screen MUST show no bar, tick or graphic for it. A rule string of one sentence MUST NOT end with a full stop. The stage 2 rule string is two sentences, and each ends with a full stop.
+The app MUST show the count in the same text style as every row. The screen MUST show no bar, tick or graphic for it. A rule string of one sentence MUST NOT end with a full stop. The stage 2 rule is two sentences from two strings, and each ends with a full stop.
 
 #### Scenario: Stage 4 cards on day 1
 - **WHEN** the person taps "Problem solving" on the Programme screen on day 1
@@ -713,7 +713,7 @@ Staying-on-track's "Restart the programme?" at a check-in is a shortcut to this 
 
 #### Scenario: Stages after a restart
 - **WHEN** stages 1 to 7 are open and the person restarts with the start day Monday 4 January 2027
-- **THEN** the store keeps every StageOpened row, stages 1 to 4, 6 and 7 stay open, and stage 5 is closed until week 6 of regular eating from the new start day
+- **THEN** the store keeps every StageOpened row, stages 1 to 4, 6 and 7 stay open, and stage 5 is closed until week 6 of regular eating, counted from the new start day, because that day is later than the record day on which stage 2 opened
 
 ### Requirement: A pure stage engine with stored openings as input
 
@@ -773,7 +773,7 @@ The engine MUST read only facts dated after the last opening moment in the store
 
 #### Scenario: A stage 5 opening before the restart
 - **WHEN** the store holds a stage 5 opening at 04:00 on Monday 9 November 2026 and restartAt is 09:00 on Monday 4 January 2027
-- **THEN** the engine ignores that opening and computes stage 5 from the new start day
+- **THEN** the engine ignores that opening and computes stage 5 from the later of the new start day and the record day on which stage 2 opened
 
 #### Scenario: The opening row holds its record day
 - **WHEN** the person saves the entry that makes the fifth recorded day at 04:30 on Friday 9 October 2026, with the day start 04:00
