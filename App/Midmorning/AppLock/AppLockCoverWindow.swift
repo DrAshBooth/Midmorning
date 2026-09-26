@@ -127,8 +127,19 @@ private struct AppLockCoverWindowRoot: View {
                         return await controller.authenticateToSaveNewEntry()
                     }
                 )
+                // "The cover and the App Switcher MUST NOT show the text"
+                // (app-lock spec, "Unsaved text survives the lock"). The
+                // screen is in this window, under the cover, so the
+                // window-level `accessibilityElementsHidden` in
+                // `AppLockCoverWindow.update` does not hide it. VoiceOver
+                // cannot reach its text or its controls while the cover
+                // shows.
+                .accessibilityHidden(controller.state.pendingRouteAwaitsUnlock)
                 if controller.state.pendingRouteAwaitsUnlock {
                     CoverView(controller: controller, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
+                        // App-lock spec, "Accessibility of the cover":
+                        // VoiceOver stays on the cover's own controls.
+                        .accessibilityAddTraits(.isModal)
                 }
             }
             // The keyboard closes under the cover, so no key goes to the
