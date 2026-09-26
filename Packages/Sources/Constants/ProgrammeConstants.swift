@@ -35,6 +35,10 @@ public struct ProgrammeConstants: Sendable, Equatable {
     public var plannedMealWindowBeforeMinutes: Int
     public var plannedMealWindowAfterMinutes: Int
     public var reminderHorizonDays: Int
+    /// The scheduler's own cap on pending local notification requests
+    /// (reminders spec, "Scheduling is local, lazy and bounded":
+    /// "The scheduler MUST keep at most 60 pending notification requests").
+    public var maxPendingReminderRequests: Int
 
     public init(
         defaultDayStartHour: Int = 4,
@@ -62,7 +66,8 @@ public struct ProgrammeConstants: Sendable, Equatable {
         lockGraceSecondsChoices: [Int] = [0, 30, 120, 300],
         plannedMealWindowBeforeMinutes: Int = 60,
         plannedMealWindowAfterMinutes: Int = 90,
-        reminderHorizonDays: Int = 6
+        reminderHorizonDays: Int = 6,
+        maxPendingReminderRequests: Int = 60
     ) {
         self.defaultDayStartHour = defaultDayStartHour
         self.programmeWeeks = programmeWeeks
@@ -90,6 +95,7 @@ public struct ProgrammeConstants: Sendable, Equatable {
         self.plannedMealWindowBeforeMinutes = plannedMealWindowBeforeMinutes
         self.plannedMealWindowAfterMinutes = plannedMealWindowAfterMinutes
         self.reminderHorizonDays = reminderHorizonDays
+        self.maxPendingReminderRequests = maxPendingReminderRequests
     }
 
     /// The shipped set. A test never edits this value; it builds a modified
