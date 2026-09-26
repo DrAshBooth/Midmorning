@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UserNotifications
 import Record
 
 @main
@@ -53,8 +54,18 @@ struct AppRootView: View {
     }
 }
 
-/// Blocks third-party keyboards so no keyboard extension reads What.
+/// Blocks third-party keyboards so no keyboard extension reads What. Also
+/// registers the notification categories and the action handler (reminders
+/// spec, "Actions on a planned meal reminder"), before anything else runs.
 final class AppDelegate: NSObject, UIApplicationDelegate {
+    private let notificationActionHandling = NotificationActionHandling()
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = notificationActionHandling
+        NotificationCategories.registerAll()
+        return true
+    }
+
     func application(_ application: UIApplication,
                      shouldAllowExtensionPointIdentifier identifier: UIApplication.ExtensionPointIdentifier) -> Bool {
         identifier != .keyboard
@@ -87,5 +98,18 @@ enum StoreLocation {
         values.isExcludedFromBackup = true
         try mutableDirectory.setResourceValues(values)
         return directory
+    }
+
+    /// The App Group container: only the widget snapshot and the action
+    /// queue live here, never the store (data-and-privacy spec, "The store
+    /// lives in the app's own container"; `AppGroupContent.fileStems`).
+    static func appGroupContainerURL() -> URL? {
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+    }
+
+    /// The action queue file's own path inside the App Group container
+    /// (widgets-and-intents spec, "The action queue").
+    static func actionQueueURL() -> URL? {
+        appGroupContainerURL()?.appendingPathComponent("queue.json")
     }
 }

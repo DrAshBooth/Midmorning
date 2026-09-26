@@ -51,6 +51,22 @@ struct AppLockRootView: View {
             .overlay {
                 CoverView(controller: controller, onEverythingDeleted: {})
             }
+            // A pending route always wins over the cover (app-lock spec, "A
+            // new entry before authentication"): the notification action
+            // "Add" posts `.reminderAddActionTapped`, which requests the
+            // route; `AppLifecycleState.coverMode` already reads `.none`
+            // while a route is pending, so the cover steps aside on its own.
+            .fullScreenCover(isPresented: Binding(
+                get: { controller.state.pendingRoute == .newEntry },
+                set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
+            )) {
+                NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
+                    controller.handle(.pendingRouteResolved)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .reminderAddActionTapped)) { _ in
+                controller.handle(.pendingRouteRequested(.newEntry))
+            }
             .onAppear { checkEnrolmentStateIfNeeded() }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {

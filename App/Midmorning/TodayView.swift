@@ -1,6 +1,7 @@
 import SwiftUI
 import Record
 import Plan
+import Programme
 
 /// The record day's entries as a time-ordered column, like the paper
 /// record (record spec, "The Today stack"). The order here is the only
@@ -35,6 +36,13 @@ struct TodayView: View {
     /// wires the live stage into both.
     @State private var stage2Open = false
     @State private var planBuilderMode: PlanBuilderMode?
+    /// `mm-t24.21` wires the live notification-permission read (`onboarding`'s
+    /// own permission request result) into this fact; a fresh install reads
+    /// as not determined, the same fixture-fact pattern `stage2Open` uses
+    /// ahead of `programme-engine`.
+    @State private var notificationPermission: NotificationPermission = .notDetermined
+    @State private var hasTappedNotificationsDeniedLineOnce = false
+    @State private var isShowingCloseTheDay = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -118,6 +126,11 @@ struct TodayView: View {
             .sheet(isPresented: $isShowingSupportSheet) {
                 SupportSheetView()
             }
+            .sheet(isPresented: $isShowingCloseTheDay) {
+                if let currentSection {
+                    CloseTheDayView(store: store, dateKey: currentSection.id) { reload() }
+                }
+            }
             .navigationDestination(for: EarlierDaysRoute.self) { _ in
                 EarlierDaysListView(store: store)
             }
@@ -145,6 +158,15 @@ struct TodayView: View {
         VStack(alignment: .leading, spacing: 8) {
             if let currentSection {
                 dayHeadingView(currentSection)
+            }
+            if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce) != nil {
+                Button(action: tapNotificationsLine) {
+                    if notificationPermission == .notDetermined {
+                        Text("today.reminders.notDetermined")
+                    } else {
+                        Text("today.reminders.denied")
+                    }
+                }
             }
             Button {
                 showingNewEntry = true
@@ -252,6 +274,10 @@ struct TodayView: View {
                         navigationPath.append(EarlierDaysRoute.list)
                     }
                 }
+                if section.role == .current {
+                    Divider()
+                    Button("closeTheDay.title") { isShowingCloseTheDay = true }
+                }
                 if section.role == .current, PlanBuilderAccess.isOffered(stage2Open: stage2Open) {
                     Divider()
                     Button("plan.today") {
@@ -285,6 +311,18 @@ struct TodayView: View {
 
     // MARK: Actions
 
+    /// A tap makes the system permission request (when not determined) or
+    /// opens the iOS Settings app (when denied), and hides the denied line
+    /// after one tap (reminders spec, "Reminder types and their switches").
+    /// `mm-t24.21` replaces the fixture request/open with the real
+    /// `UNUserNotificationCenter`/`UIApplication.openSettingsURLString` call.
+    private func tapNotificationsLine() {
+        if notificationPermission == .denied {
+            try? store.setHasTappedNotificationsDeniedLineOnce(true)
+            hasTappedNotificationsDeniedLineOnce = true
+        }
+    }
+
     private func togglePause(_ section: DaySection) {
         let on = !section.states.contains(.paused)
         try? store.setDayState(.paused, on: on, dateKey: section.id, changedAt: Date())
@@ -315,6 +353,7 @@ struct TodayView: View {
         currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open)
         previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
+        hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
     }
 }
 

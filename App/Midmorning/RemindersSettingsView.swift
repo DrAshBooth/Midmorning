@@ -1,5 +1,8 @@
 import SwiftUI
+import UIKit
+import UserNotifications
 import Record
+import Programme
 
 /// The Reminders group's own screen, one tap from the settings screen
 /// (settings spec, "The Reminders group"). First cut: "Worksheet review",
@@ -20,6 +23,9 @@ struct RemindersSettingsView: View {
     @State private var quietHoursEnd = ClockTime.date(hour: 7, minute: 0)
     @State private var pausedAt: Date?
     @State private var isShowingSupportSheet = false
+    /// `mm-t24.21` wires the real `UNUserNotificationCenter` permission read
+    /// in; a fresh install reads as not determined.
+    @State private var notificationPermission: NotificationPermission = .notDetermined
 
     var body: some View {
         Form {
@@ -27,6 +33,18 @@ struct RemindersSettingsView: View {
                 Section {
                     Text("settings.reminders.pausedLine")
                     Button("settings.reminders.turnOn", action: turnRemindersOn)
+                }
+            }
+
+            if notificationPermission == .notDetermined {
+                Section {
+                    Text("settings.reminders.notDetermined.line")
+                    Button("settings.reminders.notDetermined.allowControl", action: requestNotificationPermission)
+                }
+            } else if notificationPermission == .denied {
+                Section {
+                    Text("settings.reminders.denied.line")
+                    Button("settings.reminders.denied.iosSettingsControl", action: openIOSSettings)
                 }
             }
 
@@ -115,11 +133,38 @@ struct RemindersSettingsView: View {
         if let time = try? store.quietHoursStart() { quietHoursStart = ClockTime.date(from: time) }
         if let time = try? store.quietHoursEnd() { quietHoursEnd = ClockTime.date(from: time) }
         pausedAt = try? store.remindersPausedAt()
+        loadNotificationPermission()
     }
 
     private func turnRemindersOn() {
         try? store.turnRemindersOn()
         pausedAt = nil
+    }
+
+    /// "Allow notifications" (reminders spec, "Reminder types and their
+    /// switches"). A device check proves the real system dialog and the
+    /// resulting schedule (the epic's device-check bead).
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
+            DispatchQueue.main.async { loadNotificationPermission() }
+        }
+    }
+
+    private func openIOSSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func loadNotificationPermission() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let permission: NotificationPermission
+            switch settings.authorizationStatus {
+            case .notDetermined: permission = .notDetermined
+            case .denied: permission = .denied
+            default: permission = .granted
+            }
+            DispatchQueue.main.async { notificationPermission = permission }
+        }
     }
 }
 
