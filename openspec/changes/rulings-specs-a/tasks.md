@@ -4,6 +4,7 @@
 - [x] 1.2 Set safe mode at the third launch and choose it from the marker before the store opens in "Launch safety" (r13-13, mm-t41.25; r13-05, mm-t42.23). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 - [x] 1.3 Make "Share App Analytics with Apple" open the app's own page in "The app holds no analytics of its own" (r12-01). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 - [x] 1.4 Open both stores read-only in safe mode and keep its launch failure in the marker in "Launch safety" (r13-05, mm-t42.23). Prove it with `openspec validate rulings-specs-a --type change --strict`.
+- [x] 1.5 State in "Launch safety" that a store that needs a migration does not open in safe mode, that safe mode continues until Today appears, and that Delete-all can still delete (r13-05, r13-13; decision mm-t42.28). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 
 ## 2. app-lock
 

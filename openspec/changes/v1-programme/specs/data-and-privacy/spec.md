@@ -727,13 +727,15 @@ After the deletion the app MUST show one screen: "This device's copy is deleted.
 
 ### Requirement: Launch safety
 
-The app MUST write a launch marker file at start. The marker MUST hold the count of launches in a row that ended before the app cleared the marker. The app MUST clear the marker after Today appears. The marker MUST live outside the store directory. When the app ends before it clears the marker on two launches in a row, the app MUST enter safe mode at the third launch. Ash set this threshold on 26 September 2026. The app MUST choose safe mode from the count in the launch marker before it opens the store.
+The app MUST write a launch marker file at start. The marker MUST hold the count of launches in a row that ended before the app cleared the marker. On a launch that is not in safe mode, the app MUST clear the marker after Today appears. The marker MUST live outside the store directory. When two or more launches in a row end before the app clears the marker, the app MUST enter safe mode at the next launch. So safe mode starts at the third launch. Safe mode continues at each later launch until Today appears in safe mode. Ash set this threshold on 26 September 2026. The app MUST choose safe mode from the count in the launch marker before it opens the store.
 
-In safe mode the app MUST skip the Erasure read, the import, the Reconciler and the scheduler. In safe mode the app MUST open `Record.store` and `Local.store` read-only. In safe mode the app MUST NOT write to either store. In safe mode the app MUST NOT let a schema migration write to the store. Ash ruled on 26 September 2026 that safe mode reads the record for Export and writes nothing. In safe mode the app MUST show Today with Export and Get support.
+In safe mode the app MUST skip the Erasure read, the import, the Reconciler and the scheduler. In safe mode the app MUST open `Record.store` and `Local.store` read-only. In safe mode the app MUST NOT write to either store. This rule does not stop Delete-all or "Delete from this device". Both delete the store directory, and offline Delete-all then keeps its instruction in a new `Local.store`. In safe mode the app MUST NOT let a schema migration write to the store. Ash ruled on 26 September 2026 that safe mode reads the record for Export and writes nothing. When the read-only open succeeds, the app MUST show Today with Export and Get support.
 
 The app MUST add one to the launch failure count in `Local.store` each time it finds an uncleared marker. In safe mode the app MUST keep that failure in the launch marker instead. When Today appears in safe mode, the app MUST clear the count of launches in the marker and keep that failure. The next launch that opens the store for writing MUST add each kept failure to the count in `Local.store`.
 
 When the container throws for any reason other than unavailable protected data, the app MUST show one page. The page MUST read "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything". "Try again" MUST open the container again. "Delete everything" MUST open the Delete-all confirmation. The app MUST NOT delete the store without the person's confirmation.
+
+A store that needs a schema migration cannot open read-only. So in safe mode that open throws, and the app shows the page above. The store files stay unchanged, and Export is not available. In safe mode "Try again" opens the store read-only again, so it throws again. Today does not appear, so the next launch is in safe mode again.
 
 #### Scenario: Third launch with an uncleared marker
 - **WHEN** the app ends before Today appears on two launches in a row and the person opens it a third time
@@ -749,10 +751,14 @@ When the container throws for any reason other than unavailable protected data, 
 
 #### Scenario: Safe mode with a pending migration
 - **WHEN** the store needs a schema migration and the app enters safe mode
-- **THEN** the app opens the store read-only, and no migration step writes to the store
+- **THEN** the read-only open throws, no migration step writes to the store, the store files are unchanged, and the app shows "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything"
+
+#### Scenario: Safe mode continues
+- **WHEN** the app enters safe mode, ends before Today appears, and the person opens it again
+- **THEN** the app enters safe mode again
 
 #### Scenario: Marker cleared
-- **WHEN** Today appears on a launch
+- **WHEN** Today appears on a launch that is not in safe mode
 - **THEN** the app clears the marker, and the next launch runs the Erasure read, the import, the Reconciler and the scheduler
 
 #### Scenario: Launch failures counted

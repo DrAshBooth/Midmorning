@@ -7,8 +7,8 @@ Ash ruled on 24 open decisions on 26 September 2026, on the Midmorning Decisions
 ## What Changes
 
 - r12-01: "Share App Analytics with Apple" opens the app's own page in the iOS Settings app, through `UIApplication.openSettingsURLString`.
-- r13-13 (`mm-t41.25`): safe mode starts at the third launch, after two launches in a row end before the app clears the marker. The requirement sentence now agrees with its scenario.
-- r13-05 (`mm-t42.23`): the app chooses safe mode from the count in the launch marker before it opens the store. `Record.store` and `Local.store` open read-only in safe mode, and no schema migration writes to them. Safe mode keeps its launch failure in the marker, and the next launch that can write adds it to `Local.store`.
+- r13-13 (`mm-t41.25`): safe mode starts at the third launch, after two launches in a row end before the app clears the marker. It continues at each later launch until Today appears in safe mode. The requirement sentence now agrees with its scenario.
+- r13-05 (`mm-t42.23`): the app chooses safe mode from the count in the launch marker before it opens the store. `Record.store` and `Local.store` open read-only in safe mode, and no schema migration writes to them. Delete-all and "Delete from this device" can still delete the store directory. Safe mode keeps its launch failure in the marker, and the next launch that can write adds it to `Local.store`. SwiftData cannot open a store read-only when it needs a migration. So in safe mode that store shows "Midmorning cannot open your record on this device.", and Export is not available.
 - r14-01 (`mm-t41.26`): after a failed Delete-all, the cover, the settings screen and the store-failure page show "Could not delete. Try again." under their controls.
 - r13-04 (`mm-t15.19`): Save on the new-entry screen that the notification action "Add" opened while the app is locked asks for authentication first. On cancel or failure, the app saves nothing and keeps the text.
 - r13-06 (`mm-t15.20`): "Turn on" for "Face ID only" or "Touch ID only" saves the current enrolment state hash. That save is not a reset.
@@ -22,6 +22,16 @@ Ash ruled on 24 open decisions on 26 September 2026, on the Midmorning Decisions
 Each changed requirement that has a copy in `openspec/changes/v1-programme/specs` gets the same change there.
 
 For r12-01, the Privacy group list in `openspec/changes/v1-programme/specs/settings/spec.md` gets the same words. That requirement is only in `v1-programme`, so this change holds no `settings` delta.
+
+## Open decisions
+
+Three parts of this change wait for Ash. Each one is a card in round 15 on the Midmorning Decisions page. Until Ash rules, the text stays as this change writes it.
+
+- `mm-t42.28` (card r15-01): what safe mode does when the store needs a schema migration, and how the person leaves that state. This change does not say that Export works in that case.
+- `mm-t12b.26` and `mm-t12b.25` (card r15-02): the edit zone after travel in record "Edit an entry". This change writes the recommended option.
+- `mm-t15.21` (card r15-03): whether "Turn on" for "Face ID only" asks for authentication before the hash save. This change saves the hash at the "Turn on" tap and says nothing about a request.
+
+Branch `rulings-record-store` also changes record "Edit an entry" in `v1-programme`, and its change `rulings-record-edit-bounds` modifies the same requirement. At the merge, the lead takes the text of this change. Before the archive, the lead removes `rulings-record-edit-bounds` or makes its text the same as this change. The scenario "Edit on the day of a clock change" tests the same case as "Edit across a clock change".
 
 ## Capabilities
 
