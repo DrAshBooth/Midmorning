@@ -132,7 +132,20 @@ struct TodayView: View {
                             }
                             .listRowSeparator(.hidden)
                         }
-                        pinnedHeader
+                    }
+                    // record spec, "The Today stack": the current day
+                    // heading and "Add an entry" form a pinned section
+                    // header, which stays on screen while the rows scroll.
+                    Section {
+                        if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce) != nil {
+                            Button(action: tapNotificationsLine) {
+                                if notificationPermission == .notDetermined {
+                                    Text("today.reminders.notDetermined")
+                                } else {
+                                    Text("today.reminders.denied")
+                                }
+                            }
+                        }
                         if let currentSection {
                             DaySectionRows(section: currentSection, actions: actions(for: currentSection))
                             // "Pause for today" sits under the rows, also on
@@ -143,6 +156,8 @@ struct TodayView: View {
                             }
                             .listRowSeparator(.hidden)
                         }
+                    } header: {
+                        pinnedHeader
                     }
                     if let previousSection, !previousSection.entries.isEmpty {
                         Section {
@@ -273,19 +288,12 @@ struct TodayView: View {
 
     // MARK: Pinned header
 
+    /// The current day heading and "Add an entry", the header of the
+    /// current day's section (record spec, "The Today stack").
     private var pinnedHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let currentSection {
                 DaySectionHeading(section: currentSection, actions: actions(for: currentSection))
-            }
-            if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce) != nil {
-                Button(action: tapNotificationsLine) {
-                    if notificationPermission == .notDetermined {
-                        Text("today.reminders.notDetermined")
-                    } else {
-                        Text("today.reminders.denied")
-                    }
-                }
             }
             Button {
                 openNewEntry()
@@ -296,7 +304,7 @@ struct TodayView: View {
             .buttonStyle(.borderedProminent)
             .accessibilityFocused($addEntryFocused)
         }
-        .listRowInsets(EdgeInsets())
+        .textCase(nil)
         .padding(.vertical, 4)
     }
 
