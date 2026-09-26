@@ -6,9 +6,10 @@ import AppLock
 /// The real conformer of `Record.DeleteAllSideEffects`:
 /// `UNUserNotificationCenter` and (once `2.5` links the WidgetKit extension)
 /// `WidgetCenter`. Untestable under `swift test` (both need a device or a
-/// simulator); `LocalDeletionTests` (`RecordTests`) drives `LocalDeletion`
-/// through a fake instead (built here over fixture facts, with no live
-/// dependency — `mm-t42.20` runs it end to end).
+/// simulator; `mm-t42.20` confirmed `UNUserNotificationCenter.current()`
+/// crashes outside a real app bundle). `LocalDeletionTests` (`RecordTests`)
+/// drives `LocalDeletion` through a fake instead; the epic's device-check
+/// bead lists the real check.
 struct SystemDeleteAllSideEffects: DeleteAllSideEffects {
     func cancelEveryNotification() {
         let centre = UNUserNotificationCenter.current()

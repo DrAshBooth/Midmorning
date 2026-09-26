@@ -46,4 +46,12 @@ final class ExportRangeTests: XCTestCase {
             "The PDF leaves the app when you share it. Mail, Files and Messages keep their own copy, and Delete everything does not reach those copies."
         )
     }
+
+    /// export spec, "Offline and out of logs", Scenario: Build error. The
+    /// message itself carries no entry field or weight value; the app
+    /// target's catch site (untestable by `swift test`) always shows this
+    /// fixed string, never the underlying error's own description.
+    func testTheBuildErrorMessage() {
+        XCTAssertEqual(ExportContent.buildErrorMessage, "The PDF could not be made. Try again.")
+    }
 }

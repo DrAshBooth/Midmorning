@@ -32,7 +32,7 @@ let package = Package(
         // pending-card output with `Record`'s `TodayCardSlot` — the seam
         // `programme-engine` (2.1) wires in the App target
         // (`v1-programme/design.md`, "Programme takes value facts").
-        .testTarget(name: "RecordTests", dependencies: ["Record", "Programme", "Export"]),
+        .testTarget(name: "RecordTests", dependencies: ["Record", "Programme", "Export", "AppLock"]),
         // The plan, templates, planned days, the match of planned meals to
         // entries and the gap computation (design.md, "One umbrella package,
         // five targets"). Pure value types and functions only: it takes

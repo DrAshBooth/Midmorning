@@ -45,9 +45,12 @@ final class LocalDeletionTests: XCTestCase {
         XCTAssertTrue(contents.isEmpty)
     }
 
-    /// Scenario: "Pending requests first" (built here over fixture facts,
-    /// with no live dependency — `mm-t42.20` runs it against a real
-    /// notification centre and a real six-request queue).
+    /// Scenario: "Pending requests first". `mm-t42.20` confirmed
+    /// empirically that `UNUserNotificationCenter.current()` crashes outside
+    /// a real app bundle (`ununnotificationcenter-crashes-under-swift-test`,
+    /// `bd memories`): a real notification centre and a real six-request
+    /// queue are a device check, not a `swift test` scenario. This call-order
+    /// assertion over the fake stays the package-level proof.
     func testPerformCancelsNotificationsBeforeDeletingTheStoreDirectoryAndReloadsWidgetsLast() throws {
         let (store, appGroup, marker, cleanup) = try makeDirectories()
         defer { cleanup() }

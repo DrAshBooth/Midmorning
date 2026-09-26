@@ -43,8 +43,8 @@ final class ProgrammeStoreTests: XCTestCase {
     /// Scenario: Delete-all. A fresh store — the same directory a real
     /// Delete-all recreates (`data-and-privacy` spec, "Delete-all writes an
     /// erasure marker before it deletes the zone") — holds no stage-opened
-    /// row and no card answer; `mm-t42.20` (local-delete-all) runs the real
-    /// erasure end to end.
+    /// row and no card answer. `DeleteAllWiringTests` (`mm-t42.20`, the
+    /// export epic's wiring bead) runs the real erasure end to end.
     func testDeleteAllLeavesNoStageOpenedRowAndNoCardAnswer() throws {
         let store = try makeStore()
         XCTAssertEqual(try store.stageOpenedRows(), [])
