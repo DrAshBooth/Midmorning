@@ -44,7 +44,7 @@ struct StageScreenView: View {
         .navigationTitle(model?.title ?? stage.title)
         .getSupport()
         .sheet(item: $planBuilderMode) { mode in
-            PlanBuilderView(store: store, mode: mode) {}
+            PlanBuilderView(store: store, mode: mode) { reload() }
         }
         .onAppear(perform: reload)
     }

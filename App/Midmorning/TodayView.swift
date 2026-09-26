@@ -147,6 +147,11 @@ struct TodayView: View {
                 .onChange(of: scrollTarget) { _, target in
                     if let target { proxy.scrollTo(target) }
                 }
+                // On the stack's root, not the stack: the root appears
+                // again each time a pushed screen (Programme, a stage, the
+                // plan from a stage, a restart, a review, Settings) pops
+                // back, so Today shows the state that screen wrote.
+                .onAppear(perform: reload)
             }
             .navigationTitle("today.title")
             .toolbar {
@@ -244,7 +249,6 @@ struct TodayView: View {
         }
         .privacySensitive()
         .redacted(reason: scenePhase == .active ? [] : .privacy)
-        .onAppear(perform: reload)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }
