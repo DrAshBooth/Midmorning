@@ -47,9 +47,7 @@ struct Screen4View: View {
             .navigationTitle(Screen4Content.title)
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
-                Button(Screen4Content.startLabel) { start() }
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
+                FullWidthConfirmButton(Screen4Content.startLabel, action: start)
                     .padding()
                     .background(.bar)
             }
@@ -59,6 +57,14 @@ struct Screen4View: View {
                     Text(Screen4Content.widgetInstructions)
                         .padding()
                         .navigationTitle(Screen4Content.showMeHow)
+                        .toolbar {
+                            // One tap closes the sheet to screen 4, which
+                            // shows Get support (safeguarding spec, "Get
+                            // support on every screen").
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(CommonLabels.close) { isShowingWidgetSheet = false }
+                            }
+                        }
                 }
             }
         }

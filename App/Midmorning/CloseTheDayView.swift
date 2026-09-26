@@ -40,10 +40,13 @@ struct CloseTheDayView: View {
                 }
             }
             .navigationTitle("closeTheDay.title")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("closeTheDay.done", action: save)
-                }
+            // safeguarding spec, "Get support on every screen": the
+            // confirming action is a full-width button below the content,
+            // and Get support alone holds the trailing position.
+            .safeAreaInset(edge: .bottom) {
+                FullWidthConfirmButton("closeTheDay.done", action: save)
+                    .padding()
+                    .background(.bar)
             }
             .getSupport()
             .sheet(isPresented: $showingNewEntry) {

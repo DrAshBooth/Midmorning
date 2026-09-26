@@ -83,9 +83,7 @@ struct ReviewScreenView: View {
         .navigationTitle("weeklyReview.title")
         .getSupport()
         .safeAreaInset(edge: .bottom) {
-            Button(CommonLabels.done, action: tapDone)
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
+            FullWidthConfirmButton(CommonLabels.done, action: tapDone)
                 .padding()
                 .background(.bar)
         }

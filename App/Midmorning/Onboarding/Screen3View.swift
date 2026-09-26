@@ -69,9 +69,7 @@ struct Screen3View: View {
             .navigationTitle(Screen3Content.title)
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
-                Button(CommonLabels.continueLabel) { attemptContinue() }
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
+                FullWidthConfirmButton(CommonLabels.continueLabel, action: attemptContinue)
                     .padding()
                     .background(.bar)
             }
