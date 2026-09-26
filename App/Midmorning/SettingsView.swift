@@ -173,6 +173,14 @@ struct SettingsView: View {
         if let counts = try? store.diagnosticsCounts(contentVersion: contentInfo?.contentVersion ?? 0) {
             diagnosticsCounts = counts
         }
+        // data-and-privacy spec, "The Diagnostics counts come from the
+        // device": the pending requests and the queue file's actions.
+        let contentVersion = contentInfo?.contentVersion ?? 0
+        ReminderDiagnosticsSource.read { source in
+            if let counts = try? store.diagnosticsCounts(contentVersion: contentVersion, sourceCounts: source) {
+                diagnosticsCounts = counts
+            }
+        }
     }
 
     private func saveDayStartsAt() {

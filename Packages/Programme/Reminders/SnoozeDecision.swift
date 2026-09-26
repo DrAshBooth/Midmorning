@@ -91,9 +91,21 @@ public enum SnoozeDecision {
         if ReminderQuietHours.contains(time: candidateClock, start: userInfo.quietHoursStart, end: userInfo.quietHoursEnd) {
             return .drop
         }
-        if let next = userInfo.nextPlannedTime, ReminderClock.minutesOfDay(candidateClock) >= ReminderClock.minutesOfDay(next) {
-            return .drop
+        // Order both times from the planned time, so a next planned meal
+        // after midnight still comes after an evening snooze.
+        if let next = userInfo.nextPlannedTime {
+            let plannedMinute = ReminderClock.minutesOfDay(userInfo.plannedTime)
+            let untilNext = ReminderClock.minutesSinceDayStart(next, dayStartMinute: plannedMinute)
+            let untilSnooze = ReminderClock.minutesSinceDayStart(candidateClock, dayStartMinute: plannedMinute)
+            if untilSnooze >= untilNext { return .drop }
         }
         return .scheduleAt(candidate)
+    }
+
+    /// The one identifier a snoozed reminder carries, from the handler and
+    /// from the scheduler alike, so the scheduler replaces the handler's
+    /// request and never adds a second one.
+    public static func requestIdentifier(dayKey: String, slotIndex: Int, snoozeCount: Int) -> String {
+        "snooze.\(dayKey).\(slotIndex).\(snoozeCount)"
     }
 }

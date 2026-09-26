@@ -125,6 +125,26 @@ public enum CloseTheDayRule {
         }
         return !facts.hasEntryAfter17
     }
+
+    /// The stage 1 gate time for the "Close the day" control on Today.
+    public static let stage1ControlTime = "17:00"
+
+    /// Whether Today shows "Close the day" beside "Pause for today" (record
+    /// spec, "The Today stack"; reminders spec, "Close the day": "Today
+    /// shows a 'Close the day' control only after the last planned meal's
+    /// time, or after 17:00 in stage 1."). From stage 2, on a day with no
+    /// planned meal, the stage 1 time applies. Every time is ordered from
+    /// the day start, so a planned meal after midnight is the last one.
+    public static func controlShows(nowClockTime: String, dayStartMinute: Int, stage2Open: Bool, plannedMealTimes: [String]) -> Bool {
+        let since = { (time: String) in ReminderClock.minutesSinceDayStart(time, dayStartMinute: dayStartMinute) }
+        let gate: String
+        if stage2Open, let last = plannedMealTimes.max(by: { since($0) < since($1) }) {
+            gate = last
+        } else {
+            gate = stage1ControlTime
+        }
+        return since(nowClockTime) >= since(gate)
+    }
 }
 
 // MARK: - Seven silent days (reminders spec, "The midday and close-the-day
@@ -161,4 +181,85 @@ public enum SilentDayTracker {
     }
 
     public static func stopped(streak: Int) -> Bool { streak >= 7 }
+}
+
+// MARK: - The two stop counts on return (reminders spec, "The morning plan
+// reminder while the plan needs setting", "The midday and close-the-day
+// reminders stop after seven silent days", "Delivered reminders are grouped
+// and removed")
+
+/// One elapsed record day, as the app reads it on return: which reminders
+/// Notification Centre still held for that day, and the day's own facts.
+public struct ElapsedReminderDay: Sendable, Equatable {
+    public var dayKey: String
+    public var morningPlanDelivered: Bool
+    public var middayOrCloseTheDayDelivered: Bool
+    public var hadEntry: Bool
+    public var wasPaused: Bool
+    public var setItsOwnPlan: Bool
+
+    public init(dayKey: String, morningPlanDelivered: Bool, middayOrCloseTheDayDelivered: Bool, hadEntry: Bool, wasPaused: Bool, setItsOwnPlan: Bool) {
+        self.dayKey = dayKey
+        self.morningPlanDelivered = morningPlanDelivered
+        self.middayOrCloseTheDayDelivered = middayOrCloseTheDayDelivered
+        self.hadEntry = hadEntry
+        self.wasPaused = wasPaused
+        self.setItsOwnPlan = setItsOwnPlan
+    }
+}
+
+/// The morning-plan unanswered count and the silent-day streak, as
+/// `Local.store` keeps them.
+public struct ReminderStopCounts: Sendable, Equatable {
+    public var morningPlanUnanswered: Int
+    public var silentDays: Int
+
+    public init(morningPlanUnanswered: Int, silentDays: Int) {
+        self.morningPlanUnanswered = morningPlanUnanswered
+        self.silentDays = silentDays
+    }
+
+    public var morningPlanStopped: Bool { MorningPlanUnansweredTracker.stopped(count: morningPlanUnanswered) }
+    public var silentDaysStopped: Bool { SilentDayTracker.stopped(streak: silentDays) }
+}
+
+public enum ReminderStopFold {
+    /// Folds each elapsed record day after `foldedThrough` into the two
+    /// counts, once, in day order. A day at or before `foldedThrough` was
+    /// folded on an earlier return, so it does not count again (reminders
+    /// spec: "the app MUST count at most one unanswered day per elapsed
+    /// record day"; "at most one silent day per elapsed record day").
+    /// Answers the new counts and the new `foldedThrough`.
+    public static func fold(
+        _ counts: ReminderStopCounts, foldedThrough: String?, elapsedDays: [ElapsedReminderDay]
+    ) -> (counts: ReminderStopCounts, foldedThrough: String?) {
+        let fresh = elapsedDays
+            .filter { day in foldedThrough.map { day.dayKey > $0 } ?? true }
+            .sorted { $0.dayKey < $1.dayKey }
+        guard let last = fresh.last else { return (counts, foldedThrough) }
+        let morningPlan = MorningPlanUnansweredTracker.count(
+            startingAt: counts.morningPlanUnanswered,
+            elapsedDays: fresh.map { MorningPlanDayOutcome(wasDelivered: $0.morningPlanDelivered, wasTapped: false, daySetItsOwnPlan: $0.setItsOwnPlan) }
+        )
+        let silent = SilentDayTracker.streak(
+            startingAt: counts.silentDays,
+            elapsedDays: fresh.map { SilentDayOutcome(hadDeliveredMiddayOrCloseDay: $0.middayOrCloseTheDayDelivered, hadEntry: $0.hadEntry, wasPaused: $0.wasPaused) }
+        )
+        return (ReminderStopCounts(morningPlanUnanswered: morningPlan, silentDays: silent), last.dayKey)
+    }
+
+    /// The current record day's own restart of both stops. An entry saved
+    /// in the current record day ends the silent run (reminders spec: "The
+    /// scheduler MUST start both types again when the person saves an
+    /// entry."). A set plan for the current or the next record day, or a
+    /// changed template, starts the morning plan reminder again with the
+    /// count at zero ("when the person saves a plan or a template").
+    public static func restart(
+        _ counts: ReminderStopCounts, currentDayHasEntry: Bool, currentOrNextDayIsSet: Bool, templatesChanged: Bool
+    ) -> ReminderStopCounts {
+        var result = counts
+        if currentDayHasEntry { result.silentDays = 0 }
+        if currentOrNextDayIsSet || templatesChanged { result.morningPlanUnanswered = 0 }
+        return result
+    }
 }

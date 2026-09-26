@@ -31,4 +31,19 @@ enum ActionQueueFile {
         guard let url = StoreLocation.actionQueueURL() else { return }
         try? ActionQueueCodec.encode([]).write(to: url, options: .completeFileProtectionUntilFirstUserAuthentication)
     }
+
+    /// Applies every queued action through `store`, in order, then empties
+    /// the queue (widgets-and-intents spec, "The action queue": "the app
+    /// MUST apply the queue through the store in order... The app MUST then
+    /// empty the queue."). Throws, and keeps the queue, when the store
+    /// cannot write. Answers the actions the store applied.
+    @MainActor
+    @discardableResult
+    static func drain(into store: RecordStore, currentRecordDayKey: String) throws -> [QueuedAction] {
+        let actions = readAll()
+        guard !actions.isEmpty else { return [] }
+        let applied = try store.applyQueuedActions(actions, currentRecordDayKey: currentRecordDayKey)
+        clear()
+        return applied
+    }
 }

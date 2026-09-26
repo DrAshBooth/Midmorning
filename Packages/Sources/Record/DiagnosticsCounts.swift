@@ -52,9 +52,9 @@ public struct DiagnosticsCounts: Sendable, Equatable {
 
 /// The two counts `2.4` (reminders) and `2.5` (widgets-and-intents) own:
 /// the notification centre's pending-request count and the action queue's
-/// length. Neither exists in this change; `RecordStore.diagnosticsCounts`
-/// takes zero from `ZeroDiagnosticsSourceCounts` until `mm-t24.20` supplies
-/// the real values.
+/// length. The App target reads both from the device and passes them to
+/// `RecordStore.diagnosticsCounts`; `ZeroDiagnosticsSourceCounts` is the
+/// value for a caller that has no device to read, such as a test.
 public protocol DiagnosticsSourceCounts: Sendable {
     var pendingReminders: Int { get }
     var queueLength: Int { get }

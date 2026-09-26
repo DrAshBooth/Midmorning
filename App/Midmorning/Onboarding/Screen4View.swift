@@ -78,7 +78,7 @@ struct Screen4View: View {
     private var currentBiometry: Biometry { .faceID }
 
     private func requestNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
+        UNUserNotificationCenter.current().requestAuthorization(options: NotificationPermissionAccess.options) { _, _ in
             DispatchQueue.main.async { answers.notificationsRequested = true }
         }
     }

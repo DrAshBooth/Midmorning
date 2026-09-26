@@ -4,26 +4,36 @@ import Foundation
 /// two of one record day's candidates share a minute (reminders spec, "Two
 /// reminders never share a minute").
 public enum SameMinuteShift {
-    /// Assigns each candidate a final minute in one forward sweep, walking
-    /// the candidates in (natural minute, priority) order and pushing each
-    /// one at least five minutes past the last assigned minute when its own
-    /// natural minute would collide. This resolves every cascade in one
-    /// pass: a later, lower-priority candidate that lands on an
-    /// already-shifted minute shifts again from there.
-    public static func apply(_ candidates: [ReminderCandidate]) -> [ReminderCandidate] {
-        let order = candidates.enumerated().sorted { a, b in
-            let ma = ReminderClock.minutesOfDay(a.element.time)
-            let mb = ReminderClock.minutesOfDay(b.element.time)
-            if ma != mb { return ma < mb }
-            return priorityRank(a.element.kind) < priorityRank(b.element.kind)
+    /// Walks the occupied minutes from the earliest to the latest. At each
+    /// minute that holds two or more candidates, the highest-priority one
+    /// stays and every other one moves five minutes later. A moved
+    /// candidate can then share its new minute with another candidate, and
+    /// the same rule applies there. A candidate whose minute no other
+    /// candidate holds never moves.
+    ///
+    /// `dayStartMinute` is the clock minute the record day starts at. The
+    /// walk orders minutes from the day start, so a time after midnight
+    /// comes after a time in the evening of the same record day.
+    public static func apply(_ candidates: [ReminderCandidate], dayStartMinute: Int = 0) -> [ReminderCandidate] {
+        var minutes = candidates.map { ReminderClock.minutesSinceDayStart($0.time, dayStartMinute: dayStartMinute) }
+        var moved = Array(repeating: false, count: candidates.count)
+        while true {
+            let byMinute = Dictionary(grouping: minutes.indices, by: { minutes[$0] })
+            guard let minute = byMinute.keys.filter({ byMinute[$0]!.count > 1 }).min(), let occupants = byMinute[minute] else { break }
+            let keeper = occupants.min { a, b in
+                let ra = priorityRank(candidates[a].kind), rb = priorityRank(candidates[b].kind)
+                if ra != rb { return ra < rb }
+                return (candidates[a].slotIndex ?? Int.max, a) < (candidates[b].slotIndex ?? Int.max, b)
+            }!
+            for index in occupants where index != keeper {
+                minutes[index] += 5
+                moved[index] = true
+            }
         }
         var result = candidates
-        var lastMinutes = Int.min
-        for (offset, candidate) in order.map({ ($0.offset, $0.element) }) {
-            let natural = ReminderClock.minutesOfDay(candidate.time)
-            let assigned = natural <= lastMinutes ? lastMinutes + 5 : natural
-            result[offset].time = ReminderClock.string(hour: (assigned / 60) % 24, minute: assigned % 60)
-            lastMinutes = assigned
+        for index in result.indices where moved[index] {
+            let clock = (minutes[index] + dayStartMinute) % 1440
+            result[index].time = ReminderClock.string(hour: clock / 60, minute: clock % 60)
         }
         return result
     }

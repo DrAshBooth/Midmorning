@@ -56,7 +56,7 @@ final class ActionQueueStoreTests: XCTestCase {
     func testSkippedWhileTheAppIsClosed() throws {
         let store = try makeStore()
         let action = QueuedAction(kind: .skipped, dayKey: "2026-10-06", slotIndex: 2, plannedTime: "13:00", snoozeCount: 0, moment: at(13, 40))
-        try store.applyQueuedActions([action], currentRecordDayKey: "2026-10-06", changedAt: at(14, 10))
+        try store.applyQueuedActions([action], currentRecordDayKey: "2026-10-06")
         XCTAssertEqual(try store.plannedMealAnswer(dateKey: "2026-10-06", slotIndex: 2), "Skipped")
     }
 
@@ -64,7 +64,7 @@ final class ActionQueueStoreTests: XCTestCase {
     func testActionFromAnEarlierDay() throws {
         let store = try makeStore()
         let action = QueuedAction(kind: .skipped, dayKey: "2026-10-05", slotIndex: 2, plannedTime: "13:00", snoozeCount: 0, moment: at(13, 40, day: 5))
-        let kept = try store.applyQueuedActions([action], currentRecordDayKey: "2026-10-07", changedAt: at(9, 0, day: 7))
+        let kept = try store.applyQueuedActions([action], currentRecordDayKey: "2026-10-07")
         XCTAssertTrue(kept.isEmpty)
         XCTAssertNil(try store.plannedMealAnswer(dateKey: "2026-10-05", slotIndex: 2))
     }
@@ -73,7 +73,7 @@ final class ActionQueueStoreTests: XCTestCase {
     func testSnoozeCountApplied() throws {
         let store = try makeStore()
         let action = QueuedAction(kind: .snooze, dayKey: "2026-10-06", slotIndex: 2, plannedTime: "13:00", snoozeCount: 2, moment: at(13, 30))
-        try store.applyQueuedActions([action], currentRecordDayKey: "2026-10-06", changedAt: at(13, 45))
+        try store.applyQueuedActions([action], currentRecordDayKey: "2026-10-06")
         XCTAssertEqual(try store.snoozeCount(dateKey: "2026-10-06", slotIndex: 2), 2)
         XCTAssertNil(try store.plannedMealAnswer(dateKey: "2026-10-06", slotIndex: 2), "Record.store holds no snooze count")
     }

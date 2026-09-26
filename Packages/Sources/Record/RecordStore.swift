@@ -415,6 +415,7 @@ public final class RecordStore {
             context.rollback()
             throw Failure.saveFailed
         }
+        NotificationCenter.default.post(name: Self.didSaveNotification, object: self)
     }
 
     // MARK: - Settings: synced key/value rows (data-and-privacy spec, "Slot
@@ -473,9 +474,9 @@ public final class RecordStore {
     }
 
     /// Every count the Diagnostics page shows. `contentVersion` is the
-    /// content capability's own value; `sourceCounts` stands in for `2.4`'s
-    /// pending-reminders count and the action queue's length until
-    /// `mm-t24.20` supplies the real ones.
+    /// content capability's own value; `sourceCounts` is the device's
+    /// pending-reminders count and the action queue's length, which the App
+    /// target reads from the notification centre and the queue file.
     public func diagnosticsCounts(contentVersion: Int, sourceCounts: DiagnosticsSourceCounts = ZeroDiagnosticsSourceCounts()) throws -> DiagnosticsCounts {
         DiagnosticsCounts(
             launchFailures: try localIntSettingValue(key: Self.launchFailureCountKey),
@@ -1299,17 +1300,22 @@ public final class RecordStore {
     /// the ones whose date key is at least `currentRecordDayKey` — the app
     /// drops the rest (widgets-and-intents spec: "The app MUST drop an
     /// action whose date key is earlier than the current record day.").
+    /// Each "Skipped" Answer row carries the action's own moment as its
+    /// `changedAt` ("the store holds the skip for lunch with the moment
+    /// 13:40"). A snooze writes its count and its tap moment to
+    /// `Local.store`, so the scheduler can schedule the snooze again.
     /// Call this, then clear the queue file, on activation and whenever
     /// protected data becomes available.
     @discardableResult
-    public func applyQueuedActions(_ actions: [QueuedAction], currentRecordDayKey: String, changedAt: Date) throws -> [QueuedAction] {
+    public func applyQueuedActions(_ actions: [QueuedAction], currentRecordDayKey: String) throws -> [QueuedAction] {
         let kept = actions.filter { $0.dayKey >= currentRecordDayKey }
         for action in kept {
             switch action.kind {
             case .skipped:
-                try setPlannedMealAnswer("Skipped", dateKey: action.dayKey, slotIndex: action.slotIndex, changedAt: changedAt)
+                try setPlannedMealAnswer("Skipped", dateKey: action.dayKey, slotIndex: action.slotIndex, changedAt: action.moment)
             case .snooze:
                 try setSnoozeCount(action.snoozeCount, dateKey: action.dayKey, slotIndex: action.slotIndex)
+                try setSnoozeTapMoment(action.moment, dateKey: action.dayKey, slotIndex: action.slotIndex)
             }
         }
         return kept

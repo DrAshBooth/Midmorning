@@ -15,11 +15,33 @@ public struct PlannedMealFact: Sendable, Equatable {
     /// An entry matched this planned meal before its reminder's time
     /// (reminders spec: "the scheduler MUST cancel that reminder").
     public var matchedBeforeReminderTime: Bool
+    /// An entry matched this planned meal at any time, or the person
+    /// answered it ("Skipped"). A snoozed reminder for it then has no
+    /// purpose, so the scheduler does not schedule the snooze again.
+    public var recordedOrAnswered: Bool
 
-    public init(slotIndex: Int, time: String, matchedBeforeReminderTime: Bool) {
+    public init(slotIndex: Int, time: String, matchedBeforeReminderTime: Bool, recordedOrAnswered: Bool = false) {
         self.slotIndex = slotIndex
         self.time = time
         self.matchedBeforeReminderTime = matchedBeforeReminderTime
+        self.recordedOrAnswered = recordedOrAnswered || matchedBeforeReminderTime
+    }
+}
+
+/// One planned meal's live snooze, from `Local.store` (reminders spec,
+/// "Snooze a reminder": "The app MUST apply it to `Local.store`, keyed by the
+/// record day key and the slot index."). `count` is the snooze count after
+/// the last tap. `lastTapAt` is the moment of that tap. Both come from the
+/// action queue.
+public struct SnoozeFact: Sendable, Equatable {
+    public var slotIndex: Int
+    public var count: Int
+    public var lastTapAt: Date
+
+    public init(slotIndex: Int, count: Int, lastTapAt: Date) {
+        self.slotIndex = slotIndex
+        self.count = count
+        self.lastTapAt = lastTapAt
     }
 }
 
@@ -38,10 +60,18 @@ public struct SchedulerDay: Sendable, Equatable {
     public var closeTheDay: CloseTheDayFacts
     /// "Pause for today" was tapped for this day.
     public var isPaused: Bool
+    /// Seven silent days stopped the midday and close-the-day reminders
+    /// (reminders spec, "The midday and close-the-day reminders stop after
+    /// seven silent days"). The stop also holds the far reminder, because
+    /// the far reminder is that day's close-the-day reminder.
+    public var silentDaysStop: Bool
+    /// Each live snooze of this day's planned meals.
+    public var snoozes: [SnoozeFact]
 
     public init(
         dayKey: String, dayStart: Date, plannedMeals: [PlannedMealFact], slotLabels: [Int: String],
-        morningPlan: MorningPlanFacts, midday: MiddayFacts, closeTheDay: CloseTheDayFacts, isPaused: Bool
+        morningPlan: MorningPlanFacts, midday: MiddayFacts, closeTheDay: CloseTheDayFacts, isPaused: Bool,
+        silentDaysStop: Bool = false, snoozes: [SnoozeFact] = []
     ) {
         self.dayKey = dayKey
         self.dayStart = dayStart
@@ -51,6 +81,8 @@ public struct SchedulerDay: Sendable, Equatable {
         self.midday = midday
         self.closeTheDay = closeTheDay
         self.isPaused = isPaused
+        self.silentDaysStop = silentDaysStop
+        self.snoozes = snoozes
     }
 }
 
@@ -72,12 +104,16 @@ public struct SchedulerSettings: Sendable, Equatable {
     /// schedule nothing."). Defaults to `true` so a caller that has no
     /// permission concern (most tests) never has to set it.
     public var notificationPermissionGranted: Bool
+    /// SNOOZE_MINUTES, which the "Remind me again in" setting chooses
+    /// (reminders spec, "Snooze a reminder").
+    public var snoozeMinutes: Int
 
     public init(
         switches: [ReminderKind: Bool], remindersPausedAt: Date?, explicitWordingOn: Bool,
         morningPlanTime: String, closeTheDayTime: String,
         quietHoursOn: Bool, quietHoursStart: String, quietHoursEnd: String,
-        notificationPermissionGranted: Bool = true
+        notificationPermissionGranted: Bool = true,
+        snoozeMinutes: Int = ProgrammeConstants.default.snoozeMinutes
     ) {
         self.switches = switches
         self.remindersPausedAt = remindersPausedAt
@@ -88,6 +124,13 @@ public struct SchedulerSettings: Sendable, Equatable {
         self.quietHoursStart = quietHoursStart
         self.quietHoursEnd = quietHoursEnd
         self.notificationPermissionGranted = notificationPermissionGranted
+        self.snoozeMinutes = snoozeMinutes
+    }
+
+    /// The quiet-hours range every reminder and snooze reads: "off" (the
+    /// start equal to the end) while the switch is off.
+    public var effectiveQuietHours: (start: String, end: String) {
+        ReminderQuietHours.effectiveRange(on: quietHoursOn, start: quietHoursStart, end: quietHoursEnd)
     }
 }
 
@@ -98,6 +141,11 @@ public enum Scheduler {
     /// reduced cadence, is a first-cut no-op: `mm-t36.17`/`mm-t36.21` add it,
     /// deferred.md). Operates on plain candidates, grouped by record day for
     /// the cap and the same-minute shift.
+    ///
+    /// `pausedDayKeys` holds each record day with "Pause for today" on.
+    /// `dayStartMinutes` holds each record day's day-start clock minute, so
+    /// the same-minute shift orders a time after midnight after a time in
+    /// the evening. A day with no entry starts at 00:00.
     public static func pipeline(
         _ candidates: [ReminderCandidate],
         switches: [ReminderKind: Bool],
@@ -105,6 +153,8 @@ public enum Scheduler {
         quietHoursOn: Bool,
         quietHoursStart: String,
         quietHoursEnd: String,
+        pausedDayKeys: Set<String> = [],
+        dayStartMinutes: [String: Int] = [:],
         constants: ProgrammeConstants = .default
     ) -> [ReminderCandidate] {
         // Step 1: the switches drop every type that is off.
@@ -115,35 +165,35 @@ public enum Scheduler {
         // schedule nothing while it stays set.").
         guard remindersPausedAt == nil else { return [] }
 
-        // Step 3: a paused day drops the rest of that day — the caller
-        // passes only unpaused days' candidates in, since a paused day
-        // contributes none in the first place (`requests(days:)` below).
+        // Step 3: a paused day drops the rest of that day, the candidates
+        // another capability asks for included (reminders spec: "the
+        // scheduler MUST cancel every pending reminder for the rest of the
+        // record day").
+        result = result.filter { !pausedDayKeys.contains($0.dayKey) }
 
         // Step 4: the reduced cadence — first cut passes candidates through.
 
         // Step 5: the cap, per record day.
-        result = byDay(result) { ReminderCap.apply($0, constants: constants) }
+        result = byDay(result) { _, day in ReminderCap.apply(day, constants: constants) }
 
         // Step 6: the same-minute shift, per record day.
-        result = byDay(result) { SameMinuteShift.apply($0) }
+        result = byDay(result) { dayKey, day in SameMinuteShift.apply(day, dayStartMinute: dayStartMinutes[dayKey] ?? 0) }
 
         // Step 7: quiet hours.
-        let quietHoursActive = quietHoursOn && ReminderQuietHours.isOn(start: quietHoursStart, end: quietHoursEnd)
-        if quietHoursActive {
-            result = result.filter { !ReminderQuietHours.contains(time: $0.time, start: quietHoursStart, end: quietHoursEnd) }
-        }
+        let quiet = ReminderQuietHours.effectiveRange(on: quietHoursOn, start: quietHoursStart, end: quietHoursEnd)
+        result = result.filter { !ReminderQuietHours.contains(time: $0.time, start: quiet.start, end: quiet.end) }
 
         return result
     }
 
-    private static func byDay(_ candidates: [ReminderCandidate], _ transform: ([ReminderCandidate]) -> [ReminderCandidate]) -> [ReminderCandidate] {
+    private static func byDay(_ candidates: [ReminderCandidate], _ transform: (String, [ReminderCandidate]) -> [ReminderCandidate]) -> [ReminderCandidate] {
         var byDayKey: [String: [ReminderCandidate]] = [:]
         var order: [String] = []
         for candidate in candidates {
             if byDayKey[candidate.dayKey] == nil { order.append(candidate.dayKey) }
             byDayKey[candidate.dayKey, default: []].append(candidate)
         }
-        return order.flatMap { transform(byDayKey[$0] ?? []) }
+        return order.flatMap { transform($0, byDayKey[$0] ?? []) }
     }
 
     /// The candidates this capability's own four types contribute for one
@@ -159,10 +209,10 @@ public enum Scheduler {
         if MorningPlanRule.shouldSchedule(day.morningPlan) {
             result.append(ReminderCandidate(kind: .morningPlan, dayKey: day.dayKey, time: settings.morningPlanTime))
         }
-        if MiddayRule.fires(day.midday) {
+        if !day.silentDaysStop, MiddayRule.fires(day.midday) {
             result.append(ReminderCandidate(kind: .midday, dayKey: day.dayKey, time: MiddayRule.time))
         }
-        if CloseTheDayRule.somethingMissing(day.closeTheDay) {
+        if !day.silentDaysStop, CloseTheDayRule.somethingMissing(day.closeTheDay) {
             result.append(ReminderCandidate(kind: .closeTheDay, dayKey: day.dayKey, time: settings.closeTheDayTime))
         }
         return result
@@ -173,35 +223,50 @@ public enum Scheduler {
     /// weekly review, worksheet review and check-in reminders), through the
     /// pipeline, mapped to `ReminderRequest` values, capped at
     /// `MAX_PENDING_REQUESTS = 60` by dropping the farthest days first
-    /// (reminders spec, "Scheduling is local, lazy and bounded").
+    /// (reminders spec, "Scheduling is local, lazy and bounded"). Each live
+    /// snooze comes back through `SnoozeDecision.decide` (reminders spec,
+    /// "Snooze a reminder": "The handler and the scheduler MUST both call
+    /// that function."); a snooze that fires at or before `now` does not.
     public static func requests(
         days: [SchedulerDay],
         extraCandidates: [ReminderCandidate] = [],
         farReminderDay: SchedulerDay? = nil,
         settings: SchedulerSettings,
+        now: Date? = nil,
         calendar: Calendar = Calendar(identifier: .gregorian),
         constants: ProgrammeConstants = .default
     ) -> [ReminderRequest] {
         guard settings.notificationPermissionGranted else { return [] }
 
         var dayStarts: [String: Date] = [:]
+        var dayStartMinutes: [String: Int] = [:]
+        var pausedDayKeys: Set<String> = []
+        var plannedTimes: [String: [Int: String]] = [:]
         var slotLabelsByDay: [String: [Int: String]] = [:]
         var allCandidates: [ReminderCandidate] = []
         for day in days {
             dayStarts[day.dayKey] = day.dayStart
+            dayStartMinutes[day.dayKey] = ReminderClock.dayStartMinute(of: day.dayStart, calendar: calendar)
+            if day.isPaused { pausedDayKeys.insert(day.dayKey) }
+            plannedTimes[day.dayKey] = Dictionary(day.plannedMeals.map { ($0.slotIndex, $0.time) }, uniquingKeysWith: { first, _ in first })
             slotLabelsByDay[day.dayKey] = day.slotLabels
             allCandidates += candidates(for: day, settings: settings)
         }
         allCandidates += extraCandidates
 
         var isFarReminder = false
-        if let farDay = farReminderDay, !farDay.isPaused {
+        if let farDay = farReminderDay {
             dayStarts[farDay.dayKey] = farDay.dayStart
+            dayStartMinutes[farDay.dayKey] = ReminderClock.dayStartMinute(of: farDay.dayStart, calendar: calendar)
+            if farDay.isPaused { pausedDayKeys.insert(farDay.dayKey) }
             // The far reminder counts as that day's own close-the-day
             // reminder (reminders spec: "The scheduler MUST count the far
-            // reminder as that day's close-the-day reminder.").
-            allCandidates.append(ReminderCandidate(kind: .closeTheDay, dayKey: farDay.dayKey, time: settings.closeTheDayTime))
-            isFarReminder = true
+            // reminder as that day's close-the-day reminder."), so the
+            // silent-days stop holds it too.
+            if !farDay.isPaused, !farDay.silentDaysStop {
+                allCandidates.append(ReminderCandidate(kind: .closeTheDay, dayKey: farDay.dayKey, time: settings.closeTheDayTime))
+                isFarReminder = true
+            }
         }
 
         let scheduled = pipeline(
@@ -211,8 +276,11 @@ public enum Scheduler {
             quietHoursOn: settings.quietHoursOn,
             quietHoursStart: settings.quietHoursStart,
             quietHoursEnd: settings.quietHoursEnd,
+            pausedDayKeys: pausedDayKeys,
+            dayStartMinutes: dayStartMinutes,
             constants: constants
         )
+        let quiet = settings.effectiveQuietHours
 
         var requests: [ReminderRequest] = []
         for candidate in scheduled {
@@ -220,15 +288,18 @@ public enum Scheduler {
             let farAndCloseTheDay = isFarReminder && candidate.kind == .closeTheDay && candidate.dayKey == farReminderDay?.dayKey
             let slotLabel = candidate.slotIndex.flatMap { slotLabelsByDay[candidate.dayKey]?[$0] }
             let title = DiscreetText.title(kind: candidate.kind, explicitWordingOn: settings.explicitWordingOn, slotLabel: slotLabel)
-            let body = DiscreetText.body(time: candidate.time)
+            // A planned meal reminder always names its own planned time,
+            // also after the same-minute shift moved it.
+            let plannedTime = candidate.slotIndex.flatMap { plannedTimes[candidate.dayKey]?[$0] } ?? candidate.time
+            let body = DiscreetText.body(time: candidate.kind == .plannedMeal ? plannedTime : candidate.time)
             let userInfo: [String: String]
             if candidate.kind == .plannedMeal, let slotIndex = candidate.slotIndex {
-                let next = nextPlannedMealTime(after: candidate, in: scheduled)
+                let next = nextPlannedMealTime(after: plannedTime, dayKey: candidate.dayKey, in: scheduled, plannedTimes: plannedTimes, dayStartMinute: dayStartMinutes[candidate.dayKey] ?? 0)
                 userInfo = ReminderUserInfo(
-                    dayKey: candidate.dayKey, slotIndex: slotIndex, plannedTime: candidate.time,
+                    dayKey: candidate.dayKey, slotIndex: slotIndex, plannedTime: plannedTime,
                     nextPlannedTime: next, snoozeCount: 0,
-                    quietHoursStart: settings.quietHoursStart, quietHoursEnd: settings.quietHoursEnd,
-                    snoozeMinutes: 15
+                    quietHoursStart: quiet.start, quietHoursEnd: quiet.end,
+                    snoozeMinutes: settings.snoozeMinutes
                 ).dictionary
             } else {
                 userInfo = ["dayKey": candidate.dayKey, "kind": candidate.kind.rawValue]
@@ -241,6 +312,11 @@ public enum Scheduler {
             ))
         }
 
+        requests += snoozeRequests(
+            days: days, scheduled: scheduled, pausedDayKeys: pausedDayKeys, plannedTimes: plannedTimes,
+            dayStartMinutes: dayStartMinutes, settings: settings, now: now, calendar: calendar, constants: constants
+        )
+
         requests.sort { $0.time < $1.time }
         if requests.count > constants.maxPendingReminderRequests {
             requests = Array(requests.prefix(constants.maxPendingReminderRequests))
@@ -248,10 +324,55 @@ public enum Scheduler {
         return requests
     }
 
-    private static func nextPlannedMealTime(after candidate: ReminderCandidate, in scheduled: [ReminderCandidate]) -> String? {
-        scheduled
-            .filter { $0.kind == .plannedMeal && $0.dayKey == candidate.dayKey && ReminderClock.minutesOfDay($0.time) > ReminderClock.minutesOfDay(candidate.time) }
-            .min { ReminderClock.minutesOfDay($0.time) < ReminderClock.minutesOfDay($1.time) }?
-            .time
+    /// Each live snooze, scheduled again at the moment
+    /// `SnoozeDecision.decide` gives for its last tap. Steps 1 to 3 of the
+    /// pipeline hold a snooze too: the "Planned meals" switch, a reminder
+    /// pause and a paused day each drop it (reminders spec, "A paused day
+    /// and a reminder pause silence everything": "This MUST include snoozed
+    /// reminders"). A snooze does not count toward the cap.
+    private static func snoozeRequests(
+        days: [SchedulerDay], scheduled: [ReminderCandidate], pausedDayKeys: Set<String>, plannedTimes: [String: [Int: String]],
+        dayStartMinutes: [String: Int], settings: SchedulerSettings, now: Date?, calendar: Calendar, constants: ProgrammeConstants
+    ) -> [ReminderRequest] {
+        guard settings.switches[.plannedMeal] ?? true, settings.remindersPausedAt == nil else { return [] }
+        let quiet = settings.effectiveQuietHours
+        var result: [ReminderRequest] = []
+        for day in days where !pausedDayKeys.contains(day.dayKey) {
+            for snooze in day.snoozes where snooze.count > 0 {
+                guard let meal = day.plannedMeals.first(where: { $0.slotIndex == snooze.slotIndex }), !meal.recordedOrAnswered else { continue }
+                let next = nextPlannedMealTime(after: meal.time, dayKey: day.dayKey, in: scheduled, plannedTimes: plannedTimes, dayStartMinute: dayStartMinutes[day.dayKey] ?? 0)
+                var userInfo = ReminderUserInfo(
+                    dayKey: day.dayKey, slotIndex: meal.slotIndex, plannedTime: meal.time, nextPlannedTime: next,
+                    snoozeCount: snooze.count - 1, quietHoursStart: quiet.start, quietHoursEnd: quiet.end,
+                    snoozeMinutes: settings.snoozeMinutes
+                )
+                guard case .scheduleAt(let moment) = SnoozeDecision.decide(userInfo: userInfo, now: snooze.lastTapAt, calendar: calendar, constants: constants) else { continue }
+                if let now, moment <= now { continue }
+                userInfo.snoozeCount = snooze.count
+                result.append(ReminderRequest(
+                    id: SnoozeDecision.requestIdentifier(dayKey: day.dayKey, slotIndex: meal.slotIndex, snoozeCount: snooze.count),
+                    kind: .plannedMeal, dayKey: day.dayKey, slotIndex: meal.slotIndex, time: moment,
+                    title: DiscreetText.title(kind: .plannedMeal, explicitWordingOn: settings.explicitWordingOn, slotLabel: day.slotLabels[meal.slotIndex]),
+                    body: DiscreetText.body(time: meal.time), userInfo: userInfo.dictionary,
+                    category: ReminderKind.plannedMeal.notificationCategory
+                ))
+            }
+        }
+        return result
+    }
+
+    /// The next scheduled planned meal's planned time after `plannedTime`
+    /// in the same record day, ordered from the day start, so a planned
+    /// meal after midnight comes last.
+    private static func nextPlannedMealTime(
+        after plannedTime: String, dayKey: String, in scheduled: [ReminderCandidate],
+        plannedTimes: [String: [Int: String]], dayStartMinute: Int
+    ) -> String? {
+        let after = ReminderClock.minutesSinceDayStart(plannedTime, dayStartMinute: dayStartMinute)
+        return scheduled
+            .filter { $0.kind == .plannedMeal && $0.dayKey == dayKey }
+            .compactMap { candidate in candidate.slotIndex.flatMap { plannedTimes[dayKey]?[$0] } ?? candidate.time }
+            .filter { ReminderClock.minutesSinceDayStart($0, dayStartMinute: dayStartMinute) > after }
+            .min { ReminderClock.minutesSinceDayStart($0, dayStartMinute: dayStartMinute) < ReminderClock.minutesSinceDayStart($1, dayStartMinute: dayStartMinute) }
     }
 }
