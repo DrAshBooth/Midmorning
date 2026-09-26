@@ -141,6 +141,12 @@ struct ReviewScreenView: View {
         .onChange(of: selfHarmSecond) { _, newValue in
             if newValue == .yes { showNotRightNow() }
         }
+        // Step 2 belongs to a step-1 "Yes" only. When step 1 changes away
+        // from "Yes", clear step 2, so a later "Yes" asks step 2 again and
+        // its routing runs again (the same rule `Screen2View` uses).
+        .onChange(of: selfHarmFirst) { _, newValue in
+            if newValue != .yes { selfHarmSecond = nil }
+        }
     }
 
     // MARK: Actions

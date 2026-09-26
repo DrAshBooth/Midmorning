@@ -181,4 +181,27 @@ final class ReviewSaveStoreTests: XCTestCase {
         XCTAssertEqual(runs[dueDayKey(1)], ReviewRunWeek(week: 1, runStartDay: startDay))
         XCTAssertEqual(runs[dueDayKey(1, startDay: newStartDay)], ReviewRunWeek(week: 1, runStartDay: newStartDay))
     }
+
+    // MARK: mm-t32.23
+
+    /// Scenario: I won't be weighing. The store keeps the weigh-in, and the
+    /// summary leaves the part out until the person chooses a day again.
+    func testIWontBeWeighingOverTheRealStore() throws {
+        let store = try makeStore()
+        try store.setWeighInDayChoice(.weekday(2), changedAt: at(2026, 9, 28))
+        _ = try store.saveWeighIn(dateKey: "2026-10-05", weightKg: 70, unit: "kg", at: at(2026, 10, 5))
+        try store.setWeighInDayChoice(.wontBeWeighing, changedAt: at(2026, 10, 6))
+
+        // `WeeklyReviewModel.weekFacts`'s weigh-in read.
+        func weighInDayKey() throws -> String? {
+            let chosen: Bool
+            if case .weekday = try store.weighInDayChoice() { chosen = true } else { chosen = false }
+            let week = ReviewDue.weekDayKeys(week: 2, startDay: startDay, calendar: utc)
+            return ReviewWeekFacts.weighInDoneDayKey(weighInDayKeys: try store.weighIns().map(\.dateKey), weekDayKeys: week, weighInDayChosen: chosen)
+        }
+        XCTAssertEqual(try store.weighIns().count, 1, "the store keeps the weigh-in")
+        XCTAssertNil(try weighInDayKey(), "no weigh-in part after I won't be weighing")
+        try store.setWeighInDayChoice(.weekday(2), changedAt: at(2026, 10, 20))
+        XCTAssertEqual(try weighInDayKey(), "2026-10-05", "the part comes back when the person chooses a day")
+    }
 }

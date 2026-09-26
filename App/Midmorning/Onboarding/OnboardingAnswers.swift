@@ -32,7 +32,12 @@ final class OnboardingAnswers: ObservableObject {
     @Published var weightPoundsText = ""
     @Published var treatmentAnswer: TreatmentAnswer?
     @Published var pregnancyAnswer: PregnancyAnswer?
-    @Published var selfHarmFirst: SelfHarmFirstAnswer?
+    /// Step 2 belongs to a step-1 "Yes" only. When step 1 changes away from
+    /// "Yes", step 2 clears, on screen 2 and on the restart re-screen
+    /// (`RescreenView`), so a later "Yes" asks step 2 again.
+    @Published var selfHarmFirst: SelfHarmFirstAnswer? {
+        didSet { if selfHarmFirst != .yes { selfHarmSecond = nil } }
+    }
     @Published var selfHarmSecond: SelfHarmSecondAnswer?
 
     // Screen 3

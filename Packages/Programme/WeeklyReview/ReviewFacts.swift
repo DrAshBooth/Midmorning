@@ -66,4 +66,18 @@ public struct ReviewWeekFacts: Sendable, Equatable {
         self.closeTheDayWordsByDayKey = closeTheDayWordsByDayKey
         self.previousWeekFrozenStarred = previousWeekFrozenStarred
     }
+
+    /// The record day of the week's weigh-in that the summary shows, or
+    /// `nil` (weekly-review spec, "The summary built from the record").
+    /// The store keeps each weigh-in after "I won't be weighing" (weigh-in
+    /// spec), so the choice in force decides: "When the person chose 'I
+    /// won't be weighing', the app MUST leave the weigh-in part out. The
+    /// part MUST stay out of every review and check-in until the person
+    /// chooses a weigh-in day." `weighInDayChosen` is `true` only while the
+    /// setting holds a weekday.
+    public static func weighInDoneDayKey(weighInDayKeys: [String], weekDayKeys: [String], weighInDayChosen: Bool) -> String? {
+        guard weighInDayChosen else { return nil }
+        let week = Set(weekDayKeys)
+        return weighInDayKeys.first { week.contains($0) }
+    }
 }

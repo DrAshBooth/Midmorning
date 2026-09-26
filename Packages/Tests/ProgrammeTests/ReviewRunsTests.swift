@@ -70,3 +70,27 @@ final class ReviewRunsTests: XCTestCase {
         XCTAssertNil(ReviewRuns.week(dueDayKey: firstRun, runStartDay: firstRun, calendar: calendar))
     }
 }
+
+/// weekly-review spec, "The summary built from the record", scenario "I
+/// won't be weighing" (mm-t32.23). `WeeklyReviewModel.weekFacts` calls
+/// `ReviewWeekFacts.weighInDoneDayKey`; `RecordTests.ReviewSaveStoreTests`
+/// runs it over the real store.
+final class ReviewWeighInPartTests: XCTestCase {
+    private let week = (0..<7).map { dayKey(2026, 10, 5 + $0) }
+
+    /// Scenario: I won't be weighing. A kept weigh-in gives no part.
+    func testIWontBeWeighingLeavesThePartOut() {
+        let key = ReviewWeekFacts.weighInDoneDayKey(weighInDayKeys: [dayKey(2026, 10, 5)], weekDayKeys: week, weighInDayChosen: false)
+        XCTAssertNil(key)
+        let facts = ReviewWeekFacts(weekDayKeys: week, weighInDoneDayKey: key)
+        XCTAssertFalse(ReviewSummary.parts(facts, calendar: engineTestCalendar).contains { $0.contains("Weigh-in") })
+    }
+
+    /// With a weigh-in day chosen, the week's weigh-in gives the part.
+    func testAChosenDayShowsThePart() {
+        let key = ReviewWeekFacts.weighInDoneDayKey(weighInDayKeys: [dayKey(2026, 9, 28), dayKey(2026, 10, 5)], weekDayKeys: week, weighInDayChosen: true)
+        XCTAssertEqual(key, dayKey(2026, 10, 5))
+        let facts = ReviewWeekFacts(weekDayKeys: week, weighInDoneDayKey: key)
+        XCTAssertTrue(ReviewSummary.parts(facts, calendar: engineTestCalendar).contains("Weigh-in: done on Monday."))
+    }
+}

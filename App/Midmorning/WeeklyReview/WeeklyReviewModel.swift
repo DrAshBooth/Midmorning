@@ -141,7 +141,11 @@ enum WeeklyReviewModel {
 
         let weekDaySet = Set(weekDayKeys)
         let urgeDetails = ((try? store.urgeOutcomeDetails()) ?? []).filter { weekDaySet.contains($0.dayKey) }
-        let weighInDayKey = ((try? store.weighIns()) ?? []).first { weekDaySet.contains($0.dateKey) }?.dateKey
+        let weighInDayChosen: Bool
+        if case .weekday = try? store.weighInDayChoice() { weighInDayChosen = true } else { weighInDayChosen = false }
+        let weighInDayKey = ReviewWeekFacts.weighInDoneDayKey(
+            weighInDayKeys: ((try? store.weighIns()) ?? []).map(\.dateKey), weekDayKeys: weekDayKeys, weighInDayChosen: weighInDayChosen
+        )
 
         var previousWeekFrozenStarred: Int? = nil
         if week > 1 {
