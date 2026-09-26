@@ -37,18 +37,54 @@ final class FrozenSchemaTests: XCTestCase {
 
     /// Scenario: Frozen names. Simulates a rename by dropping the frozen
     /// name for one field from a hand-built "current" snapshot standing in
-    /// for a renamed live schema, and asserts the checker fails and names it.
+    /// for a renamed live schema, and asserts the checker fails and names
+    /// the field.
     func testFrozenNamesCatchesARename() throws {
         let frozen = try FrozenSchema.load()
         var renamedCurrent = frozen
-        var itemVersionFields = renamedCurrent["ItemVersion"]!
-        itemVersionFields.remove("what")
-        itemVersionFields.insert("whatText") // the rename
-        renamedCurrent["ItemVersion"] = itemVersionFields
+        let type = renamedCurrent["ItemVersion"]!.removeValue(forKey: "what")!
+        renamedCurrent["ItemVersion"]!["whatText"] = type // the rename
 
         let violations = FrozenSchema.violations(current: renamedCurrent, frozen: frozen)
-        XCTAssertEqual(violations, ["ItemVersion"], "the test fails and names the entity with the renamed field")
-        XCTAssertFalse(renamedCurrent["ItemVersion"]!.contains("what"), "the old name is gone")
+        XCTAssertEqual(violations, [
+            "ItemVersion.what: field missing from the schema (a rename or a delete)",
+            "ItemVersion.whatText: field String not in the frozen file"
+        ], "the test fails and names the field")
+    }
+
+    /// A retype keeps every name, so a names-only check would pass it. The
+    /// frozen file holds each field's type, so the checker fails and names
+    /// the field.
+    func testFrozenTypesCatchARetype() throws {
+        let frozen = try FrozenSchema.load()
+        XCTAssertEqual(frozen["Measure"]?["weightKg"], "Double")
+        var retyped = frozen
+        retyped["Measure"]!["weightKg"] = "String"
+        XCTAssertEqual(FrozenSchema.violations(current: retyped, frozen: frozen), ["Measure.weightKg: type String, frozen as Double"])
+    }
+
+    /// Making a required field optional, or an optional field required, is
+    /// a change of the field, not an addition.
+    func testFrozenTypesCatchAnOptionalityChange() throws {
+        let frozen = try FrozenSchema.load()
+        XCTAssertEqual(frozen["ItemVersion"]?["dayKey"], "String")
+        XCTAssertEqual(frozen["Review"]?["frozenAt"], "Date?")
+        var changed = frozen
+        changed["ItemVersion"]!["dayKey"] = "String?"
+        changed["Review"]!["frozenAt"] = "Date"
+        XCTAssertEqual(FrozenSchema.violations(current: changed, frozen: frozen), [
+            "ItemVersion.dayKey: type String?, frozen as String",
+            "Review.frozenAt: type Date, frozen as Date?"
+        ])
+    }
+
+    /// The live schema reports an optional attribute with a `?`, the same
+    /// shape as the frozen file.
+    func testTheLiveSchemaWritesOptionalTypesWithAQuestionMark() {
+        let current = FrozenSchema.currentFields()
+        XCTAssertEqual(current["Day"]?["setAt"], "Date?")
+        XCTAssertEqual(current["Measure"]?["weightKg"], "Double")
+        XCTAssertEqual(current["Session"]?["entryId"], "UUID?")
     }
 
     /// Scenario: Field added. Adding an optional field to the frozen
@@ -57,9 +93,10 @@ final class FrozenSchemaTests: XCTestCase {
     func testFieldAddedWithTheFrozenFileUpdatedInTheSameCommitPasses() throws {
         let frozen = try FrozenSchema.load()
         var withNewField = frozen
-        withNewField["Item"]!.insert("note")
+        withNewField["Item"]!["note"] = "String?"
         let currentAfterAddingTheField = withNewField
         XCTAssertTrue(FrozenSchema.violations(current: currentAfterAddingTheField, frozen: withNewField).isEmpty)
+        XCTAssertEqual(FrozenSchema.violations(current: currentAfterAddingTheField, frozen: frozen), ["Item.note: field String? not in the frozen file"], "until the file is updated, the addition fails")
     }
 
     /// The live schema matches the committed frozen file exactly, right now.
