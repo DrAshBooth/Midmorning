@@ -37,7 +37,7 @@ struct WeighInScreenView: View {
                 Section {
                     weightField
                     if let belowRangeMessage {
-                        Text(verbatim: belowRangeMessage).foregroundStyle(.red)
+                        ValidationMessageText(belowRangeMessage)
                     }
                     Button("entry.save", action: save)
                         .disabled(!hasCompleteInput)
@@ -197,7 +197,7 @@ struct WeighInScreenView: View {
             case .missing:
                 return
             case .partOutOfRange:
-                belowRangeMessage = WeighInWeight.belowRangeMessage.string
+                showBelowRangeMessage()
                 return
             case .value(let kg):
                 raw = kg
@@ -205,7 +205,7 @@ struct WeighInScreenView: View {
         }
         switch WeighInWeight.validate(kg: raw) {
         case .belowRange:
-            belowRangeMessage = WeighInWeight.belowRangeMessage.string
+            showBelowRangeMessage()
         case .valid(let kg):
             belowRangeMessage = nil
             let stored = WeighInWeight.storedKg(kg)
@@ -217,6 +217,14 @@ struct WeighInScreenView: View {
             runUnderweightCheck()
             reload()
         }
+    }
+
+    /// Shows the range message in the neutral text colour and announces it
+    /// to VoiceOver (r13-15, mm-t14.45).
+    private func showBelowRangeMessage() {
+        let message = WeighInWeight.belowRangeMessage.string
+        belowRangeMessage = message
+        ValidationAnnouncement.post(message)
     }
 
     /// safeguarding spec, "The underweight check": run once, right after

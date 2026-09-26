@@ -10,7 +10,8 @@ import Programme
 ///
 /// Each question is a section with the question as its header. When
 /// `ScreeningForm.firstIssue` stops "Continue", the section of that question
-/// shows the issue's message and gets VoiceOver focus. After "Yes" and then
+/// shows the issue's message in the neutral text colour and gets VoiceOver
+/// focus, and the screen announces the message (r13-15, mm-t14.45). After "Yes" and then
 /// "No" to the self-harm item, the support line shows under the item and
 /// the support sheet's items follow inline, with Samaritans first.
 struct ScreeningQuestionSections: View {
@@ -141,7 +142,7 @@ struct ScreeningQuestionSections: View {
     @ViewBuilder
     private func message(for field: ScreeningField) -> some View {
         if let issue, issue.field == field {
-            Text(issue.problem.message()).foregroundStyle(.red)
+            ValidationMessageText(issue.problem.message())
         }
     }
 }
