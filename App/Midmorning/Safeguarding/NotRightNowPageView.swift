@@ -1,4 +1,5 @@
 import SwiftUI
+import Record
 import Programme
 
 /// The not-right-now page (safeguarding spec, "The not-right-now page").
@@ -6,6 +7,7 @@ import Programme
 /// (programme-engine) open this from their own triggers; this change builds
 /// the page itself. "Done" returns the app to the screen beneath.
 struct NotRightNowPageView: View {
+    let store: RecordStore
     let reasons: [ExclusionReason]
     var onDone: () -> Void
 
@@ -26,7 +28,7 @@ struct NotRightNowPageView: View {
                         .font(.title2.bold())
                     GPParagraphView(variant: GPParagraph.variant(for: reasons))
 
-                    ExportStubButton()
+                    ExportControlButton(store: store)
                     Text(NotRightNowPage.recordStaysLine)
                     Text(NotRightNowPage.remindersLine(for: reasons))
 

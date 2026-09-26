@@ -27,7 +27,7 @@ struct RestartChoiceView: View {
             case .choice:
                 choiceView
             case .excluded(let reasons):
-                NotRightNowPageView(reasons: reasons) {
+                NotRightNowPageView(store: store, reasons: reasons) {
                     onFinished()
                     dismiss()
                 }

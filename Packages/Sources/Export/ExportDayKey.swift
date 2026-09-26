@@ -13,13 +13,16 @@ public enum ExportDayKey {
         return calendar
     }()
 
-    static func date(_ key: String) -> Date? {
+    /// Midnight GMT of the calendar date `key` names. The app target uses
+    /// this to give a `DatePicker` a `Date` for a day key; only the
+    /// calendar-date components matter, never the time.
+    public static func date(_ key: String) -> Date? {
         let pieces = key.split(separator: "-")
         guard pieces.count == 3, let y = Int(pieces[0]), let m = Int(pieces[1]), let d = Int(pieces[2]) else { return nil }
         return calendar.date(from: DateComponents(year: y, month: m, day: d))
     }
 
-    static func key(from date: Date) -> String {
+    public static func key(from date: Date) -> String {
         let c = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
