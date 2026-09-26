@@ -84,8 +84,7 @@ the record day changes.
 
 The UI tests are not part of `./verify`, for two reasons. First, the 35
 checks take about 13 minutes (794 s) on a warm simulator (26 September
-2026), and a warm
-`./verify` must stay under 240 s. Second, a simulator run needs a booted
+2026), and a warm `./verify` must stay under 240 s. Second, a simulator run needs a booted
 simulator of its own, and parallel worktrees share one simulator service.
 On 26 September 2026 that service stopped for about 20 minutes: every
 `simctl` call waited while four simulators stayed in "Shutting Down". The
@@ -101,7 +100,7 @@ this suite. Ash can skip the check only after a dated run in which every
 check passes on a committed build. Write that run as a line in the table
 below: the date, the commit, the simulator runtime and the result. Before
 each TestFlight build and each release, run the suite again on that build
-and write a new line (the release gate on mm-t43).
+and write a new line (gate mm-t43.31).
 
 Two bugs change what the suite checks until they are fixed:
 
