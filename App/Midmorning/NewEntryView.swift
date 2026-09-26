@@ -19,6 +19,8 @@ struct NewEntryView: View {
     @State private var time = Date()
     @State private var what = ""
     @State private var whereSelection: String?
+    /// The text in "Add a place", or `nil` while that field is closed.
+    @State private var pendingPlace: String?
     @State private var feltLikeABinge = false
     @State private var context = ""
     @State private var whatIsFocused = false
@@ -54,7 +56,10 @@ struct NewEntryView: View {
             .recordSheetDetent()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("entry.cancel") { dismiss() }
+                    Button("entry.cancel") {
+                        pendingPlace = nil // Cancel keeps no place typed in "Add a place"
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("entry.save", action: save)
@@ -109,7 +114,7 @@ struct NewEntryView: View {
                 onSaveFromKeyboard: save
             )
         case .whereField:
-            WhereChipsView(selection: $whereSelection, customPlaces: customPlaces, onSaveFromKeyboard: save) { newPlace in
+            WhereChipsView(selection: $whereSelection, pendingPlace: $pendingPlace, customPlaces: customPlaces, onSaveFromKeyboard: save) { newPlace in
                 try? store.touchCustomPlace(newPlace, at: Date())
                 customPlaces = (try? store.customPlaces()) ?? []
             }
@@ -141,16 +146,22 @@ struct NewEntryView: View {
 
     private func save() {
         let now = Date()
+        let place = WhereSelection.onSave(selection: whereSelection, pendingPlace: pendingPlace)
         do {
+            if let kept = place.placeToKeep {
+                try? store.touchCustomPlace(kept, at: now)
+            }
             let entry = try store.add(
                 time: min(time, now),
                 what: what,
                 feltLikeABinge: feltLikeABinge,
                 createdAt: now,
                 utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: now),
-                whereText: whereSelection ?? "",
+                whereText: place.whereText,
                 context: context
             )
+            pendingPlace = nil
+            whereSelection = place.whereText.isEmpty ? nil : place.whereText
             dismiss()
             onSave(entry)
         } catch {

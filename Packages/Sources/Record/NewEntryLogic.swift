@@ -27,6 +27,16 @@ public enum WhereSelection {
     public static func afterTap(current: String?, tapped: String) -> String? {
         current == tapped ? nil : tapped
     }
+
+    /// The Where an entry saves with, and the custom place to keep. A place
+    /// still typed in "Add a place" when the person taps Save wins over the
+    /// selected chip (record spec, "Where chips", scenario "Add a custom
+    /// place"). `pendingPlace` is `nil` when the field is closed.
+    public static func onSave(selection: String?, pendingPlace: String?) -> (whereText: String, placeToKeep: String?) {
+        let typed = (pendingPlace ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !typed.isEmpty { return (typed, typed) }
+        return (selection ?? "", nil)
+    }
 }
 
 /// Resolves the new-entry and edit screens' time wheel against the selected

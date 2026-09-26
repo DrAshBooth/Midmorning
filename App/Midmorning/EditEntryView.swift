@@ -15,6 +15,8 @@ struct EditEntryView: View {
     @State private var time: Date
     @State private var what: String
     @State private var whereSelection: String?
+    /// The text in "Add a place", or `nil` while that field is closed.
+    @State private var pendingPlace: String?
     @State private var feltLikeABinge: Bool
     @State private var context: String
     @State private var whatIsFocused = false
@@ -79,7 +81,10 @@ struct EditEntryView: View {
             .recordSheetDetent()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("entry.cancel") { dismiss() }
+                    Button("entry.cancel") {
+                        pendingPlace = nil // "Cancel" MUST discard every change
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("entry.save", action: save)
@@ -118,7 +123,7 @@ struct EditEntryView: View {
                 onSaveFromKeyboard: save
             )
         case .whereField:
-            WhereChipsView(selection: $whereSelection, customPlaces: customPlaces, onSaveFromKeyboard: save) { newPlace in
+            WhereChipsView(selection: $whereSelection, pendingPlace: $pendingPlace, customPlaces: customPlaces, onSaveFromKeyboard: save) { newPlace in
                 try? store.touchCustomPlace(newPlace, at: Date())
                 customPlaces = (try? store.customPlaces()) ?? []
             }
@@ -146,11 +151,18 @@ struct EditEntryView: View {
     }
 
     private func save() {
+        let now = Date()
+        let place = WhereSelection.onSave(selection: whereSelection, pendingPlace: pendingPlace)
         do {
+            if let kept = place.placeToKeep {
+                try? store.touchCustomPlace(kept, at: now)
+            }
             let updated = try store.update(
                 entryId: entry.id, time: time, what: what, feltLikeABinge: feltLikeABinge,
-                whereText: whereSelection ?? "", context: context, editedAt: Date()
+                whereText: place.whereText, context: context, editedAt: now
             )
+            pendingPlace = nil
+            whereSelection = place.whereText.isEmpty ? nil : place.whereText
             dismiss()
             onSave(updated)
         } catch {
