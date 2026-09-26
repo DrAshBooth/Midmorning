@@ -31,6 +31,18 @@ public struct SignedCatalogueKeys: Sendable, Equatable, Codable {
         allPrefixes.contains { key.hasPrefix($0) }
     }
 
+    /// The keys in `keys` that have the segment `segment` and that no prefix
+    /// matches, sorted. A segment is a part of the key that full stops
+    /// separate, before the first space. A key that holds reminder text has
+    /// the segment "reminders" (content spec, "Content versions"), so each
+    /// key with that segment must be signed.
+    public func unsignedKeys(withSegment segment: String, in keys: some Sequence<String>) -> [String] {
+        keys.filter { key in
+            let name = key.split(separator: " ", maxSplits: 1).first ?? ""
+            return name.split(separator: ".").contains { $0 == segment } && !isSigned(key)
+        }.sorted()
+    }
+
     /// The entries of `catalogue` whose key is signed.
     public func signedEntries(of catalogue: [String: XCStringsCatalogue.Entry]) -> [String: XCStringsCatalogue.Entry] {
         catalogue.filter { isSigned($0.key) }

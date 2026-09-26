@@ -24,7 +24,7 @@ final class BMITests: XCTestCase {
 
     func testHeightOutsideTheRange() {
         XCTAssertEqual(ScreeningLimits.validate(heightCm: 90), .tooLow)
-        XCTAssertEqual(ScreeningLimits.heightMessage().english, "Enter a height between 100 cm and 250 cm.")
+        XCTAssertEqual(ScreeningLimits.heightMessage().english, "Enter a height between 100 and 250 cm.")
     }
 
     /// Ruling r13-11: with "ft in" chosen, the message gives the limits in
@@ -53,7 +53,7 @@ final class BMITests: XCTestCase {
         constants.minHeightCm = 150
         constants.maxHeightCm = 200
         constants.minWeightKg = 40
-        XCTAssertEqual(ScreeningLimits.heightMessage(unit: .cm, constants: constants).english, "Enter a height between 150 cm and 200 cm.")
+        XCTAssertEqual(ScreeningLimits.heightMessage(unit: .cm, constants: constants).english, "Enter a height between 150 and 200 cm.")
         XCTAssertEqual(ScreeningLimits.heightMessage(unit: .ftIn, constants: constants).english, "Enter a height between 5 ft 0 in and 6 ft 6 in.")
         XCTAssertEqual(ScreeningLimits.weightMessage(unit: .kg, constants: constants).english, "Enter a weight of 40 kg or more.")
         XCTAssertEqual(ScreeningLimits.weightMessage(unit: .stLb, constants: constants).english, "Enter a weight of 6 st 5 lb or more.")

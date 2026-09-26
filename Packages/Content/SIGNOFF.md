@@ -162,6 +162,7 @@ screening.limit.height
 screening.limit.in %lld
 screening.limit.kg %lld
 screening.limit.lb %lld
+screening.limit.number %lld
 screening.limit.st %lld
 screening.limit.stLb
 screening.limit.weight

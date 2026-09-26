@@ -67,11 +67,14 @@ public enum ScreeningLimits {
     }
 
     /// "Enter a height between %1$@ and %2$@.", filled with the two limits
-    /// in `unit`.
+    /// in `unit`. With "cm", the lower limit comes from "%lld" and the upper
+    /// limit from "%lld cm", so the message reads "Enter a height between 100
+    /// and 250 cm." (onboarding spec, "The one-time BMI").
     public static func heightMessage(unit: HeightUnit = .cm, constants: ProgrammeConstants = .default) -> CatalogueText {
         switch unit {
         case .cm:
-            return .key("screening.limit.height", centimetres(constants.minHeightCm), centimetres(constants.maxHeightCm))
+            // The unit follows the upper limit only.
+            return .key("screening.limit.height", .key("screening.limit.number %lld", .count(constants.minHeightCm)), centimetres(constants.maxHeightCm))
         case .ftIn:
             let inches = heightLimitsInInches(constants: constants)
             return .key("screening.limit.height", feetAndInches(inches.lowerBound), feetAndInches(inches.upperBound))

@@ -223,44 +223,70 @@ final class SignedTextCopiesTests: XCTestCase {
 
     // MARK: - Every signed-off Swift constant has a bundle copy
 
-    /// Scenario "A signed-off Swift constant with no bundle copy": each
-    /// `static let` string constant in the signed-off Programme sources has
-    /// a bundle string with the same text, or the test names the constant.
-    /// The scan reads one-line constants only. The tests above cover the
-    /// arrays, the templates and the switch cases.
+    /// Scenario "A signed-off Swift constant with no bundle copy". The scan
+    /// reads every Swift file in the signed-off Programme folders. Each
+    /// `static let` string constant must equal a bundle string. Each string
+    /// that a `return`, a `case` or a line of an array holds must be in a
+    /// bundle string or a signed catalogue string, because the code can join
+    /// it with other parts. The test names each string that fails.
+    /// A string with `\(` is a template, and the tests above cover it. A
+    /// multi-line literal fails the test, because the scan cannot read it.
     func testEverySignedOffSwiftConstantHasABundleCopy() throws {
-        // A part that a test above joins into one bundle string, or a string
-        // that waits for decision mm-t11.47.
-        let exceptions: Set<String> = [
+        // A part that a test above joins into one bundle string.
+        let joinedParts: Set<String> = [
             "SupportSheet.samaritansWelshLabel", "SupportSheet.samaritansWelshNumber", // "support.samaritans.welsh"
             "GPParagraph.selfHarmAddition", // "gp.selfharm"
-            "OnboardingContent.treatmentQuestion", // "therapist": decision mm-t11.47
         ]
+        // Text with a word from the forbidden list. It waits for decision
+        // mm-t11.47 (mm-t11.48).
+        let waitingForDecision: Set<String> = [
+            Screen1Content.lines[0], Screen1Content.lines[2], Screen2Content.treatmentQuestion,
+        ]
+        // A file that holds the phrases a check looks for. The app does not
+        // show these phrases.
+        let notShown: Set<String> = ["TreatmentClaim"]
+
         let bundleTexts = Set(Shipped.bundle.strings.flatMap(\.readableTexts))
+        let knownTexts = Array(bundleTexts) + Shipped.bundle.signedCatalogue.values.flatMap(\.texts)
         let programme = RepositoryRoot.path.appendingPathComponent("Packages/Programme")
-        let safeguarding = programme.appendingPathComponent("Safeguarding")
-        let sources = try [
-            programme.appendingPathComponent("Onboarding/OnboardingContent.swift"),
-            programme.appendingPathComponent("Onboarding/CommonLabels.swift"),
-            programme.appendingPathComponent("WeeklyReview/ReviewContent.swift"),
-            programme.appendingPathComponent("Engine/StageRuleText.swift"),
-        ] + FileManager.default.contentsOfDirectory(at: safeguarding, includingPropertiesForKeys: nil)
-            .filter { $0.pathExtension == "swift" }
-        let pattern = try NSRegularExpression(pattern: #"static let (\w+)(?:\s*:\s*String)?\s*=\s*"((?:[^"\\]|\\.)*)""#)
-        var scanned = 0
-        for source in sources {
-            let text = try String(contentsOf: source, encoding: .utf8)
-            let file = source.deletingPathExtension().lastPathComponent
-            for match in pattern.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
-                let name = String(text[Range(match.range(at: 1), in: text)!])
-                let literal = String(text[Range(match.range(at: 2), in: text)!])
-                    .replacingOccurrences(of: #"\""#, with: "\"")
-                guard !literal.contains("\\("), !exceptions.contains("\(file).\(name)") else { continue }
-                scanned += 1
-                XCTAssertTrue(bundleTexts.contains(literal), "\(file).\(name) has no bundle copy")
+        let sources = try ["Onboarding", "Safeguarding", "WeeklyReview", "Engine"].flatMap { folder in
+            try FileManager.default.contentsOfDirectory(at: programme.appendingPathComponent(folder), includingPropertiesForKeys: nil)
+                .filter { $0.pathExtension == "swift" }
+        }
+        let literal = #""((?:[^"\\]|\\.)*)""#
+        let constant = try NSRegularExpression(pattern: #"static let (\w+)(?:\s*:\s*String)?\s*=\s*"# + literal)
+        let part = try NSRegularExpression(
+            pattern: #"^[ \t]*(?:(?:case\b[^"\n]*|default)[ \t]*:[ \t]*)?(?:return[ \t]+)?"# + literal + #"[ \t]*,?[ \t]*(?://.*)?$"#,
+            options: .anchorsMatchLines
+        )
+        func matches(_ regex: NSRegularExpression, in text: String) -> [[String]] {
+            regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).map { match in
+                (1..<match.numberOfRanges).map { String(text[Range(match.range(at: $0), in: text)!]) }
             }
         }
-        XCTAssertGreaterThan(scanned, 40)
+        func shown(_ text: String) -> String? {
+            let value = text.replacingOccurrences(of: #"\""#, with: "\"")
+            guard !value.contains("\\("), value.contains(where: \.isLetter), !waitingForDecision.contains(value) else { return nil }
+            return value
+        }
+        var scanned = 0
+        for source in sources {
+            let file = source.deletingPathExtension().lastPathComponent
+            guard !notShown.contains(file) else { continue }
+            let text = try String(contentsOf: source, encoding: .utf8)
+            XCTAssertFalse(text.contains("\"\"\""), "\(file) holds a multi-line literal, which this scan cannot read")
+            for groups in matches(constant, in: text) where !joinedParts.contains("\(file).\(groups[0])") {
+                guard let value = shown(groups[1]) else { continue }
+                scanned += 1
+                XCTAssertTrue(bundleTexts.contains(value), "\(file).\(groups[0]) has no bundle copy")
+            }
+            for groups in matches(part, in: text) {
+                guard let value = shown(groups[0]) else { continue }
+                scanned += 1
+                XCTAssertTrue(knownTexts.contains { $0.contains(value) }, "\(file): \"\(value)\" is in no bundle string and no signed catalogue string")
+            }
+        }
+        XCTAssertGreaterThan(scanned, 80)
     }
 
     // MARK: - Safeguarding: the GP paragraph

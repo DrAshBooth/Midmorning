@@ -1,7 +1,7 @@
 import XCTest
 @testable import Content
 
-/// "Content versions" (mm-t11.8). All six scenarios are built here.
+/// "Content versions" (mm-t11.8; ruling r13-01, mm-t11.40 and mm-t11.49).
 final class ContentVersionTests: XCTestCase {
     private func bundle(bodyWord: String) -> ContentBundle {
         ContentBundle(
@@ -20,27 +20,61 @@ final class ContentVersionTests: XCTestCase {
     }
 
     /// Scenario: A catalogue string changes. Ruling r13-01: the hash covers
-    /// the signed keys of the real `Localizable.xcstrings`. "entry.save" is a
-    /// signed key (the "entry." prefix), so "Save" to "Keep" with no version
-    /// rise fails the lock check.
+    /// the signed keys of the real `Localizable.xcstrings`.
+    /// "entry.delete.confirmTitle" is a signed key (the "entry." prefix), so
+    /// "Delete this entry?" to "Remove this entry?" with no version rise
+    /// fails the lock check.
     func testACatalogueStringChangeWithNoVersionRiseFailsTheLockCheck() throws {
         let lock = try XCTUnwrap(ContentLock.read(from: RepositoryRoot.contentResourcesDirectory))
-        let catalogue = try catalogueCopy(changing: "entry.save", from: "Save", to: "Keep")
+        let signed = try SignedCatalogueKeys.read(from: RepositoryRoot.contentResourcesDirectory)
+        XCTAssertTrue(signed.allPrefixes.contains("entry."))
+        let catalogue = try catalogueCopy(changing: "entry.delete.confirmTitle", from: "Delete this entry?", to: "Remove this entry?")
         let changed = try ContentBundle.load(from: RepositoryRoot.contentResourcesDirectory, catalogue: catalogue, environment: [:])
         XCTAssertEqual(changed.contentVersion, lock.contentVersion)
-        XCTAssertEqual(changed.signedCatalogue["entry.save"]?.value, "Keep")
+        XCTAssertEqual(changed.signedCatalogue["entry.delete.confirmTitle"]?.value, "Remove this entry?")
         XCTAssertTrue(ContentLock.disagrees(lock, with: changed))
     }
 
-    /// Ruling r13-01: a key that no signed prefix names is interface chrome.
-    /// A change to it leaves the hash as it is and needs no version rise.
-    func testAChromeStringChangeLeavesTheHashAsItIs() throws {
+    /// Scenario: Interface text changes. Ruling r13-01: no signed prefix
+    /// matches "common.cancel", so it is interface text. "Cancel" to "Close"
+    /// leaves the hash as it is, needs no version rise, and the sign-off
+    /// list does not hold the key.
+    func testAnInterfaceTextChangePassesTheLockCheck() throws {
         let lock = try XCTUnwrap(ContentLock.read(from: RepositoryRoot.contentResourcesDirectory))
-        let catalogue = try catalogueCopy(changing: "settings.title", from: "Settings", to: "Options")
+        let signed = try SignedCatalogueKeys.read(from: RepositoryRoot.contentResourcesDirectory)
+        XCTAssertFalse(signed.isSigned("common.cancel"))
+        let catalogue = try catalogueCopy(changing: "common.cancel", from: "Cancel", to: "Close")
         let changed = try ContentBundle.load(from: RepositoryRoot.contentResourcesDirectory, catalogue: catalogue, environment: [:])
-        XCTAssertNil(changed.signedCatalogue["settings.title"])
+        XCTAssertEqual(changed.contentVersion, lock.contentVersion)
+        XCTAssertNil(changed.signedCatalogue["common.cancel"])
         XCTAssertFalse(ContentLock.disagrees(lock, with: changed))
         XCTAssertEqual(changed.bundleHash, Shipped.bundle.bundleHash)
+        XCTAssertFalse(changed.signOffIds.contains("common.cancel"))
+    }
+
+    /// Scenario: A reminder key with no prefix. A catalogue key with the
+    /// segment "reminders" holds reminder text, so a signed prefix must
+    /// match it. With no "today.reminders." prefix, the check names
+    /// "today.reminders.denied".
+    func testAReminderKeyWithNoPrefixIsNamed() throws {
+        let keys = try XCStringsCatalogue.readEntries(from: RepositoryRoot.appCatalogueURL).keys
+        XCTAssertTrue(keys.contains("today.reminders.denied"))
+        let withoutToday = SignedCatalogueKeys(prefixes: ["reminders": ["reminders.", "settings.reminders."]])
+        XCTAssertTrue(withoutToday.unsignedKeys(withSegment: "reminders", in: keys).contains("today.reminders.denied"))
+        // A format part after the first space is not a segment.
+        XCTAssertEqual(withoutToday.unsignedKeys(withSegment: "reminders", in: ["today.reminders %lld", "today.title"]), ["today.reminders %lld"])
+    }
+
+    /// The real check: each catalogue key with the segment "reminders"
+    /// matches a prefix in signed-catalogue-keys.json. The test names each
+    /// key that does not.
+    func testEveryReminderKeyMatchesASignedPrefix() throws {
+        let signed = try SignedCatalogueKeys.read(from: RepositoryRoot.contentResourcesDirectory)
+        let keys = try XCStringsCatalogue.readEntries(from: RepositoryRoot.appCatalogueURL).keys
+        XCTAssertTrue(keys.contains { $0.split(separator: ".").contains("reminders") })
+        for key in signed.unsignedKeys(withSegment: "reminders", in: keys) {
+            XCTFail("\(key) has the segment \"reminders\" and matches no prefix in \(SignedCatalogueKeys.fileName)")
+        }
     }
 
     /// Ruling r13-01 puts reminder text under the hash. A change to the

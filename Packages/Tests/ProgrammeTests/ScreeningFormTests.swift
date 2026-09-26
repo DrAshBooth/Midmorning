@@ -61,7 +61,7 @@ final class ScreeningFormTests: XCTestCase {
     func testHeightOutsideTheRange() {
         let issue = ScreeningForm.firstIssue(input(height: .value(90)))
         XCTAssertEqual(issue, ScreeningFormIssue(field: .height, problem: .heightOutOfRange))
-        XCTAssertEqual(issue?.problem.message().english, "Enter a height between 100 cm and 250 cm.")
+        XCTAssertEqual(issue?.problem.message().english, "Enter a height between 100 and 250 cm.")
         XCTAssertEqual(issue?.problem.message(heightUnit: .ftIn).english, "Enter a height between 3 ft 4 in and 8 ft 2 in.")
     }
 
