@@ -60,18 +60,16 @@ struct RemindersSettingsView: View {
                 Text("settings.reminders.eachDeviceCaption")
             }
 
+            // Each control writes only from its own setter, so opening the
+            // screen writes no row and computes no schedule (mm-t24.38).
             Section {
-                DatePicker("settings.reminders.time.setTodaysPlan", selection: $setTodaysPlanTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: setTodaysPlanTime) { store.trySetReminderTime($1, .setTodaysPlan); ReminderCoordinator.recomputeAndApply(store: store) }
+                DatePicker("settings.reminders.time.setTodaysPlan", selection: writing($setTodaysPlanTime) { store.trySetReminderTime($0, .setTodaysPlan) }, displayedComponents: .hourAndMinute)
                 quietHoursLine(for: setTodaysPlanTime)
-                DatePicker("settings.reminders.time.closeTheDay", selection: $closeTheDayTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: closeTheDayTime) { store.trySetReminderTime($1, .closeTheDay); ReminderCoordinator.recomputeAndApply(store: store) }
+                DatePicker("settings.reminders.time.closeTheDay", selection: writing($closeTheDayTime) { store.trySetReminderTime($0, .closeTheDay) }, displayedComponents: .hourAndMinute)
                 quietHoursLine(for: closeTheDayTime)
-                DatePicker("settings.reminders.time.weighIn", selection: $weighInTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: weighInTime) { store.trySetReminderTime($1, .weighIn); ReminderCoordinator.recomputeAndApply(store: store) }
+                DatePicker("settings.reminders.time.weighIn", selection: writing($weighInTime) { store.trySetReminderTime($0, .weighIn) }, displayedComponents: .hourAndMinute)
                 quietHoursLine(for: weighInTime)
-                DatePicker("settings.reminders.time.weeklyReview", selection: $weeklyReviewTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: weeklyReviewTime) { store.trySetReminderTime($1, .weeklyReview); ReminderCoordinator.recomputeAndApply(store: store) }
+                DatePicker("settings.reminders.time.weeklyReview", selection: writing($weeklyReviewTime) { store.trySetReminderTime($0, .weeklyReview) }, displayedComponents: .hourAndMinute)
                 quietHoursLine(for: weeklyReviewTime)
             } header: {
                 Text("settings.reminders.whenHeader")
@@ -80,24 +78,19 @@ struct RemindersSettingsView: View {
             }
 
             Section {
-                Toggle("settings.reminders.explicitWording", isOn: $explicitWordingOn)
-                    .onChange(of: explicitWordingOn) { _, on in try? store.setExplicitWordingOn(on); ReminderCoordinator.recomputeAndApply(store: store) }
-                Picker("settings.reminders.remindAgainLabel", selection: $remindAgainMinutes) {
+                Toggle("settings.reminders.explicitWording", isOn: writing($explicitWordingOn) { try? store.setExplicitWordingOn($0) })
+                // The store's change signal makes the scheduler register the
+                // snooze title again and compute the schedule.
+                Picker("settings.reminders.remindAgainLabel", selection: writing($remindAgainMinutes, recompute: false) { try? store.setRemindAgainMinutes($0) }) {
                     Text("settings.reminders.remindAgain.15").tag(15)
                     Text("settings.reminders.remindAgain.30").tag(30)
                 }
-                // The store's change signal makes the scheduler register the
-                // snooze title again and compute the schedule.
-                .onChange(of: remindAgainMinutes) { _, minutes in try? store.setRemindAgainMinutes(minutes) }
             }
 
             Section {
-                Toggle("settings.reminders.quietHours", isOn: $quietHoursOn)
-                    .onChange(of: quietHoursOn) { _, on in try? store.setQuietHoursOn(on); ReminderCoordinator.recomputeAndApply(store: store) }
-                DatePicker("settings.reminders.quietHours.start", selection: $quietHoursStart, displayedComponents: .hourAndMinute)
-                    .onChange(of: quietHoursStart) { store.trySetQuietHoursStart($1); ReminderCoordinator.recomputeAndApply(store: store) }
-                DatePicker("settings.reminders.quietHours.end", selection: $quietHoursEnd, displayedComponents: .hourAndMinute)
-                    .onChange(of: quietHoursEnd) { store.trySetQuietHoursEnd($1); ReminderCoordinator.recomputeAndApply(store: store) }
+                Toggle("settings.reminders.quietHours", isOn: writing($quietHoursOn) { try? store.setQuietHoursOn($0) })
+                DatePicker("settings.reminders.quietHours.start", selection: writing($quietHoursStart) { store.trySetQuietHoursStart($0) }, displayedComponents: .hourAndMinute)
+                DatePicker("settings.reminders.quietHours.end", selection: writing($quietHoursEnd) { store.trySetQuietHoursEnd($0) }, displayedComponents: .hourAndMinute)
             }
         }
         .navigationTitle("settings.reminders.title")
@@ -117,6 +110,22 @@ struct RemindersSettingsView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// A binding that writes through `write` only when the person picks a
+    /// new value, then computes the schedule again unless `recompute` is
+    /// `false`. `load()` sets the state directly and so writes nothing
+    /// (mm-t24.38; the settings screen does the same, mm-t13.13).
+    private func writing<Value: Equatable>(_ value: Binding<Value>, recompute: Bool = true, write: @escaping (Value) -> Void) -> Binding<Value> {
+        Binding(
+            get: { value.wrappedValue },
+            set: { newValue in
+                guard newValue != value.wrappedValue else { return }
+                value.wrappedValue = newValue
+                write(newValue)
+                if recompute { ReminderCoordinator.recomputeAndApply(store: store) }
+            }
+        )
     }
 
     private func binding(for kind: RecordStore.ReminderSwitch) -> Binding<Bool> {
