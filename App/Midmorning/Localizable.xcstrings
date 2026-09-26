@@ -1497,6 +1497,28 @@
         }
       }
     },
+    "today.weeklyReview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly review"
+          }
+        }
+      }
+    },
+    "weeklyReview.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly review"
+          }
+        }
+      }
+    },
     "today.reminders.notDetermined": {
       "extractionState": "manual",
       "localizations": {

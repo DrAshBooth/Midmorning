@@ -16,6 +16,12 @@ extension Foundation.Notification.Name {
     /// screen."). `RunningRootView` presents `WeighInScreenView` over
     /// Today when it receives this.
     static let weighInReminderTapped = Foundation.Notification.Name("uk.midmorning.weighInReminderTapped")
+
+    /// Posted on a plain tap on the weekly review reminder (reminders spec,
+    /// "The weekly review reminder": "A tap MUST open the weekly review.").
+    /// `AppLockRootView` presents `ReviewScreenView` over Today when it
+    /// receives this.
+    static let weeklyReviewReminderTapped = Foundation.Notification.Name("uk.midmorning.weeklyReviewReminderTapped")
 }
 
 /// Handles a planned meal reminder's three actions. Registered as
@@ -50,13 +56,18 @@ final class NotificationActionHandling: NSObject, UNUserNotificationCenterDelega
 
         default:
             // A plain tap (`UNNotificationDefaultActionIdentifier`). Every
-            // reminder kind but the weigh-in day reminder opens the app to
-            // Today, the system's own default behaviour; the weigh-in day
-            // reminder's own requirement names its own screen instead
-            // (reminders spec, "The weigh-in day reminder": "A tap MUST
-            // open the weigh-in screen.").
-            if content.userInfo["kind"] as? String == ReminderKind.weighInDay.rawValue {
+            // reminder kind but the weigh-in day and weekly review
+            // reminders opens the app to Today, the system's own default
+            // behaviour; each of those two names its own screen instead
+            // (reminders spec, "The weigh-in day reminder", "The weekly
+            // review reminder").
+            switch content.userInfo["kind"] as? String {
+            case ReminderKind.weighInDay.rawValue:
                 NotificationCenter.default.post(name: .weighInReminderTapped, object: nil)
+            case ReminderKind.weeklyReview.rawValue:
+                NotificationCenter.default.post(name: .weeklyReviewReminderTapped, object: nil)
+            default:
+                break
             }
         }
 

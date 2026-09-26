@@ -546,6 +546,21 @@ public final class RecordStore {
         try setSettingValue(on ? "true" : "false", key: Self.gapBandsKey, changedAt: changedAt)
     }
 
+    private static let weeklySummaryKey = "record.weeklySummary.enabled"
+
+    /// "Weekly summary" (on, syncs; settings spec, "The Record group").
+    /// Weekly-review reads this to decide whether a review shows its summary
+    /// part (weekly-review spec, "The weekly summary is opt-out": the
+    /// reflection questions, the self-harm item and "I'm getting worse" stay
+    /// regardless).
+    public func weeklySummaryOn() throws -> Bool {
+        try (settingValue(key: Self.weeklySummaryKey) ?? "true") == "true"
+    }
+
+    public func setWeeklySummaryOn(_ on: Bool, changedAt: Date = .now) throws {
+        try setSettingValue(on ? "true" : "false", key: Self.weeklySummaryKey, changedAt: changedAt)
+    }
+
     // MARK: - The Reminders group (settings spec, "The Reminders group")
 
     /// Every switch is a device setting, on by default.
@@ -953,6 +968,98 @@ public final class RecordStore {
         try setSettingValue(unit, key: Self.weighInUnitKey, changedAt: changedAt)
     }
 
+    // MARK: - Reviews: weekly reviews and check-ins (weekly-review spec,
+    // "Finish and reopen a review", "The week's counts are frozen in the
+    // Review row"; data-and-privacy spec, "Day states, sessions and
+    // reviews"). A `Review` row's natural key is (`kind`, `dueDateKey`);
+    // every write is a new row, append-only like every other synced row,
+    // and `ReviewReconciler` picks the earliest-frozen winner on read.
+    // `weekly-review` (3.2) owns `answersJSON`'s shape — a JSON payload of
+    // the review's own answers and its frozen counts, opaque to this store
+    // the same way `Day.slotsJSON` is opaque to it.
+
+    public enum ReviewKind: String, Sendable, CaseIterable {
+        case weeklyReview, checkIn
+    }
+
+    /// One `Review` row as the app reads it.
+    public struct ReviewRow: Sendable, Equatable {
+        public let id: UUID
+        public let kind: String
+        public let dueDateKey: String
+        public let frozenAt: Date?
+        public let answersJSON: String
+        public let selfHarmAnswered: Bool
+        public let pinnedNote: String
+        public let changedAt: Date
+    }
+
+    private func reviewRow(_ model: Review) -> ReviewRow {
+        ReviewRow(
+            id: model.id, kind: model.kind, dueDateKey: model.dueDateKey, frozenAt: model.frozenAt,
+            answersJSON: model.answersJSON, selfHarmAnswered: model.selfHarmAnswered,
+            pinnedNote: model.pinnedNote, changedAt: model.changedAt
+        )
+    }
+
+    private func reviewModels(kind: ReviewKind, dueDateKey: String? = nil) throws -> [Review] {
+        let kindValue = kind.rawValue
+        var descriptor: FetchDescriptor<Review>
+        if let dueDateKey {
+            descriptor = FetchDescriptor<Review>(predicate: #Predicate { $0.kind == kindValue && $0.dueDateKey == dueDateKey })
+        } else {
+            descriptor = FetchDescriptor<Review>(predicate: #Predicate { $0.kind == kindValue })
+        }
+        descriptor.includePendingChanges = false
+        return try context.fetch(descriptor)
+    }
+
+    /// The device's own latest row for (`kind`, `dueDateKey`), whatever its
+    /// freeze state — the row a local edit or a later freeze writes into
+    /// (mirrors `weighIn(dateKey:)`'s own "the winner this device already
+    /// wrote" read, since a still-unfrozen row is never a `ReviewReconciler`
+    /// winner).
+    /// The winning row for (`kind`, `dueDateKey`): the frozen row with the
+    /// earliest freeze moment, or `nil` when none is frozen yet ("Freeze
+    /// waits for sync": an unfrozen row is never a winner).
+    public func review(kind: ReviewKind, dueDateKey: String) throws -> ReviewRow? {
+        let rows = try reviewModels(kind: kind, dueDateKey: dueDateKey)
+        guard let winner = ReviewReconciler.winners(in: rows)["\(kind.rawValue)|\(dueDateKey)"] else { return nil }
+        return reviewRow(winner)
+    }
+
+    /// Every `dueDateKey`'s winning row for `kind` — one per key, frozen
+    /// rows only (the "Reviews" list, the deterioration rule's last four
+    /// frozen counts, and "Today's pinned note" all read from this).
+    public func reviewRowWinners(kind: ReviewKind) throws -> [ReviewRow] {
+        let rows = try reviewModels(kind: kind)
+        return ReviewReconciler.winners(in: rows).values.map(reviewRow)
+    }
+
+    /// Writes a fresh row for (`kind`, `dueDateKey`), append-only like every
+    /// other synced row (`saveWeighIn`'s own pattern: a new `id` every call;
+    /// the natural key and `ReviewReconciler`'s policy decide the winner, not
+    /// row identity). Pass `frozenAt` to freeze (or re-freeze) the row, or
+    /// the existing frozen row's own `frozenAt` back unchanged to save an
+    /// answer with no freeze effect — `ReviewReconciler` then reads this
+    /// edit's row as that same frozen review's latest content ("An edit
+    /// MUST write into that row."). The caller passes the complete,
+    /// already-merged `answersJSON`; this store never reads or writes its
+    /// shape.
+    @discardableResult
+    public func upsertReview(
+        kind: ReviewKind, dueDateKey: String, frozenAt: Date?, answersJSON: String,
+        selfHarmAnswered: Bool, pinnedNote: String, changedAt: Date
+    ) throws -> ReviewRow {
+        let model = Review(
+            kind: kind.rawValue, dueDateKey: dueDateKey, frozenAt: frozenAt,
+            answersJSON: answersJSON, selfHarmAnswered: selfHarmAnswered, pinnedNote: pinnedNote, changedAt: changedAt
+        )
+        context.insert(model)
+        try persist()
+        return reviewRow(model)
+    }
+
     // MARK: - Programme: stage-opened rows, card answers and the restart
     // moment (programme spec, "A pure stage engine with stored openings as
     // input", "The card's answer is kept in the record", "Start week 1
@@ -1101,6 +1208,20 @@ public final class RecordStore {
         return try context.fetch(descriptor).compactMap { session in
             session.outcomeAt.map { UrgeOutcomeRow(dayKey: session.outcomeDayKey, outcomeAt: $0) }
         }
+    }
+
+    /// One urge outcome with its own outcome value, for `weekly-review`'s
+    /// "Urges: %1$lld. Passed: %2$lld." (`urge-toolkit` owns the outcome
+    /// vocabulary; this store only reports the value it kept).
+    public struct UrgeOutcomeDetailRow: Sendable, Equatable {
+        public let dayKey: String
+        public let outcome: String
+    }
+
+    public func urgeOutcomeDetails() throws -> [UrgeOutcomeDetailRow] {
+        var descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.outcome != "" })
+        descriptor.includePendingChanges = false
+        return try context.fetch(descriptor).map { UrgeOutcomeDetailRow(dayKey: $0.outcomeDayKey, outcome: $0.outcome) }
     }
 
     /// Whether the store holds any `Template` row (programme spec, "A card

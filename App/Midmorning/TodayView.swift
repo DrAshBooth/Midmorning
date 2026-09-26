@@ -33,6 +33,11 @@ struct CardRoute: Hashable {
 /// fact it needs from `store`, so the route carries no payload.
 struct WeighInRoute: Hashable {}
 
+/// The "Reviews" list, and one review by its own week number (weekly-review
+/// spec, "Finish and reopen a review").
+struct ReviewsListRoute: Hashable {}
+struct WeeklyReviewRoute: Hashable { let week: Int }
+
 struct TodayView: View {
     let store: RecordStore
 
@@ -54,6 +59,8 @@ struct TodayView: View {
     @AccessibilityFocusState private var addEntryFocused: Bool
     @State private var isShowingSupportSheet = false
     @State private var programmeSnapshot: ProgrammeModel.Snapshot?
+    @State private var weeklyReviewSnapshot: WeeklyReviewModel.Snapshot?
+    @State private var pinnedNoteHeld = false
     @State private var pendingCard: PendingCard?
     @State private var openCardId: String?
     @State private var planBuilderMode: PlanBuilderMode?
@@ -70,11 +77,44 @@ struct TodayView: View {
     /// read this same value.
     private var stage2Open: Bool { programmeSnapshot?.state.isOpen(.regularEating) ?? false }
 
+    /// The pinned note Today shows, or `nil` while a starred entry or an "I
+    /// binged" outcome holds it back for the rest of this record day
+    /// (weekly-review spec, "The one thing to change and the pinned note",
+    /// decision 90).
+    private var pinnedNoteText: String? {
+        guard !pinnedNoteHeld, let note = weeklyReviewSnapshot?.pinnedNote, !note.isEmpty else { return nil }
+        return note
+    }
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ScrollViewReader { proxy in
                 List {
                     Section {
+                        if let note = pinnedNoteText {
+                            Button {
+                                if let week = weeklyReviewSnapshot?.pinnedNoteWeek { navigationPath.append(WeeklyReviewRoute(week: week)) }
+                            } label: {
+                                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                    Image(systemName: "pin.fill")
+                                    Text(verbatim: note).font(.body)
+                                    Spacer(minLength: 0)
+                                }
+                                .foregroundStyle(.primary)
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(note)
+                            .listRowSeparator(.hidden)
+                        }
+                        if let dueWeek = weeklyReviewSnapshot?.dueWeek {
+                            Button {
+                                navigationPath.append(WeeklyReviewRoute(week: dueWeek))
+                            } label: {
+                                Text("today.weeklyReview")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .listRowSeparator(.hidden)
+                        }
                         if let pendingCard {
                             TodayCardSlotView(card: pendingCard, onPrimary: { primaryCardAction(pendingCard) }, onClose: { answerCard(pendingCard, value: "Close") })
                         }
@@ -129,12 +169,12 @@ struct TodayView: View {
                     .accessibilityLabel("today.getSupport")
                 }
                 ToolbarItemGroup(placement: .bottomBar) {
-                    // `weekly-review` (3.2) supplies the live "is a review
-                    // due" fact; `false` is this build's fixture. "Settings"
-                    // opens the real screen (settings spec, "One screen, one
-                    // tap from Today"); "Programme" and "Reviews" stay no-op
-                    // placeholders until their own build changes land.
-                    ForEach(Array(BottomToolbar.items(reviewsDue: false).enumerated()), id: \.offset) { index, item in
+                    // "Settings" opens the real screen (settings spec, "One
+                    // screen, one tap from Today"); "Reviews" shows from the
+                    // moment the first weekly review becomes due
+                    // (`weeklyReviewSnapshot.reviewsControlShows`, record
+                    // spec, "The Today stack").
+                    ForEach(Array(BottomToolbar.items(reviewsDue: weeklyReviewSnapshot?.reviewsControlShows ?? false).enumerated()), id: \.offset) { index, item in
                         if index > 0 { Spacer() }
                         if item == "Settings" {
                             NavigationLink("today.settings") {
@@ -142,6 +182,8 @@ struct TodayView: View {
                             }
                         } else if item == "Programme" {
                             Button(item) { navigationPath.append(ProgrammeRoute.screen) }
+                        } else if item == "Reviews" {
+                            Button(item) { navigationPath.append(ReviewsListRoute()) }
                         } else {
                             Button {} label: { Text(item) }
                         }
@@ -190,6 +232,12 @@ struct TodayView: View {
             }
             .navigationDestination(for: WeighInRoute.self) { _ in
                 WeighInScreenView(store: store)
+            }
+            .navigationDestination(for: ReviewsListRoute.self) { _ in
+                ReviewsListView(store: store, openWeek: { week in navigationPath.append(WeeklyReviewRoute(week: week)) })
+            }
+            .navigationDestination(for: WeeklyReviewRoute.self) { route in
+                ReviewScreenView(store: store, week: route.week, onDone: { reload() })
             }
             .accessibilityAction(.magicTap) { showingNewEntry = true }
         }
@@ -438,12 +486,14 @@ struct TodayView: View {
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
         hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
 
+        let starredToday = currentSection?.entries.contains { $0.feltLikeABinge } ?? false
         if let snapshot = programmeSnapshot {
-            let starredToday = currentSection?.entries.contains { $0.feltLikeABinge } ?? false
             pendingCard = ProgrammeModel.nextTodayCard(snapshot, starredEntryOrOutcomeAt: starredToday ? now : nil, currentRecordDay: day)
         } else {
             pendingCard = nil
         }
+        pinnedNoteHeld = WeeklyReviewModel.pinnedNoteHeld(starredEntryOrOutcomeAt: starredToday ? now : nil, currentRecordDay: day)
+        weeklyReviewSnapshot = WeeklyReviewModel.load(store: store, now: now, calendar: .current)
     }
 }
 

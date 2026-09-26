@@ -31,6 +31,7 @@ struct SettingsView: View {
 
     @State private var dayStartsAt = ClockTime.date(hour: RecordDay.startHour, minute: 0)
     @State private var gapBandsOn = true
+    @State private var weeklySummaryOn = true
     @State private var weighInWeekday: Int?
     @State private var weighInUnit: WeightUnit = .kg
     @State private var isShowingDeleteConfirmation = false
@@ -53,6 +54,8 @@ struct SettingsView: View {
             Section("settings.group.record") {
                 DatePicker("settings.record.dayStartsAt", selection: $dayStartsAt, displayedComponents: .hourAndMinute)
                     .onChange(of: dayStartsAt) { saveDayStartsAt() }
+                Toggle(ReviewContent.weeklySummarySwitchLabel, isOn: $weeklySummaryOn)
+                    .onChange(of: weeklySummaryOn) { _, on in try? store.setWeeklySummaryOn(on) }
                 Toggle("settings.record.gapBands", isOn: $gapBandsOn)
                     .onChange(of: gapBandsOn) { _, on in try? store.setGapBandsOn(on) }
             }
@@ -148,6 +151,7 @@ struct SettingsView: View {
             dayStartsAt = ClockTime.date(hour: hour, minute: 0)
         }
         gapBandsOn = (try? store.gapBandsOn()) ?? true
+        weeklySummaryOn = (try? store.weeklySummaryOn()) ?? true
         switch try? store.weighInDayChoice() {
         case .weekday(let weekday): weighInWeekday = weekday
         case .wontBeWeighing, nil: weighInWeekday = nil

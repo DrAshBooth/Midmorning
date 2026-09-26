@@ -168,11 +168,15 @@ public enum SheetReconciler {
     }
 }
 
-/// One row per (`kind`, `dueDateKey`); winner: the row with the earliest
-/// `frozenAt` among the frozen rows. An unfrozen row is not yet a winner —
-/// no device has crossed the due moment on a later sync, so there is nothing
-/// to freeze yet (data-and-privacy spec, "Day states, sessions and
-/// reviews").
+/// One row per (`kind`, `dueDateKey`); winner: among the frozen rows with
+/// the earliest `frozenAt`, the one with the latest `changedAt` — an edit
+/// carries the same `frozenAt` forward (weekly-review spec, "The week's
+/// counts are frozen in the Review row": "Every edit to the review MUST
+/// write into that row."), so a later edit's content supersedes the row's
+/// own original, freeze-only content without shifting which freeze moment
+/// wins across devices. An unfrozen row is not yet a winner — no device has
+/// crossed the due moment on a later sync, so there is nothing to freeze yet
+/// (data-and-privacy spec, "Day states, sessions and reviews").
 public enum ReviewReconciler {
     struct Key: Hashable { let kind: String; let dueDateKey: String }
 
@@ -181,7 +185,8 @@ public enum ReviewReconciler {
         let byKey = Dictionary(grouping: frozen, by: { Key(kind: $0.kind, dueDateKey: $0.dueDateKey) })
         var result: [String: Review] = [:]
         for (key, group) in byKey {
-            if let winner = group.min(by: { $0.frozenAt! < $1.frozenAt! }) {
+            guard let earliestFreeze = group.map({ $0.frozenAt! }).min() else { continue }
+            if let winner = group.filter({ $0.frozenAt! == earliestFreeze }).max(by: { $0.changedAt < $1.changedAt }) {
                 result["\(key.kind)|\(key.dueDateKey)"] = winner
             }
         }
