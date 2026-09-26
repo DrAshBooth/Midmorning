@@ -10,6 +10,7 @@ let package = Package(
     products: [
         .library(name: "Record", targets: ["Record"]),
         .library(name: "Constants", targets: ["Constants"]),
+        .library(name: "Plan", targets: ["Plan"]),
         .library(name: "AppLock", targets: ["AppLock"]),
         .library(name: "Content", targets: ["Content"]),
         .executable(name: "content-lock", targets: ["ContentLockTool"]),
@@ -17,9 +18,21 @@ let package = Package(
     ],
     targets: [
         .target(name: "Constants"),
-        .target(name: "Record", dependencies: ["Constants"], resources: [.copy("FrozenSchema.json")]),
+        // `Record` depends on `Plan` for the slot, planned-meal and
+        // materialisation shapes that `Day.slotsJSON` and `Template.slotsJSON`
+        // hold opaquely (regular-eating-plan, 2.3): one source of truth for
+        // the payload shape, not a duplicate in each target. `Plan` never
+        // imports `Record`, so there is no cycle.
+        .target(name: "Record", dependencies: ["Constants", "Plan"], resources: [.copy("FrozenSchema.json")]),
         .testTarget(name: "ConstantsTests", dependencies: ["Constants"]),
         .testTarget(name: "RecordTests", dependencies: ["Record"]),
+        // The plan, templates, planned days, the match of planned meals to
+        // entries and the gap computation (design.md, "One umbrella package,
+        // five targets"). Pure value types and functions only: it takes
+        // value facts, never a `Record` model, so it compiles without
+        // `Record` (regular-eating-plan, 2.3).
+        .target(name: "Plan", dependencies: ["Constants"]),
+        .testTarget(name: "PlanTests", dependencies: ["Plan"]),
         // The pure app-lock rules: the cover state machine, the label
         // function, the lock-grace policy and the seams the App target's
         // LocalAuthentication and lifecycle code call (app-lock spec).

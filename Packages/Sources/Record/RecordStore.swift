@@ -563,6 +563,125 @@ public final class RecordStore {
     public func turnRemindersOn(changedAt: Date = .now) throws {
         try setSettingValue("", key: Self.remindersPausedAtKey, changedAt: changedAt)
     }
+
+    // MARK: - Plan: templates, days and planned-meal answers (regular-eating-
+    // plan spec, "Weekday and weekend templates", "A planned day", "The
+    // plan's data stays on the device"). Every write here is a new row, like
+    // every synced row; the Reconciler picks the winner on read.
+
+    public enum TemplateKind: String, Sendable, CaseIterable, Equatable {
+        case weekday, weekend
+    }
+
+    /// The winning `slotsJSON` for `kind`'s template, or "[]" when none
+    /// exists yet.
+    public func templateSlotsJSON(_ kind: TemplateKind) throws -> String {
+        let rows = try context.fetch(FetchDescriptor<Template>())
+        return TemplateReconciler.winners(in: rows)[kind.rawValue]?.slotsJSON ?? "[]"
+    }
+
+    /// Writes a new `Template` row for `kind`.
+    public func setTemplateSlotsJSON(_ json: String, kind: TemplateKind, changedAt: Date) throws {
+        context.insert(Template(kind: kind.rawValue, slotsJSON: json, changedAt: changedAt))
+        try persist()
+    }
+
+    /// One record day's plan, as the store keeps it (regular-eating-plan
+    /// spec, "A planned day").
+    public struct DayPlan: Sendable, Equatable {
+        public let dateKey: String
+        public let slotsJSON: String
+        public let windowBeforeMinutes: Int
+        public let windowAfterMinutes: Int
+        public let setAt: Date?
+        public let setBy: String
+    }
+
+    /// The winning `Day` row for `dateKey`, or `nil` when no row exists yet
+    /// (the day's plan then comes from its template).
+    public func dayPlan(dateKey: String) throws -> DayPlan? {
+        var descriptor = FetchDescriptor<Day>(predicate: #Predicate { $0.dateKey == dateKey })
+        descriptor.includePendingChanges = false
+        guard let winner = DayReconciler.winners(in: try context.fetch(descriptor))[dateKey] else { return nil }
+        return DayPlan(
+            dateKey: winner.dateKey, slotsJSON: winner.slotsJSON,
+            windowBeforeMinutes: winner.windowBeforeMinutes, windowAfterMinutes: winner.windowAfterMinutes,
+            setAt: winner.setAt, setBy: winner.setBy
+        )
+    }
+
+    /// True once any `Day` row for `dateKey` carries a set event, on this
+    /// device or synced from another (regular-eating-plan spec, "A planned
+    /// day": "A set event on any device means the day is set").
+    public func isSetDay(dateKey: String) throws -> Bool {
+        try dayPlan(dateKey: dateKey)?.setAt != nil
+    }
+
+    /// Writes the person's edit to `dateKey`'s plan from "Today's plan" or
+    /// "Tomorrow's plan", and sets the day (regular-eating-plan spec, "A
+    /// planned day": "The person taps 'Save' on an edit ... for that day").
+    /// Always inserts a new row; `DayReconciler` keeps the sticky set event
+    /// across any earlier or later row for the same key.
+    public func setDayPlan(
+        dateKey: String, slotsJSON: String, windowBeforeMinutes: Int, windowAfterMinutes: Int,
+        setAt: Date, setBy: String, changedAt: Date
+    ) throws {
+        context.insert(Day(
+            dateKey: dateKey, slotsJSON: slotsJSON, windowBeforeMinutes: windowBeforeMinutes,
+            windowAfterMinutes: windowAfterMinutes, changedAt: changedAt, setAt: setAt, setBy: setBy
+        ))
+        try persist()
+    }
+
+    /// Copies the template onto `dateKey` as a `Day` row, only when no row
+    /// for that key exists yet (regular-eating-plan spec, "Weekday and
+    /// weekend templates": "Materialisation MUST NOT create a Day row for a
+    /// key that already exists"; data-and-privacy spec: "Materialisation
+    /// MUST NOT write `changedAt`"). `.distantPast` is the sentinel: a real
+    /// edit's own `changedAt` always outranks it, and it is never read as a
+    /// genuine moment. Returns whether it wrote a row.
+    @discardableResult
+    public func materialiseDayFromTemplate(dateKey: String, slotsJSON: String, windowBeforeMinutes: Int, windowAfterMinutes: Int) throws -> Bool {
+        guard try dayPlan(dateKey: dateKey) == nil else { return false }
+        context.insert(Day(dateKey: dateKey, slotsJSON: slotsJSON, windowBeforeMinutes: windowBeforeMinutes, windowAfterMinutes: windowAfterMinutes, changedAt: .distantPast))
+        try persist()
+        return true
+    }
+
+    /// The winning value of `dateKey`'s `slotIndex` planned-meal answer
+    /// ("Skipped", or a later answer kind), or `nil` when unanswered.
+    public func plannedMealAnswer(dateKey: String, slotIndex: Int) throws -> String? {
+        try plannedMealAnswers(dateKey: dateKey)[slotIndex]
+    }
+
+    /// Every planned-meal answer of `dateKey`, by slot index.
+    public func plannedMealAnswers(dateKey: String) throws -> [Int: String] {
+        var descriptor = FetchDescriptor<Answer>(predicate: #Predicate { $0.kind == "plannedMeal" && $0.dateKey == dateKey })
+        descriptor.includePendingChanges = false
+        let winners = AnswerReconciler.winners(in: try context.fetch(descriptor))
+        return Dictionary(uniqueKeysWithValues: winners.values.map { ($0.slotIndex, $0.value) })
+    }
+
+    /// Writes a new planned-meal `Answer` row.
+    public func setPlannedMealAnswer(_ value: String, dateKey: String, slotIndex: Int, changedAt: Date) throws {
+        context.insert(Answer(kind: "plannedMeal", dateKey: dateKey, slotIndex: slotIndex, value: value, changedAt: changedAt))
+        try persist()
+    }
+
+    /// The stored override of a slot's label, or `nil` when the slot shows
+    /// its default label (regular-eating-plan spec, "Rename a slot in the
+    /// plan builder").
+    public func slotLabel(index: Int) throws -> String? {
+        try settingValue(key: Settings.slotLabelKey(index))
+    }
+
+    /// Writes a new `Settings` row for the slot's label. `nil` writes an
+    /// empty row, which reverts the slot to its default label — the store
+    /// never deletes a row, even to clear one (data-and-privacy spec, "The
+    /// Reconciler never deletes a row").
+    public func setSlotLabel(_ label: String?, index: Int, changedAt: Date) throws {
+        try setSettingValue(label ?? "", key: Settings.slotLabelKey(index), changedAt: changedAt)
+    }
 }
 
 /// The store directory inside the app's own `Application Support` directory

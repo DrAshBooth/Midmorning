@@ -1,5 +1,6 @@
 import SwiftUI
 import Record
+import Plan
 
 /// The record day's entries as a time-ordered column, like the paper
 /// record (record spec, "The Today stack"). The order here is the only
@@ -23,10 +24,16 @@ struct TodayView: View {
     @State private var previousSection: DaySection?
     @State private var earlierDaysAvailable = false
     @State private var showingNewEntry = false
+    @State private var newEntryInitialTime: Date?
     @State private var editingEntry: RecordRow?
     @State private var scrollTarget: UUID?
     @State private var navigationPath = NavigationPath()
     @AccessibilityFocusState private var addEntryFocused: Bool
+    /// `programme-engine` (2.1) is not built, so this is a fixture fact, the
+    /// same pattern `GapBand`'s own `stage2Open` already uses; `mm-t21.23`
+    /// wires the live stage into both.
+    @State private var stage2Open = false
+    @State private var planBuilderMode: PlanBuilderMode?
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -90,11 +97,14 @@ struct TodayView: View {
                 }
             }
             .sheet(isPresented: $showingNewEntry) {
-                NewEntryView(store: store, day: day) { saved in
+                NewEntryView(store: store, day: day, initialTime: newEntryInitialTime) { saved in
                     reload()
                     scrollTarget = saved.id
                     addEntryFocused = true
                 }
+            }
+            .sheet(item: $planBuilderMode) { mode in
+                PlanBuilderView(store: store, mode: mode) { reload() }
             }
             .sheet(item: $editingEntry) { entry in
                 EditEntryView(store: store, entry: entry, dayStartHour: RecordDay.startHour) { _ in
@@ -154,26 +164,46 @@ struct TodayView: View {
                 .listRowSeparator(.hidden)
         }
         if section.isExpanded {
-            ForEach(Array(section.entries.enumerated()), id: \.element.id) { index, entry in
-                EntryRow(entry: entry)
-                    .listRowSeparator(.hidden)
-                    .contentShape(Rectangle())
-                    .onTapGesture { editingEntry = entry }
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
+            let items = section.displayItems
+            ForEach(items) { item in
+                switch item {
+                case .entry(let entry):
+                    EntryRow(entry: entry)
+                        .listRowSeparator(.hidden)
+                        .contentShape(Rectangle())
+                        .onTapGesture { editingEntry = entry }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                try? store.delete(entryId: entry.id, deletedAt: Date())
+                                reload()
+                            } label: {
+                                Text("entry.delete.action")
+                            }
+                        }
+                        .accessibilityAction(named: Text("entry.delete.action")) {
                             try? store.delete(entryId: entry.id, deletedAt: Date())
                             reload()
-                        } label: {
-                            Text("entry.delete.action")
                         }
-                    }
-                    .accessibilityAction(named: Text("entry.delete.action")) {
-                        try? store.delete(entryId: entry.id, deletedAt: Date())
+                case .planned(let row):
+                    PlannedMealRowView(row: row, dateKey: section.id, onAddIt: { time in
+                        newEntryInitialTime = time
+                        showingNewEntry = true
+                    }, onSkip: { slotIndex in
+                        try? store.setPlannedMealAnswer("Skipped", dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
                         reload()
-                    }
-                if showBands, section.gapBandIndexesBefore.contains(index) {
+                    })
+                    .listRowSeparator(.hidden)
+                    .contentShape(Rectangle())
+                    .onTapGesture { if let entry = row.matchedEntry { editingEntry = entry } }
+                }
+                if showBands, let entryIndex = entryIndex(of: item, in: section.entries), section.gapBandIndexesBefore.contains(entryIndex) {
                     GapBandRow()
                 }
+            }
+            if let trailingLine = section.plan?.trailingNextLine {
+                Text(trailingLine)
+                    .font(.body)
+                    .listRowSeparator(.hidden)
             }
             if section.role == .current {
                 Button(section.states.contains(.paused) ? "today.pauseForToday.on" : "today.pauseForToday") {
@@ -217,6 +247,22 @@ struct TodayView: View {
                         navigationPath.append(EarlierDaysRoute.list)
                     }
                 }
+                if section.role == .current, PlanBuilderAccess.isOffered(stage2Open: stage2Open) {
+                    Divider()
+                    Button("plan.today") {
+                        planBuilderMode = .day(dateKey: section.id, titleKey: "plan.today", isCurrentDay: true)
+                    }
+                    Button("plan.tomorrow") {
+                        let tomorrow = RecordDay.next(section.interval, calendar: .current)
+                        planBuilderMode = .day(dateKey: RecordDay.key(containing: tomorrow.start, calendar: .current), titleKey: "plan.tomorrow", isCurrentDay: false)
+                    }
+                    Button("plan.weekday") {
+                        planBuilderMode = .template(kind: .weekday, titleKey: "plan.weekday")
+                    }
+                    Button("plan.weekend") {
+                        planBuilderMode = .template(kind: .weekend, titleKey: "plan.weekend")
+                    }
+                }
             } label: {
                 Image(systemName: "chevron.down")
             }
@@ -250,14 +296,19 @@ struct TodayView: View {
         reload()
     }
 
+    private func entryIndex(of item: DaySection.DisplayItem, in entries: [RecordRow]) -> Int? {
+        guard case .entry(let row) = item else { return nil }
+        return entries.firstIndex { $0.id == row.id }
+    }
+
     private func reload() {
         let now = Date()
         day = RecordDay.interval(containing: now, calendar: .current)
         let previous = RecordDay.previous(day, calendar: .current)
         let currentKey = RecordDay.key(containing: now, calendar: .current)
         let previousKey = RecordDay.key(containing: previous.start, calendar: .current)
-        currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: false)
-        previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: false)
+        currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open)
+        previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
     }
 }

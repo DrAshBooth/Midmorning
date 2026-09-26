@@ -243,6 +243,127 @@
         }
       }
     },
+    "plan.addIt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add it"
+          }
+        }
+      }
+    },
+    "plan.copyToWeekend": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy to weekend plan"
+          }
+        }
+      }
+    },
+    "plan.goBack": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go back"
+          }
+        }
+      }
+    },
+    "plan.rename": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        }
+      }
+    },
+    "plan.saveAnyway": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save anyway"
+          }
+        }
+      }
+    },
+    "plan.skipped": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped"
+          }
+        }
+      }
+    },
+    "plan.thatWasIt": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That was it"
+          }
+        }
+      }
+    },
+    "plan.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today's plan"
+          }
+        }
+      }
+    },
+    "plan.tomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tomorrow's plan"
+          }
+        }
+      }
+    },
+    "plan.weekday": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekday plan"
+          }
+        }
+      }
+    },
+    "plan.weekend": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekend plan"
+          }
+        }
+      }
+    },
     "settings.about.appVersion": {
       "extractionState": "manual",
       "localizations": {
