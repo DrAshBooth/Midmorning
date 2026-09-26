@@ -154,9 +154,11 @@ public final class RecordStore {
     /// Saves one entry as a new `Item` and its first `ItemVersion`, and
     /// returns the row. Trims white space and line breaks from the ends of
     /// `what` and `context`. Truncates `time` to the minute. Throws on
-    /// failure with no entry data in the error. The record day key comes from
-    /// the "Day starts at" rows in force (record spec, "The record day");
-    /// `dayStartHour` sets one fixed hour instead, for a test.
+    /// failure with no entry data in the error. `utcOffsetSeconds` is the
+    /// offset in effect at `time`, not at `createdAt` (`EntryOffset`). The
+    /// record day key comes from `time`, that offset and the "Day starts at"
+    /// rows in force (record spec, "The record day"); `dayStartHour` sets
+    /// one fixed hour instead, for a test.
     @discardableResult
     public func add(
         time: Date, what: String, feltLikeABinge: Bool, createdAt: Date, utcOffsetSeconds: Int,
@@ -185,14 +187,15 @@ public final class RecordStore {
     }
 
     /// Writes a new version of `entryId` with the changed fields (record
-    /// spec, "Edit an entry"). Keeps the entry's record day, UTC offset and
-    /// creation moment as they were; only a fresh `changedAt` and the given
-    /// fields move. Throws `Failure.saveFailed` when `entryId` has no
-    /// current version.
+    /// spec, "Edit an entry"). Keeps the entry's record day and creation
+    /// moment as they were; only a fresh `changedAt` and the given fields
+    /// move. `utcOffsetSeconds` is the offset at the edited time
+    /// (`EntryOffset`); `nil` keeps the current version's offset. Throws
+    /// `Failure.saveFailed` when `entryId` has no current version.
     @discardableResult
     public func update(
         entryId: UUID, time: Date, what: String, feltLikeABinge: Bool, whereText: String,
-        context: String, editedAt: Date
+        context: String, editedAt: Date, utcOffsetSeconds: Int? = nil
     ) throws -> RecordRow {
         guard let current = try winningVersion(entryId: entryId) else { throw Failure.saveFailed }
         let version = ItemVersion(
@@ -200,7 +203,7 @@ public final class RecordStore {
             changedAt: editedAt,
             dayKey: current.dayKey,
             time: Self.truncatedToMinute(time),
-            utcOffsetSeconds: current.utcOffsetSeconds,
+            utcOffsetSeconds: utcOffsetSeconds ?? current.utcOffsetSeconds,
             what: what.trimmingCharacters(in: .whitespacesAndNewlines),
             feltLikeABinge: feltLikeABinge,
             createdAt: current.createdAt,
