@@ -169,13 +169,10 @@ struct SettingsView: View {
         if let hour = try? store.dayStartHourFromNextRecordDay(after: Date(), calendar: .current) {
             dayStartHour = hour
         }
-        gapBandsOn = (try? store.gapBandsOn()) ?? true
-        weeklySummaryOn = (try? store.weeklySummaryOn()) ?? true
-        switch try? store.weighInDayChoice() {
-        case .weekday(let weekday): weighInWeekday = weekday
-        case .wontBeWeighing, nil: weighInWeekday = nil
-        }
-        weighInUnit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? "kg") ?? .kg
+        gapBandsOn = (try? store.gapBandsOn()) ?? RecordStore.Defaults.gapBandsOn
+        weeklySummaryOn = (try? store.weeklySummaryOn()) ?? RecordStore.Defaults.weeklySummaryOn
+        weighInWeekday = (try? store.weighInDayChoice())?.weekday
+        weighInUnit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? RecordStore.Defaults.weighInUnit) ?? .kg
         if let bundle = try? BundleLoader.loadShipped() {
             contentInfo = bundle
             contactEmail = bundle.string(id: "about.contact")?.text ?? ""

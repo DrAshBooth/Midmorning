@@ -84,7 +84,7 @@ struct DaySection: Identifiable {
         let kept = try? store.collapseChoice(dateKey: dayKey)
         let isExpanded = entries.isEmpty || CollapseDefault.isExpanded(role: role, kept: kept ?? nil)
         let hasExemptState = states.contains(.didntRecord) || states.contains(.paused) || states.contains(.fasting)
-        let gapBandsOn = (try? store.gapBandsOn()) ?? true
+        let gapBandsOn = (try? store.gapBandsOn()) ?? RecordStore.Defaults.gapBandsOn
         let gapIndexes = GapBand.indexesBeforeBand(
             sortedTimes: entries.map(\.time),
             stage2Open: GapBand.applies(toDayKey: dayKey, stage2OpenedDayKey: stage2OpenedDayKey, switchOn: gapBandsOn),

@@ -216,11 +216,7 @@ enum ReminderCoordinator {
     /// (design.md: "The same scheduler MUST schedule every reminder that
     /// another capability asks for").
     private static func weighInDayCandidates(store: RecordStore, dayKeys: [String], calendar: Calendar) -> [ReminderCandidate] {
-        let weighInWeekday: Int?
-        switch try? store.weighInDayChoice() {
-        case .weekday(let weekday): weighInWeekday = weekday
-        case .wontBeWeighing, nil: weighInWeekday = nil
-        }
+        let weighInWeekday = (try? store.weighInDayChoice())?.weekday
         let time = (try? store.reminderTime(.weighIn)) ?? RecordStore.ReminderTime.weighIn.defaultTime
         return WeighInReminderRule.candidates(
             weighInWeekday: weighInWeekday, dayKeys: dayKeys, time: time,
@@ -427,7 +423,8 @@ enum ReminderCoordinator {
     // MARK: Store reads
 
     private static func schedulerSettings(store: RecordStore, notificationPermissionGranted: Bool) -> SchedulerSettings {
-        func on(_ kind: RecordStore.ReminderSwitch) -> Bool { (try? store.reminderSwitchOn(kind)) ?? true }
+        func on(_ kind: RecordStore.ReminderSwitch) -> Bool { (try? store.reminderSwitchOn(kind)) ?? RecordStore.Defaults.reminderSwitchOn }
+        let quietHours = (try? store.quietHours()) ?? RecordStore.Defaults.quietHours
         let switches: [ReminderKind: Bool] = [
             .plannedMeal: on(.plannedMeals),
             .morningPlan: on(.setTodaysPlan),
@@ -439,14 +436,14 @@ enum ReminderCoordinator {
         return SchedulerSettings(
             switches: switches,
             remindersPausedAt: try? store.remindersPausedAt(),
-            explicitWordingOn: (try? store.explicitWordingOn()) ?? false,
+            explicitWordingOn: (try? store.explicitWordingOn()) ?? RecordStore.Defaults.explicitWordingOn,
             morningPlanTime: (try? store.reminderTime(.setTodaysPlan)) ?? RecordStore.ReminderTime.setTodaysPlan.defaultTime,
             closeTheDayTime: (try? store.reminderTime(.closeTheDay)) ?? RecordStore.ReminderTime.closeTheDay.defaultTime,
-            quietHoursOn: (try? store.quietHoursOn()) ?? true,
-            quietHoursStart: (try? store.quietHoursStart()) ?? "22:00",
-            quietHoursEnd: (try? store.quietHoursEnd()) ?? "07:00",
+            quietHoursOn: quietHours.isOn,
+            quietHoursStart: quietHours.start,
+            quietHoursEnd: quietHours.end,
             notificationPermissionGranted: notificationPermissionGranted,
-            snoozeMinutes: (try? store.remindAgainMinutes()) ?? ProgrammeConstants.default.snoozeMinutes
+            snoozeMinutes: (try? store.remindAgainMinutes()) ?? RecordStore.Defaults.remindAgainMinutes
         )
     }
 

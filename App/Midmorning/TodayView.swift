@@ -338,7 +338,7 @@ struct TodayView: View {
                 showingNewEntry = true
             },
             skipPlannedMeal: { slotIndex in
-                try? store.setPlannedMealAnswer("Skipped", dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
+                try? store.setPlannedMealSkipped(dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
                 reload()
             },
             openEarlierDays: isCurrent && earlierDaysAvailable ? { navigationPath.append(EarlierDaysRoute.list) } : nil,
@@ -471,7 +471,7 @@ struct TodayView: View {
         previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open, stage2OpenedDayKey: stage2OpenedDayKey)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
         hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
-        anyReminderSwitchOn = RecordStore.ReminderSwitch.allCases.contains { (try? store.reminderSwitchOn($0)) ?? true }
+        anyReminderSwitchOn = RecordStore.ReminderSwitch.allCases.contains { (try? store.reminderSwitchOn($0)) ?? RecordStore.Defaults.reminderSwitchOn }
         NotificationPermissionAccess.read { notificationPermission = $0 }
 
         let starredToday = currentSection?.entries.contains { $0.feltLikeABinge } ?? false

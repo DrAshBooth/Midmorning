@@ -69,7 +69,7 @@ public struct PlanTodayRows: Sendable, Equatable {
             let nextTime = later.first.flatMap { match.window(for: $0.slotIndex)?.time }
             let matchedEntryId = match.matches[meal.slotIndex]
             let answer = answers[meal.slotIndex] ?? ""
-            let isSkipped = answer == "Skipped"
+            let isSkipped = answer == PlannedMealAnswer.skipped
 
             let hasLaterEntry = later.contains { match.matches[$0.slotIndex] != nil }
                 || (nextTime.map { t in entries.contains { $0.time >= t } } ?? false)
@@ -137,7 +137,7 @@ public struct PlanTodayRows: Sendable, Equatable {
             }
         }
 
-        for meal in ordered where answers[meal.slotIndex] == "Skipped" && match.matches[meal.slotIndex] == nil {
+        for meal in ordered where answers[meal.slotIndex] == PlannedMealAnswer.skipped && match.matches[meal.slotIndex] == nil {
             if let time = match.window(for: meal.slotIndex)?.time {
                 point(after: time, excluding: nil)
             }

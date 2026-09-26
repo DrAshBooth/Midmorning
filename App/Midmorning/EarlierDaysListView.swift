@@ -143,7 +143,7 @@ struct EarlierDayDetailView: View {
             },
             addPlannedMeal: { _ in },
             skipPlannedMeal: { slotIndex in
-                try? store.setPlannedMealAnswer("Skipped", dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
+                try? store.setPlannedMealSkipped(dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
                 load()
             }
         )

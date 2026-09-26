@@ -39,9 +39,7 @@ struct PlanBuilderView: View {
     @State private var storedLabels: [Int: String] = [:]
     @State private var dayStartHour = RecordDay.startHour
     @State private var isFastingDay = false
-    @State private var quietOn = true
-    @State private var quietStart = "22:00"
-    @State private var quietEnd = "07:00"
+    @State private var quietHours = RecordStore.Defaults.quietHours
     @State private var lockedSlots: Set<Int> = []
     @State private var renamingSlot: Int?
     @State private var renameText = ""
@@ -135,7 +133,7 @@ struct PlanBuilderView: View {
             if let gap = gapLine(after: meal) {
                 Text(gap).font(.footnote).foregroundStyle(.secondary)
             }
-            if QuietHours(isOn: quietOn, start: quietStart, end: quietEnd).contains(meal.time) {
+            if quietHours.contains(meal.time) {
                 Text("settings.reminders.quietHoursNotSent").font(.footnote).foregroundStyle(.secondary)
             }
             HStack {
@@ -293,7 +291,7 @@ struct PlanBuilderView: View {
                 let answers = (try? store.plannedMealAnswers(dateKey: dateKey)) ?? [:]
                 let entries = (try? store.entries(dayKey: dateKey)) ?? []
                 let matches = plan.match(entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) }, recordDay: recordDay, calendar: .current).matches
-                lockedSlots = Set(meals.map(\.slotIndex).filter { !PlanEditing.canChangeOrDelete(hasMatchedEntry: matches[$0] != nil, hasSkippedAnswer: answers[$0] == "Skipped") })
+                lockedSlots = Set(meals.map(\.slotIndex).filter { !PlanEditing.canChangeOrDelete(hasMatchedEntry: matches[$0] != nil, hasSkippedAnswer: answers[$0] == PlannedMealAnswer.skipped) })
             } else {
                 lockedSlots = []
             }
@@ -301,8 +299,6 @@ struct PlanBuilderView: View {
             meals = PlanCodec.decode((try? store.templateSlotsJSON(kind)) ?? "[]")
         }
         for slot in Slot.all { storedLabels[slot.index] = try? store.slotLabel(index: slot.index) }
-        quietOn = (try? store.quietHoursOn()) ?? true
-        quietStart = (try? store.quietHoursStart()) ?? "22:00"
-        quietEnd = (try? store.quietHoursEnd()) ?? "07:00"
+        quietHours = (try? store.quietHours()) ?? RecordStore.Defaults.quietHours
     }
 }

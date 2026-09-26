@@ -25,7 +25,7 @@ enum ExportComposer {
 
         var weighInLines: [ExportWeighInLine] = []
         if includeWeighIns {
-            let unit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? "kg") ?? .kg
+            let unit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? RecordStore.Defaults.weighInUnit) ?? .kg
             weighInLines = ExportWeighInPageBuilder.lines(from: try store.weighIns(), fromDayKey: fromDayKey, toDayKey: toDayKey, unit: unit)
         }
 

@@ -90,11 +90,7 @@ enum PlanToday {
 
     @MainActor
     private static func quietHours(store: RecordStore) -> QuietHours {
-        QuietHours(
-            isOn: (try? store.quietHoursOn()) ?? true,
-            start: (try? store.quietHoursStart()) ?? "22:00",
-            end: (try? store.quietHoursEnd()) ?? "07:00"
-        )
+        (try? store.quietHours()) ?? RecordStore.Defaults.quietHours
     }
 
     private static func matchedEntryText(_ entry: RecordRow) -> MatchedEntryText {
