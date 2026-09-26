@@ -33,6 +33,7 @@ final class ProgrammeConstantsTests: XCTestCase {
         XCTAssertEqual(c.plannedMealWindowBeforeMinutes, 60)
         XCTAssertEqual(c.plannedMealWindowAfterMinutes, 90)
         XCTAssertEqual(c.reminderHorizonDays, 6)
+        XCTAssertEqual(c.maxPendingReminderRequests, 60)
     }
 
     /// Scenario: The lock grace set.
@@ -42,17 +43,14 @@ final class ProgrammeConstantsTests: XCTestCase {
         XCTAssertEqual(c.lockGraceSecondsChoices.first, 0, "0 is the default")
     }
 
-    /// Scenario: A threshold test. Builds a modified value and passes it to a
-    /// stand-in "engine" function; `.default` keeps its own value throughout.
-    func testThresholdTestConstructsAModifiedValue() {
-        func stage2Opens(recordedDays: Int, constants: ProgrammeConstants) -> Bool {
-            recordedDays >= constants.recordedDaysForStage2
-        }
+    /// Scenario: A threshold test, the `Constants` half: a modified value is
+    /// a copy, so `.default` keeps 5. `ProgrammeTests.ConstantsThresholdTests`
+    /// passes the modified value to the real stage engine.
+    func testAModifiedValueLeavesTheDefaultUnchanged() {
         var modified = ProgrammeConstants.default
         modified.recordedDaysForStage2 = 3
-        XCTAssertTrue(stage2Opens(recordedDays: 3, constants: modified))
-        XCTAssertFalse(stage2Opens(recordedDays: 3, constants: .default), "default still holds 5")
-        XCTAssertEqual(ProgrammeConstants.default.recordedDaysForStage2, 5)
+        XCTAssertEqual(modified.recordedDaysForStage2, 3)
+        XCTAssertEqual(ProgrammeConstants.default.recordedDaysForStage2, 5, "default still holds 5")
     }
 
     /// Scenario: The default day start never changes. A version that edited
@@ -61,12 +59,8 @@ final class ProgrammeConstantsTests: XCTestCase {
         XCTAssertEqual(ProgrammeConstants.default.defaultDayStartHour, 4)
     }
 
-    /// Scenario: A capability reads the day start from the setting.
-    /// `RecordDay` takes `startHour` as a parameter; the setting supplies it,
-    /// never `ProgrammeConstants`. The constant is unaffected by a setting change.
-    func testACapabilityReadsTheDayStartFromTheSettingNotTheConstant() {
-        let settingDayStart = 5 // "Day starts at" 05:00, read from Settings, not from ProgrammeConstants.
-        XCTAssertNotEqual(settingDayStart, ProgrammeConstants.default.defaultDayStartHour)
-        XCTAssertEqual(ProgrammeConstants.default.defaultDayStartHour, 4, "the constant never stands in for the setting")
-    }
+    // Scenario: A capability reads the day start from the setting. The
+    // `Constants` target cannot open the store, so
+    // `RecordTests.DayStartSettingTests` sets "Day starts at" to 05:00 in
+    // the real store and computes the current record day from it.
 }

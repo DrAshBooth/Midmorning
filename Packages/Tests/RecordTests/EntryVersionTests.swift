@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import XCTest
+import Export
 @testable import Record
 
 /// data-and-privacy spec: "Every synced row carries its own change moment",
@@ -145,24 +146,49 @@ final class EntryVersionTests: XCTestCase {
 
     // MARK: Date-keyed rows keep the key written at creation (mm-t12.9)
 
-    /// Scenario: Entry across a zone change. The record day key never moves
-    /// after save, whatever the device zone later reads.
-    func testEntryAcrossAZoneChangeKeepsItsSavedDayKey() {
+    /// Scenario: Entry across a zone change. The real store writes the key
+    /// at save from the entry's own offset. Read later from Tokyo, the
+    /// entry stays on 6 October, on the day view and in the export.
+    @MainActor
+    func testEntryAcrossAZoneChangeKeepsItsSavedDayKey() throws {
+        let store = try makeStore()
         var london = Calendar(identifier: .gregorian)
         london.timeZone = TimeZone(identifier: "Europe/London")!
+        var tokyo = Calendar(identifier: .gregorian)
+        tokyo.timeZone = TimeZone(identifier: "Asia/Tokyo")!
         let savedAt = london.date(from: DateComponents(year: 2026, month: 10, day: 6, hour: 23, minute: 30))!
-        let dayKey = RecordDay.key(for: savedAt, utcOffsetSeconds: 3600)
-        XCTAssertEqual(dayKey, "2026-10-06")
-        // Tokyo's zone never recomputes it: the key was written at save.
-        let entryVersion = version(entryId: UUID(), changedAt: savedAt, what: "Late snack")
-        XCTAssertEqual(entryVersion.dayKey, "2026-09-25", "the fixture's own dayKey field, written once at creation")
+        let row = try store.add(time: savedAt, what: "Late snack", feltLikeABinge: false, createdAt: savedAt, utcOffsetSeconds: london.timeZone.secondsFromGMT(for: savedAt))
+        XCTAssertEqual(row.dayKey, "2026-10-06")
+
+        // In Tokyo the same moment is 07:30 on 7 October, a different record day.
+        XCTAssertEqual(RecordDay.key(containing: savedAt, calendar: tokyo), "2026-10-07")
+        XCTAssertFalse(try store.entries(recordDayContaining: savedAt, calendar: tokyo).contains { $0.id == row.id }, "Tokyo's 7 October does not take the entry")
+        XCTAssertEqual(try store.entries(dayKey: "2026-10-06").map(\.id), [row.id], "the entry stays on 6 October")
+
+        let days = try ["2026-10-06", "2026-10-07"].map { ExportDayInput(dayKey: $0, entries: try store.entries(dayKey: $0), states: try store.dayStates(dateKey: $0)) }
+        let document = ExportDocumentBuilder.build(request: ExportBuildRequest(fromDayKey: "2026-10-06", toDayKey: "2026-10-07", includeContext: true, dayStartHour: 4), days: days)
+        XCTAssertEqual(document.days.first { $0.dayKey == "2026-10-06" }?.entries.map(\.what), ["Late snack"], "and in the export")
+        XCTAssertEqual(document.days.first { $0.dayKey == "2026-10-07" }?.entries.count, 0)
     }
 
-    /// Scenario: Row received by sync. A device that receives a row never
-    /// recomputes its key.
-    func testRowReceivedBySyncKeepsTheSendersKey() {
-        let received = Day(dateKey: "2026-10-06", changedAt: .now)
-        XCTAssertEqual(received.dateKey, "2026-10-06", "device B keeps the key device A wrote; nothing recomputes it")
+    /// Scenario: Row received by sync. Device A created the planned day in
+    /// another zone; the row arrives in device B's store as written, and
+    /// device B reads it by its key without computing a new one.
+    @MainActor
+    func testRowReceivedBySyncKeepsTheSendersKey() throws {
+        let store = try makeStore()
+        let received = ModelContext(store.container)
+        received.insert(Day(dateKey: "2026-10-06", slotsJSON: "[]", changedAt: date(2026, 10, 5)))
+        try received.save()
+        XCTAssertEqual(try store.dayPlan(dateKey: "2026-10-06")?.dateKey, "2026-10-06", "device B keeps the key 6 October")
+        XCTAssertNil(try store.dayPlan(dateKey: "2026-10-05"), "and shows it on no other day")
+    }
+
+    @MainActor
+    private func makeStore() throws -> RecordStore {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return try RecordStore(directory: directory)
     }
 
     // MARK: Helpers
