@@ -3,13 +3,13 @@ import UIKit
 import Record
 import Content
 import AppLock
+import Programme
 
 /// The settings screen: one screen, one tap from Today (settings spec, "One
 /// screen, one tap from Today"). Shows its groups in the spec's order:
-/// Reminders, Record, Privacy, About. The Weigh-in group joins between
-/// Record and Privacy once `weigh-in` (2.2) builds it; `plain system
-/// styling` throughout, until `record-full` (1.2b) lands `Appearance.swift`
-/// and the shared accent colour asset.
+/// Reminders, Record, Weigh-in, Privacy, About; `plain system styling`
+/// throughout, until `record-full` (1.2b) lands `Appearance.swift` and the
+/// shared accent colour asset.
 struct SettingsView: View {
     let store: RecordStore
     /// data-and-privacy spec, "Delete-all". Defaults to the real seam built
@@ -31,6 +31,8 @@ struct SettingsView: View {
 
     @State private var dayStartsAt = ClockTime.date(hour: RecordDay.startHour, minute: 0)
     @State private var gapBandsOn = true
+    @State private var weighInWeekday: Int?
+    @State private var weighInUnit: WeightUnit = .kg
     @State private var isShowingDeleteConfirmation = false
     @State private var isShowingSupportSheet = false
     @State private var contentInfo: ContentBundle?
@@ -56,7 +58,21 @@ struct SettingsView: View {
                     .onChange(of: gapBandsOn) { _, on in try? store.setGapBandsOn(on) }
             }
 
-            // The Weigh-in group: `weigh-in` (2.2) adds it here.
+            Section("settings.group.weighIn") {
+                Picker(Screen3Content.weighInDayHeading, selection: weighInDaySelection) {
+                    ForEach(Weekday.allCases, id: \.self) { weekday in
+                        Text(weekday.name).tag(Optional(weekday.rawValue))
+                    }
+                    Text(Screen3Content.wontBeWeighingChoice).tag(Optional<Int>.none)
+                }
+                .accessibilityLabel(Screen3Content.weighInDayHeading)
+                Picker(WeighInContent.unitLabel, selection: $weighInUnit) {
+                    Text(WeighInContent.kgChoice).tag(WeightUnit.kg)
+                    Text(WeighInContent.stLbChoice).tag(WeightUnit.stLb)
+                }
+                .accessibilityLabel(WeighInContent.unitLabel)
+                .onChange(of: weighInUnit) { _, unit in try? store.setWeighInUnit(unit.rawValue) }
+            }
 
             Section("settings.group.privacy") {
                 NavigationLink("settings.privacy.link") {
@@ -141,6 +157,11 @@ struct SettingsView: View {
             dayStartsAt = ClockTime.date(hour: hour, minute: 0)
         }
         gapBandsOn = (try? store.gapBandsOn()) ?? true
+        switch try? store.weighInDayChoice() {
+        case .weekday(let weekday): weighInWeekday = weekday
+        case .wontBeWeighing, nil: weighInWeekday = nil
+        }
+        weighInUnit = WeightUnit(rawValue: (try? store.weighInUnit()) ?? "kg") ?? .kg
         if let bundle = try? BundleLoader.loadShipped() {
             contentInfo = bundle
             contactEmail = bundle.string(id: "about.contact")?.text ?? ""
@@ -155,6 +176,24 @@ struct SettingsView: View {
         let calendar = Calendar.current
         let hour = calendar.component(.hour, from: dayStartsAt)
         try? store.setDayStartHour(hour, now: Date(), calendar: calendar)
+    }
+
+    /// settings spec, "The Weigh-in group": the same label and choices as
+    /// the weigh-in screen's own control, over the same synced row
+    /// (`RecordStore.WeighInDayChoice`).
+    private var weighInDaySelection: Binding<Int?> {
+        Binding(
+            get: { weighInWeekday },
+            set: { newValue in
+                weighInWeekday = newValue
+                if let newValue {
+                    try? store.setWeighInDayChoice(.weekday(newValue))
+                } else {
+                    try? store.setWeighInDayChoice(.wontBeWeighing)
+                }
+                ReminderCoordinator.recomputeAndApply(store: store)
+            }
+        )
     }
 
     private var contentVersionText: String {
