@@ -16,7 +16,7 @@ final class SevenStagesTests: XCTestCase {
 
     /// Scenario: A tool before its stage.
     func testATooBeforeItsStage() {
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: ProgrammeFacts(), openings: [], settings: defaultSettings, constants: .default,
             now: moment(2026, 9, 28), restartAt: nil, currentRecordDay: dayKey(2026, 9, 28), calendar: engineTestCalendar
         )

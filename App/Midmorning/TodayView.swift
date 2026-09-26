@@ -1,20 +1,31 @@
 import SwiftUI
 import Record
 import Plan
+import Programme
 
 /// The record day's entries as a time-ordered column, like the paper
 /// record (record spec, "The Today stack"). The order here is the only
 /// order: the navigation bar (lock, Get support), the bottom toolbar
-/// (Programme, Reviews, Settings), the pinned current-day header and its
-/// rows, the previous-day section, and the "Earlier days" entry point.
+/// (Programme, Reviews, Settings), the card slot, the "Getting started"
+/// line, the pinned current-day header and its rows, the previous-day
+/// section, and the "Earlier days" entry point.
 ///
-/// `programme`, `regular-eating-plan` and `reminders` are not built yet, so
-/// the card slot, the "Getting started" line, "Today's plan" and the
-/// notification permission line stay empty slots this change adds no
-/// content to (decision 91's three deferred slots); the owning capability
-/// fills each one without touching this file (record spec, "The Today
-/// stack": "Another capability MUST NOT add an element to Today except
-/// through the card slot or a day section row").
+/// `programme-engine` (2.1) fills the card slot and the "Getting started"
+/// line (decision 91's deferred slots); `regular-eating-plan` and
+/// `reminders` still own "Today's plan" and the notification permission
+/// line (record spec, "The Today stack": "Another capability MUST NOT add
+/// an element to Today except through the card slot or a day section row").
+/// Pushed onto Today's own navigation stack, alongside `EarlierDaysRoute` and
+/// a plain `String` day key (product-rules spec, "Appearance"): the
+/// Programme screen, a stage screen, and one content card.
+enum ProgrammeRoute: Hashable {
+    case screen
+}
+
+struct CardRoute: Hashable {
+    let cardId: String
+}
+
 struct TodayView: View {
     let store: RecordStore
 
@@ -30,17 +41,33 @@ struct TodayView: View {
     @State private var navigationPath = NavigationPath()
     @AccessibilityFocusState private var addEntryFocused: Bool
     @State private var isShowingSupportSheet = false
-    /// `programme-engine` (2.1) is not built, so this is a fixture fact, the
-    /// same pattern `GapBand`'s own `stage2Open` already uses; `mm-t21.23`
-    /// wires the live stage into both.
-    @State private var stage2Open = false
+    @State private var programmeSnapshot: ProgrammeModel.Snapshot?
+    @State private var pendingCard: PendingCard?
+    @State private var openCardId: String?
     @State private var planBuilderMode: PlanBuilderMode?
+
+    /// The live stage 2 state (programme spec, "Stage 2 opens after five
+    /// recorded days"); `GapBand`, `PlanBuilderAccess` and `DaySection` all
+    /// read this same value.
+    private var stage2Open: Bool { programmeSnapshot?.state.isOpen(.regularEating) ?? false }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ScrollViewReader { proxy in
                 List {
                     Section {
+                        if let pendingCard {
+                            TodayCardSlotView(card: pendingCard, onPrimary: { primaryCardAction(pendingCard) }, onClose: { answerCard(pendingCard, value: "Close") })
+                        }
+                        if !stage2Open {
+                            Button {
+                                navigationPath.append(Stage.gettingStarted)
+                            } label: {
+                                Text("today.gettingStarted")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .listRowSeparator(.hidden)
+                        }
                         pinnedHeader
                         if let currentSection {
                             daySectionRows(currentSection)
@@ -92,6 +119,8 @@ struct TodayView: View {
                             NavigationLink("today.settings") {
                                 SettingsView(store: store)
                             }
+                        } else if item == "Programme" {
+                            Button(item) { navigationPath.append(ProgrammeRoute.screen) }
                         } else {
                             Button {} label: { Text(item) }
                         }
@@ -123,6 +152,15 @@ struct TodayView: View {
             }
             .navigationDestination(for: String.self) { dayKey in
                 EarlierDayDetailView(store: store, initialDayKey: dayKey, navigationPath: $navigationPath)
+            }
+            .navigationDestination(for: ProgrammeRoute.self) { _ in
+                ProgrammeScreenView(store: store)
+            }
+            .navigationDestination(for: Stage.self) { stage in
+                StageScreenView(store: store, stage: stage)
+            }
+            .navigationDestination(for: CardRoute.self) { route in
+                CardScreenView(store: store, cardId: route.cardId, recordsAnswerOnAppear: openCardId == route.cardId)
             }
             .accessibilityAction(.magicTap) { showingNewEntry = true }
         }
@@ -283,6 +321,34 @@ struct TodayView: View {
         }
     }
 
+    // MARK: The card slot (programme spec, "A stage opening shows one
+    // card", "Two stage 1 cards come to Today", "A card when the plan is
+    // not set")
+
+    /// Writes the card's answer and performs its control's own action
+    /// (programme spec, "The card's answer is kept in the record"): "Open"
+    /// pushes the stage screen, "Read" pushes the card screen, "Set it up"
+    /// opens the plan builder. "Close" only ever answers and reloads.
+    private func primaryCardAction(_ card: PendingCard) {
+        switch card.kind {
+        case .opening:
+            answerCard(card, value: "Open")
+            if let stage = card.openingStage { navigationPath.append(stage) }
+        case .stage1:
+            answerCard(card, value: "Read")
+            openCardId = card.id
+            navigationPath.append(CardRoute(cardId: card.id))
+        case .plan:
+            answerCard(card, value: "Set it up")
+            planBuilderMode = .template(kind: .weekday, titleKey: "plan.weekday")
+        }
+    }
+
+    private func answerCard(_ card: PendingCard, value: String) {
+        try? store.setCardAnswer(value, id: card.id, changedAt: Date())
+        reload()
+    }
+
     // MARK: Actions
 
     private func togglePause(_ section: DaySection) {
@@ -308,6 +374,7 @@ struct TodayView: View {
 
     private func reload() {
         let now = Date()
+        programmeSnapshot = ProgrammeModel.load(store: store, now: now, calendar: .current)
         day = RecordDay.interval(containing: now, calendar: .current)
         let previous = RecordDay.previous(day, calendar: .current)
         let currentKey = RecordDay.key(containing: now, calendar: .current)
@@ -315,6 +382,13 @@ struct TodayView: View {
         currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open)
         previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
+
+        if let snapshot = programmeSnapshot {
+            let starredToday = currentSection?.entries.contains { $0.feltLikeABinge } ?? false
+            pendingCard = ProgrammeModel.nextTodayCard(snapshot, starredEntryOrOutcomeAt: starredToday ? now : nil, currentRecordDay: day)
+        } else {
+            pendingCard = nil
+        }
     }
 }
 

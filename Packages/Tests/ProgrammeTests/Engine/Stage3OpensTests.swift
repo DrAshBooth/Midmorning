@@ -16,7 +16,7 @@ final class Stage3OpensTests: XCTestCase {
         }
         let facts = ProgrammeFacts(entries: plannedRecorded.map(\.entry), plannedDays: plannedRecorded.map(\.plan))
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 1, 0))] // fallback would land on 15 October, after the primary path
-        let s = Programme.state(facts: facts, openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 10), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: facts, openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 10), calendar: engineTestCalendar)
         XCTAssertEqual(s.stageOpenedMoment[.alternatives], moment(2026, 10, 8, 4))
     }
 
@@ -26,7 +26,7 @@ final class Stage3OpensTests: XCTestCase {
         let entries = keys.map { EntryFact(id: $0, dayKey: $0, starred: false, savedAt: moment(2026, 10, 1, 9)) }
         let planned = keys.map { PlannedDayFact(dayKey: $0) }
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 5, 9))]
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 19, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 19), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 19, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 19), calendar: engineTestCalendar)
         XCTAssertEqual(s.stageOpenedMoment[.alternatives], moment(2026, 10, 19, 4))
         XCTAssertTrue(s.computedOpenings.contains(StageOpenedRecord(stage: 3, moment: moment(2026, 10, 19, 4))))
     }
@@ -37,14 +37,14 @@ final class Stage3OpensTests: XCTestCase {
         let entries = days.map { EntryFact(id: $0, dayKey: $0, starred: false, savedAt: moment(2026, 10, 1, 9)) }
         let planned = days.map { PlannedDayFact(dayKey: $0) }
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 5, 9))]
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 14, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 14), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 14, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 14), calendar: engineTestCalendar)
         XCTAssertEqual(s.stageOpenedMoment[.alternatives], moment(2026, 10, 14, 4))
     }
 
     /// Scenario: No template in two weeks — the fallback needs no planned day.
     func testNoTemplateInTwoWeeks() {
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 5, 9))]
-        let s = Programme.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 19, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 19), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 19, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 19), calendar: engineTestCalendar)
         XCTAssertEqual(s.stageOpenedMoment[.alternatives], moment(2026, 10, 19, 4))
     }
 
@@ -57,7 +57,7 @@ final class Stage3OpensTests: XCTestCase {
             + [EntryFact(id: "7", dayKey: dayKey(2026, 10, 7), starred: false, savedAt: moment(2026, 10, 7, 22))]
         let planned = (sixBefore + [dayKey(2026, 10, 7)]).map { PlannedDayFact(dayKey: $0) }
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 1, 0))]
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 8, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 8), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 8, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 8), calendar: engineTestCalendar)
         XCTAssertTrue(s.isOpen(.alternatives))
     }
 
@@ -67,7 +67,7 @@ final class Stage3OpensTests: XCTestCase {
         let entries = sixWithEntries.map { EntryFact(id: $0, dayKey: $0, starred: false, savedAt: moment(2026, 10, 1, 9)) }
         let planned = (sixWithEntries + [dayKey(2026, 10, 7)]).map { PlannedDayFact(dayKey: $0) } // day 7 planned, no entry
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 1, 0))]
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 8, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 8), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 8, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 8), calendar: engineTestCalendar)
         XCTAssertFalse(s.isOpen(.alternatives), "only six planned-and-recorded days exist, and the fallback has not reached 14 days")
     }
 
@@ -79,7 +79,7 @@ final class Stage3OpensTests: XCTestCase {
             + [EntryFact(id: "7", dayKey: dayKey(2026, 10, 7), starred: false, savedAt: moment(2026, 10, 7, 20))]
         let planned = (sixBefore + [dayKey(2026, 10, 7)]).map { PlannedDayFact(dayKey: $0) }
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 1, 0))]
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 8, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 8), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries, plannedDays: planned), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 8, 5), restartAt: nil, currentRecordDay: dayKey(2026, 10, 8), calendar: engineTestCalendar)
         XCTAssertTrue(s.isOpen(.alternatives))
     }
 
@@ -87,7 +87,7 @@ final class Stage3OpensTests: XCTestCase {
     func testACopiedPlanWithNoEntryDoesNotCount() {
         let friday = dayKey(2026, 10, 9)
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 8, 0))]
-        let s = Programme.state(facts: ProgrammeFacts(plannedDays: [PlannedDayFact(dayKey: friday)]), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 10), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(plannedDays: [PlannedDayFact(dayKey: friday)]), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 10), calendar: engineTestCalendar)
         XCTAssertFalse(s.isOpen(.alternatives))
     }
 
@@ -95,7 +95,7 @@ final class Stage3OpensTests: XCTestCase {
     func testSetPlansWithNoEntriesStage3StaysClosed() {
         let sixDays = (1...6).map { dayKey(2026, 10, $0) }
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 1, 0))]
-        let s = Programme.state(facts: ProgrammeFacts(plannedDays: sixDays.map { PlannedDayFact(dayKey: $0) }), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 7), restartAt: nil, currentRecordDay: dayKey(2026, 10, 7), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(plannedDays: sixDays.map { PlannedDayFact(dayKey: $0) }), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 7), restartAt: nil, currentRecordDay: dayKey(2026, 10, 7), calendar: engineTestCalendar)
         XCTAssertFalse(s.isOpen(.alternatives))
     }
 }

@@ -5,7 +5,7 @@ import XCTest
 /// (mm-t21.4).
 final class Stage2OpensTests: XCTestCase {
     private func state(_ entries: [EntryFact], now: Date) -> ProgrammeState {
-        Programme.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: .default, now: now, restartAt: nil, currentRecordDay: dayKey(2026, 10, 20), calendar: engineTestCalendar)
+        StageEngine.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: .default, now: now, restartAt: nil, currentRecordDay: dayKey(2026, 10, 20), calendar: engineTestCalendar)
     }
 
     /// Scenario: Five recorded days over two weeks.
@@ -70,7 +70,7 @@ final class Stage2OpensTests: XCTestCase {
     func testTheDayStartChangeKeepsTheEntrysRecordDay() {
         let entries = [EntryFact(id: "1", dayKey: dayKey(2026, 10, 2), starred: false, savedAt: moment(2026, 10, 2, 4, 30))]
         let laterDayStart = ProgrammeSettings(startDay: defaultSettings.startDay, dayStart: 5)
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: laterDayStart, constants: .default, now: moment(2026, 10, 3), restartAt: nil, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: laterDayStart, constants: .default, now: moment(2026, 10, 3), restartAt: nil, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar)
         XCTAssertEqual(s.recordedDaysCount, 1, "Friday still counts")
     }
 }

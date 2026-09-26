@@ -6,7 +6,7 @@ import Constants
 /// "Stage 4 cards on day 1" is `deferred: mm-t33.16`.
 final class ReadingAheadTests: XCTestCase {
     private func state(entries: [EntryFact], now: Date = moment(2026, 10, 1)) -> ProgrammeState {
-        Programme.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: .default, now: now, restartAt: nil, currentRecordDay: dayKey(2026, 10, 1), calendar: engineTestCalendar)
+        StageEngine.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: .default, now: now, restartAt: nil, currentRecordDay: dayKey(2026, 10, 1), calendar: engineTestCalendar)
     }
 
     /// Scenario: A closed stage's row.
@@ -27,7 +27,7 @@ final class ReadingAheadTests: XCTestCase {
         var constants = ProgrammeConstants.default
         constants.recordedDaysForStage2 = 3
         let entries = [EntryFact(id: "1", dayKey: dayKey(2026, 9, 28), starred: false, savedAt: moment(2026, 9, 28, 9))]
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: constants, now: moment(2026, 9, 29), restartAt: nil, currentRecordDay: dayKey(2026, 9, 29), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: constants, now: moment(2026, 9, 29), restartAt: nil, currentRecordDay: dayKey(2026, 9, 29), calendar: engineTestCalendar)
         XCTAssertFalse(s.isOpen(.regularEating))
         XCTAssertEqual(StageRuleText.string(for: .regularEating, constants: constants, recordedDaysCount: s.recordedDaysCount), "Opens after 3 recorded days. You have 1.")
     }

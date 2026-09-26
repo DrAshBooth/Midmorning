@@ -12,7 +12,7 @@ final class PureStageEngineTests: XCTestCase {
             EntryFact(id: "2", dayKey: dayKey(2026, 9, 30), starred: false, savedAt: moment(2026, 9, 30, 9)),
         ])
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 1, 9))]
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: facts, openings: openings, settings: defaultSettings, constants: .default,
             now: moment(2026, 10, 2), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar
         )
@@ -25,7 +25,7 @@ final class PureStageEngineTests: XCTestCase {
         let entries = (0..<5).map { i in
             EntryFact(id: "\(i)", dayKey: dayKey(2026, 9, 29 + i), starred: false, savedAt: moment(2026, 9, 29 + i, 9))
         }
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: .default,
             now: moment(2026, 10, 3, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar
         )
@@ -45,7 +45,7 @@ final class PureStageEngineTests: XCTestCase {
         let earlyOutcome = UrgeOutcomeFact(dayKey: dayKey(2026, 10, 1), savedAt: moment(2026, 10, 1, 10))
         let facts = ProgrammeFacts(entries: earlyEntries, urgeOutcomes: [earlyOutcome])
         let openings = [StageOpenedRecord(stage: 3, moment: stage3Opening)]
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: facts, openings: openings, settings: defaultSettings, constants: .default,
             now: moment(2026, 10, 13), restartAt: nil, currentRecordDay: dayKey(2026, 10, 13), calendar: engineTestCalendar
         )
@@ -60,7 +60,7 @@ final class PureStageEngineTests: XCTestCase {
         }
         let facts = ProgrammeFacts(entries: plannedRecorded.map(\.entry), plannedDays: plannedRecorded.map(\.plan))
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 9, 29, 9))]
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: facts, openings: openings, settings: defaultSettings, constants: .default,
             now: moment(2026, 10, 6, 9, 15), restartAt: nil, currentRecordDay: stage2Day, calendar: engineTestCalendar
         )
@@ -74,7 +74,7 @@ final class PureStageEngineTests: XCTestCase {
         let entries = (0..<5).map { i in
             EntryFact(id: "\(i)", dayKey: dayKey(2026, 10, 2 + i), starred: false, savedAt: moment(2026, 10, 2 + i, 13, 2))
         }
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: ProgrammeFacts(entries: entries), openings: [], settings: defaultSettings, constants: .default,
             now: moment(2026, 10, 7), restartAt: nil, currentRecordDay: dayKey(2026, 10, 7), calendar: engineTestCalendar
         )
@@ -88,7 +88,7 @@ final class PureStageEngineTests: XCTestCase {
         }
         let facts = ProgrammeFacts(entries: entries)
         func run() -> ProgrammeState {
-            Programme.state(facts: facts, openings: [], settings: defaultSettings, constants: .default, now: moment(2026, 10, 3), restartAt: nil, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar)
+            StageEngine.state(facts: facts, openings: [], settings: defaultSettings, constants: .default, now: moment(2026, 10, 3), restartAt: nil, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar)
         }
         XCTAssertEqual(run(), run())
     }
@@ -96,7 +96,7 @@ final class PureStageEngineTests: XCTestCase {
     /// Scenario: A future-dated opening.
     func testAFutureDatedOpening() {
         let openings = [StageOpenedRecord(stage: 5, moment: moment(2026, 11, 9, 4))]
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default,
             now: moment(2026, 11, 3, 10), restartAt: nil, currentRecordDay: dayKey(2026, 11, 3), calendar: engineTestCalendar
         )
@@ -108,7 +108,7 @@ final class PureStageEngineTests: XCTestCase {
         let openings = [StageOpenedRecord(stage: 5, moment: moment(2026, 11, 9, 4))]
         let restartAt = moment(2027, 1, 4, 9)
         let settings = ProgrammeSettings(startDay: dayKey(2027, 1, 4), dayStart: 4)
-        let state = Programme.state(
+        let state = StageEngine.state(
             facts: ProgrammeFacts(), openings: openings, settings: settings, constants: .default,
             now: moment(2027, 1, 4, 9), restartAt: restartAt, currentRecordDay: dayKey(2027, 1, 4), calendar: engineTestCalendar
         )
@@ -126,7 +126,7 @@ final class AppKeepsTheStageStateTests: XCTestCase {
     func testEntriesDeletedAfterStage2OpenedStageStaysOpen() {
         let facts = ProgrammeFacts(entries: [EntryFact(id: "1", dayKey: dayKey(2026, 10, 1), starred: false, savedAt: moment(2026, 10, 1, 9))])
         let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 1, 9))]
-        let state = Programme.state(facts: facts, openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 2), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
+        let state = StageEngine.state(facts: facts, openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 2), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
         XCTAssertTrue(state.isOpen(.regularEating))
     }
 
@@ -134,7 +134,7 @@ final class AppKeepsTheStageStateTests: XCTestCase {
     /// stays open with no urge outcome in the facts at all.
     func testTheFirstUrgeOutcomeDeletedStage4StaysOpen() {
         let openings = [StageOpenedRecord(stage: 3, moment: moment(2026, 10, 1, 4)), StageOpenedRecord(stage: 4, moment: moment(2026, 10, 5, 9))]
-        let state = Programme.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 6), restartAt: nil, currentRecordDay: dayKey(2026, 10, 6), calendar: engineTestCalendar)
+        let state = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 6), restartAt: nil, currentRecordDay: dayKey(2026, 10, 6), calendar: engineTestCalendar)
         XCTAssertTrue(state.isOpen(.problemSolving))
     }
 
@@ -144,7 +144,7 @@ final class AppKeepsTheStageStateTests: XCTestCase {
     func testRestartOfTheAppStage3StaysOpen() {
         let openings = [StageOpenedRecord(stage: 3, moment: moment(2026, 10, 1, 4))]
         func run() -> Bool {
-            Programme.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 2), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar).isOpen(.alternatives)
+            StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 2), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar).isOpen(.alternatives)
         }
         XCTAssertTrue(run())
         XCTAssertTrue(run())
@@ -156,17 +156,17 @@ final class AppKeepsTheStageStateTests: XCTestCase {
             StageOpenedRecord(stage: 2, moment: moment(2026, 10, 6, 13, 2)),
             StageOpenedRecord(stage: 2, moment: moment(2026, 10, 6, 18, 40)),
         ]
-        let state = Programme.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 7), restartAt: nil, currentRecordDay: dayKey(2026, 10, 7), calendar: engineTestCalendar)
+        let state = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 10, 7), restartAt: nil, currentRecordDay: dayKey(2026, 10, 7), calendar: engineTestCalendar)
         XCTAssertEqual(state.stageOpenedMoment[.regularEating], moment(2026, 10, 6, 13, 2))
     }
 
     /// Scenario: The clock moves back past an opening.
     func testTheClockMovesBackPastAnOpening() {
         let openings = [StageOpenedRecord(stage: 5, moment: moment(2026, 11, 9, 4))]
-        let movedBack = Programme.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 11, 3), restartAt: nil, currentRecordDay: dayKey(2026, 11, 3), calendar: engineTestCalendar)
+        let movedBack = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 11, 3), restartAt: nil, currentRecordDay: dayKey(2026, 11, 3), calendar: engineTestCalendar)
         XCTAssertFalse(movedBack.isOpen(.takingStock), "the engine ignores it until the clock passes its moment")
 
-        let clockPassesItAgain = Programme.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 11, 10), restartAt: nil, currentRecordDay: dayKey(2026, 11, 10), calendar: engineTestCalendar)
+        let clockPassesItAgain = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: defaultSettings, constants: .default, now: moment(2026, 11, 10), restartAt: nil, currentRecordDay: dayKey(2026, 11, 10), calendar: engineTestCalendar)
         XCTAssertTrue(clockPassesItAgain.isOpen(.takingStock), "the store kept the row, so stage 5 opens again at its own moment")
         XCTAssertEqual(clockPassesItAgain.stageOpenedMoment[.takingStock], moment(2026, 11, 9, 4))
     }

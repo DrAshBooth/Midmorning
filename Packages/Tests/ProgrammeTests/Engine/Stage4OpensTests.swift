@@ -10,7 +10,7 @@ final class Stage4OpensTests: XCTestCase {
     /// Scenario: The first outcome is "It passed".
     func testTheFirstOutcomeIsItPassed() {
         let outcome = UrgeOutcomeFact(dayKey: dayKey(2026, 10, 2), savedAt: moment(2026, 10, 2, 15))
-        let s = Programme.state(facts: ProgrammeFacts(urgeOutcomes: [outcome]), openings: [stage3Opened], settings: defaultSettings, constants: .default, now: moment(2026, 10, 2, 16), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(urgeOutcomes: [outcome]), openings: [stage3Opened], settings: defaultSettings, constants: .default, now: moment(2026, 10, 2, 16), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
         XCTAssertTrue(s.isOpen(.problemSolving))
     }
 
@@ -18,14 +18,14 @@ final class Stage4OpensTests: XCTestCase {
     /// opens the stage; `Programme` does not distinguish them.
     func testTheFirstOutcomeIsIBinged() {
         let outcome = UrgeOutcomeFact(dayKey: dayKey(2026, 10, 2), savedAt: moment(2026, 10, 2, 21, 30))
-        let s = Programme.state(facts: ProgrammeFacts(urgeOutcomes: [outcome]), openings: [stage3Opened], settings: defaultSettings, constants: .default, now: moment(2026, 10, 2, 22), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(urgeOutcomes: [outcome]), openings: [stage3Opened], settings: defaultSettings, constants: .default, now: moment(2026, 10, 2, 22), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
         XCTAssertTrue(s.isOpen(.problemSolving))
         XCTAssertEqual(s.stageOpenedMoment[.problemSolving], moment(2026, 10, 2, 21, 30))
     }
 
     /// Scenario: A timer with no outcome.
     func testATimerWithNoOutcomeStage4StaysClosed() {
-        let s = Programme.state(facts: ProgrammeFacts(), openings: [stage3Opened], settings: defaultSettings, constants: .default, now: moment(2026, 10, 2), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(), openings: [stage3Opened], settings: defaultSettings, constants: .default, now: moment(2026, 10, 2), restartAt: nil, currentRecordDay: dayKey(2026, 10, 2), calendar: engineTestCalendar)
         XCTAssertFalse(s.isOpen(.problemSolving))
     }
 
@@ -35,7 +35,7 @@ final class Stage4OpensTests: XCTestCase {
         // Sunday 18 October.
         let stage3 = StageOpenedRecord(stage: 3, moment: moment(2026, 10, 12, 4))
         let entries = (0..<7).map { i in EntryFact(id: "\(i)", dayKey: dayKey(2026, 10, 12 + i), starred: false, savedAt: moment(2026, 10, 12 + i, 9)) }
-        let s = Programme.state(facts: ProgrammeFacts(entries: entries), openings: [stage3], settings: defaultSettings, constants: .default, now: moment(2026, 10, 18, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 18), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(entries: entries), openings: [stage3], settings: defaultSettings, constants: .default, now: moment(2026, 10, 18, 10), restartAt: nil, currentRecordDay: dayKey(2026, 10, 18), calendar: engineTestCalendar)
         XCTAssertTrue(s.isOpen(.problemSolving))
         XCTAssertEqual(s.stageOpenedMoment[.problemSolving], moment(2026, 10, 18, 9), "the first entry on the seventh day, 18 October")
     }
@@ -44,7 +44,7 @@ final class Stage4OpensTests: XCTestCase {
     func testAnOutcomeBeforeTheSeventhDay() {
         let stage3 = StageOpenedRecord(stage: 3, moment: moment(2026, 10, 12, 4))
         let outcome = UrgeOutcomeFact(dayKey: dayKey(2026, 10, 14), savedAt: moment(2026, 10, 14, 12))
-        let s = Programme.state(facts: ProgrammeFacts(urgeOutcomes: [outcome]), openings: [stage3], settings: defaultSettings, constants: .default, now: moment(2026, 10, 14, 13), restartAt: nil, currentRecordDay: dayKey(2026, 10, 14), calendar: engineTestCalendar)
+        let s = StageEngine.state(facts: ProgrammeFacts(urgeOutcomes: [outcome]), openings: [stage3], settings: defaultSettings, constants: .default, now: moment(2026, 10, 14, 13), restartAt: nil, currentRecordDay: dayKey(2026, 10, 14), calendar: engineTestCalendar)
         XCTAssertTrue(s.isOpen(.problemSolving))
         XCTAssertEqual(s.stageOpenedMoment[.problemSolving], moment(2026, 10, 14, 12))
     }

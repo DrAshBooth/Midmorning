@@ -1,7 +1,7 @@
 import Foundation
 import Constants
 
-/// What `Programme.state` returns: the stage, the open tools, the week
+/// What `StageEngine.state` returns: the stage, the open tools, the week
 /// number, the counts toward the next stage and every opening the engine
 /// computed but the store does not yet hold (programme spec, "A pure stage
 /// engine with stored openings as input").
@@ -48,12 +48,19 @@ public struct PendingCard: Sendable, Equatable {
         self.kind = kind
         self.becameDueAt = becameDueAt
     }
+
+    /// The stage this opening card announces, parsed from its own id
+    /// ("opening.2"), or `nil` for a stage 1 or plan card.
+    public var openingStage: Stage? {
+        guard kind == .opening, id.hasPrefix("opening.") else { return nil }
+        return Int(id.dropFirst("opening.".count)).flatMap(Stage.init(rawValue:))
+    }
 }
 
 /// The pure stage engine (programme spec, "A pure stage engine with stored
 /// openings as input"; `v1-programme/design.md`, "The programme engine is a
 /// pure function with stored openings as input").
-public enum Programme {
+public enum StageEngine {
     /// `calendar` is plumbing, not a domain fact: the requirement's input
     /// list names the facts the engine reasons about; every function here
     /// that turns a moment into a record-day key or back needs a calendar,

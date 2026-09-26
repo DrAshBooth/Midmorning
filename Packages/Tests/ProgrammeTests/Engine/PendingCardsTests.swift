@@ -14,8 +14,8 @@ final class PendingCardsTests: XCTestCase {
         stagesWithToolInBuild: Set<Int> = [1, 2], hasTemplate: Bool = true,
         now: Date, currentRecordDay: String, settings: ProgrammeSettings = defaultSettings, constants: ProgrammeConstants = .default
     ) -> (state: ProgrammeState, cards: [PendingCard]) {
-        let state = Programme.state(facts: ProgrammeFacts(entries: entries), openings: openings, settings: settings, constants: constants, now: now, restartAt: nil, currentRecordDay: currentRecordDay, calendar: engineTestCalendar)
-        let cards = Programme.pendingCards(state: state, facts: ProgrammeFacts(entries: entries), cardAnswers: cardAnswers, stagesWithToolInBuild: stagesWithToolInBuild, hasTemplate: hasTemplate, currentRecordDay: currentRecordDay, settings: settings, calendar: engineTestCalendar)
+        let state = StageEngine.state(facts: ProgrammeFacts(entries: entries), openings: openings, settings: settings, constants: constants, now: now, restartAt: nil, currentRecordDay: currentRecordDay, calendar: engineTestCalendar)
+        let cards = StageEngine.pendingCards(state: state, facts: ProgrammeFacts(entries: entries), cardAnswers: cardAnswers, stagesWithToolInBuild: stagesWithToolInBuild, hasTemplate: hasTemplate, currentRecordDay: currentRecordDay, settings: settings, calendar: engineTestCalendar)
         return (state, cards)
     }
 

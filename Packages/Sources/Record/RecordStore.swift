@@ -886,6 +886,71 @@ public final class RecordStore {
         descriptor.includePendingChanges = false
         return try context.fetch(descriptor).sorted { $0.seenAt > $1.seenAt }
     }
+
+    // MARK: - Programme: value facts for the engine (programme spec, "A pure
+    // stage engine with stored openings as input"). The App target maps each
+    // one to `Programme`'s own fact type; `Programme` never imports `Record`.
+
+    /// One winning, non-deleted entry, as the engine needs it: its record
+    /// day, whether it is starred, and the moment the store actually saved
+    /// it (`createdAt`, not `time` — a backdated entry's own `time` can
+    /// differ from the moment it was saved).
+    public struct RecordedEntryFact: Sendable, Equatable {
+        public let dayKey: String
+        public let starred: Bool
+        public let savedAt: Date
+    }
+
+    /// Every winning, non-deleted entry in the whole store.
+    public func recordedEntryFacts() throws -> [RecordedEntryFact] {
+        var descriptor = FetchDescriptor<ItemVersion>()
+        descriptor.includePendingChanges = false
+        let winners = EntryWinner.winners(in: try context.fetch(descriptor))
+        return winners.values.filter { !$0.deleted }.map { RecordedEntryFact(dayKey: $0.dayKey, starred: $0.feltLikeABinge, savedAt: $0.createdAt) }
+    }
+
+    /// Every record day that counts as "planned" (regular-eating-plan spec,
+    /// "A planned day": explicitly set, or holding an entry, and never a
+    /// paused day), for the stage 3 count. `PlannedDay.isPlanned` in `Plan`
+    /// is the rule; this gathers the store-wide facts it needs, since no
+    /// single `Day`/`ItemVersion` row already carries "is this day paused".
+    public func plannedDayKeys() throws -> Set<String> {
+        var versionDescriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { !$0.deleted })
+        versionDescriptor.includePendingChanges = false
+        let entryDayKeys = Set(try context.fetch(versionDescriptor).map(\.dayKey))
+
+        var dayDescriptor = FetchDescriptor<Day>()
+        dayDescriptor.includePendingChanges = false
+        let setDayKeys = Set(DayReconciler.winners(in: try context.fetch(dayDescriptor)).values.filter { $0.setAt != nil }.map(\.dateKey))
+
+        var pausedDescriptor = FetchDescriptor<DayState>(predicate: #Predicate { $0.kind == "paused" })
+        pausedDescriptor.includePendingChanges = false
+        let pausedDayKeys = Set(DayStateReconciler.winners(in: try context.fetch(pausedDescriptor)).values.filter { $0.value == "on" }.map(\.dateKey))
+
+        return entryDayKeys.union(setDayKeys).subtracting(pausedDayKeys)
+    }
+
+    /// One urge outcome, as the engine needs it (`urge-toolkit` owns the
+    /// outcome's own vocabulary; the engine only needs that one exists).
+    public struct UrgeOutcomeRow: Sendable, Equatable {
+        public let dayKey: String
+        public let outcomeAt: Date
+    }
+
+    public func urgeOutcomeFacts() throws -> [UrgeOutcomeRow] {
+        var descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.outcome != "" })
+        descriptor.includePendingChanges = false
+        return try context.fetch(descriptor).compactMap { session in
+            session.outcomeAt.map { UrgeOutcomeRow(dayKey: session.outcomeDayKey, outcomeAt: $0) }
+        }
+    }
+
+    /// Whether the store holds any `Template` row (programme spec, "A card
+    /// when the plan is not set": "The plan card shows while the store
+    /// holds no Template row.").
+    public func hasAnyTemplate() throws -> Bool {
+        try !context.fetch(FetchDescriptor<Template>()).isEmpty
+    }
 }
 
 /// The store directory inside the app's own `Application Support` directory

@@ -117,8 +117,8 @@ public enum StageScreenBuilder {
         let isOpen = state.isOpen(stage)
         var line: String?
         if isOpen {
-            let openedWeek = state.stageOpenedDayKey[stage].flatMap { Programme.week(startDay: settings.startDay, currentRecordDay: $0, calendar: calendar) }
-            let currentWeek = Programme.week(startDay: settings.startDay, currentRecordDay: currentRecordDay, calendar: calendar)
+            let openedWeek = state.stageOpenedDayKey[stage].flatMap { StageEngine.week(startDay: settings.startDay, currentRecordDay: $0, calendar: calendar) }
+            let currentWeek = StageEngine.week(startDay: settings.startDay, currentRecordDay: currentRecordDay, calendar: calendar)
             line = (openedWeek != nil && currentWeek != nil) ? "Opened in week \(openedWeek!)" : nil
         } else {
             line = StageRuleText.string(for: stage, constants: constants, recordedDaysCount: state.recordedDaysCount)
