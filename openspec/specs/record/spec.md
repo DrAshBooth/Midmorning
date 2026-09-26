@@ -113,7 +113,7 @@ The app MUST NOT write any entry field to the system log or to standard output. 
 
 ### Requirement: The app keeps the entry's UTC offset and creation moment
 
-The app MUST keep, with each entry, the UTC offset in effect on the device when the person saved. The app MUST NOT keep a time zone name. The app MUST keep the moment the person saved the entry, separate from the entry time. The app MUST NOT show the creation moment or any "logged later" label to the person. Today MUST show the entry's clock time at the entry's UTC offset.
+The app MUST keep, with each entry, the UTC offset for the entry's own time. On the new-entry screen, the app MUST compute that offset from the device's current time zone rules at the entry time, with `TimeZone.current.secondsFromGMT(for:)`. The app MUST NOT use the offset at the save moment. On the edit screen, the app MUST compute the offset at the edited time in the edit zone. The "Edit an entry" requirement defines the edit zone. The store writes the record day key from the entry's time and this offset, as "The record day" requirement states. Ash ruled this on 26 September 2026. The app MUST NOT keep a time zone name. The app MUST keep the moment the person saved the entry, separate from the entry time. The app MUST NOT show the creation moment or any "logged later" label to the person. Today MUST show the entry's clock time at the entry's UTC offset.
 
 #### Scenario: Entry with an earlier time
 - **WHEN** the person saves an entry with a time two hours before now
@@ -126,6 +126,10 @@ The app MUST keep, with each entry, the UTC offset in effect on the device when 
 #### Scenario: Offset change
 - **WHEN** the person saves an entry at 20:00 in London and opens Today in New York while that entry is in the current record day
 - **THEN** Today shows the entry at 20:00
+
+#### Scenario: Earlier time across a clock change
+- **WHEN** the clocks in London go back at 02:00 on Sunday 25 October, and at 10:00 that day the person saves an entry with the time 04:30 on Saturday 24 October
+- **THEN** the app keeps the offset UTC+1 with the entry, the store writes the key of Saturday 24 October, and the entry shows at 04:30 under Saturday 24 October
 
 ### Requirement: Today shows the record day's entries in time order
 
@@ -177,7 +181,7 @@ Today MUST show absolute times only, with no relative times, no divider and no g
 - the control that opens the new-entry screen
 - the fixed elements that the Today stack defines
 
-The `record` capability in change `v1-programme` defines the Today stack. The visible strings of this change are "Today", "What", "felt like a binge", "Save" and "Cancel". The new-entry screen MUST have no title. On Today's rows and on the new-entry screen, the app MUST NOT use six words. Those words are "meal", "food", "log", "diary", "intake" and "eat". The `product-rules` capability owns vocabulary on every other screen.
+The `record` capability in change `v1-programme` defines the Today stack. The new-entry screen MUST have no title. On Today's rows and on the new-entry screen, the app MUST NOT use six words. Those words are "meal", "food", "log", "diary", "intake" and "eat". This rule does not apply to the plan's text on Today: the slot labels, the next-planned-meal line and the missed planned meal prompt. The `regular-eating-plan` capability owns that text, and `product-rules` requires the words "planned meal". The rule still applies to the app's own text on every entry row and on the new-entry screen. Ash ruled this on 26 September 2026. The `product-rules` capability owns vocabulary on every other screen.
 
 A reviewer checks these rules on the simulator. No test in this change covers them.
 
@@ -192,6 +196,10 @@ A reviewer checks these rules on the simulator. No test in this change covers th
 #### Scenario: Heading after midnight
 - **WHEN** the current time is 01:00 on Friday 25 September
 - **THEN** the current day's heading reads "Thursday 24 September, night"
+
+#### Scenario: Plan text on Today
+- **WHEN** Today shows the planned meal "Evening meal" at 19:00 and the line "Evening meal at 19:00 still happens."
+- **THEN** the six-words rule does not apply to those two rows, and the app's own text on the entry rows and on the new-entry screen holds none of the six words
 
 ### Requirement: Today hides entries when the app is not active
 
@@ -444,9 +452,9 @@ Today MUST show an entry's Where after the What when the Where is not empty. Tod
 
 A tap on a row on Today or on an earlier day MUST open the entry for editing. The edit screen is the new-entry screen filled with the entry's values. The person MUST be able to change the time, the What, the Where, the star and the Context.
 
-The time control MUST offer only times inside the entry's own record day. The time control MUST show one segment, which names that record day. The app MUST compute that record day's bounds from the entry's UTC offset and the day start row. That row is the one in force for that record day key, as `data-and-privacy` states. The time control MUST NOT offer a time after the current moment.
+The time control MUST offer only times inside the entry's own record day. The time control MUST show one segment, which names that record day. The time control MUST show and offer times in the entry's edit zone. When the device's current time zone gives the entry's kept UTC offset at the entry's time, the edit zone is the device's current time zone. Otherwise the edit zone is a fixed zone at the entry's kept UTC offset. The app MUST compute that record day's bounds in the edit zone, from the day start row. That row is the one in force for that record day key, as `data-and-privacy` states. In the device's current time zone, a record day on a clock-change date is 23 or 25 hours long, as "The record day" requirement states. The time control MUST NOT offer a time after the current moment.
 
-On save the app MUST keep the entry's record day as it was. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day.
+On save the app MUST keep the UTC offset of the edit zone at the edited time. In a fixed zone, that offset is the entry's kept offset. On save the app MUST keep the entry's record day as it was. The edited time and its offset then still give that record day's key. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day. The edit zone follows Ash's ruling of 26 September 2026 on the offset at the entry's own time. After travel, it also follows the ruling of 25 September 2026.
 
 #### Scenario: Change the What
 - **WHEN** the person taps the 13:05 entry "Toast and tea", changes What to "Toast, tea and a biscuit" and saves
@@ -467,6 +475,14 @@ On save the app MUST keep the entry's record day as it was. On save the app MUST
 #### Scenario: Cancel an edit
 - **WHEN** the person turns the star on in the edit screen and taps "Cancel"
 - **THEN** the entry keeps the star off
+
+#### Scenario: Edit after travel
+- **WHEN** the person saves an entry at 05:00 on Saturday 26 September in London at UTC+1, then on Sunday 27 September opens it in New York at UTC-4 and sets the time 05:30
+- **THEN** the time control shows 05:00 when it opens, the app keeps UTC+1 with the entry, and the entry shows at 05:30 under Saturday 26 September
+
+#### Scenario: Edit across a clock change
+- **WHEN** the clocks in London go back at 02:00 on Sunday 25 October, and at 09:00 that day the person in London opens the Saturday 24 October 23:00 entry and sets the time 03:30 on Sunday
+- **THEN** the time control offers times from 04:00 on Saturday to 03:59 on Sunday, 25 hours, the app keeps UTC+0 with the entry, and the entry shows at 03:30 under Saturday 24 October
 
 ### Requirement: Delete an entry
 

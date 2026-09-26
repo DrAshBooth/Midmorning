@@ -15,7 +15,7 @@ The app MUST let the person change the weigh-in day from the weigh-in screen. Th
 
 A change MUST take effect at once. The app MUST NOT show a message about the change. `reminders` owns the weigh-in day reminder and its default time of 07:30.
 
-With no weigh-in day, the weigh-in screen MUST show "Choose a weigh-in day" with the seven weekdays as one-tap choices. The screen MUST then show no weight input, no refusal text, no chart and no explanation. `reminders` MUST NOT schedule a weigh-in day reminder while no weigh-in day exists. `weekly-review` and `staying-on-track` MUST leave the weigh-in part out of every review and check-in while no weigh-in day exists. A tap on a weekday MUST set the weigh-in day at once, with no message. The app MUST then treat the screen as it does after any change of the weigh-in day.
+With no weigh-in day, the weigh-in screen MUST show "Choose a weigh-in day" with the seven weekdays as one-tap choices. Under the weekdays the screen MUST show the onboarding sentence "Once a week, on this day, the app asks for your weight and shows the trend. There is no goal and no target." The screen MUST then show no weight input, no refusal text, no chart and no explanation. In this capability, "the explanation" is the one-line explanation under the chart, as "The one-line explanation" requirement states. The onboarding sentence is not that explanation. Ash ruled this on 26 September 2026. `reminders` MUST NOT schedule a weigh-in day reminder while no weigh-in day exists. `weekly-review` and `staying-on-track` MUST leave the weigh-in part out of every review and check-in while no weigh-in day exists. A tap on a weekday MUST set the weigh-in day at once, with no message. The app MUST then treat the screen as it does after any change of the weigh-in day.
 
 The person can choose "I won't be weighing" after weigh-ins exist. The screen then hides the chart, as the chart rule states. The store MUST keep every weigh-in. When the person picks a weigh-in day again, the chart MUST show every kept weigh-in. Decision 103 sets this rule. Ash ruled it on 25 September 2026.
 
@@ -29,7 +29,7 @@ The person can choose "I won't be weighing" after weigh-ins exist. The screen th
 
 #### Scenario: No weigh-in day
 - **WHEN** the person chose "I won't be weighing" at onboarding and opens the weigh-in screen on any day
-- **THEN** the screen shows "Choose a weigh-in day" with the seven weekdays, no weight input, no refusal text and no chart
+- **THEN** the screen shows "Choose a weigh-in day" with the seven weekdays and the sentence "Once a week, on this day, the app asks for your weight and shows the trend. There is no goal and no target.", no weight input, no refusal text and no chart
 
 #### Scenario: Choose a weigh-in day later
 - **WHEN** the person has no weigh-in day and taps "Friday" under "Choose a weigh-in day" on Wednesday 30 September

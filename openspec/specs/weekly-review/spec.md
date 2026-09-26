@@ -35,7 +35,7 @@ The review MUST have a "Done" control that stays active at all times. "Done" MUS
 
 "Done" MUST work with any answer to the self-harm item and with none. The self-harm requirement states what the store keeps when the item has no answer, and that the app asks it again. The app MUST NOT show a message, a sound, a haptic or an animation on "Done". The person MUST be able to reopen and edit a finished review until the next review becomes due.
 
-The app MUST offer a "Reviews" list of finished reviews, newest first. The `programme` capability places the list one tap from Today. Each row MUST read "Week %1$lld, %2$@. Starred entries: %3$lld." The second placeholder is the week's date range from the en_GB interval formatter. The third is the frozen starred count from the Review row, for example "Week 3, 12–18 October. Starred entries: 4." With "Weekly summary" off, each row MUST read "Week %1$lld, %2$@" only.
+The app MUST offer a "Reviews" list of finished reviews, newest first. The `programme` capability places the list one tap from Today. Each row shows the week number, the week's dates and the frozen starred count, for example "Week 3, 12–18 October. Starred entries: 4." The row shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The app MUST show "Week %1$lld, %2$@." and "Starred entries: %lld.", joined by one space. %1$lld is the week number. %2$@ is the week's date range from the en_GB interval formatter. The %lld of the second string is the frozen starred count from the Review row. With "Weekly summary" off, each row MUST read "Week %1$lld, %2$@" only, with no full stop.
 
 The list MUST NOT show an arrow, a colour, a total or a comparison between rows. A row MUST open the review for reading. Each review has its own due day as its key, so after a restart the list can show two runs.
 
@@ -83,11 +83,11 @@ The review of week n MUST open with a summary, one plain sentence per part. The 
 
 The app MUST count an entry in the week of its saved record day key. The store writes that key with the entry at save, and the `record` capability owns it. The app MUST NOT compute an entry's record day again at review time. A day state row and a weigh-in row keep the key the store wrote when it created them. The review MUST read that key.
 
-Every count in a summary string MUST enter through a %lld placeholder with the plural forms that `content` defines. Every duration, weekday and time MUST enter through a %@ placeholder from the en_GB formatter. The `content` capability owns the catalogue rules.
+Every count in a summary string MUST enter through a %lld placeholder with the plural forms that `content` defines. Every duration, weekday and time MUST enter through a %@ placeholder from the en_GB formatter. The `content` capability owns the catalogue rules. The starred part with a last-week count and the urge part each show two counts. So each of them MUST come from strings with one count each, as the catalogue rules require. This requirement names those strings.
 
 The days part MUST read "Days with an entry: %lld.". The count is the number of record days in week n with at least one entry. A "didn't record" day with an entry counts. Every review MUST open with the days part, before the starred part. The days part is a count of days, not of entries.
 
-The starred part MUST read "Starred entries: %1$lld this week, %2$lld last week." with the starred counts of week n and week n − 1. In the review of week 1, the starred part MUST read "Starred entries: %lld this week."
+The starred part shows the starred counts of week n and week n − 1, for example "Starred entries: 4 this week, 6 last week." The app MUST show "Starred entries: %1$@, %2$@." The app MUST fill %1$@ from "%lld this week", with the starred count of week n. The app MUST fill %2$@ from "%lld last week", with the starred count of week n − 1. In the review of week 1, the starred part MUST read "Starred entries: %lld this week."
 
 The plan part MUST read "Planned meals with an entry beside them: %lld." The number is the planned meals of week n with an entry beside them. The app MUST NOT show the total of planned meals in the plan part. The app MUST NOT show a count of skipped planned meals. The `regular-eating-plan` capability owns the plan beside the record and the "Skipped" answer. The `problem-solving` capability reads that answer for its missed-slot groups. When week n has no planned day, the app MUST leave the plan part out.
 
@@ -97,7 +97,7 @@ The longest gap on a recorded day is the longest time between two consecutive en
 
 The app MUST leave out a record day the person set as "didn't record". The app MUST leave out a record day with the state fasting. A fasting day counts no gap. The app MUST leave out a record day with fewer than two entries. The `record` capability owns the "didn't record" state and the fasting state.
 
-The urge part MUST read "Urges: %1$lld. Passed: %2$lld." The first number is the count of urges in week n. The second is the count with the outcome "It passed". The `urge-toolkit` capability owns urges and urge outcomes. When week n has no urge, the app MUST leave the urge part out.
+The urge part MUST read "Urges: %lld." and "Passed: %lld.", joined by one space, for example "Urges: 3. Passed: 2." The first count is the count of urges in week n. The second is the count with the outcome "It passed". The `urge-toolkit` capability owns urges and urge outcomes. When week n has no urge, the app MUST leave the urge part out.
 
 The weigh-in part MUST read "Weigh-in: done on %@." with the weekday name from the en_GB formatter. When week n has no done weigh-in, the app MUST leave the weigh-in part out. The review MUST NOT state that no weigh-in happened. The app MUST NOT show a weight value in the review. The `weigh-in` capability owns the weigh-in.
 
@@ -343,7 +343,9 @@ The page's control is "Done". The plan and its reminders MUST stay on. When the 
 
 The week-1 answers are the person's answers to three questions the app asks only in the review of week 1. The questions MUST come after the summary and before the reflection questions. The questions are: "What do you want to be different by week 12?", "What is hardest at the moment?" and "When are the hardest times of day?" Each question MUST have one free-text field.
 
-Each question MUST be optional. The app MUST save the week-1 answers with the review of week 1. The app MUST NOT ask these questions in any later review except taking stock. When the person never finishes the review of week 1, no week-1 answers exist.
+Each question MUST be optional. The app MUST save the week-1 answers with the review of week 1. The app MUST NOT ask these questions in any later review except taking stock.
+
+In every week, week 1 included, the app MUST save the answers so far when the person takes one of two routes before "Done". The first route is a tap on "I'm getting worse". The second route is the self-harm route: "Yes" at step 1 and "Yes" at step 2. The requirements "I'm getting worse" and "The self-harm item at the review" state each save. So the store can hold week-1 answers from a review of week 1 with no "Done". When the person never taps "Done" in the review of week 1 and takes neither route, no week-1 answers exist. Ash ruled this on 26 September 2026 (r13-17).
 
 #### Scenario: The review of week 1
 - **WHEN** the person opens the review of week 1
@@ -354,8 +356,16 @@ Each question MUST be optional. The app MUST save the week-1 answers with the re
 - **THEN** the review shows no week-1 question
 
 #### Scenario: Week 1 review never finished
-- **WHEN** the person never taps "Done" on the review of week 1
+- **WHEN** the person never taps "Done" on the review of week 1, and takes neither the "I'm getting worse" route nor the self-harm route in it
 - **THEN** the store holds no week-1 answers
+
+#### Scenario: Getting worse in week 1
+- **WHEN** the person types "Evenings" under "When are the hardest times of day?" in the review of week 1, and taps "I'm getting worse" before "Done"
+- **THEN** the store keeps "Evenings" with the review of week 1
+
+#### Scenario: The self-harm route in week 1
+- **WHEN** the person types "Evenings" under "When are the hardest times of day?" in the review of week 1, then answers step 1 "Yes" and step 2 "Yes"
+- **THEN** the store keeps "Evenings" with the review of week 1, and the app shows the not-right-now page
 
 ### Requirement: What the review never shows
 
