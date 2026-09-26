@@ -38,10 +38,13 @@ struct EarlierDaysListView: View {
     }
 }
 
-/// One earlier record day: its entries under the same rules as a day on
-/// Today, and controls to move to the previous and the next record day, and
-/// back to Today (record spec, "Earlier record days"). No control creates an
-/// entry here.
+/// One earlier record day: its heading, its menu and its rows under the
+/// same rules as a day on Today, and controls to move to the previous and
+/// the next record day, and back to Today (record spec, "Earlier record
+/// days"). A tap on a row opens the entry for editing; a swipe or the
+/// VoiceOver action "Delete" asks before it deletes; the menu offers
+/// "Didn't record", "Fasting today" and the collapse control. No control
+/// creates an entry here.
 struct EarlierDayDetailView: View {
     let store: RecordStore
     /// The record day stage 2 opened, or `nil` while stage 2 is closed: the
@@ -50,6 +53,8 @@ struct EarlierDayDetailView: View {
     @Binding var navigationPath: NavigationPath
     @State private var dayKey: String
     @State private var section: DaySection?
+    @State private var editingEntry: RecordRow?
+    @State private var pendingDelete: RecordRow?
 
     init(store: RecordStore, initialDayKey: String, stage2OpenedDayKey: String?, navigationPath: Binding<NavigationPath>) {
         self.store = store
@@ -61,20 +66,16 @@ struct EarlierDayDetailView: View {
     var body: some View {
         List {
             if let section {
-                if let stateLine = section.stateLine {
-                    Text(stateLine)
-                }
-                if section.isExpanded {
-                    ForEach(section.entries) { entry in
-                        EntryRow(entry: entry)
-                    }
-                } else {
-                    Text(section.entries.count == 1 ? "1 entry" : "\(section.entries.count) entries")
+                Section {
+                    DaySectionRows(section: section, actions: actions(for: section))
+                } header: {
+                    DaySectionHeading(section: section, actions: actions(for: section))
                 }
             }
         }
         .recordListStyle()
         .navigationTitle(Text(DayHeading.dateOnly(forDayKey: dayKey)))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // "Today" and "Get support" (safeguarding spec, "Get support on
             // every screen") share the trailing position; "Get support"
@@ -105,8 +106,42 @@ struct EarlierDayDetailView: View {
             }
             .padding()
         }
+        .sheet(item: $editingEntry) { entry in
+            EditEntryView(store: store, entry: entry, dayStartHour: RecordDay.startHour) { _ in
+                load()
+            } onDelete: {
+                load()
+            }
+        }
+        .deleteEntryConfirmation($pendingDelete) { entry in
+            try? store.delete(entryId: entry.id, deletedAt: Date())
+            load()
+        }
         .onAppear(perform: load)
         .onChange(of: dayKey) { _, _ in load() }
+    }
+
+    /// An earlier day offers no "Earlier days", no "Close the day", no plan
+    /// builder and no control that creates an entry. "Add it" shows only
+    /// before a record day ends, so it never shows on an earlier day.
+    private func actions(for section: DaySection) -> DaySectionActions {
+        DaySectionActions(
+            edit: { editingEntry = $0 },
+            askToDelete: { pendingDelete = $0 },
+            setExpanded: { expanded in
+                try? store.setCollapseChoice(expanded ? .expanded : .collapsed, dateKey: section.id)
+                load()
+            },
+            toggleState: { kind, on in
+                try? store.setDayState(kind, on: on, dateKey: section.id, changedAt: Date())
+                load()
+            },
+            addPlannedMeal: { _ in },
+            skipPlannedMeal: { slotIndex in
+                try? store.setPlannedMealAnswer("Skipped", dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
+                load()
+            }
+        )
     }
 
     private func move(by delta: Int) {
