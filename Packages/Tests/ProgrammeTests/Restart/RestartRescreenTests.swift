@@ -104,4 +104,28 @@ final class RestartRescreenTests: XCTestCase {
         XCTAssertEqual(result.reasons, [.weight])
         XCTAssertTrue(result.remindersPausedByWeightReason)
     }
+
+    // MARK: mm-t21.23, "wiring: scenarios that need 2.1, end to end" — the
+    // not-right-now page's own reason ordering (safeguarding spec, "The
+    // not-right-now page"), run from a real re-screen's answers rather than
+    // a fixture reasons array.
+
+    /// Scenario: Two reasons at a re-screen.
+    func testTwoReasonsAtARescreen() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 53, pregnancy: .no, treatment: .no, selfHarmFirst: .yes, selfHarmSecond: .yes)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertEqual(result.reasons, [.selfHarm, .weight], "self-harm above weight")
+        XCTAssertEqual(NotRightNowPage.paragraph(for: .selfHarm), NotRightNowPage.selfHarmReason)
+        XCTAssertTrue(result.remindersPausedByWeightReason)
+        XCTAssertEqual(NotRightNowPage.remindersLine(for: result.reasons), NotRightNowPage.remindersPausedLine)
+    }
+
+    /// Scenario: Four reasons at a re-screen.
+    func testFourReasonsAtARescreen() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 53, pregnancy: .yes, treatment: .yes, selfHarmFirst: .yes, selfHarmSecond: .yes)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertEqual(result.reasons, [.selfHarm, .weight, .pregnancy, .treatment])
+        XCTAssertEqual(NotRightNowPage.paragraph(for: .pregnancy), ExclusionPage.paragraph(for: .pregnancy))
+        XCTAssertEqual(NotRightNowPage.paragraph(for: .treatment), ExclusionPage.paragraph(for: .treatment))
+    }
 }
