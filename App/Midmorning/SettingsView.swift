@@ -1,6 +1,7 @@
 import SwiftUI
 import Record
 import Content
+import AppLock
 
 /// The settings screen: one screen, one tap from Today (settings spec, "One
 /// screen, one tap from Today"). Shows its groups in the spec's order:
@@ -12,12 +13,19 @@ struct SettingsView: View {
     let store: RecordStore
     var deleteAllSeam: DeleteAllSeam = StubDeleteAllSeam()
 
+    // The app's one real `AppLockController` (built once in
+    // `AppLockRootView`, above Today), shared through the environment so the
+    // Privacy section's rows and the cover agree on the lock state
+    // (mm-t13.9).
+    @EnvironmentObject private var appLockController: AppLockController
+
     @State private var dayStartsAt = ClockTime.date(hour: RecordDay.startHour, minute: 0)
     @State private var gapBandsOn = true
     @State private var isShowingDeleteConfirmation = false
     @State private var isShowingSupportSheet = false
     @State private var contentInfo: ContentBundle?
     @State private var contactEmail = ""
+    @State private var biometry: Biometry = .none
 
     var body: some View {
         Form {
@@ -45,6 +53,14 @@ struct SettingsView: View {
                 }
             }
 
+            // The app lock's own switch, "Face ID only"/"Touch ID only" and
+            // "Lock after" (app-lock spec, "The app lock is on by default",
+            // "Face ID only or Touch ID only", "Lock after": each names "The
+            // Privacy group of the settings screen"). `PrivacyAppLockControls`
+            // renders its own section against the real `AppLockController`
+            // (mm-t13.9).
+            PrivacyAppLockControls(controller: appLockController, biometry: biometry)
+
             Section("settings.group.about") {
                 LabeledContent("settings.about.appVersion", value: Self.appVersion)
                     .accessibilityElement(children: .combine)
@@ -60,9 +76,8 @@ struct SettingsView: View {
                 .accessibilityElement(children: .combine)
                 LabeledContent("settings.about.contact", value: contactEmail)
                     .accessibilityElement(children: .combine)
-                // "Face ID only" (`app-lock`, mm-t15.13) and "Diagnostics"
-                // (`local-delete-all`, mm-t41.13) join this group once each
-                // change lands.
+                // "Diagnostics" (`local-delete-all`, mm-t41.13) joins this
+                // group once that change lands.
             }
         }
         .navigationTitle("settings.title")
@@ -100,6 +115,7 @@ struct SettingsView: View {
             contentInfo = bundle
             contactEmail = bundle.string(id: "about.contact")?.text ?? ""
         }
+        biometry = BiometryDetector.current()
     }
 
     private func saveDayStartsAt() {

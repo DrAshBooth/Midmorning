@@ -2,13 +2,11 @@ import SwiftUI
 import AppLock
 
 /// The app-lock items the Privacy group of the settings screen shows
-/// (settings spec, "The Privacy group"; app-lock spec, "The app lock is on
-/// by default", "Lock after", "Face ID only or Touch ID only"). `settings`
-/// (1.3, mm-t13) is not merged in this worktree, so this view is a fixture
-/// built and tested on its own, standalone, over `AppLockController` — not
-/// embedded in a real settings screen (the change README, "Built over
-/// fixture facts"). mm-t13's own wiring bead embeds these three rows in the
-/// real Privacy group once it exists.
+/// (app-lock spec, "The app lock is on by default", "Lock after", "Face ID
+/// only or Touch ID only"). `SettingsView` embeds this over the app's one
+/// real `AppLockController`, shared through the environment from
+/// `AppLockRootView` (mm-t13.9), as its own section beside the Privacy
+/// group's "Privacy" link and "Delete everything".
 struct PrivacyAppLockControls: View {
     @ObservedObject var controller: AppLockController
     let biometry: Biometry
