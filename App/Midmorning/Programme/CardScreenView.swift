@@ -51,7 +51,7 @@ struct CardScreenView: View {
     }
 
     private func load() {
-        guard let bundle = try? BundleLoader.loadShipped(), let card = bundle.card(id: cardId) else { return }
+        guard let bundle = ShippedContent.bundle, let card = bundle.card(id: cardId) else { return }
         screen = Content.CardScreen(card: card)
         isDraft = bundle.isDraft
         try? store.recordCardSeen(cardId: cardId, contentVersion: bundle.contentVersion, language: bundle.language, seenAt: Date())

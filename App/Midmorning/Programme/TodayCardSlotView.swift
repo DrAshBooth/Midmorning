@@ -12,6 +12,19 @@ struct TodayCardSlotView: View {
     let card: PendingCard
     let onPrimary: () -> Void
     let onClose: () -> Void
+    /// The card's text, found once when the view is made, from the bundle
+    /// the app reads once per launch (`ShippedContent`), not on each render.
+    private let title: String
+    private let bodyLines: [String]
+
+    init(card: PendingCard, onPrimary: @escaping () -> Void, onClose: @escaping () -> Void) {
+        self.card = card
+        self.onPrimary = onPrimary
+        self.onClose = onClose
+        let text = Self.text(for: card, bundle: ShippedContent.bundle)
+        self.title = text.title
+        self.bodyLines = text.bodyLines
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -29,21 +42,21 @@ struct TodayCardSlotView: View {
         .listRowSeparator(.hidden)
     }
 
-    private var stage: Stage? { card.openingStage }
-
-    private var title: String {
+    /// The title and the body lines of `card`. The stage 1 card's title and
+    /// the plan card's text come from the content bundle ("todaycard.plan";
+    /// content spec, "Strings live in catalogues"). An opening card reads
+    /// the bundle's "opening.stage<n>" string when the bundle holds it.
+    private static func text(for card: PendingCard, bundle: ContentBundle?) -> (title: String, bodyLines: [String]) {
         switch card.kind {
-        case .opening: return stage?.title ?? ""
-        case .stage1: return (try? BundleLoader.loadShipped().card(id: card.id)?.title) ?? ""
-        case .plan: return ""
-        }
-    }
-
-    private var bodyLines: [String] {
-        switch card.kind {
-        case .opening: return [stage?.openingSentence ?? ""].compactMap { $0.isEmpty ? nil : $0 }
-        case .stage1: return []
-        case .plan: return ["Your plan isn't set yet. It takes about two minutes."]
+        case .opening:
+            let stage = card.openingStage
+            let sentence = stage.flatMap { bundle?.string(id: "opening.stage\($0.rawValue)")?.text } ?? stage?.openingSentence ?? ""
+            return (stage?.title ?? "", sentence.isEmpty ? [] : [sentence])
+        case .stage1:
+            return (bundle?.card(id: card.id)?.title ?? "", [])
+        case .plan:
+            let line = bundle?.string(id: "todaycard.plan")?.text ?? ""
+            return ("", line.isEmpty ? [] : [line])
         }
     }
 

@@ -73,7 +73,7 @@ struct StageScreenView: View {
             stage: stage, state: snapshot.state, constants: .default, settings: snapshot.settings,
             currentRecordDay: snapshot.currentRecordDay, calendar: snapshot.calendar
         )
-        let bundle = try? BundleLoader.loadShipped()
+        let bundle = ShippedContent.bundle
         cardTitles = (bundle?.activeCards(in: .stage(stage.rawValue)) ?? []).map { ($0.id, $0.title) }
     }
 }
