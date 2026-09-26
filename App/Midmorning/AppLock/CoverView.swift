@@ -3,7 +3,9 @@ import AppLock
 
 /// The screen the app-lock spec's "The cover" requirement defines: shown the
 /// moment the app is inactive or locked, over every other screen, Get
-/// support included, because the cover names nothing.
+/// support included, because the cover names nothing. `AppLockCoverWindow`
+/// shows it in a window of its own, above every sheet and full-screen
+/// cover of the app's own window (mm-t15.15).
 ///
 /// `AppLockController.state.coverMode` decides what shows:
 /// - `.none`: nothing; the real screen shows.
@@ -83,6 +85,15 @@ struct CoverView: View {
         }
         .task(id: showsUnlock) {
             focusedControl = showsUnlock ? .unlock : .deleteFromThisDevice
+        }
+        // The system authentication request makes the app inactive. When
+        // the app is active again and the cover is still up, the request
+        // closed without success: focus goes back to "Unlock". This also
+        // covers the request the app makes by itself at launch (mm-t15.17).
+        .onChange(of: controller.state.scenePhase) { _, phase in
+            if phase == .active {
+                focusedControl = showsUnlock ? .unlock : .deleteFromThisDevice
+            }
         }
         .confirmationDialog(
             "applock.deleteEverything.confirm.title",

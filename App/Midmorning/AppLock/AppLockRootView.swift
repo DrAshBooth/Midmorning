@@ -3,15 +3,6 @@ import UIKit
 import Record
 import AppLock
 
-/// The `LocalSetting` keys the app lock owns in `Local.store`
-/// (data-and-privacy spec, "Two store configurations in one directory").
-enum AppLockSettingsKeys {
-    static let enabled = "appLock.enabled"
-    static let faceOrTouchOnly = "appLock.faceOrTouchOnly"
-    static let lockAfterSeconds = "appLock.lockAfterSeconds"
-    static let enrolmentStateHash = "appLock.enrolmentStateHash"
-}
-
 /// The app's root: opens `RecordStore` lazily, only once protected data is
 /// available, and shows one of four phases (data-and-privacy spec, "Launch
 /// safety", "File protection": "Launch before the first unlock"; design.md,
@@ -22,9 +13,10 @@ struct AppLockRootView: View {
         case waitingForProtectedData
         case running(RecordStore, AppLockController)
         /// data-and-privacy spec, "Launch safety": the third consecutive
-        /// launch with an uncleared marker. Skips onboarding gating, the
-        /// app lock cover and the reminder scheduler; shows only Export and
-        /// Get support (`mm-t42.13`, proved end to end by `mm-t42.20`).
+        /// launch with an uncleared marker. Skips onboarding gating and the
+        /// reminder scheduler; shows only Export and Get support
+        /// (`mm-t42.13`, proved end to end by `mm-t42.20`), under the app
+        /// lock cover (`SafeModeRootView`, mm-t42.21).
         case safeMode(RecordStore)
         case deleted(DeletedScreen.Kind)
         case failedToOpen
@@ -47,7 +39,11 @@ struct AppLockRootView: View {
                     onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
                 )
             case .safeMode(let store):
-                SafeModeView(store: store)
+                SafeModeRootView(
+                    store: store,
+                    onEverythingDeleted: { phase = .deleted(.everything) },
+                    onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
+                )
             case .deleted(let kind):
                 DeletedScreen(kind: kind)
             case .failedToOpen:
@@ -119,18 +115,7 @@ struct AppLockRootView: View {
     }
 
     private static func makeController(store: RecordStore) -> AppLockController {
-        let enabledSetting = (try? store.localSettingValue(key: AppLockSettingsKeys.enabled)) ?? nil
-        // Requirement: "The app lock is on by default" — no saved row yet
-        // means the person has not turned it off, so it is on.
-        let appLockEnabled = enabledSetting.map { $0 == "true" } ?? true
-        let faceOrTouchOnly = ((try? store.localSettingValue(key: AppLockSettingsKeys.faceOrTouchOnly)) ?? nil) == "true"
-        let lockAfterSeconds = ((try? store.localSettingValue(key: AppLockSettingsKeys.lockAfterSeconds)) ?? nil)
-            .flatMap { TimeInterval($0) } ?? 0
-        return AppLockController(
-            state: .launch(appLockEnabled: appLockEnabled, faceOrTouchOnlyEnabled: faceOrTouchOnly, lockAfterSeconds: lockAfterSeconds),
-            authenticator: LAContextAuthenticator(),
-            deleteAllSeam: Self.makeSeam()
-        )
+        AppLockControllerFactory.make(store: store)
     }
 
     /// The Privacy group's "Delete everything" (`Record.DeleteAllSeam`) and
@@ -190,7 +175,10 @@ private struct OnboardingGatedRootView: View {
                 onDeleteFromThisDevice: onDeleteFromThisDevice
             )
         } else {
-            OnboardingRootView(store: store) { isOnboardingCompleted = true }
+            OnboardingRootView(store: store) {
+                AppLockControllerFactory.applyOnboardingChoice(to: controller, store: store)
+                isOnboardingCompleted = true
+            }
         }
     }
 }
@@ -218,28 +206,19 @@ private struct RunningRootView: View {
             // can never disagree about the lock state (mm-t13.9).
             .environmentObject(controller)
             .environmentObject(deletionNotifier)
-            .overlay {
-                CoverView(controller: controller, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
-            }
+            // The cover, in a window of its own over every sheet and
+            // full-screen cover (app-lock spec, "The cover"). It also shows
+            // the new-entry screen of a pending route ("A new entry before
+            // authentication"): the notification action "Add" posts
+            // `.reminderAddActionTapped`, which requests the route, and
+            // `AppLifecycleState.coverMode` reads `.none` while it waits.
+            .appLockCover(controller: controller, store: store, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
             .onAppear {
                 deletionNotifier.onEverythingDeleted = onEverythingDeleted
                 checkEnrolmentStateIfNeeded()
                 // design.md, "The scheduler is a pure function over a
                 // rolling horizon": recomputed on activation.
                 ReminderCoordinator.recomputeAndApply(store: store)
-            }
-            // A pending route always wins over the cover (app-lock spec, "A
-            // new entry before authentication"): the notification action
-            // "Add" posts `.reminderAddActionTapped`, which requests the
-            // route; `AppLifecycleState.coverMode` already reads `.none`
-            // while a route is pending, so the cover steps aside on its own.
-            .fullScreenCover(isPresented: Binding(
-                get: { controller.state.pendingRoute == .newEntry },
-                set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
-            )) {
-                NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
-                    controller.handle(.pendingRouteResolved)
-                }
             }
             // A tap on the weigh-in day reminder (reminders spec, "The
             // weigh-in day reminder"). No pending-route bypass: unlike
@@ -285,16 +264,8 @@ private struct RunningRootView: View {
 
     /// Requirement: "Face ID only or Touch ID only" — "compare the
     /// enrolment state with the kept hash before each system authentication
-    /// request." Only relevant while the setting is on and the app is
-    /// about to ask; the first run has no kept hash, so it only saves one.
+    /// request." `AppLockEnrolmentCheck` holds the check.
     private func checkEnrolmentStateIfNeeded() {
-        guard controller.state.faceOrTouchOnlyEnabled, controller.state.isLocked else { return }
-        guard let current = EnrolmentHash.current() else { return }
-        let kept = (try? store.localSettingValue(key: AppLockSettingsKeys.enrolmentStateHash)) ?? nil
-        if kept == nil {
-            try? store.setLocalSettingValue(current, key: AppLockSettingsKeys.enrolmentStateHash)
-            return
-        }
-        controller.noteEnrolmentState(current: current, kept: kept)
+        AppLockEnrolmentCheck.run(controller: controller, store: store)
     }
 }

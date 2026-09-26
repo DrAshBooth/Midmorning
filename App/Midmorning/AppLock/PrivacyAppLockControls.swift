@@ -42,8 +42,11 @@ struct PrivacyAppLockControls: View {
     }
 
     private var appLockRow: some View {
+        // Requirement "The app lock is on by default": "When the device has
+        // no passcode, the switch MUST be off and disabled." Each change
+        // below is kept in `Local.store` by the controller (mm-8jr).
         Toggle(isOn: Binding(
-            get: { controller.state.appLockEnabled },
+            get: { controller.state.appLockEnabled && strings.isLockEnabled },
             set: { newValue in
                 if newValue {
                     controller.turnOnAppLock()

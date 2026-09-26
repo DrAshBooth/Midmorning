@@ -89,7 +89,13 @@ public struct AppLifecycleState: Sendable, Equatable {
             guard appLockEnabled else { return .privacyOnly }
             return enrolmentChanged ? .lockedAfterEnrolmentChange : .locked
         }
-        if scenePhase != .active { return .privacyOnly }
+        if scenePhase != .active {
+            // Scenario "App switcher": with the app lock on, the snapshot
+            // shows "Midmorning", "Unlock" and "Delete everything", also
+            // inside the grace period. Scenario "App lock off": with the
+            // app lock off, it shows "Midmorning" only.
+            return appLockEnabled ? .locked : .privacyOnly
+        }
         return .none
     }
 }
