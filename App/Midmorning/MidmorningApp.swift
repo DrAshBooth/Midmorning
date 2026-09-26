@@ -3,6 +3,7 @@ import UIKit
 import MetricKit
 import UserNotifications
 import Record
+import Export
 
 @main
 struct MidmorningApp: App {
@@ -52,6 +53,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         MXMetricManager.shared.add(metricKitSubscriber)
         UNUserNotificationCenter.current().delegate = notificationActionHandling
         NotificationCategories.registerAll()
+        // export spec, "Share sheet only": a PDF that a process left in
+        // tmp/Export when it ended with the share sheet up goes now.
+        ExportTemporaryFiles.removeAll(temporaryDirectory: FileManager.default.temporaryDirectory)
         return true
     }
 

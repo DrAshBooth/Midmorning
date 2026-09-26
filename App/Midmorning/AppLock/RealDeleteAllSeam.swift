@@ -2,6 +2,7 @@ import Foundation
 import UserNotifications
 import Record
 import AppLock
+import Export
 
 /// The real conformer of `Record.DeleteAllSideEffects`:
 /// `UNUserNotificationCenter` and (once `2.5` links the WidgetKit extension)
@@ -34,28 +35,31 @@ struct SystemDeleteAllSideEffects: DeleteAllSideEffects {
 /// actor-isolation rule), so this type stays nonisolated and safe to call
 /// from either call site's own actor.
 final class RealDeleteAllSeam: DeleteAllSeam, DeleteAllPerforming, @unchecked Sendable {
-    private let deletion: LocalDeletion
+    /// Finds the paths when the deletion runs, not when the seam is made,
+    /// and throws when it cannot find them: the deletion never runs
+    /// against a wrong directory.
+    private let makeDeletion: @Sendable () throws -> LocalDeletion
     private let sideEffects: DeleteAllSideEffects
 
-    init(deletion: LocalDeletion, sideEffects: DeleteAllSideEffects = SystemDeleteAllSideEffects()) {
-        self.deletion = deletion
+    init(makeDeletion: @escaping @Sendable () throws -> LocalDeletion, sideEffects: DeleteAllSideEffects = SystemDeleteAllSideEffects()) {
+        self.makeDeletion = makeDeletion
         self.sideEffects = sideEffects
     }
 
     // MARK: Record.DeleteAllSeam — the Privacy group's "Delete everything"
 
     func deleteEverything() throws {
-        try deletion.perform(sideEffects: sideEffects)
+        try makeDeletion().perform(sideEffects: sideEffects)
     }
 
     // MARK: AppLock.DeleteAllPerforming — the cover
 
-    func deleteEverything() async {
-        try? deletion.perform(sideEffects: sideEffects)
+    func deleteEverything() async throws {
+        try makeDeletion().perform(sideEffects: sideEffects)
     }
 
-    func deleteFromThisDevice() async {
-        try? deletion.perform(sideEffects: sideEffects)
+    func deleteFromThisDevice() async throws {
+        try makeDeletion().perform(sideEffects: sideEffects)
     }
 }
 
@@ -68,11 +72,14 @@ extension RealDeleteAllSeam {
     /// same paths with no state threaded between them; `LocalDeletion`
     /// holds no mutable state, so two independent instances are safe.
     static func usingAppFileLocations() -> RealDeleteAllSeam {
-        let applicationSupportDirectory = (try? StoreLocation.applicationSupportDirectory()) ?? FileManager.default.temporaryDirectory
-        return RealDeleteAllSeam(deletion: LocalDeletion(
-            directory: StoreLayout.storeDirectory(applicationSupportDirectory: applicationSupportDirectory),
-            appGroupDirectory: StoreLocation.appGroupDirectory(),
-            launchMarkerURL: StoreLayout.launchMarkerURL(applicationSupportDirectory: applicationSupportDirectory)
-        ))
+        RealDeleteAllSeam(makeDeletion: {
+            let applicationSupportDirectory = try StoreLocation.applicationSupportDirectory()
+            return LocalDeletion(
+                directory: StoreLayout.storeDirectory(applicationSupportDirectory: applicationSupportDirectory),
+                appGroupDirectory: StoreLocation.appGroupDirectory(),
+                launchMarkerURL: StoreLayout.launchMarkerURL(applicationSupportDirectory: applicationSupportDirectory),
+                exportDirectory: ExportTemporaryFiles.directory(inTemporaryDirectory: FileManager.default.temporaryDirectory)
+            )
+        })
     }
 }

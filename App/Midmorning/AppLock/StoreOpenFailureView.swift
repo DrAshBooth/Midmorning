@@ -45,8 +45,9 @@ struct StoreOpenFailureView: View {
             titleVisibility: .visible
         ) {
             Button("settings.privacy.deleteEverything", role: .destructive) {
-                try? seam.deleteEverything()
-                onDeleted()
+                // The deleted screen only after a deletion that succeeded;
+                // on failure this page stays.
+                if (try? seam.deleteEverything()) != nil { onDeleted() }
             }
             Button("entry.cancel", role: .cancel) {}
         } message: {

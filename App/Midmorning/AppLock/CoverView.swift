@@ -91,8 +91,9 @@ struct CoverView: View {
         ) {
             Button("applock.cover.deleteEverything", role: .destructive) {
                 Task {
-                    await controller.confirmDeleteEverything()
-                    onEverythingDeleted()
+                    // The deleted screen only after a deletion that
+                    // succeeded; on failure the cover stays.
+                    if await controller.confirmDeleteEverything() { onEverythingDeleted() }
                 }
             }
             Button("applock.cancel", role: .cancel) {}
@@ -106,8 +107,7 @@ struct CoverView: View {
         ) {
             Button("applock.cover.deleteFromThisDevice", role: .destructive) {
                 Task {
-                    await controller.confirmDeleteFromThisDevice()
-                    onDeleteFromThisDevice()
+                    if await controller.confirmDeleteFromThisDevice() { onDeleteFromThisDevice() }
                 }
             }
             Button("applock.cancel", role: .cancel) {}
