@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Record
 import Content
 import AppLock
@@ -11,13 +12,22 @@ import AppLock
 /// and the shared accent colour asset.
 struct SettingsView: View {
     let store: RecordStore
-    var deleteAllSeam: DeleteAllSeam = StubDeleteAllSeam()
+    /// data-and-privacy spec, "Delete-all". Defaults to the real seam built
+    /// from the app's own file locations (`RealDeleteAllSeam
+    /// .usingAppFileLocations()`), the same paths `AppLockRootView`'s
+    /// controller uses for the cover's two controls.
+    var deleteAllSeam: DeleteAllSeam = RealDeleteAllSeam.usingAppFileLocations()
 
     // The app's one real `AppLockController` (built once in
     // `AppLockRootView`, above Today), shared through the environment so the
     // Privacy section's rows and the cover agree on the lock state
     // (mm-t13.9).
     @EnvironmentObject private var appLockController: AppLockController
+    /// Tells `AppLockRootView` this screen's own "Delete everything" tap
+    /// finished, so the app can show the deleted screen the same way the
+    /// cover's own "Delete everything" does (data-and-privacy spec,
+    /// "Delete-all").
+    @EnvironmentObject private var deletionNotifier: DeletionNotifier
 
     @State private var dayStartsAt = ClockTime.date(hour: RecordDay.startHour, minute: 0)
     @State private var gapBandsOn = true
@@ -26,6 +36,10 @@ struct SettingsView: View {
     @State private var contentInfo: ContentBundle?
     @State private var contactEmail = ""
     @State private var biometry: Biometry = .none
+    @State private var diagnosticsCounts = DiagnosticsCounts(
+        launchFailures: 0, lastSuccessfulSyncDay: DiagnosticsCounts.noSyncYet, schemaVersion: "", contentVersion: 0,
+        pendingReminders: 0, queueLength: 0, lastReconcileOutcome: .init(winners: 0, losers: 0), crashCount: 0
+    )
 
     var body: some View {
         Form {
@@ -47,6 +61,19 @@ struct SettingsView: View {
             Section("settings.group.privacy") {
                 NavigationLink("settings.privacy.link") {
                     PrivacyNoticeView(contactEmail: contactEmail)
+                }
+                // data-and-privacy spec, "The app holds no analytics of its
+                // own": "Share App Analytics with Apple" opens the app's own
+                // page in the iOS Settings app — the one public API Apple
+                // gives for this (`UIApplication.openSettingsURLString`).
+                // Apple has no supported deep link straight to Privacy &
+                // Security, Analytics & Improvements; a decision for Ash
+                // (see mm-t41.4's own comment) covers the gap between this
+                // and the requirement's literal wording.
+                Button("settings.privacy.shareAppAnalytics") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
                 }
                 Button("settings.privacy.deleteEverything", role: .destructive) {
                     isShowingDeleteConfirmation = true
@@ -76,8 +103,9 @@ struct SettingsView: View {
                 .accessibilityElement(children: .combine)
                 LabeledContent("settings.about.contact", value: contactEmail)
                     .accessibilityElement(children: .combine)
-                // "Diagnostics" (`local-delete-all`, mm-t41.13) joins this
-                // group once that change lands.
+                NavigationLink("settings.about.diagnostics") {
+                    DiagnosticsView(counts: diagnosticsCounts)
+                }
             }
         }
         .navigationTitle("settings.title")
@@ -88,16 +116,18 @@ struct SettingsView: View {
             }
         }
         .confirmationDialog(
-            "settings.privacy.deleteEverything",
+            "applock.deleteEverything.confirm.title",
             isPresented: $isShowingDeleteConfirmation,
             titleVisibility: .visible
         ) {
             Button("settings.privacy.deleteEverything", role: .destructive) {
-                try? deleteAllSeam.deleteEverything()
+                if (try? deleteAllSeam.deleteEverything()) != nil {
+                    deletionNotifier.onEverythingDeleted()
+                }
             }
             Button("entry.cancel", role: .cancel) {}
         } message: {
-            Text("settings.privacy.deleteEverything.message")
+            Text("applock.deleteEverything.confirm.message")
         }
         .sheet(isPresented: $isShowingSupportSheet) {
             GetSupportPlaceholderSheet()
@@ -116,6 +146,9 @@ struct SettingsView: View {
             contactEmail = bundle.string(id: "about.contact")?.text ?? ""
         }
         biometry = BiometryDetector.current()
+        if let counts = try? store.diagnosticsCounts(contentVersion: contentInfo?.contentVersion ?? 0) {
+            diagnosticsCounts = counts
+        }
     }
 
     private func saveDayStartsAt() {
