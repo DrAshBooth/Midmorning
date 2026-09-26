@@ -25,10 +25,27 @@ final class EarlierDaysTests: XCTestCase {
         XCTAssertEqual(rows.map(\.what), ["Cereal"])
     }
 
-    /// Scenario: The list shows dates only.
-    func testTheListShowsDatesOnly() {
-        let list = EarlierDays.list(dateKeysWithContent: ["2026-09-21", "2026-09-22"], previousRecordDayKey: "2026-09-23")
-        XCTAssertEqual(list, ["2026-09-22", "2026-09-21"], "most recent first")
+    /// Scenario: The list shows dates only. Monday 21 September has
+    /// entries and Tuesday 22 September has none: the list still shows
+    /// both, most recent first (mm-t12b.15).
+    func testTheListShowsDatesOnly() throws {
+        let store = try makeStore()
+        for minute in 0..<15 {
+            try store.add(time: london(9, minute, day: 21), what: "Entry \(minute)", feltLikeABinge: false, createdAt: london(9, minute, day: 21), utcOffsetSeconds: 3600)
+        }
+        let content = try store.dateKeysWithContent(before: "2026-09-23")
+        XCTAssertEqual(content, ["2026-09-21"], "Tuesday 22 September has no content")
+        let list = EarlierDays.list(dateKeysWithContent: content, previousRecordDayKey: "2026-09-23")
+        XCTAssertEqual(list, ["2026-09-22", "2026-09-21"], "most recent first, with the empty day too")
+    }
+
+    /// The list starts at the earliest day with content, ends at the day
+    /// before the previous record day, and steps across a month end.
+    func testTheListRunsFromTheEarliestContentDayAcrossAMonthEnd() {
+        let list = EarlierDays.list(dateKeysWithContent: ["2026-08-30", "2026-09-03"], previousRecordDayKey: "2026-09-02")
+        XCTAssertEqual(list, ["2026-09-01", "2026-08-31", "2026-08-30"])
+        XCTAssertEqual(EarlierDays.list(dateKeysWithContent: ["2026-09-02"], previousRecordDayKey: "2026-09-02"), [])
+        XCTAssertEqual(EarlierDays.list(dateKeysWithContent: [], previousRecordDayKey: "2026-09-02"), [])
     }
 
     /// Scenario: Move between days, and Scenario: Return to Today. The

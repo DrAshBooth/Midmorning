@@ -8,8 +8,9 @@ enum EarlierDaysRoute: Hashable {
     case list
 }
 
-/// "Earlier days": the list of record days before the previous record day
-/// that have an entry or a state, most recent first (record spec, "Earlier
+/// "Earlier days": the list of record days from the earliest day with an
+/// entry or a state to the day before the previous record day, most recent
+/// first, with a row for a day that has neither (record spec, "Earlier
 /// record days").
 struct EarlierDaysListView: View {
     let store: RecordStore
