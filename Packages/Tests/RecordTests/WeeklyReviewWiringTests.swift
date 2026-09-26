@@ -148,7 +148,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
             let dueDayKey = dayKey(2026, 9, 21 + index * 7)
             try store.upsertReview(kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: at(2026, 9, 21 + index * 7), answersJSON: payload.encoded(), selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 9, 21 + index * 7))
         }
-        let winners = try store.reviewRowWinners(kind: .weeklyReview).sorted { $0.dueDateKey < $1.dueDateKey }
+        let winners = try store.reviewRowWinners(kind: .weeklyReview, now: at(2026, 10, 12, 9), calendar: utc).sorted { $0.dueDateKey < $1.dueDateKey }
         let starredCounts = winners.compactMap { ReviewAnswersPayload.decode($0.answersJSON).frozenCounts?.starred }
         XCTAssertEqual(starredCounts, counts)
         XCTAssertTrue(DeteriorationRule.fires(lastFrozenStarredCounts: starredCounts))

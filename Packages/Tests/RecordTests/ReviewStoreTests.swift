@@ -25,6 +25,11 @@ final class ReviewStoreTests: XCTestCase {
         utc.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 
+    /// A read moment later than every fixture date here, so no fixture row
+    /// is future-dated when a test reads it (data-and-privacy spec, "The
+    /// Reconciler never deletes a row").
+    private var readMoment: Date { at(2027, 1, 1) }
+
     // MARK: mm-t32.3, "No network"
 
     /// Scenario: No network. `RecordStore` calls no network API anywhere in
@@ -35,9 +40,9 @@ final class ReviewStoreTests: XCTestCase {
         var payload = ReviewAnswersPayload()
         payload.reflectionAnswers = ["Evenings were hard", "", ""]
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: nil, answersJSON: payload.encoded(), selfHarmAnswered: true, pinnedNote: "", changedAt: at(2026, 10, 5, 18))
-        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-05")
+        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-05", now: readMoment, calendar: utc)
         XCTAssertNil(row, "an unfrozen row is not yet a reconciler winner")
-        let raw = try store.reviewRowWinners(kind: .weeklyReview)
+        let raw = try store.reviewRowWinners(kind: .weeklyReview, now: readMoment, calendar: utc)
         XCTAssertTrue(raw.isEmpty, "still unfrozen; freezing is a separate step")
     }
 
@@ -48,7 +53,7 @@ final class ReviewStoreTests: XCTestCase {
         let store = try makeStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-09-08", frozenAt: at(2026, 9, 8), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 9, 8))
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-27", frozenAt: at(2026, 10, 27), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 27))
-        let winners = try store.reviewRowWinners(kind: .weeklyReview)
+        let winners = try store.reviewRowWinners(kind: .weeklyReview, now: readMoment, calendar: utc)
         XCTAssertEqual(Set(winners.map(\.dueDateKey)), ["2026-09-08", "2026-10-27"], "the second run's reviews use their own due-day keys; the Reviews list can show both")
     }
 
@@ -81,7 +86,7 @@ final class ReviewStoreTests: XCTestCase {
         XCTAssertFalse(ready)
         // The app only calls `upsertReview(frozenAt:)` once `readyToFreeze`
         // says yes; with it false, the store holds nothing for this key.
-        XCTAssertNil(try store.review(kind: .weeklyReview, dueDateKey: dueDayKey))
+        XCTAssertNil(try store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: readMoment, calendar: utc))
     }
 
     /// An edit after freeze writes into the same row (mm-t32.4, "Edit before
@@ -93,7 +98,7 @@ final class ReviewStoreTests: XCTestCase {
         var payload = ReviewAnswersPayload(finished: true)
         payload.reflectionAnswers = ["Ok week", "", ""]
         _ = try store.upsertReview(kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: frozen.frozenAt, answersJSON: payload.encoded(), selfHarmAnswered: true, pinnedNote: "", changedAt: at(2026, 10, 7, 9))
-        let winner = try store.review(kind: .weeklyReview, dueDateKey: dueDayKey)
+        let winner = try store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: readMoment, calendar: utc)
         XCTAssertEqual(winner?.frozenAt, frozen.frozenAt, "the edit carries the same freeze moment forward")
         XCTAssertTrue(ReviewAnswersPayload.decode(winner!.answersJSON).finished, "the reconciler reads the edit's content as this frozen review's latest")
     }
@@ -104,7 +109,7 @@ final class ReviewStoreTests: XCTestCase {
     func testDoneWithoutAnAnswer() throws {
         let store = try makeStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-19", frozenAt: at(2026, 10, 19, 4), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 19, 9))
-        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19")
+        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19", now: readMoment, calendar: utc)
         XCTAssertEqual(row?.selfHarmAnswered, false)
     }
 
@@ -113,7 +118,7 @@ final class ReviewStoreTests: XCTestCase {
     func testTheStoreAfterAReviewKeepsNoAnswer() throws {
         let store = try makeStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-19", frozenAt: at(2026, 10, 19, 4), answersJSON: "{}", selfHarmAnswered: true, pinnedNote: "", changedAt: at(2026, 10, 19, 9))
-        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19")
+        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19", now: readMoment, calendar: utc)
         XCTAssertEqual(row?.selfHarmAnswered, true)
         XCTAssertFalse(row!.answersJSON.lowercased().contains("yes"), "the answer itself never enters the row")
     }
@@ -125,7 +130,7 @@ final class ReviewStoreTests: XCTestCase {
         let store = try makeStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: at(2026, 10, 5, 4), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 5, 9))
         // Week 4's review is a different row; it starts unanswered.
-        let nextWeek = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-12")
+        let nextWeek = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-12", now: readMoment, calendar: utc)
         XCTAssertNil(nextWeek)
     }
 
@@ -133,7 +138,7 @@ final class ReviewStoreTests: XCTestCase {
 
     /// The latest finished review's `pinnedNote` is "Today's" pinned note.
     private func currentPinnedNote(_ store: RecordStore) throws -> String? {
-        let winners = try store.reviewRowWinners(kind: .weeklyReview)
+        let winners = try store.reviewRowWinners(kind: .weeklyReview, now: readMoment, calendar: utc)
         let finished = winners.filter { ReviewAnswersPayload.decode($0.answersJSON).finished }
         guard let latest = finished.max(by: { $0.dueDateKey < $1.dueDateKey }) else { return nil }
         return latest.pinnedNote.isEmpty ? nil : latest.pinnedNote
@@ -184,7 +189,7 @@ final class ReviewStoreTests: XCTestCase {
         var payload = ReviewAnswersPayload()
         payload.frozenCounts = counts
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-19", frozenAt: at(2026, 10, 19, 4), answersJSON: payload.encoded(), selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 19, 4))
-        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19")
+        let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19", now: readMoment, calendar: utc)
         XCTAssertEqual(ReviewAnswersPayload.decode(row!.answersJSON).frozenCounts?.starred, 6)
     }
 

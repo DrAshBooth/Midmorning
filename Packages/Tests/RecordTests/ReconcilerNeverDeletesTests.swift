@@ -7,14 +7,57 @@ final class ReconcilerNeverDeletesTests: XCTestCase {
     /// Scenario: Future-dated review. The device clock moves back a day; a
     /// review row dated tomorrow is ignored today, kept, and read tomorrow.
     func testFutureDatedReviewIsIgnoredTodayKeptAndReadTomorrow() {
-        let today = date(2026, 10, 6)
-        let tomorrow = date(2026, 10, 7)
-        let review = Review(kind: "weeklyReview", dueDateKey: "2026-10-07", frozenAt: tomorrow, changedAt: tomorrow)
-        XCTAssertTrue(ReviewReconciler.winners(in: [review]).isEmpty == false, "the row stays in the store")
-        // The engine's own read of it as "future" is a `now`-gated concern;
-        // the Reconciler itself never deletes it regardless of `now`.
-        XCTAssertEqual(review.frozenAt, tomorrow, "the row is unchanged; nothing removed it")
-        _ = today
+        let frozenTomorrow = date(2026, 10, 7, hour: 9)
+        let review = Review(kind: "weeklyReview", dueDateKey: "2026-10-07", frozenAt: frozenTomorrow, changedAt: frozenTomorrow)
+        let rows = [review]
+
+        let today = ReviewReconciler.winners(in: rows, now: date(2026, 10, 6, hour: 9), currentDayKey: "2026-10-06")
+        XCTAssertTrue(today.isEmpty, "the app ignores the row today")
+        XCTAssertEqual(rows.count, 1, "the read removes no row")
+        XCTAssertEqual(review.frozenAt, frozenTomorrow, "the row is unchanged")
+
+        let tomorrow = ReviewReconciler.winners(in: rows, now: date(2026, 10, 7, hour: 10), currentDayKey: "2026-10-07")
+        XCTAssertEqual(tomorrow["weeklyReview|2026-10-07"]?.id, review.id, "the app reads the row tomorrow")
+    }
+
+    /// A row due today but frozen later today (by a device with a clock
+    /// ahead) is future-dated until the freeze moment passes; a check-in
+    /// follows the same rule.
+    func testAFreezeMomentLaterThanTheClockIsIgnoredUntilItPasses() {
+        let frozenAt = date(2026, 10, 6, hour: 18)
+        let checkIn = Review(kind: "checkIn", dueDateKey: "2026-10-06", frozenAt: frozenAt, changedAt: frozenAt)
+        XCTAssertTrue(ReviewReconciler.winners(in: [checkIn], now: date(2026, 10, 6, hour: 12), currentDayKey: "2026-10-06").isEmpty)
+        XCTAssertNotNil(ReviewReconciler.winners(in: [checkIn], now: date(2026, 10, 6, hour: 19), currentDayKey: "2026-10-06")["checkIn|2026-10-06"])
+    }
+
+    /// Scenario: Future-dated review, through the real store read that the
+    /// Reviews list, the pinned note and the freeze step call.
+    @MainActor
+    func testFutureDatedReviewThroughTheStoreIsIgnoredTodayKeptAndReadTomorrow() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try RecordStore(directory: directory)
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = .gmt
+        let frozenTomorrow = date(2026, 10, 7, hour: 9)
+        try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-07", frozenAt: frozenTomorrow, answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "Eat lunch at work", changedAt: frozenTomorrow)
+
+        let today = date(2026, 10, 6, hour: 9)
+        XCTAssertNil(try store.review(kind: .weeklyReview, dueDateKey: "2026-10-07", now: today, calendar: utc), "ignored today")
+        XCTAssertTrue(try store.reviewRowWinners(kind: .weeklyReview, now: today, calendar: utc).isEmpty, "not in the Reviews list or the pinned note today")
+
+        let tomorrow = date(2026, 10, 7, hour: 10)
+        XCTAssertEqual(try store.review(kind: .weeklyReview, dueDateKey: "2026-10-07", now: tomorrow, calendar: utc)?.pinnedNote, "Eat lunch at work", "kept, and read tomorrow")
+        XCTAssertEqual(try store.reviewRowWinners(kind: .weeklyReview, now: tomorrow, calendar: utc).map(\.dueDateKey), ["2026-10-07"])
+    }
+
+    /// A stage opening dated tomorrow is ignored today, kept, and read
+    /// tomorrow, by the same rule.
+    func testFutureDatedStageOpeningIsIgnoredTodayAndReadTomorrow() {
+        let row = Answer(kind: StageOpenedReconciler.kind, cardId: "2", value: "", changedAt: date(2026, 10, 7, hour: 4))
+        XCTAssertNil(StageOpenedReconciler.winner(stage: 2, in: [row], now: date(2026, 10, 6, hour: 9)))
+        XCTAssertEqual(StageOpenedReconciler.winner(stage: 2, in: [row], now: date(2026, 10, 7, hour: 9))?.id, row.id)
     }
 
     /// Scenario: Restart keeps the stage 5 row.
