@@ -45,17 +45,26 @@ public struct UrgeOutcomeFact: Sendable, Equatable {
     }
 }
 
-/// A `StageOpened` row as the engine reads it: a stage and the moment the
-/// store keeps for it. The caller passes every row the Reconciler returns,
-/// including one the engine will go on to ignore (programme spec, "A pure
-/// stage engine with stored openings as input").
+/// A `StageOpened` row as the engine reads it: a stage, the moment the
+/// store keeps for it and the record-day key the app wrote with it. The
+/// caller passes every row the Reconciler returns, including one the engine
+/// will go on to ignore (programme spec, "A pure stage engine with stored
+/// openings as input").
+///
+/// `dayKey` is the record day on which the stage opened, written when the
+/// stage opens (r14-03, mm-t21.37). The engine reads it as the stage's day,
+/// so a later change of "Day starts at" does not move that day. A row from
+/// before r14-03 has no key (`nil`); the engine then finds the record day
+/// from the moment with the day start in force.
 public struct StageOpenedRecord: Sendable, Equatable {
     public var stage: Int
     public var moment: Date
+    public var dayKey: String?
 
-    public init(stage: Int, moment: Date) {
+    public init(stage: Int, moment: Date, dayKey: String? = nil) {
         self.stage = stage
         self.moment = moment
+        self.dayKey = dayKey
     }
 }
 

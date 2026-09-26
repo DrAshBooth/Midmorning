@@ -187,8 +187,8 @@ final class NonEntryEditInPlaceTests: XCTestCase {
     /// stage-opened rows").
     func testStageOpeningsStayTheirOwnRows() throws {
         let store = try makeTemporaryStore()
-        try store.recordStageOpened(2, at: moment(1))
-        try store.recordStageOpened(2, at: moment(2))
+        try store.recordStageOpened(2, at: moment(1), dayKey: "2026-10-05")
+        try store.recordStageOpened(2, at: moment(2), dayKey: "2026-10-05")
         XCTAssertEqual(try store.stageOpenedRows().count, 2)
     }
 

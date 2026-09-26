@@ -53,8 +53,7 @@ struct ExportScreenView: View {
                 Button(ExportContent.makePDFLabel.string, action: makePDF)
                     .disabled(!isLoaded)
                 if let errorMessage {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
+                    ValidationMessageText(errorMessage)
                         .accessibilityAddTraits(.updatesFrequently)
                 }
             }
@@ -124,7 +123,9 @@ struct ExportScreenView: View {
             // export spec, "Offline and out of logs": the error carries no
             // entry field and no weight value; `ExportComposer.Failure` and
             // every file-system error here name no record content.
-            errorMessage = ExportContent.buildErrorMessage.string
+            let message = ExportContent.buildErrorMessage.string
+            errorMessage = message
+            ValidationAnnouncement.post(message)
         }
     }
 

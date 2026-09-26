@@ -48,13 +48,14 @@ final class ReviewSaveStoreTests: XCTestCase {
     /// `WeeklyReviewModel.save`.
     private func save(
         _ mode: ReviewSave.Mode, _ store: RecordStore, week: Int, startDay: String? = nil,
-        reflection: [String] = ["", "", ""], oneThing: String = "", selfHarmStepOneAnswered: Bool, at moment: Date
+        reflection: [String] = ["", "", ""], oneThing: String = "", weekOne: [String]? = nil,
+        selfHarmStepOneAnswered: Bool, at moment: Date
     ) throws {
         let key = dueDayKey(week, startDay: startDay)
         let existing = try store.review(kind: .weeklyReview, dueDateKey: key, now: readNow)
         let result = ReviewSave.values(
             existing: existing.map(values), mode: mode, week: week, runStartDay: startDay ?? self.startDay,
-            reflectionAnswers: reflection, oneThingToChange: oneThing, weekOneAnswers: nil,
+            reflectionAnswers: reflection, oneThingToChange: oneThing, weekOneAnswers: weekOne,
             selfHarmStepOneAnswered: selfHarmStepOneAnswered
         )
         try store.upsertReview(kind: .weeklyReview, dueDateKey: key, frozenAt: existing?.frozenAt, answersJSON: result.answersJSON, selfHarmAnswered: result.selfHarmAnswered, pinnedNote: result.pinnedNote, changedAt: moment)
@@ -90,6 +91,41 @@ final class ReviewSaveStoreTests: XCTestCase {
         let marked = ReviewSave.deteriorationPageShown(existing: values(current))
         try store.upsertReview(kind: .weeklyReview, dueDateKey: dueDayKey(week), frozenAt: current.frozenAt, answersJSON: marked.answersJSON, selfHarmAnswered: marked.selfHarmAnswered, pinnedNote: marked.pinnedNote, changedAt: moment)
         return true
+    }
+
+    // MARK: mm-t32.25, r13-17: answers so far in week 1
+
+    /// "I'm getting worse" in the review of week 1, before "Done": the store
+    /// keeps the week-1 answers and the reflection answers, the review
+    /// stays unfinished, and a reopen reads the same answers
+    /// (`ReviewScreenView.load`).
+    func testGettingWorseInWeek1KeepsTheWeek1Answers() throws {
+        let store = try makeTemporaryStore()
+        try freeze(store, week: 1, at: at(2026, 10, 5, 4))
+        try save(
+            .answersSoFar, store, week: 1, reflection: ["", "Evenings were hard", ""],
+            weekOne: ["Eat breakfast", "Evenings", ""], selfHarmStepOneAnswered: false, at: at(2026, 10, 5, 20)
+        )
+
+        let row = try XCTUnwrap(try store.review(kind: .weeklyReview, dueDateKey: dueDayKey(1), now: readNow))
+        let payload = ReviewAnswersPayload.decode(row.answersJSON)
+        XCTAssertEqual(payload.weekOneAnswers, ["Eat breakfast", "Evenings", ""], "nothing typed at a hard moment is lost")
+        XCTAssertEqual(payload.reflectionAnswers, ["", "Evenings were hard", ""])
+        XCTAssertFalse(try isFinished(store, week: 1), "only Done finishes the review")
+        XCTAssertNil(try pinnedNote(store))
+    }
+
+    /// The self-harm route ("Yes" then "Yes") in the review of week 1 saves
+    /// the week-1 answers the same way.
+    func testTheSelfHarmRouteInWeek1KeepsTheWeek1Answers() throws {
+        let store = try makeTemporaryStore()
+        try freeze(store, week: 1, at: at(2026, 10, 5, 4))
+        try save(.answersSoFar, store, week: 1, weekOne: ["", "Weekends", "Late evening"], selfHarmStepOneAnswered: true, at: at(2026, 10, 5, 20))
+
+        let row = try XCTUnwrap(try store.review(kind: .weeklyReview, dueDateKey: dueDayKey(1), now: readNow))
+        XCTAssertEqual(ReviewAnswersPayload.decode(row.answersJSON).weekOneAnswers, ["", "Weekends", "Late evening"])
+        XCTAssertTrue(row.selfHarmAnswered)
+        XCTAssertFalse(try isFinished(store, week: 1))
     }
 
     // MARK: mm-t32.19

@@ -32,13 +32,17 @@ public enum ReviewSave {
         /// the app saves the answers so far. The review stays as finished
         /// or unfinished as it was, and the pinned note stays until the
         /// person taps "Done" ("The pinned note MUST stay until the person
-        /// taps 'Done' on the next review.").
+        /// taps 'Done' on the next review."). This save runs in every week,
+        /// week 1 included: in week 1 it also keeps the week-1 answers, so
+        /// nothing typed at a hard moment is lost (r13-17, mm-t32.25).
         case answersSoFar
     }
 
     /// The row after a save. `existing` is the row the store holds for the
-    /// review's key, or `nil`. `selfHarmStepOneAnswered` is `true` when the
-    /// person answered step 1 on this visit. A row that already holds
+    /// review's key, or `nil`. `weekOneAnswers` are the week-1 answers the
+    /// screen shows; the row keeps them only for week 1, with either mode.
+    /// `selfHarmStepOneAnswered` is `true` when the person answered step 1
+    /// on this visit. A row that already holds
     /// `selfHarmAnswered: true` keeps it ("When step 1 has an answer, the
     /// store MUST keep `selfHarmAnswered: true` for the review.").
     public static func values(

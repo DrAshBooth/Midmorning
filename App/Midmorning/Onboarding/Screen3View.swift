@@ -54,7 +54,7 @@ struct Screen3View: View {
                     .pickerStyle(.inline)
                     Text(Screen3Content.weighInExplanation.string).font(.footnote).foregroundStyle(.secondary)
                     if weighInDayInvalid {
-                        Text(Screen3Content.unansweredMessage.string).foregroundStyle(.red)
+                        ValidationMessageText(Screen3Content.unansweredMessage.string)
                     }
                 }
                 .accessibilityFocused($weighInDayFocused)
@@ -118,6 +118,7 @@ struct Screen3View: View {
         guard answers.weighInWeekday != nil || answers.wontBeWeighing else {
             weighInDayInvalid = true
             weighInDayFocused = true
+            ValidationAnnouncement.post(Screen3Content.unansweredMessage.string)
             return
         }
         weighInDayInvalid = false

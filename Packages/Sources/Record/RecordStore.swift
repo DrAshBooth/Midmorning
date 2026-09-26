@@ -1220,10 +1220,20 @@ public final class RecordStore {
 
     /// One `StageOpened` row as the store keeps it: an `Answer` row of kind
     /// "stageOpened", keyed by the stage number in `cardId` (data-and-privacy
-    /// spec, "Model names, singletons and the account binding").
+    /// spec, "Model names, singletons and the account binding"). `dayKey` is
+    /// the record-day key in the row's `dateKey`: the record day on which
+    /// the stage opened (r14-03, mm-t21.37). A row from before r14-03 has an
+    /// empty `dateKey`, and `dayKey` is then `nil`.
     public struct StageOpenedRow: Sendable, Equatable {
         public let stage: Int
         public let moment: Date
+        public let dayKey: String?
+
+        public init(stage: Int, moment: Date, dayKey: String? = nil) {
+            self.stage = stage
+            self.moment = moment
+            self.dayKey = dayKey
+        }
     }
 
     /// Every `StageOpened` row the store holds, for every stage, unfiltered.
@@ -1234,17 +1244,18 @@ public final class RecordStore {
         var descriptor = FetchDescriptor<Answer>(predicate: #Predicate { $0.kind == "stageOpened" })
         descriptor.includePendingChanges = false
         return try context.fetch(descriptor).compactMap { row in
-            Int(row.cardId).map { StageOpenedRow(stage: $0, moment: row.changedAt) }
+            Int(row.cardId).map { StageOpenedRow(stage: $0, moment: row.changedAt, dayKey: row.dateKey.isEmpty ? nil : row.dateKey) }
         }
     }
 
-    /// Writes a new `StageOpened` row for `stage` at `moment` (programme
-    /// spec: "When the engine computes an opening the store lacks, the app
-    /// MUST write that moment to the store."). Never overwrites or deletes
-    /// an existing row — a stage can end up with more than one, and the
-    /// engine reads the earliest.
-    public func recordStageOpened(_ stage: Int, at moment: Date) throws {
-        context.insert(Answer(kind: StageOpenedReconciler.kind, cardId: String(stage), value: "", changedAt: moment))
+    /// Writes a new `StageOpened` row for `stage` at `moment`, with the
+    /// record-day key `dayKey` of the day on which the stage opened in the
+    /// row's `dateKey` (programme spec: "When the engine computes an opening
+    /// the store lacks, the app MUST write that moment to the store."; r14-03,
+    /// mm-t21.37). Never overwrites or deletes an existing row — a stage can
+    /// end up with more than one, and the engine reads the earliest.
+    public func recordStageOpened(_ stage: Int, at moment: Date, dayKey: String) throws {
+        context.insert(Answer(kind: StageOpenedReconciler.kind, dateKey: dayKey, cardId: String(stage), value: "", changedAt: moment))
         try persist()
     }
 

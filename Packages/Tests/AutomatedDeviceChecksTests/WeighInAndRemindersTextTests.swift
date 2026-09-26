@@ -25,12 +25,12 @@ final class WeighInAndRemindersTextTests: XCTestCase {
         let screen = try ScreenText.source("WeighIn/WeighInScreenView.swift")
         let refusal = try XCTUnwrap(ScreenText.range(of: """
             case .partOutOfRange:
-                belowRangeMessage = WeighInWeight.belowRangeMessage.string
+                showBelowRangeMessage()
                 return
             """, in: screen), "\"st lb\" out of range shows the refusal and returns before the save")
         let save = try XCTUnwrap(ScreenText.range(of: "try? store.saveWeighIn(", in: screen))
         XCTAssertLessThan(refusal.lowerBound, save.lowerBound)
-        try ScreenText.assertScreen("WeighIn/WeighInScreenView.swift", shows: ["if let belowRangeMessage { Text(verbatim: belowRangeMessage)"])
+        try ScreenText.assertScreen("WeighIn/WeighInScreenView.swift", shows: ["if let belowRangeMessage { ValidationMessageText(belowRangeMessage)", "let message = WeighInWeight.belowRangeMessage.string"])
     }
 
     /// mm-t24.22, mm-t24.35 (commit 535403b) and mm-t24.37 items 1 and 2

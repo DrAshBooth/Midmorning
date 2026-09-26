@@ -34,6 +34,7 @@ struct Screen2View: View {
         issue = ScreeningForm.firstIssue(answers.formInput(asksAge: true))
         if let issue {
             focusedField = issue.field
+            ValidationAnnouncement.post(issue.problem.message(heightUnit: answers.heightUnit.limitUnit, weightUnit: answers.weightUnit.limitUnit).string)
             return
         }
         onContinue()

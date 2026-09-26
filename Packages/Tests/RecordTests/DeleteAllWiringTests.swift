@@ -36,7 +36,7 @@ final class DeleteAllWiringTests: XCTestCase {
     func testDeleteAllLeavesNoStageOpenedRowAndNoCardAnswer() throws {
         let directory = try makeTemporaryDirectory()
         let store = try RecordStore(directory: directory)
-        try store.recordStageOpened(3, at: Date(timeIntervalSince1970: 1_760_000_000))
+        try store.recordStageOpened(3, at: Date(timeIntervalSince1970: 1_760_000_000), dayKey: "2025-10-09")
         try store.setCardAnswer("Open", id: "opening.2", changedAt: .now)
 
         try LocalEraser.eraseAndRecreate(directory: directory)

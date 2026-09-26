@@ -40,7 +40,10 @@ enum ProgrammeModel {
         let urgeOutcomes = ((try? store.urgeOutcomeFacts()) ?? []).map { UrgeOutcomeFact(dayKey: $0.dayKey, savedAt: $0.outcomeAt) }
         let facts = ProgrammeFacts(entries: entries, plannedDays: plannedDays, urgeOutcomes: urgeOutcomes, takingStockCompletedAt: nil)
 
-        let openings = ((try? store.stageOpenedRows()) ?? []).map { StageOpenedRecord(stage: $0.stage, moment: $0.moment) }
+        // Each row carries the record-day key the app wrote when the stage
+        // opened; an old row with no key gives `nil`, and the engine then
+        // finds the day from the moment (r14-03, mm-t21.37).
+        let openings = ((try? store.stageOpenedRows()) ?? []).map { StageOpenedRecord(stage: $0.stage, moment: $0.moment, dayKey: $0.dayKey) }
         let restartAt = try? store.restartAt()
 
         let state = StageEngine.state(
@@ -50,9 +53,12 @@ enum ProgrammeModel {
 
         // "When the engine computes an opening the store lacks, the app
         // MUST write that moment to the store" (programme spec, "A pure
-        // stage engine with stored openings as input").
+        // stage engine with stored openings as input"), with the record-day
+        // key of the day on which the stage opened, so a later change of
+        // "Day starts at" does not move that day (r14-03, mm-t21.37).
         for computed in state.computedOpenings {
-            try? store.recordStageOpened(computed.stage, at: computed.moment)
+            let dayKey = computed.dayKey ?? RecordDay.key(containing: computed.moment, calendar: calendar, schedule: schedule)
+            try? store.recordStageOpened(computed.stage, at: computed.moment, dayKey: dayKey)
         }
 
         let cardAnswers = (try? store.answeredCardIds()) ?? []

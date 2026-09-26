@@ -45,6 +45,7 @@ struct RescreenView: View {
         issue = ScreeningForm.firstIssue(answers.formInput(asksAge: false))
         if let issue {
             focusedField = issue.field
+            ValidationAnnouncement.post(issue.problem.message(heightUnit: answers.heightUnit.limitUnit, weightUnit: answers.weightUnit.limitUnit).string)
             return
         }
         guard let heightCm = answers.heightCm, let weightKg = answers.weightKg,

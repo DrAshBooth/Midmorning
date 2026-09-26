@@ -161,7 +161,9 @@ struct ReviewScreenView: View {
     /// Saves the answers gathered so far, with no answer to the self-harm
     /// item required (weekly-review spec, "\"I'm getting worse\"": "The app
     /// MUST save the review's answers so far."). Only `.done` finishes the
-    /// review and replaces the pinned note (`ReviewSave`).
+    /// review and replaces the pinned note (`ReviewSave`). "I'm getting
+    /// worse" and the self-harm route save in every week, week 1 included,
+    /// with the week-1 answers (r13-17, mm-t32.25).
     private func save(_ mode: ReviewSave.Mode) {
         _ = WeeklyReviewModel.save(
             mode, store: store, week: week, startDay: startDay, calendar: calendar,
