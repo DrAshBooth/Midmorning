@@ -7,7 +7,9 @@ import Record
 /// (commit f6b57d3): "onboarding screen 3 reads 'Today, <weekday date>'
 /// and 'Tomorrow, <weekday date>' and 'A day runs from 04:00 to 03:59.'
 /// from Localizable.xcstrings". The test proves the three lines from the
-/// catalogue and proves that `Screen3View.swift` shows them.
+/// catalogue. That `Screen3View.swift` shows them is proved from the source
+/// text only; `AutomatedChecks.testOnboardingScreen3` finds them on the
+/// screen.
 final class OnboardingScreenTextTests: XCTestCase {
     func testScreen3ShowsTheStartDayChoicesAndTheDayBoundary() throws {
         var calendar = Calendar(identifier: .gregorian)

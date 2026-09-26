@@ -2,7 +2,11 @@
 # Runs the automated device checks (ruling r13-19, mm-t43.30) on a simulator:
 # HarnessUITests/AutomatedChecks.swift. Each test names the device-check bead
 # and the check that it replaces. Ash runs this by hand; it is not part of
-# ./verify (see README.md in this folder for the reason).
+# ./verify (see README.md in this folder for the reason). A device check
+# marked "Automated by" can be skipped only after a dated run in which every
+# check passes on a committed build, and the release gate on mm-t43 asks for
+# a new run before each TestFlight build (README.md, "When Ash can skip a
+# device check"). Run between 09:00 and 03:30: the seeder stops before 09:00.
 #
 # Usage: tools/skeleton-checks/automated-checks.sh [test name ...]
 #   With no test name, the script runs every test in AutomatedChecks.

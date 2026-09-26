@@ -48,14 +48,25 @@ Ash ruled on 26 September 2026 (r13-19, mm-t43.30) that navigation, text
 and manifest checks move off the device-check beads into tests.
 
 - Text and manifest checks are package tests in
-  `Packages/Tests/AutomatedDeviceChecksTests`. `./verify` runs them.
-- Navigation checks are UI tests in `HarnessUITests/AutomatedChecks.swift`.
-  Each test names its device-check bead. Run them with one command:
+  `Packages/Tests/AutomatedDeviceChecksTests`. `./verify` runs them. A
+  package test proves the words from the string catalogue or the content
+  bundle. When it also matches the source of an App file, that part is
+  proved from the source text only: it shows that the screen calls the
+  words, not where they show. A layout claim needs a UI test.
+- Navigation and flow checks are UI tests in
+  `HarnessUITests/AutomatedChecks.swift` (35 checks). Each test names its
+  device-check bead. Run them with one command:
 
 ```bash
 tools/skeleton-checks/automated-checks.sh            # every check
 tools/skeleton-checks/automated-checks.sh testPrivacyNotice testDiagnosticsShowsTheEightCounts
 ```
+
+A new navigation, text or flow check goes into one of these two places, not
+onto a device-check bead. A device-check bead keeps only what needs a
+device or a person: VoiceOver, Voice Control, the largest text size,
+contrast, biometrics, real notifications and calls, a change of the clock,
+backups, the network, crashes and the shame walk.
 
 The script makes and boots its own simulator (`mm-automated-checks`), so it
 does not disturb a simulator that another session uses. It builds and
@@ -65,18 +76,48 @@ tells what each holds). Before each launch, a test copies one seeded store
 into the app's container. The app then opens on Today with the app lock off.
 The log and the result bundle go to `out/automated/`.
 
-The UI tests are not part of `./verify`, for two reasons. First, the 21
-checks take about 430 s on a warm simulator (26 September 2026), and a warm
-`./verify` must stay under 150 s. Second, a simulator run needs a booted
+When to run. Run the checks between 09:00 and 03:30 in the Mac's time
+zone. The seeder puts no entry after now, and the gap band on the current
+record day needs 5 hours of that day; before 09:00 the seeder stops with an
+error. The run takes about 13 minutes, and it must end before 04:00, when
+the record day changes.
+
+The UI tests are not part of `./verify`, for two reasons. First, the 35
+checks take about 13 minutes (794 s) on a warm simulator (26 September
+2026), and a warm
+`./verify` must stay under 240 s. Second, a simulator run needs a booted
 simulator of its own, and parallel worktrees share one simulator service.
 On 26 September 2026 that service stopped for about 20 minutes: every
 `simctl` call waited while four simulators stayed in "Shutting Down". The
 package tests stay in `./verify`; they take less than one second.
 
-Until mm-t12b.27 is fixed, every check that starts on Today fails: on the
-iOS 27.0 simulator Today shows a blank screen. On 26 September 2026 all 21
-checks passed on a local build with the fix of that bead, and that build
-was not committed.
-
 After a failure, the script keeps the test's screenshot and accessibility
 hierarchy in `out/automated/<test>.png` and `<test>.txt`.
+
+### When Ash can skip a device check
+
+A bead comment that says "Automated by ... (r13-19)" moves that check to
+this suite. Ash can skip the check only after a dated run in which every
+check passes on a committed build. Write that run as a line in the table
+below: the date, the commit, the simulator runtime and the result. Before
+each TestFlight build and each release, run the suite again on that build
+and write a new line (the release gate on mm-t43).
+
+Two bugs change what the suite checks until they are fixed:
+
+- mm-t12b.27: on the iOS 27.0 simulator Today is blank while TodayView,
+  NewEntryView and EditEntryView apply `.privacySensitive()`. Every check
+  that starts on Today fails on the committed code until this bug is fixed.
+- mm-t12b.28: on iOS 27, "Delete this entry?" shows no "Cancel".
+  `tapDialogButton` taps outside the dialog to cancel. The fix of
+  mm-t12b.28 makes the helper require the "Cancel" button.
+
+mm-t32.28 (each self-harm row at the review reads the question) does not
+change the result: `reviewSelfHarmRows` finds the rows by the question
+while the bug is open and by the answer after its fix. On 26 September
+2026 the review checks passed both with and without a local fix of
+mm-t32.28.
+
+| Date | Commit | Runtime | Result |
+|------|--------|---------|--------|
+| 26 September 2026 | rulings-automation, not committed: the build removed the two modifiers of mm-t12b.27 | iOS 27.0 (24A434) | 35 of 35 passed in 794 s. This run does not count, because the build was not committed. |

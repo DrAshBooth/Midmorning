@@ -12,7 +12,9 @@ import Content
 ///   `BundleLoader.load` call while Today scrolls) stays a device check.
 /// - mm-t21.29 (commit 13a84d5): "on a team build with no sign-off file ...
 ///   The line 'Draft' shows above the card title. Settings, About, still
-///   shows 'Draft' beside the content version."
+///   shows 'Draft' beside the content version." This test proves the
+///   draft rule and the words; the layout ("above", "beside") is
+///   `AutomatedChecks.testDraftShowsAboveTheCardTitle` on the simulator.
 ///
 /// The tests read the content bundle that the app ships
 /// (`BundleLoader.loadShipped`, as `ShippedContent` and `SettingsView` do)
@@ -60,11 +62,14 @@ final class ProgrammeScreenTextTests: XCTestCase {
         XCTAssertTrue(try BundleLoader.load(from: unsigned, environment: [:]).isDraft, "a bundle with no sign-off file is a draft")
         XCTAssertEqual(ScreenText.english(.key("programme.card.draft")), "Draft")
         XCTAssertEqual(ScreenText.english(.key("settings.about.draftBadge")), "Draft")
+        // Source text only: the card screen's stack lists "Draft" before the
+        // title. AutomatedChecks.testDraftShowsAboveTheCardTitle checks the
+        // layout on the simulator.
         let card = try ScreenText.source("Programme/CardScreenView.swift")
-        let draftLine = try XCTUnwrap(card.range(of: "Text(\"programme.card.draft\")"), "the card screen shows \"Draft\"")
-        let title = try XCTUnwrap(card.range(of: "Text(screen.title)"), "the card screen shows the title")
-        XCTAssertLessThan(draftLine.lowerBound, title.lowerBound, "\"Draft\" shows above the card title")
-        XCTAssertTrue(card.contains("isDraft = bundle.isDraft"), "the card screen reads the flag from the bundle it shows")
+        let draftLine = try XCTUnwrap(ScreenText.range(of: "Text(\"programme.card.draft\")", in: card), "the card screen shows \"Draft\"")
+        let title = try XCTUnwrap(ScreenText.range(of: "Text(screen.title)", in: card), "the card screen shows the title")
+        XCTAssertLessThan(draftLine.lowerBound, title.lowerBound, "the card screen's stack lists \"Draft\" before the card title")
+        try ScreenText.assertScreen("Programme/CardScreenView.swift", shows: ["isDraft = bundle.isDraft"])
         try ScreenText.assertScreen("SettingsView.swift", shows: ["if contentInfo?.isDraft == true", "Text(\"settings.about.draftBadge\")"])
     }
 }

@@ -7,5 +7,6 @@ let package = Package(
     targets: [.executableTarget(name: "Seeder", dependencies: [
         .product(name: "Record", package: "Packages"),
         .product(name: "AppLock", package: "Packages"),
+        .product(name: "Constants", package: "Packages"),
     ])]
 )
