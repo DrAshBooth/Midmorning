@@ -31,21 +31,19 @@ struct EarlierDaysListView: View {
     private func load() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
-        let schedule = (try? store.dayStartSchedule()) ?? .standard
-        let previous = RecordDay.previous(RecordDay.interval(containing: Date(), calendar: calendar, schedule: schedule), calendar: calendar, schedule: schedule)
-        let previousKey = RecordDay.key(containing: previous.start, calendar: calendar, schedule: schedule)
-        let content = (try? store.dateKeysWithContent(before: previousKey)) ?? []
-        dayKeys = EarlierDays.list(dateKeysWithContent: content, previousRecordDayKey: previousKey)
+        dayKeys = (try? store.earlierDayKeys(now: Date(), calendar: calendar)) ?? []
     }
 }
 
 /// One earlier record day: its heading, its menu and its rows under the
 /// same rules as a day on Today, and controls to move to the previous and
 /// the next record day, and back to Today (record spec, "Earlier record
-/// days"). A tap on a row opens the entry for editing; a swipe or the
-/// VoiceOver action "Delete" asks before it deletes; the menu offers
-/// "Didn't record", "Fasting today" and the collapse control. No control
-/// creates an entry here.
+/// days"). The two controls move only inside the "Earlier days" list, so
+/// the screen never shows the previous or the current record day; each
+/// control turns off at an end of the list. A tap on a row opens the entry
+/// for editing; a swipe or the VoiceOver action "Delete" asks before it
+/// deletes; the menu offers "Didn't record", "Fasting today" and the
+/// collapse control. No control creates an entry here.
 struct EarlierDayDetailView: View {
     let store: RecordStore
     /// The record day stage 2 opened, or `nil` while stage 2 is closed: the
@@ -53,6 +51,8 @@ struct EarlierDayDetailView: View {
     let stage2OpenedDayKey: String?
     @Binding var navigationPath: NavigationPath
     @State private var dayKey: String
+    /// The "Earlier days" list, read at each load (mm-t12b.24).
+    @State private var earlierDayKeys: [String] = []
     @State private var section: DaySection?
     @State private var editingEntry: RecordRow?
     @State private var pendingDelete: RecordRow?
@@ -99,6 +99,7 @@ struct EarlierDayDetailView: View {
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("today.earlierDays.previousDay")
+                .disabled(EarlierDays.step(from: dayKey, by: -1, in: earlierDayKeys) == nil)
                 Spacer()
                 Button {
                     move(by: 1)
@@ -108,6 +109,7 @@ struct EarlierDayDetailView: View {
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel("today.earlierDays.nextDay")
+                .disabled(EarlierDays.step(from: dayKey, by: 1, in: earlierDayKeys) == nil)
             }
             .padding()
         }
@@ -149,13 +151,11 @@ struct EarlierDayDetailView: View {
         )
     }
 
+    /// Moves one record day inside the "Earlier days" list; at an end of
+    /// the list the control is off and nothing moves.
     private func move(by delta: Int) {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
-        let schedule = (try? store.dayStartSchedule()) ?? .standard
-        guard let interval = RecordDay.interval(forKey: dayKey, calendar: calendar, schedule: schedule) else { return }
-        let newInterval = delta > 0 ? RecordDay.next(interval, calendar: calendar, schedule: schedule) : RecordDay.previous(interval, calendar: calendar, schedule: schedule)
-        dayKey = RecordDay.key(containing: newInterval.start, calendar: calendar, schedule: schedule)
+        guard let key = EarlierDays.step(from: dayKey, by: delta, in: earlierDayKeys) else { return }
+        dayKey = key
     }
 
     private func load() {
@@ -164,6 +164,7 @@ struct EarlierDayDetailView: View {
         let schedule = (try? store.dayStartSchedule()) ?? .standard
         let interval = RecordDay.interval(forKey: dayKey, calendar: calendar, schedule: schedule)
             ?? RecordDay.interval(containing: Date(), calendar: calendar, schedule: schedule)
+        earlierDayKeys = (try? store.earlierDayKeys(now: Date(), calendar: calendar)) ?? []
         let planShows = stage2OpenedDayKey.map { dayKey >= $0 } ?? false
         section = DaySection.load(dayKey: dayKey, interval: interval, role: .earlier, store: store, stage2Open: planShows, stage2OpenedDayKey: stage2OpenedDayKey)
     }
