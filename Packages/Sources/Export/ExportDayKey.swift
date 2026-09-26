@@ -3,9 +3,9 @@ import Foundation
 /// Record-day key arithmetic and formatting, self-contained here (like
 /// `Programme`'s own `DayKeyMath`) because a key never carries a time zone
 /// and compares correctly as a plain string. Every date shown in the export
-/// is en-GB, per product-rules "Dates and times in strings". Public: the app
-/// target reuses `dayHeading` for the weigh-in page's own dates, so there is
-/// one weekday-date-year formatter, not two.
+/// is en-GB, per product-rules "Dates and times in strings". The export's
+/// weigh-in page uses `dayHeading` too, so the export has one
+/// weekday-date-year formatter, not two.
 public enum ExportDayKey {
     static let calendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)

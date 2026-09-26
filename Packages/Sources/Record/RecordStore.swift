@@ -1061,11 +1061,6 @@ public final class RecordStore {
         return try context.fetch(descriptor)
     }
 
-    /// The device's own latest row for (`kind`, `dueDateKey`), whatever its
-    /// freeze state — the row a local edit or a later freeze writes into
-    /// (mirrors `weighIn(dateKey:)`'s own "the winner this device already
-    /// wrote" read, since a still-unfrozen row is never a `ReviewReconciler`
-    /// winner).
     /// The winning row for (`kind`, `dueDateKey`): the frozen row with the
     /// earliest freeze moment, or `nil` when none is frozen yet ("Freeze
     /// waits for sync": an unfrozen row is never a winner).

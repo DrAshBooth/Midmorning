@@ -8,9 +8,7 @@ import Export
 
 /// The settings screen: one screen, one tap from Today (settings spec, "One
 /// screen, one tap from Today"). Shows its groups in the spec's order:
-/// Reminders, Record, Weigh-in, Privacy, About; `plain system styling`
-/// throughout, until `record-full` (1.2b) lands `Appearance.swift` and the
-/// shared accent colour asset.
+/// Reminders, Record, Weigh-in, Privacy, About.
 struct SettingsView: View {
     let store: RecordStore
     /// data-and-privacy spec, "Delete-all". Defaults to the real seam built

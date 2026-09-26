@@ -173,8 +173,6 @@ public struct ReminderRequest: Sendable, Equatable {
 /// hours"). The canonical definition this capability owns; `Plan.QuietHours`
 /// stays regular-eating-plan's own interim copy ahead of this change.
 public enum ReminderQuietHours {
-    public static let reminderNotSentMessage = "This time is in quiet hours. The reminder will not be sent."
-
     /// False when `start` equals `end` (reminders spec: "When the start
     /// equals the end, quiet hours are off").
     public static func isOn(start: String, end: String) -> Bool {

@@ -75,8 +75,8 @@ struct TodayView: View {
     @State private var isShowingCloseTheDay = false
 
     /// The live stage 2 state (programme spec, "Stage 2 opens after five
-    /// recorded days"); `GapBand`, `PlanBuilderAccess` and `DaySection` all
-    /// read this same value.
+    /// recorded days"); the plan builder and `DaySection` both read this
+    /// same value.
     private var stage2Open: Bool { programmeSnapshot?.state.isOpen(.regularEating) ?? false }
 
     /// The record day stage 2 opened, or `nil` while it is closed: the gap
@@ -217,16 +217,15 @@ struct TodayView: View {
                     // spec, "The Today stack").
                     ForEach(Array(BottomToolbar.items(reviewsDue: weeklyReviewSnapshot?.reviewsControlShows ?? false).enumerated()), id: \.offset) { index, item in
                         if index > 0 { Spacer() }
-                        if item == "Settings" {
+                        switch item {
+                        case .settings:
                             NavigationLink("today.settings") {
                                 SettingsView(store: store)
                             }
-                        } else if item == "Programme" {
-                            Button(item) { navigationPath.append(ProgrammeRoute.screen) }
-                        } else if item == "Reviews" {
-                            Button(item) { navigationPath.append(ReviewsListRoute()) }
-                        } else {
-                            Button {} label: { Text(item) }
+                        case .programme:
+                            Button("today.programme") { navigationPath.append(ProgrammeRoute.screen) }
+                        case .reviews:
+                            Button("today.reviews") { navigationPath.append(ReviewsListRoute()) }
                         }
                     }
                 }
@@ -343,7 +342,7 @@ struct TodayView: View {
                 reload()
             },
             openEarlierDays: isCurrent && earlierDaysAvailable ? { navigationPath.append(EarlierDaysRoute.list) } : nil,
-            openPlanBuilder: isCurrent && PlanBuilderAccess.isOffered(stage2Open: stage2Open) ? { planBuilderMode = $0 } : nil
+            openPlanBuilder: isCurrent && stage2Open ? { planBuilderMode = $0 } : nil
         )
     }
 

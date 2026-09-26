@@ -4,10 +4,7 @@ import Foundation
 /// beside the file deletion itself (data-and-privacy spec, "Delete-all":
 /// "the app MUST first cancel every pending notification request. The app
 /// MUST delete every delivered notification at the same step... The app
-/// MUST reload every widget"). Named narrowly, for this one engine only;
-/// `2.4` (reminders) builds its own `NotificationCentre` seam for the
-/// scheduler, over the same system APIs, and may fold this in at that
-/// epic's own merge.
+/// MUST reload every widget"). Named narrowly, for this one engine only.
 public protocol DeleteAllSideEffects: Sendable {
     func cancelEveryNotification()
     func reloadWidgets()

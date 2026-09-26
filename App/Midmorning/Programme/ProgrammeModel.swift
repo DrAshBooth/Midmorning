@@ -75,27 +75,12 @@ enum ProgrammeModel {
         )
     }
 
-    /// Maps one `PendingCard` onto `Record`'s own `TodayCardFact`, the type
-    /// `TodayCardSlot.next` picks from; `Programme` cannot import `Record`,
-    /// so this mapping lives here, one for one.
-    static func todayCardFact(_ card: PendingCard) -> TodayCardFact {
-        let kind: TodayCardFact.Kind
-        switch card.kind {
-        case .opening: kind = .opening
-        case .stage1: kind = .stage1
-        case .plan: kind = .plan
-        }
-        return TodayCardFact(kind: kind, becameDueAt: card.becameDueAt)
-    }
-
     /// The one card Today's slot shows, and its full `PendingCard` (for its
     /// id, to write the answer): the oldest pending card, unless a starred
     /// entry or an "I binged" outcome in the current record day bars it
     /// (record spec, "The Today stack"; programme spec, "No opening card
     /// after a binge in the same record day").
     static func nextTodayCard(_ snapshot: Snapshot, starredEntryOrOutcomeAt: Date?, currentRecordDay: DateInterval) -> PendingCard? {
-        let cards = pendingCards(snapshot)
-        guard let winner = TodayCardSlot.next(pending: cards.map(todayCardFact), starredEntryOrOutcomeAt: starredEntryOrOutcomeAt, currentRecordDay: currentRecordDay) else { return nil }
-        return cards.first { todayCardFact($0) == winner }
+        TodayCardSlot.next(pending: pendingCards(snapshot), starredEntryOrOutcomeAt: starredEntryOrOutcomeAt, currentRecordDay: currentRecordDay)
     }
 }

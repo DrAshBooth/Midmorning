@@ -16,8 +16,7 @@ struct DaySection: Identifiable {
     let isExpanded: Bool
     let gapBandIndexesBefore: [Int]
     /// `nil` before stage 2 (regular-eating-plan spec, "The plan builder
-    /// opens at stage 2"): `PlanBuilderAccess.isOffered(stage2Open:)` gates
-    /// this the same fixture-fact way `GapBand` reads `stage2Open`.
+    /// opens at stage 2"): the live `stage2Open` fact gates it.
     let plan: PlanDaySection?
 
     var heading: String {
@@ -93,7 +92,7 @@ struct DaySection: Identifiable {
             isCollapsed: !isExpanded,
             maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours
         )
-        let plan = PlanBuilderAccess.isOffered(stage2Open: stage2Open)
+        let plan = stage2Open
             ? PlanToday.load(dateKey: dayKey, recordDay: interval, store: store, entries: entries, now: Date(), calendar: .current)
             : nil
         return DaySection(id: dayKey, interval: interval, role: role, entries: entries, states: states, isExpanded: isExpanded, gapBandIndexesBefore: gapIndexes, plan: plan)

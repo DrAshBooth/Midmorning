@@ -31,11 +31,9 @@ public struct ProgrammeState: Sendable, Equatable {
     public func isOpen(_ stage: Stage) -> Bool { openStages.contains(stage) }
 }
 
-/// A pending card `Record`'s `TodayCardSlot` can pick from (programme spec,
-/// "A stage opening shows one card", "Two stage 1 cards come to Today", "A
-/// card when the plan is not set"). `Programme` cannot import `Record`, so
-/// this is its own value type; the App target maps `kind` onto `Record`'s
-/// `TodayCardFact.Kind` one for one.
+/// A pending card `TodayCardSlot` can pick from (programme spec, "A stage
+/// opening shows one card", "Two stage 1 cards come to Today", "A card when
+/// the plan is not set").
 public struct PendingCard: Sendable, Equatable {
     public enum Kind: String, Sendable { case opening, stage1, plan }
 

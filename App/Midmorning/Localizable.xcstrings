@@ -144,17 +144,6 @@
         }
       }
     },
-    "applock.lockControl.accessibilityLabel": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lock"
-          }
-        }
-      }
-    },
     "applock.privacy.lockAfter.label": {
       "extractionState": "manual",
       "localizations": {
@@ -327,17 +316,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete this entry?"
-          }
-        }
-      }
-    },
-    "entry.new.accessibilityLabel": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New entry"
           }
         }
       }
@@ -822,17 +800,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete everything"
-          }
-        }
-      }
-    },
-    "settings.privacy.deleteEverything.message": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This deletes your entire record from this device. You cannot undo it."
           }
         }
       }
@@ -1703,6 +1670,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open iOS Settings"
+          }
+        }
+      }
+    },
+    "today.programme": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Programme"
+          }
+        }
+      }
+    },
+    "today.reviews": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reviews"
           }
         }
       }
