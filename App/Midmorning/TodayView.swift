@@ -54,7 +54,7 @@ struct TodayView: View {
     @State private var showingNewEntry = false
     @State private var newEntryInitialTime: Date?
     @State private var editingEntry: RecordRow?
-    @State private var scrollTarget: UUID?
+    @State private var scrollTarget: String?
     @State private var navigationPath = NavigationPath()
     @AccessibilityFocusState private var addEntryFocused: Bool
     @State private var isShowingSupportSheet = false
@@ -148,7 +148,9 @@ struct TodayView: View {
                 }
                 .recordListStyle()
                 .onChange(of: scrollTarget) { _, target in
-                    if let target { proxy.scrollTo(target) }
+                    guard let target else { return }
+                    proxy.scrollTo(target, anchor: .center)
+                    scrollTarget = nil
                 }
             }
             .navigationTitle("today.title")
@@ -196,8 +198,9 @@ struct TodayView: View {
             }
             .sheet(isPresented: $showingNewEntry) {
                 NewEntryView(store: store, day: day, initialTime: newEntryInitialTime) { saved in
+                    expandDayOfSavedEntry(saved)
                     reload()
-                    scrollTarget = saved.id
+                    scrollTarget = scrollId(forSaved: saved)
                     addEntryFocused = true
                 }
             }
@@ -243,7 +246,7 @@ struct TodayView: View {
             .navigationDestination(for: WeeklyReviewRoute.self) { route in
                 ReviewScreenView(store: store, week: route.week, onDone: { reload() })
             }
-            .accessibilityAction(.magicTap) { showingNewEntry = true }
+            .accessibilityAction(.magicTap) { openNewEntry() }
         }
         .privacySensitive()
         .redacted(reason: scenePhase == .active ? [] : .privacy)
@@ -275,7 +278,7 @@ struct TodayView: View {
                 }
             }
             Button {
-                showingNewEntry = true
+                openNewEntry()
             } label: {
                 Text("today.addEntry")
                     .frame(maxWidth: .infinity)
@@ -317,6 +320,7 @@ struct TodayView: View {
                             try? store.delete(entryId: entry.id, deletedAt: Date())
                             reload()
                         }
+                        .id(section.scrollId(of: item))
                 case .planned(let row):
                     PlannedMealRowView(row: row, dateKey: section.id, onAddIt: { time in
                         newEntryInitialTime = time
@@ -328,6 +332,7 @@ struct TodayView: View {
                     .listRowSeparator(.hidden)
                     .contentShape(Rectangle())
                     .onTapGesture { if let entry = row.matchedEntry { editingEntry = entry } }
+                    .id(section.scrollId(of: item))
                 }
                 if let entryIndex = entryIndex(of: item, in: section.entries), section.gapBandIndexesBefore.contains(entryIndex) {
                     GapBandRow()
@@ -476,6 +481,34 @@ struct TodayView: View {
     private func entryIndex(of item: DaySection.DisplayItem, in entries: [RecordRow]) -> Int? {
         guard case .entry(let row) = item else { return nil }
         return entries.firstIndex { $0.id == row.id }
+    }
+
+    /// "Add an entry" and the two-finger double tap open the new-entry
+    /// screen at the current time, never at a planned meal's time that an
+    /// earlier "Add it" set.
+    private func openNewEntry() {
+        newEntryInitialTime = nil
+        showingNewEntry = true
+    }
+
+    /// A save into a collapsed day expands that day and keeps the choice
+    /// (record spec, "Collapse a day to a count"). A new entry goes into
+    /// the current or the previous record day.
+    private func expandDayOfSavedEntry(_ saved: RecordRow) {
+        let role: RecordDayRole = saved.dayKey == currentSection?.id ? .current : .previous
+        let kept = (try? store.collapseChoice(dateKey: saved.dayKey)) ?? nil
+        if let choice = CollapseDefault.choiceAfterSave(role: role, kept: kept) {
+            try? store.setCollapseChoice(choice, dateKey: saved.dayKey)
+        }
+    }
+
+    /// The scroll id of the row that shows the saved entry, after `reload`
+    /// (record spec, "Save is quiet").
+    private func scrollId(forSaved saved: RecordRow) -> String? {
+        [currentSection, previousSection]
+            .compactMap { $0 }
+            .first { $0.id == saved.dayKey }?
+            .scrollId(forEntry: saved.id)
     }
 
     private func reload() {

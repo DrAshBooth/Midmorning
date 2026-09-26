@@ -41,8 +41,8 @@ struct DaySection: Identifiable {
 
         var id: String {
             switch self {
-            case .entry(let row): return "entry-\(row.id)"
-            case .planned(let row): return "planned-\(row.slotIndex)"
+            case .entry(let row): return TodayRowId.entry(row.id)
+            case .planned(let row): return TodayRowId.planned(slotIndex: row.slotIndex)
             }
         }
 
@@ -59,6 +59,19 @@ struct DaySection: Identifiable {
         let plainEntries = entries.filter { !matchedIds.contains($0.id) }.map(DisplayItem.entry)
         let plannedRows = (plan?.rows ?? []).map(DisplayItem.planned)
         return (plainEntries + plannedRows).sorted { $0.time < $1.time }
+    }
+
+    /// The id a row carries across the whole of Today, for the scroll after
+    /// a save (record spec, "Save is quiet").
+    func scrollId(of item: DisplayItem) -> String {
+        TodayRowId.scrollId(dateKey: id, rowId: item.id)
+    }
+
+    /// The scroll id of the row that shows `entryId`: the planned meal row
+    /// that the entry matches, or else the entry's own row.
+    func scrollId(forEntry entryId: UUID) -> String {
+        let matchedSlot = plan?.rows.first { $0.matchedEntry?.id == entryId }?.slotIndex
+        return TodayRowId.scrollId(forEntry: entryId, dateKey: id, matchedSlotIndex: matchedSlot)
     }
 
     @MainActor
