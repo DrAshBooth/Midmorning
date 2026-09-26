@@ -12,6 +12,11 @@ struct NewEntryView: View {
     /// time"). `nil` opens with the current time, as from "Add an entry".
     var initialTime: Date?
     let onSave: (RecordRow) -> Void
+    /// app-lock spec, "A new entry before authentication" (ruling r13-04,
+    /// mm-t15.19). Set only for the new-entry screen of a pending route.
+    /// Save calls it first and saves only on `true`. On `false` nothing
+    /// saves and the typed text stays.
+    var authenticateBeforeSave: (@MainActor () async -> Bool)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -30,6 +35,7 @@ struct NewEntryView: View {
     /// force when the screen opens (record spec, "The record day").
     @State private var segments: [RecordTimeControl.Segment] = []
     @State private var saveOutcome: SaveOutcome = .saved
+    @State private var isAuthenticatingSave = false
 
     /// The device zone, on the Gregorian calendar (product-rules spec,
     /// "Dates and times in strings").
@@ -144,7 +150,20 @@ struct NewEntryView: View {
         RecordTimeControl(segments: segments, time: $time, notAfter: openedAt, calendar: calendar)
     }
 
+    /// Save, and "Save" from the keyboard. A pending route's screen asks
+    /// for authentication first, once at a time.
     private func save() {
+        guard let authenticateBeforeSave else { return saveEntry() }
+        guard !isAuthenticatingSave else { return }
+        isAuthenticatingSave = true
+        Task {
+            let canSave = await authenticateBeforeSave()
+            isAuthenticatingSave = false
+            if canSave { saveEntry() }
+        }
+    }
+
+    private func saveEntry() {
         let now = Date()
         let place = WhereSelection.onSave(selection: whereSelection, pendingPlace: pendingPlace)
         do {

@@ -22,8 +22,10 @@ public enum PendingRoute: Sendable, Equatable {
 /// screen the app shows while merely inactive, on or off; `.locked` and
 /// `.lockedAfterEnrolmentChange` are the cover with "Unlock" (or
 /// "Delete from this device") and "Delete everything". Requirement:
-/// "A new entry before authentication" — a pending route always wins, so
-/// the new-entry screen shows with no cover at all.
+/// "A new entry before authentication" — a pending route wins, so the
+/// new-entry screen shows with no cover at all. The one exception: after
+/// the request at Save does not succeed, the cover shows over that screen
+/// until "Unlock" succeeds (`pendingRouteAwaitsUnlock`, ruling r13-04).
 public enum CoverMode: Sendable, Equatable {
     case none
     case privacyOnly
@@ -42,6 +44,11 @@ public struct AppLifecycleState: Sendable, Equatable {
     public var enrolmentChanged: Bool
     public var enteredBackgroundAt: TimeInterval?
     public var pendingRoute: PendingRoute?
+    /// Requirement "A new entry before authentication" (ruling r13-04):
+    /// the system authentication request at Save on the pending route's
+    /// new-entry screen did not succeed. The screen stays, with its text,
+    /// under the cover until "Unlock" succeeds.
+    public var pendingRouteAwaitsUnlock: Bool
 
     public init(
         scenePhase: LifecycleScenePhase = .active,
@@ -51,7 +58,8 @@ public struct AppLifecycleState: Sendable, Equatable {
         isLocked: Bool,
         enrolmentChanged: Bool = false,
         enteredBackgroundAt: TimeInterval? = nil,
-        pendingRoute: PendingRoute? = nil
+        pendingRoute: PendingRoute? = nil,
+        pendingRouteAwaitsUnlock: Bool = false
     ) {
         self.scenePhase = scenePhase
         self.appLockEnabled = appLockEnabled
@@ -61,6 +69,7 @@ public struct AppLifecycleState: Sendable, Equatable {
         self.enrolmentChanged = enrolmentChanged
         self.enteredBackgroundAt = enteredBackgroundAt
         self.pendingRoute = pendingRoute
+        self.pendingRouteAwaitsUnlock = pendingRouteAwaitsUnlock
     }
 
     /// Scenario: "Launch" and "Default" — the app lock, when on, always
@@ -79,7 +88,7 @@ public struct AppLifecycleState: Sendable, Equatable {
     }
 
     public var coverMode: CoverMode {
-        if pendingRoute != nil { return .none }
+        if pendingRoute != nil, !pendingRouteAwaitsUnlock { return .none }
         if isLocked {
             // Requirement: "The lock control on Today" — "With the app lock
             // off, the lock control MUST still show the cover" as the plain
@@ -114,6 +123,9 @@ public enum AppLifecycleEvent: Sendable, Equatable {
     case enrolmentChanged
     case pendingRouteRequested(PendingRoute)
     case pendingRouteResolved
+    /// The system authentication request at Save on the pending route's
+    /// new-entry screen did not succeed (ruling r13-04).
+    case pendingRouteSaveNotAuthenticated
     case privacyCoverDismissed
 }
 
@@ -163,8 +175,12 @@ public enum AppLifecycle {
             state.isLocked = true
 
         case .authenticationSucceeded:
+            // Requirement "A new entry before authentication": "After
+            // 'Unlock' succeeds with kept text, the app MUST show the
+            // new-entry screen with that text."
             state.isLocked = false
             state.enrolmentChanged = false
+            state.pendingRouteAwaitsUnlock = false
 
         case .enrolmentChanged:
             // Requirement: "Face ID only or Touch ID only" — "the app MUST
@@ -173,10 +189,21 @@ public enum AppLifecycle {
             state.isLocked = true
 
         case .pendingRouteRequested(let route):
+            // A second "Add" while the cover hides a kept draft keeps the
+            // cover: the draft shows only after "Unlock".
             state.pendingRoute = route
 
         case .pendingRouteResolved:
             state.pendingRoute = nil
+            state.pendingRouteAwaitsUnlock = false
+
+        case .pendingRouteSaveNotAuthenticated:
+            // Requirement "A new entry before authentication": "When the
+            // person cancels the request, the app MUST keep the text. The
+            // app MUST then show the cover." (ruling r13-04).
+            if state.pendingRoute != nil, state.isLocked {
+                state.pendingRouteAwaitsUnlock = true
+            }
 
         case .privacyCoverDismissed:
             // Scenario: "Lock control with the app lock off" — a plain tap

@@ -84,6 +84,30 @@ public final class AppLockController: ObservableObject {
         return succeeded
     }
 
+    /// Requirement "A new entry before authentication": "On Save the app
+    /// MUST make the system authentication request. When authentication
+    /// succeeds, the app MUST save the entry." (ruling r13-04, mm-t15.19).
+    /// The new-entry screen of a pending route (the reminder "Add") calls
+    /// this before it saves, and saves only on `true`:
+    /// - With the app lock off, or with the app not locked, `true` at once
+    ///   and no request.
+    /// - After an enrolment change, `false` and no request: the cover
+    ///   offers no "Unlock", so no authentication can unlock the app.
+    /// - Else the result of the system authentication request. A success
+    ///   unlocks the app.
+    /// On `false` the app stays locked and the cover shows over the
+    /// screen, which keeps the typed text. After "Unlock" succeeds, the
+    /// screen shows again with that text.
+    public func authenticateToSaveNewEntry() async -> Bool {
+        guard state.appLockEnabled, state.isLocked else { return true }
+        var succeeded = false
+        if !state.enrolmentChanged {
+            succeeded = await tapUnlock()
+        }
+        if !succeeded { handle(.pendingRouteSaveNotAuthenticated) }
+        return succeeded
+    }
+
     /// Onboarding spec, "Screen 4: permissions", scenarios "App lock
     /// default" and "App lock off": "Start" applies the person's choice to
     /// this controller, which the app built before onboarding. The person
