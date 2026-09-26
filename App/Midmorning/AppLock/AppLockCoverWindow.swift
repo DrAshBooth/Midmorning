@@ -95,22 +95,28 @@ private struct AppLockCoverWindowRoot: View {
     let onDeleteFromThisDevice: () -> Void
 
     var body: some View {
-        CoverView(controller: controller, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .fullScreenCover(isPresented: Binding(
-                get: { controller.state.pendingRoute == .newEntry },
-                set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
-            )) {
-                NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
-                    controller.handle(.pendingRouteResolved)
-                }
+        // The background is always a real view, so the presentation below
+        // has a view to present from while `CoverView` shows nothing (a
+        // pending route sets `coverMode` to `.none`). It also keeps the
+        // app's own window out of sight behind the new-entry screen.
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+            CoverView(controller: controller, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { controller.state.pendingRoute == .newEntry },
+            set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
+        )) {
+            NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
+                controller.handle(.pendingRouteResolved)
             }
-            // A hosting controller in a window of its own does not follow
-            // the scene's phase, and the new-entry screen hides its text
-            // with it while the app is inactive. The controller holds the
-            // same phase that the app's own window sends it.
-            .environment(\.scenePhase, Self.scenePhase(controller.state.scenePhase))
-            .tint(Color.accentColor)
+        }
+        // A hosting controller in a window of its own does not follow the
+        // scene's phase, and the new-entry screen hides its text with it
+        // while the app is inactive. The controller holds the same phase
+        // that the app's own window sends it.
+        .environment(\.scenePhase, Self.scenePhase(controller.state.scenePhase))
+        .tint(Color.accentColor)
     }
 
     private static func scenePhase(_ phase: LifecycleScenePhase) -> ScenePhase {
