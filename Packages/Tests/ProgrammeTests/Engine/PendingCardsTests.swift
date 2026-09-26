@@ -138,6 +138,18 @@ final class PendingCardsTests: XCTestCase {
         XCTAssertEqual(cards.filter { $0.kind == .plan }.map(\.id), ["plancard.3"])
     }
 
+    /// The first Today load is on day 11 (code review of 26 September 2026,
+    /// mm-t21.32). The day-10 card shows; after "Close" no plan card comes
+    /// back as the day-3 card ("Each of the two cards returns no more after
+    /// either control.").
+    func testAFirstLoadOnDay11ThenCloseShowsNoPlanCard() {
+        let openings = [StageOpenedRecord(stage: 2, moment: moment(2026, 10, 5, 9))]
+        let first = pending(openings: openings, hasTemplate: false, now: moment(2026, 10, 16, 8), currentRecordDay: dayKey(2026, 10, 16)).cards
+        XCTAssertEqual(first.filter { $0.kind == .plan }.map(\.id), ["plancard.10"])
+        let afterClose = pending(openings: openings, cardAnswers: ["plancard.10"], hasTemplate: false, now: moment(2026, 10, 16, 9), currentRecordDay: dayKey(2026, 10, 16)).cards
+        XCTAssertTrue(afterClose.filter { $0.kind == .plan }.isEmpty)
+    }
+
     /// `PendingCard.openingStage` parses the stage back out of an opening
     /// card's own id, the App target's seam for pushing that stage's screen
     /// on "Open" (programme spec, "A stage opening shows one card": "'Open'

@@ -232,8 +232,14 @@ public enum StageEngine {
         if !hasTemplate, let stage2Day = state.stageOpenedDayKey[.regularEating] {
             let day10 = DayKeyMath.adding(10, to: stage2Day, calendar: calendar)
             let day3 = DayKeyMath.adding(3, to: stage2Day, calendar: calendar)
-            if !DayKeyMath.isBefore(currentRecordDay, day10), !cardAnswers.contains("plancard.10") {
-                result.append(PendingCard(id: "plancard.10", kind: .plan, becameDueAt: DayKeyMath.dayStartMoment(for: day10, dayStart: settings.dayStart, calendar: calendar)))
+            // From day 10 only the second card can show, so a person whose
+            // first load is on day 10 or later and who closes it does not
+            // get the day-3 card next ("Each of the two cards returns no
+            // more after either control.").
+            if !DayKeyMath.isBefore(currentRecordDay, day10) {
+                if !cardAnswers.contains("plancard.10") {
+                    result.append(PendingCard(id: "plancard.10", kind: .plan, becameDueAt: DayKeyMath.dayStartMoment(for: day10, dayStart: settings.dayStart, calendar: calendar)))
+                }
             } else if !DayKeyMath.isBefore(currentRecordDay, day3), !cardAnswers.contains("plancard.3") {
                 result.append(PendingCard(id: "plancard.3", kind: .plan, becameDueAt: DayKeyMath.dayStartMoment(for: day3, dayStart: settings.dayStart, calendar: calendar)))
             }
