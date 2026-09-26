@@ -8,12 +8,14 @@ import Foundation
 /// change.
 public protocol DeleteAllPerforming: Sendable {
     /// Requirement: "Delete everything from the cover". Deletes every
-    /// device's copy, as `data-and-privacy`'s "Delete-all" states.
-    func deleteEverything() async
+    /// device's copy, as `data-and-privacy`'s "Delete-all" states. Throws
+    /// when the deletion fails, so the cover never shows the deleted
+    /// screen for a deletion that did not happen.
+    func deleteEverything() async throws
     /// Requirement: "Delete from this device after an enrolment change".
     /// Deletes only this device's copy, as `data-and-privacy`'s "Delete
-    /// from this device" states.
-    func deleteFromThisDevice() async
+    /// from this device" states. Throws when the deletion fails.
+    func deleteFromThisDevice() async throws
 }
 
 /// A seam that only records each call, for a test to assert the cover

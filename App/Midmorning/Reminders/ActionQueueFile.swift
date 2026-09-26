@@ -17,6 +17,7 @@ enum ActionQueueFile {
         let existing = (try? Data(contentsOf: url)) ?? Data()
         let updated = ActionQueueCodec.appending(action, to: existing)
         try? updated.write(to: url, options: .completeFileProtectionUntilFirstUserAuthentication)
+        try? FileProtection.protectSideFile(url)
     }
 
     /// Every queued action, or `[]` when the file is absent or unreadable.
@@ -30,6 +31,7 @@ enum ActionQueueFile {
     static func clear() {
         guard let url = StoreLocation.actionQueueURL() else { return }
         try? ActionQueueCodec.encode([]).write(to: url, options: .completeFileProtectionUntilFirstUserAuthentication)
+        try? FileProtection.protectSideFile(url)
     }
 
     /// Applies every queued action through `store`, in order, then empties

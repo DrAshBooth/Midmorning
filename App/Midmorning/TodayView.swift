@@ -235,6 +235,8 @@ struct TodayView: View {
         .privacySensitive()
         .redacted(reason: scenePhase == .active ? [] : .privacy)
         .onAppear(perform: reload)
+        // A tap on a reminder opens its own screen (reminders spec).
+        .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }

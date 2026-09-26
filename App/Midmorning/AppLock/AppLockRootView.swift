@@ -20,6 +20,16 @@ struct AppLockRootView: View {
         case safeMode(RecordStore)
         case deleted(DeletedScreen.Kind)
         case failedToOpen
+
+        var openPhase: StoreOpenPhase {
+            switch self {
+            case .waitingForProtectedData: return .waitingForProtectedData
+            case .running: return .running
+            case .safeMode: return .safeMode
+            case .deleted: return .deleted
+            case .failedToOpen: return .failedToOpen
+            }
+        }
     }
 
     let metricKitSubscriber: MetricKitSubscriber
@@ -65,10 +75,11 @@ struct AppLockRootView: View {
     /// MUST open the store container only when protected data is
     /// available."). `Record.AppStoreOpening` is the pure decision this
     /// follows; `AppStoreOpeningTests` proves the ordering with fixed
-    /// booleans.
+    /// booleans. Tries only from the waiting and failure phases
+    /// (`AppStoreOpening.triesToOpen`): the deleted screen stays until the
+    /// next launch, whatever protected data does.
     private func attemptOpen() {
-        if case .running = phase { return }
-        if case .safeMode = phase { return }
+        guard AppStoreOpening.triesToOpen(from: phase.openPhase) else { return }
         let protectedDataAvailable = UIApplication.shared.isProtectedDataAvailable
         var opened: (store: RecordStore, controller: AppLockController, enterSafeMode: Bool)?
         var openSucceeded = false
@@ -92,24 +103,21 @@ struct AppLockRootView: View {
         }
     }
 
-    /// Data-and-privacy spec, "Launch safety": writes the marker, opens the
-    /// store, adds one to the lifetime failure count when this launch found
-    /// an uncleared marker, then either enters safe mode or clears the
-    /// marker (this app has no onboarding gate yet, so reaching either
-    /// point stands in for "Today appears" — "Marker cleared" names no
-    /// difference between safe-mode Today and the ordinary one). "The app
-    /// MUST NOT call `fatalError` when the container fails to open" — every
-    /// throw here reaches `attemptOpen`'s `catch` instead.
+    /// Data-and-privacy spec, "Launch safety": writes the marker (once per
+    /// launch), opens the store, and adds one to the lifetime failure count
+    /// when this launch found an uncleared marker (once per launch). The
+    /// marker stays until Today or safe mode's Today appears
+    /// (`LaunchMarker.clearAfterTodayAppears`). "The app MUST NOT call
+    /// `fatalError` when the container fails to open" — every throw here
+    /// reaches `attemptOpen`'s `catch` instead.
     private static func openStoreAndController(metricKitSubscriber: MetricKitSubscriber) throws -> (store: RecordStore, controller: AppLockController, enterSafeMode: Bool) {
         let applicationSupportDirectory = try StoreLocation.applicationSupportDirectory()
-        let launchMarker = LaunchMarker.beginLaunch(applicationSupportDirectory: applicationSupportDirectory)
-        let store = try RecordStore(directory: StoreLayout.storeDirectory(applicationSupportDirectory: applicationSupportDirectory))
-        if launchMarker.markerWasUncleared {
-            _ = try? store.incrementLaunchFailureCount()
-        }
-        LaunchMarker.clearAfterTodayAppears(applicationSupportDirectory: applicationSupportDirectory)
-        metricKitSubscriber.onDiagnostics = { [weak store] in
-            _ = try? store?.incrementCrashCount()
+        let launch = LaunchMarker.session(applicationSupportDirectory: applicationSupportDirectory)
+        let launchMarker = launch.begin()
+        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory)
+        launch.countLaunchFailureIfNeeded(in: store)
+        metricKitSubscriber.connect { [weak store] crashes in
+            for _ in 0..<crashes { _ = try? store?.incrementCrashCount() }
         }
         return (store, makeController(store: store), launchMarker.launchOutcome.enterSafeMode)
     }
@@ -142,7 +150,6 @@ final class DeletionNotifier: ObservableObject {
     var onEverythingDeleted: () -> Void = {}
 }
 
-/// Today, the cover and the app's lifecycle events, once the store and the
 /// Onboarding, once, before anything else the store and the controller make
 /// possible (onboarding spec, "Four screens, once, in order": "The app MUST
 /// show onboarding the first time the app opens after install... MUST NOT
@@ -195,8 +202,6 @@ private struct RunningRootView: View {
     let onDeleteFromThisDevice: () -> Void
     @StateObject private var deletionNotifier = DeletionNotifier()
     @Environment(\.scenePhase) private var scenePhase
-    @State private var showingWeighInFromReminder = false
-    @State private var showingWeeklyReviewFromReminder = false
 
     var body: some View {
         TodayView(store: store)
@@ -209,9 +214,10 @@ private struct RunningRootView: View {
             // The cover, in a window of its own over every sheet and
             // full-screen cover (app-lock spec, "The cover"). It also shows
             // the new-entry screen of a pending route ("A new entry before
-            // authentication"): the notification action "Add" posts
-            // `.reminderAddActionTapped`, which requests the route, and
-            // `AppLifecycleState.coverMode` reads `.none` while it waits.
+            // authentication"): the notification action "Add" requests the
+            // route through `ReminderRouteInbox` (`ReminderRouteOpening`, on
+            // Today), and `AppLifecycleState.coverMode` reads `.none` while
+            // it waits.
             .appLockCover(controller: controller, store: store, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
             .onAppear {
                 deletionNotifier.onEverythingDeleted = onEverythingDeleted
@@ -219,29 +225,8 @@ private struct RunningRootView: View {
                 // design.md, "The scheduler is a pure function over a
                 // rolling horizon": recomputed on activation.
                 ReminderCoordinator.recomputeAndApply(store: store)
-            }
-            // A tap on the weigh-in day reminder (reminders spec, "The
-            // weigh-in day reminder"). No pending-route bypass: unlike
-            // "Add", the notification carries no authentication-required
-            // option, so the device is already unlocked by the time the app
-            // opens.
-            .fullScreenCover(isPresented: $showingWeighInFromReminder) {
-                NavigationStack { WeighInScreenView(store: store) }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .weighInReminderTapped)) { _ in
-                showingWeighInFromReminder = true
-            }
-            // A tap on the weekly review reminder (reminders spec, "The
-            // weekly review reminder": "A tap MUST open the weekly
-            // review.").
-            .fullScreenCover(isPresented: $showingWeeklyReviewFromReminder) {
-                NavigationStack { ReviewScreenView(store: store, week: WeeklyReviewModel.load(store: store).dueWeek ?? 1) }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .weeklyReviewReminderTapped)) { _ in
-                showingWeeklyReviewFromReminder = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .reminderAddActionTapped)) { _ in
-                controller.handle(.pendingRouteRequested(.newEntry))
+                // data-and-privacy spec, "Launch safety": Today appeared.
+                LaunchMarker.clearAfterTodayAppears()
             }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {

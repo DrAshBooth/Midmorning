@@ -29,6 +29,11 @@ enum WeeklyReviewModel {
         /// (record spec, "The Today stack": "'Reviews', from the moment the
         /// first weekly review becomes due").
         let reviewsControlShows: Bool
+        /// The latest week whose review is due, finished or not, or `nil`
+        /// before the first review is due. A tap on the weekly review
+        /// reminder opens this week (reminders spec, "The weekly review
+        /// reminder").
+        let latestDueWeek: Int?
     }
 
     static func load(store: RecordStore, now: Date = Date(), calendar: Calendar = .current) -> Snapshot {
@@ -41,11 +46,13 @@ enum WeeklyReviewModel {
             isFinished: { week in isFinished(store: store, week: week, startDay: startDay, calendar: calendar) }
         )
         let dueDayKey = dueWeek.map { ReviewDue.dueDayKey(week: $0, startDay: startDay, calendar: calendar) }
-        let reviewsControlShows = ReviewDue.latestDueWeek(startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar) != nil
+        let latestDueWeek = ReviewDue.latestDueWeek(startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar)
+        let reviewsControlShows = latestDueWeek != nil
         let (note, noteWeek) = currentPinnedNoteAndWeek(store: store, startDay: startDay, calendar: calendar)
         return Snapshot(
             dueWeek: dueWeek, dueDayKey: dueDayKey, startDay: startDay, calendar: calendar,
-            pinnedNote: note, pinnedNoteWeek: noteWeek, reviewsControlShows: reviewsControlShows
+            pinnedNote: note, pinnedNoteWeek: noteWeek, reviewsControlShows: reviewsControlShows,
+            latestDueWeek: latestDueWeek
         )
     }
 

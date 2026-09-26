@@ -128,15 +128,31 @@ public final class AppLockController: ObservableObject {
         return await authenticator.authenticate(reason: BiometryLabels.unlockReason, policy: state.authenticationPolicy)
     }
 
-    public func confirmDeleteEverything() async {
-        await deleteAllSeam.deleteEverything()
+    /// Returns whether the deletion succeeded. The cover shows the deleted
+    /// screen only on `true` (data-and-privacy spec, "Delete-all": the
+    /// screen follows the deletion).
+    @discardableResult
+    public func confirmDeleteEverything() async -> Bool {
+        do {
+            try await deleteAllSeam.deleteEverything()
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// "Delete from this device" after an enrolment change makes no
     /// authentication request: the enrolment change is why the cover offers
-    /// this control instead of "Unlock" in the first place.
-    public func confirmDeleteFromThisDevice() async {
-        await deleteAllSeam.deleteFromThisDevice()
+    /// this control instead of "Unlock" in the first place. Returns whether
+    /// the deletion succeeded.
+    @discardableResult
+    public func confirmDeleteFromThisDevice() async -> Bool {
+        do {
+            try await deleteAllSeam.deleteFromThisDevice()
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// The lock control on Today: locks at once, with no grace period,

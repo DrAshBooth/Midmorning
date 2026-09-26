@@ -51,7 +51,8 @@ final class FileProtectionTests: XCTestCase {
     func testAppGroupContentFileURLsAreTheActionQueueAndTheWidgetSnapshot() {
         let directory = URL(fileURLWithPath: "/var/mobile/Containers/Shared/AppGroup/ABCDEF")
         let urls = AppGroupContent.fileURLs(inAppGroupDirectory: directory)
-        XCTAssertEqual(Set(urls.map(\.lastPathComponent)), AppGroupContent.fileStems)
+        XCTAssertEqual(Set(urls.map { $0.deletingPathExtension().lastPathComponent }), AppGroupContent.fileStems)
+        XCTAssertEqual(Set(urls.map(\.lastPathComponent)), [AppGroupContent.actionQueueFileName, AppGroupContent.snapshotFileName])
     }
 
     private func tempDirectory() throws -> URL {

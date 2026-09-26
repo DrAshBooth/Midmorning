@@ -4,25 +4,6 @@ import Programme
 import Record
 
 extension Foundation.Notification.Name {
-    /// Posted when a notification action (or a plain tap) should open the
-    /// new-entry screen, locked or not (app-lock spec, "A new entry before
-    /// authentication"; widgets-and-intents spec, "Notification actions are
-    /// entry points"). `AppLockRootView` turns this into
-    /// `AppLifecycleEvent.pendingRouteRequested(.newEntry)`.
-    static let reminderAddActionTapped = Foundation.Notification.Name("uk.midmorning.reminderAddActionTapped")
-
-    /// Posted on a plain tap on the weigh-in day reminder (reminders spec,
-    /// "The weigh-in day reminder": "A tap MUST open the weigh-in
-    /// screen."). `RunningRootView` presents `WeighInScreenView` over
-    /// Today when it receives this.
-    static let weighInReminderTapped = Foundation.Notification.Name("uk.midmorning.weighInReminderTapped")
-
-    /// Posted on a plain tap on the weekly review reminder (reminders spec,
-    /// "The weekly review reminder": "A tap MUST open the weekly review.").
-    /// `AppLockRootView` presents `ReviewScreenView` over Today when it
-    /// receives this.
-    static let weeklyReviewReminderTapped = Foundation.Notification.Name("uk.midmorning.weeklyReviewReminderTapped")
-
     /// Posted after the handler wrote an action to the queue. While the app
     /// runs, `ReminderCoordinator` then applies the queue at once, so a
     /// "Skipped" reaches Today and a snooze reaches `Local.store` with no
@@ -30,16 +11,25 @@ extension Foundation.Notification.Name {
     static let reminderActionQueued = Foundation.Notification.Name("uk.midmorning.reminderActionQueued")
 }
 
-/// Handles a planned meal reminder's three actions. Registered as
-/// `UNUserNotificationCenter.current().delegate` in `AppDelegate`.
+/// Handles a planned meal reminder's three actions and a tap on any
+/// reminder. Registered as `UNUserNotificationCenter.current().delegate` in
+/// `AppDelegate`.
 ///
 /// "Skipped" and the snooze action never open the store (app-lock spec: "The
 /// handler MUST NOT open the store"): both only call `ActionQueueFile` and
 /// `UNUserNotificationCenter`, plain file and framework calls, never
-/// `RecordStore`. "Add" opens the app in the foreground (its
-/// `UNNotificationAction` options say so) and posts `.reminderAddActionTapped`
-/// so the pending-route rule shows the empty new-entry screen with no cover.
+/// `RecordStore`. Every other response puts its `ReminderTapRoute` in the
+/// inbox `AppDelegate` owns, and Today opens it when it can
+/// (`ReminderRouteOpening`). "Add" opens the app in the foreground (its
+/// `UNNotificationAction` options say so), and its route uses the
+/// pending-route rule, so the empty new-entry screen shows with no cover.
 final class NotificationActionHandling: NSObject, UNUserNotificationCenterDelegate {
+    private let routes: ReminderRouteInbox
+
+    init(routes: ReminderRouteInbox) {
+        self.routes = routes
+    }
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -58,23 +48,16 @@ final class NotificationActionHandling: NSObject, UNUserNotificationCenterDelega
         case PlannedMealReminderAction.snooze.identifier:
             handleSnooze(content: content, center: center)
 
-        case PlannedMealReminderAction.add.identifier:
-            NotificationCenter.default.post(name: .reminderAddActionTapped, object: nil)
-
         default:
-            // A plain tap (`UNNotificationDefaultActionIdentifier`). Every
-            // reminder kind but the weigh-in day and weekly review
-            // reminders opens the app to Today, the system's own default
-            // behaviour; each of those two names its own screen instead
-            // (reminders spec, "The weigh-in day reminder", "The weekly
-            // review reminder").
-            switch content.userInfo["kind"] as? String {
-            case ReminderKind.weighInDay.rawValue:
-                NotificationCenter.default.post(name: .weighInReminderTapped, object: nil)
-            case ReminderKind.weeklyReview.rawValue:
-                NotificationCenter.default.post(name: .weeklyReviewReminderTapped, object: nil)
-            default:
-                break
+            // "Add" and a plain tap (`UNNotificationDefaultActionIdentifier`).
+            if let route = ReminderTapRoute.forResponse(
+                actionIdentifier: response.actionIdentifier,
+                requestIdentifier: response.notification.request.identifier,
+                kind: content.userInfo["kind"] as? String,
+                dayKey: dayKey
+            ) {
+                let routes = self.routes
+                Task { @MainActor in routes.request(route) }
             }
         }
 

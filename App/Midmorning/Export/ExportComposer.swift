@@ -39,12 +39,10 @@ enum ExportComposer {
     /// temporary file with the store's protection class." The store's own
     /// files carry `NSFileProtectionComplete` (`Record.FileProtection`);
     /// `.completeFileProtection` is the same class for a plain file write.
+    /// The file goes under `tmp/Export` (`Export.ExportTemporaryFiles`), the
+    /// one folder the launch sweep and Delete-all remove.
     static func writeTemporaryFile(data: Data, fileName: String) throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent(fileName)
-        try data.write(to: url, options: [.atomic, .completeFileProtection])
-        return url
+        try ExportTemporaryFiles.write(data, fileName: fileName, temporaryDirectory: FileManager.default.temporaryDirectory)
     }
 
     /// export spec, "Share sheet only": "The app MUST delete the file when
