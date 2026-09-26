@@ -56,6 +56,17 @@
         }
       }
     },
+    "applock.deleteEverything.confirm.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This removes your record, plan, weigh-ins, lists and settings from this device and from iCloud. Another device that uses your iCloud account deletes its copy the next time it syncs. There is no undo."
+          }
+        }
+      }
+    },
     "applock.deleteEverything.confirm.title": {
       "extractionState": "manual",
       "localizations": {
@@ -100,6 +111,17 @@
         }
       }
     },
+    "applock.deleteFromThisDevice.done.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device's copy is deleted. To remove the app, touch and hold its icon and choose Remove App."
+          }
+        }
+      }
+    },
     "applock.done": {
       "extractionState": "manual",
       "localizations": {
@@ -140,6 +162,127 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lock after"
+          }
+        }
+      }
+    },
+    "applock.storeOpenFailure.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Midmorning cannot open your record on this device."
+          }
+        }
+      }
+    },
+    "applock.storeOpenFailure.tryAgain": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        }
+      }
+    },
+    "diagnostics.contentVersion": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Content version"
+          }
+        }
+      }
+    },
+    "diagnostics.crashCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crash count"
+          }
+        }
+      }
+    },
+    "diagnostics.lastReconcileOutcome": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last reconcile outcome"
+          }
+        }
+      }
+    },
+    "diagnostics.lastSuccessfulSyncDay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last successful sync day"
+          }
+        }
+      }
+    },
+    "diagnostics.launchFailures": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch failures"
+          }
+        }
+      }
+    },
+    "diagnostics.pendingReminders": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending reminders"
+          }
+        }
+      }
+    },
+    "diagnostics.queueLength": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queue length"
+          }
+        }
+      }
+    },
+    "diagnostics.schemaVersion": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schema version"
+          }
+        }
+      }
+    },
+    "diagnostics.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
           }
         }
       }
@@ -276,6 +419,17 @@
         }
       }
     },
+    "settings.about.diagnostics": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        }
+      }
+    },
     "settings.about.draftBadge": {
       "extractionState": "manual",
       "localizations": {
@@ -360,6 +514,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Privacy"
+          }
+        }
+      }
+    },
+    "settings.privacy.shareAppAnalytics": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share App Analytics with Apple"
           }
         }
       }

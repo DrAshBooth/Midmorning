@@ -129,6 +129,13 @@ public final class RecordStore {
         )
         context = ModelContext(container)
         context.autosaveEnabled = false
+        // Every file `Record.store` and `Local.store` create (each one's
+        // main file, `-wal` and `-shm`) carries `NSFileProtectionComplete`
+        // (data-and-privacy spec, "File protection": "Store files"). The App
+        // target's `StoreLocation.directory()` already protects the
+        // directory itself; this protects the files `ModelContainer` just
+        // created inside it.
+        FileProtection.applyToDatabaseFiles(in: directory)
     }
 
     /// Opens the store on a single legacy file URL, for tests that predate
@@ -416,6 +423,69 @@ public final class RecordStore {
         try persist()
     }
 
+    // MARK: - Diagnostics: the eight counts (data-and-privacy spec, "The
+    // Diagnostics counts come from the device"; settings spec, "The About
+    // group")
+
+    private static let launchFailureCountKey = "diagnostics.launchFailureCount"
+    private static let lastSuccessfulSyncDayKey = "diagnostics.lastSuccessfulSyncDay"
+    private static let reconcileWinnersKey = "diagnostics.reconcile.winners"
+    private static let reconcileLosersKey = "diagnostics.reconcile.losers"
+    private static let crashCountKey = "diagnostics.crashCount"
+
+    private func localIntSettingValue(key: String) throws -> Int {
+        try (localSettingValue(key: key)).flatMap(Int.init) ?? 0
+    }
+
+    /// Every count the Diagnostics page shows. `contentVersion` is the
+    /// content capability's own value; `sourceCounts` stands in for `2.4`'s
+    /// pending-reminders count and the action queue's length until
+    /// `mm-t24.20` supplies the real ones.
+    public func diagnosticsCounts(contentVersion: Int, sourceCounts: DiagnosticsSourceCounts = ZeroDiagnosticsSourceCounts()) throws -> DiagnosticsCounts {
+        DiagnosticsCounts(
+            launchFailures: try localIntSettingValue(key: Self.launchFailureCountKey),
+            lastSuccessfulSyncDay: try (localSettingValue(key: Self.lastSuccessfulSyncDayKey)) ?? DiagnosticsCounts.noSyncYet,
+            schemaVersion: "\(RecordSchemaV1.versionIdentifier)",
+            contentVersion: contentVersion,
+            pendingReminders: sourceCounts.pendingReminders,
+            queueLength: sourceCounts.queueLength,
+            lastReconcileOutcome: DiagnosticsCounts.ReconcileOutcome(
+                winners: try localIntSettingValue(key: Self.reconcileWinnersKey),
+                losers: try localIntSettingValue(key: Self.reconcileLosersKey)
+            ),
+            crashCount: try localIntSettingValue(key: Self.crashCountKey)
+        )
+    }
+
+    /// Adds one to the launch failure count (data-and-privacy spec, "Launch
+    /// safety": "Launch failures counted"). Returns the new count.
+    @discardableResult
+    public func incrementLaunchFailureCount() throws -> Int {
+        let next = try localIntSettingValue(key: Self.launchFailureCountKey) + 1
+        try setLocalSettingValue(String(next), key: Self.launchFailureCountKey)
+        return next
+    }
+
+    /// Adds one to the MetricKit crash count (data-and-privacy spec, "No
+    /// record content in the system log or crash reports": "MetricKit
+    /// diagnostic"). Keeps no part of the diagnostic itself. Returns the new
+    /// count.
+    @discardableResult
+    public func incrementCrashCount() throws -> Int {
+        let next = try localIntSettingValue(key: Self.crashCountKey) + 1
+        try setLocalSettingValue(String(next), key: Self.crashCountKey)
+        return next
+    }
+
+    /// Records a reconcile pass's winner and loser counts, for the
+    /// Diagnostics page's "last reconcile outcome". Nothing in the first cut
+    /// runs a reconcile pass yet, so both counts stay zero until a later
+    /// change calls this.
+    public func recordReconcileOutcome(winners: Int, losers: Int) throws {
+        try setLocalSettingValue(String(winners), key: Self.reconcileWinnersKey)
+        try setLocalSettingValue(String(losers), key: Self.reconcileLosersKey)
+    }
+
     // MARK: - The Record group: "Day starts at" and "Gap bands" (settings
     // spec, "The Record group"; decision 65)
 
@@ -574,6 +644,13 @@ public enum StoreLayout {
     public static func storeDirectory(applicationSupportDirectory: URL) -> URL {
         applicationSupportDirectory.appendingPathComponent("Record", isDirectory: true)
     }
+
+    /// The launch marker file's path: beside the store directory, never
+    /// inside it (data-and-privacy spec, "Launch safety": "The marker MUST
+    /// live outside the store directory").
+    public static func launchMarkerURL(applicationSupportDirectory: URL) -> URL {
+        applicationSupportDirectory.appendingPathComponent("LaunchMarker", isDirectory: false)
+    }
 }
 
 /// What the App Group container holds: only the widget snapshot and the
@@ -583,4 +660,13 @@ public enum StoreLayout {
 /// grows into the App Group by accident.
 public enum AppGroupContent {
     public static let fileStems: Set<String> = ["snapshot", "queue"]
+
+    /// The two side files' real paths inside `directory` (the App Group
+    /// container). Delete-all and "Delete from this device" delete both by
+    /// this same path, whether or not either file exists yet (data-and-
+    /// privacy spec, "Delete-all", "Delete from this device", "File
+    /// protection": "Side files").
+    public static func fileURLs(inAppGroupDirectory directory: URL) -> [URL] {
+        fileStems.sorted().map { directory.appendingPathComponent($0) }
+    }
 }

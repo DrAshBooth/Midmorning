@@ -23,6 +23,25 @@ final class StoreLayoutTests: XCTestCase {
         XCTAssertFalse(AppGroupContent.fileStems.contains("Local"))
     }
 
+    // MARK: The app excludes the whole store directory from backups (mm-t41.9)
+
+    /// Scenario: New device with sync off. A backup made with sync off
+    /// holds no store file (the whole directory is excluded, data-and-
+    /// privacy spec, "The app excludes the whole store directory from
+    /// backups"), so a "restore" onto a new device finds an empty
+    /// directory; opening the store there starts with no entry, the same as
+    /// a fresh install.
+    @MainActor
+    func testANewDeviceWithNoRestoredStoreFileOpensEmpty() throws {
+        let directory = try tempDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).isEmpty, "nothing restored: the directory a backup would have excluded")
+
+        let store = try RecordStore(directory: directory)
+        let today = try store.entries(dayKey: RecordDay.key(containing: Date(), calendar: .current))
+        XCTAssertTrue(today.isEmpty, "a new device with no restored store file starts with no entry")
+    }
+
     // MARK: Two store configurations in one directory (mm-t12.4)
 
     /// Scenario: App lock on one device only. The app lock is a device-only

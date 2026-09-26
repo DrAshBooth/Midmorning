@@ -15,10 +15,13 @@ import AppLock
 ///   and "Delete everything", with no "Unlock".
 struct CoverView: View {
     @ObservedObject var controller: AppLockController
-    /// Until 4.1 (`local-delete-all`) replaces it, "Everything is deleted"
-    /// only shows this screen; nothing is actually deleted (the change
-    /// README names this a stub).
+    /// `local-delete-all` (4.1) calls this once the real deletion
+    /// (`RealDeleteAllSeam`) finishes, so `AppLockRootView` can switch to
+    /// the deleted screen data-and-privacy's "Delete-all" names.
     var onEverythingDeleted: () -> Void = {}
+    /// The same, for "Delete from this device" (data-and-privacy spec,
+    /// "Delete from this device"), which shows its own, different text.
+    var onDeleteFromThisDevice: () -> Void = {}
 
     private enum Focus: Hashable {
         case unlock
@@ -28,7 +31,6 @@ struct CoverView: View {
     @AccessibilityFocusState private var focusedControl: Focus?
     @State private var isShowingDeleteEverythingConfirmation = false
     @State private var isShowingDeleteFromThisDeviceConfirmation = false
-    @State private var isShowingEverythingDeleted = false
 
     var body: some View {
         switch controller.state.coverMode {
@@ -90,10 +92,12 @@ struct CoverView: View {
             Button("applock.cover.deleteEverything", role: .destructive) {
                 Task {
                     await controller.confirmDeleteEverything()
-                    isShowingEverythingDeleted = true
+                    onEverythingDeleted()
                 }
             }
             Button("applock.cancel", role: .cancel) {}
+        } message: {
+            Text("applock.deleteEverything.confirm.message")
         }
         .confirmationDialog(
             "applock.deleteFromThisDevice.confirm.title",
@@ -103,15 +107,12 @@ struct CoverView: View {
             Button("applock.cover.deleteFromThisDevice", role: .destructive) {
                 Task {
                     await controller.confirmDeleteFromThisDevice()
-                    isShowingEverythingDeleted = true
+                    onDeleteFromThisDevice()
                 }
             }
             Button("applock.cancel", role: .cancel) {}
         } message: {
             Text("applock.deleteFromThisDevice.confirm.message")
-        }
-        .alert("applock.deleteEverything.done.message", isPresented: $isShowingEverythingDeleted) {
-            Button("applock.done") { onEverythingDeleted() }
         }
     }
 
