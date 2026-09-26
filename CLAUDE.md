@@ -116,8 +116,10 @@ After the worktree. Ash merges without squashing, so the commit named in each
 'contains scenario(s) not present in the modified block', Ash copies that
 requirement's full text from `openspec/specs` on main into the delta as
 MODIFIED, keeps the change's own scenarios and archives again.
-Ash closes the device-check bead after the device checks, and
-then the epic. Each worktree starts its branch from local HEAD (`worktree.baseRef` is `head`
+The device-check bead does not gate the epic. Ash closes the epic with
+`bd close <epic> --force` once every other child is closed, leaving the
+device-check bead open, and does the device checks later on Ash's own
+schedule; closing that bead afterwards needs no epic reopened. Each worktree starts its branch from local HEAD (`worktree.baseRef` is `head`
 in `.claude/settings.json`). If Ash rejects
 a branch, Ash reopens its closed children with `bd reopen`. Parallel worktrees
 edit Today, `Packages/Package.swift` and the content version; Ash sets the
