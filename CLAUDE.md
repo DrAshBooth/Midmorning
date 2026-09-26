@@ -96,7 +96,10 @@ continue its openspec build change. Build one child at a time, P0 first and
 P2 last. A child's acceptance names the scenarios it builds; the change's
 tasks.md lists every other scenario as `deferred: <bead id>`. When a scenario
 needs an epic that Ash has not merged yet, the agent tests it over fixture
-facts. A wiring bead (label `wiring`) in the later epic runs it end to end. Run `./verify`.
+facts. A wiring bead (label `wiring`) in the later epic runs it end to end. A
+README may map an App-target scenario as "structural" only when its line names
+the file and the line that build the scenario, and the epic's device-check bead
+holds a line for the same scenario. Run `./verify`.
 The first run in a new worktree is cold and can exceed 240 s; run it again,
 because the warm run is the budget. The change README states the cold time.
 When a child's tests pass, commit on the worktree branch and close the child
