@@ -57,7 +57,6 @@ struct TodayView: View {
     @State private var scrollTarget: UUID?
     @State private var navigationPath = NavigationPath()
     @AccessibilityFocusState private var addEntryFocused: Bool
-    @State private var isShowingSupportSheet = false
     @State private var programmeSnapshot: ProgrammeModel.Snapshot?
     @State private var weeklyReviewSnapshot: WeeklyReviewModel.Snapshot?
     @State private var pinnedNoteHeld = false
@@ -148,6 +147,9 @@ struct TodayView: View {
                 }
             }
             .navigationTitle("today.title")
+            // "Get support" in the trailing position (safeguarding spec,
+            // "Get support on every screen"), from the shared modifier.
+            .getSupport()
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     // app-lock spec, "The lock control on Today": locks at
@@ -159,14 +161,6 @@ struct TodayView: View {
                         Image(systemName: "lock")
                     }
                     .accessibilityLabel("today.lock.accessibilityLabel")
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isShowingSupportSheet = true
-                    } label: {
-                        Text("today.getSupport")
-                    }
-                    .accessibilityLabel("today.getSupport")
                 }
                 ToolbarItemGroup(placement: .bottomBar) {
                     // "Settings" opens the real screen (settings spec, "One
@@ -206,9 +200,6 @@ struct TodayView: View {
                 } onDelete: {
                     reload()
                 }
-            }
-            .sheet(isPresented: $isShowingSupportSheet) {
-                SupportSheetView()
             }
             .sheet(isPresented: $isShowingCloseTheDay) {
                 if let currentSection {

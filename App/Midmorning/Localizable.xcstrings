@@ -760,17 +760,6 @@
         }
       }
     },
-    "settings.getSupport": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Get support"
-          }
-        }
-      }
-    },
     "settings.group.about": {
       "extractionState": "manual",
       "localizations": {

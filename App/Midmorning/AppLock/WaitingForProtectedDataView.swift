@@ -20,7 +20,7 @@ struct WaitingForProtectedDataView: View {
                 // Safeguarding: "Get support on every screen" — the
                 // placeholder sheet needs no store, so it stays reachable
                 // even while the app cannot yet open one.
-                Button("settings.getSupport") { isShowingSupportSheet = true }
+                Button("today.getSupport") { isShowingSupportSheet = true }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
             }
