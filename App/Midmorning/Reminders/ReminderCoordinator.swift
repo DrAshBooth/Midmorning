@@ -16,10 +16,11 @@ import Programme
 /// so its planned meals are correctly unmatched and its midday/close-the-day
 /// facts correctly read as "nothing yet" (reminders spec: a future day's
 /// close-the-day reminder schedules ahead of time and cancels reactively
-/// when an entry arrives). `stage2Open` stays a fixture `false`, the same
-/// pattern `GapBand`/`PlanBuilderAccess` already use ahead of
-/// `programme-engine` (2.1); `mm-t21.23` wires the live stage into all three
-/// at once.
+/// when an entry arrives). `stage2Open` is the live stage from
+/// `ProgrammeModel` (mm-t32.16 wires it here; `TodayView`'s own `DaySection`
+/// already reads it live for `GapBand`/`PlanBuilderAccess`), read once per
+/// call and shared by every day in the horizon, the same single "is stage 2
+/// open right now" fact `TodayView` reuses across its own day sections.
 @MainActor
 enum ReminderCoordinator {
     /// Call on activation, when protected data becomes available, and after
@@ -36,21 +37,35 @@ enum ReminderCoordinator {
     /// The pure part: every fact-gathering step, with no `UNUserNotificationCenter` call, so a caller with its own permission read can test this in isolation.
     static func requests(store: RecordStore, now: Date, calendar: Calendar, notificationPermissionGranted: Bool) -> [ReminderRequest] {
         let constants = ProgrammeConstants.default
+        let stage2Open = ProgrammeModel.load(store: store, now: now, calendar: calendar).state.isOpen(.regularEating)
         var days: [SchedulerDay] = []
         var previousDayKey = RecordDay.key(containing: RecordDay.previous(RecordDay.interval(containing: now, calendar: calendar), calendar: calendar).start, calendar: calendar)
         var dayInterval = RecordDay.interval(containing: now, calendar: calendar)
 
         for index in 0..<constants.reminderHorizonDays {
             let dayKey = RecordDay.key(containing: dayInterval.start, calendar: calendar)
-            days.append(schedulerDay(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: index == 0, previousDayKey: previousDayKey, calendar: calendar, constants: constants))
+            days.append(schedulerDay(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: index == 0, previousDayKey: previousDayKey, stage2Open: stage2Open, calendar: calendar, constants: constants))
             previousDayKey = dayKey
             dayInterval = RecordDay.next(dayInterval, calendar: calendar)
         }
-        let farDay = schedulerDay(store: store, dayKey: RecordDay.key(containing: dayInterval.start, calendar: calendar), dayInterval: dayInterval, isCurrentDay: false, previousDayKey: previousDayKey, calendar: calendar, constants: constants)
+        let farDay = schedulerDay(store: store, dayKey: RecordDay.key(containing: dayInterval.start, calendar: calendar), dayInterval: dayInterval, isCurrentDay: false, previousDayKey: previousDayKey, stage2Open: stage2Open, calendar: calendar, constants: constants)
 
         let settings = schedulerSettings(store: store, notificationPermissionGranted: notificationPermissionGranted)
-        let extraCandidates = weighInDayCandidates(store: store, dayKeys: days.map(\.dayKey), calendar: calendar)
+        let dayKeys = days.map(\.dayKey)
+        let extraCandidates = weighInDayCandidates(store: store, dayKeys: dayKeys, calendar: calendar)
+            + weeklyReviewCandidates(store: store, dayKeys: dayKeys, calendar: calendar, now: now)
         return Scheduler.requests(days: days, extraCandidates: extraCandidates, farReminderDay: farDay, settings: settings, calendar: calendar, constants: constants)
+    }
+
+    /// reminders spec, "The weekly review reminder": `weekly-review`'s own
+    /// candidate, fed into the same scheduler as an extra candidate.
+    /// `WeeklyReviewModel.load`'s own `dueDayKey` is already `nil` once the
+    /// review is finished (`ReviewDue.todayLineWeek`), so this candidate
+    /// needs no separate "is finished" read.
+    private static func weeklyReviewCandidates(store: RecordStore, dayKeys: [String], calendar: Calendar, now: Date) -> [ReminderCandidate] {
+        let snapshot = WeeklyReviewModel.load(store: store, now: now, calendar: calendar)
+        let time = (try? store.reminderTime(.weeklyReview)) ?? RecordStore.ReminderTime.weeklyReview.defaultTime
+        return WeeklyReviewReminderRule.candidates(dueDayKey: snapshot.dueDayKey, isFinished: false, dayKeys: dayKeys, time: time)
     }
 
     /// reminders spec, "The weigh-in day reminder": `weigh-in`'s own
@@ -73,7 +88,7 @@ enum ReminderCoordinator {
 
     private static func schedulerDay(
         store: RecordStore, dayKey: String, dayInterval: DateInterval, isCurrentDay: Bool,
-        previousDayKey: String, calendar: Calendar, constants: ProgrammeConstants
+        previousDayKey: String, stage2Open: Bool, calendar: Calendar, constants: ProgrammeConstants
     ) -> SchedulerDay {
         let dayStartHour = (try? store.dayStartHour(effectiveOn: dayKey)) ?? RecordDay.startHour
         let plannedMealFacts = resolvedPlannedMeals(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: isCurrentDay, dayStartHour: dayStartHour, calendar: calendar, constants: constants)
@@ -92,7 +107,7 @@ enum ReminderCoordinator {
 
         let lastPlannedMeal = plannedMealFacts.max { ReminderClock.minutesOfDay($0.time) < ReminderClock.minutesOfDay($1.time) }
         let closeTheDay = CloseTheDayFacts(
-            stage2Open: false,
+            stage2Open: stage2Open,
             hasEntryAfter17: hasEntryAfter17,
             lastPlannedMealTime: lastPlannedMeal?.time,
             lastPlannedMealMatched: lastPlannedMeal?.matchedBeforeReminderTime ?? false,
@@ -101,7 +116,7 @@ enum ReminderCoordinator {
 
         let templatesExist = !(((try? store.templateSlotsJSON(.weekday)) ?? "[]") == "[]" && ((try? store.templateSlotsJSON(.weekend)) ?? "[]") == "[]")
         let morningPlan = MorningPlanFacts(
-            stage2Open: false,
+            stage2Open: stage2Open,
             templatesExist: templatesExist,
             previousDayIsSetDay: (try? store.isSetDay(dateKey: previousDayKey)) ?? false,
             currentDayAlreadySet: (try? store.isSetDay(dateKey: dayKey)) ?? false,
@@ -168,6 +183,7 @@ enum ReminderCoordinator {
             .midday: on(.midday),
             .closeTheDay: on(.closeTheDay),
             .weighInDay: on(.weighInDay),
+            .weeklyReview: on(.weeklyReview),
         ]
         return SchedulerSettings(
             switches: switches,

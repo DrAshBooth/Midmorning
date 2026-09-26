@@ -197,6 +197,7 @@ private struct RunningRootView: View {
     @StateObject private var deletionNotifier = DeletionNotifier()
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingWeighInFromReminder = false
+    @State private var showingWeeklyReviewFromReminder = false
 
     var body: some View {
         TodayView(store: store)
@@ -239,6 +240,15 @@ private struct RunningRootView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .weighInReminderTapped)) { _ in
                 showingWeighInFromReminder = true
+            }
+            // A tap on the weekly review reminder (reminders spec, "The
+            // weekly review reminder": "A tap MUST open the weekly
+            // review.").
+            .fullScreenCover(isPresented: $showingWeeklyReviewFromReminder) {
+                NavigationStack { ReviewScreenView(store: store, week: WeeklyReviewModel.load(store: store).dueWeek ?? 1) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .weeklyReviewReminderTapped)) { _ in
+                showingWeeklyReviewFromReminder = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .reminderAddActionTapped)) { _ in
                 controller.handle(.pendingRouteRequested(.newEntry))
