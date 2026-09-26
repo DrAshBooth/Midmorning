@@ -5,20 +5,17 @@ import RecordTestSupport
 
 /// record spec, "The app keeps the entry's UTC offset and creation moment".
 /// Ash ruled on 26 September 2026 (r13-16, mm-t12b.22) that an entry keeps
-/// the UTC offset in effect at its own time, by the device zone rules, not
-/// the offset at the save moment, on add and on edit. Each test makes the
-/// calls that `NewEntryView` and `EditEntryView` make on save, with London
-/// as the device zone. In 2026 the London clocks go forward at 01:00 GMT on
-/// 29 March and go back at 02:00 BST on 25 October.
+/// the UTC offset in effect at its own time, by the device's current zone
+/// rules, not the offset at the save moment, on add and on edit. The rules
+/// are in `RecordStore.add` and `RecordStore.update`, and the new-entry
+/// screen and the edit screen pass no offset. So each test makes the same
+/// store call as the screen, with London as the device zone. In 2026 the
+/// London clocks go forward at 01:00 GMT on 29 March and go back at 02:00
+/// BST on 25 October.
 @MainActor
 final class EntryOffsetTests: XCTestCase {
     private let londonZone = TimeZone(identifier: "Europe/London")!
-
-    private var london: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = londonZone
-        return calendar
-    }
+    private let tokyoZone = TimeZone(identifier: "Asia/Tokyo")!
 
     private func utc(_ month: Int, _ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
         var calendar = Calendar(identifier: .gregorian)
@@ -26,30 +23,29 @@ final class EntryOffsetTests: XCTestCase {
         return calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
     }
 
-    /// What `NewEntryView.save` does: the offset at the entry's own time.
-    private func saveNew(_ time: Date, savedAt now: Date, in store: RecordStore) throws -> RecordRow {
+    /// The call of `NewEntryView.save`, in `deviceZone`.
+    private func saveNew(_ time: Date, savedAt now: Date, in store: RecordStore, deviceZone: TimeZone? = nil) throws -> RecordRow {
         try store.add(
             time: min(time, now), what: "Toast", feltLikeABinge: false, createdAt: now,
-            utcOffsetSeconds: EntryOffset.seconds(at: min(time, now), in: londonZone), dayStartHour: 4
+            deviceZone: deviceZone ?? londonZone
         )
     }
 
-    /// What `EditEntryView` does: its zone from the entry, and on save the
-    /// offset at the edited time in that zone.
-    private func saveEdit(_ entry: RecordRow, time: Date, what: String, at now: Date, in store: RecordStore, deviceZone: TimeZone) throws -> RecordRow {
-        let zone = EntryOffset.editZone(entryTime: entry.time, entryOffsetSeconds: entry.utcOffsetSeconds, deviceZone: deviceZone)
-        return try store.update(
+    /// The call of `EditEntryView.save`, in `deviceZone`.
+    private func saveEdit(_ entry: RecordRow, time: Date, what: String, at now: Date, in store: RecordStore, deviceZone: TimeZone? = nil) throws -> RecordRow {
+        try store.update(
             entryId: entry.id, time: time, what: what, feltLikeABinge: entry.feltLikeABinge,
             whereText: entry.whereText, context: entry.context, editedAt: now,
-            utcOffsetSeconds: EntryOffset.seconds(at: time, in: zone)
+            deviceZone: deviceZone ?? londonZone
         )
     }
 
     // MARK: Add
 
-    /// The 25 October 2026 case from the ruling. On Sunday at 10:00 GMT the
-    /// person saves an entry for Saturday 04:30 BST. With the offset at the
-    /// save moment (GMT) the entry showed 03:30 and took Friday's key.
+    /// Scenario: Earlier time across a clock change. On Sunday 25 October
+    /// at 10:00 GMT the person saves an entry for Saturday 04:30 BST. With
+    /// the offset at the save moment (GMT) the entry showed 03:30 and took
+    /// Friday's key.
     func testABackdatedEntryAcrossTheAutumnChangeKeepsItsOwnOffset() throws {
         let store = try makeTemporaryStore()
         let entryTime = utc(10, 24, 3, 30) // Saturday 04:30 BST
@@ -85,6 +81,13 @@ final class EntryOffsetTests: XCTestCase {
         XCTAssertEqual(entry.dayKey, "2026-09-25")
     }
 
+    /// A given offset wins over the device zone, for a test or an import.
+    func testAGivenOffsetWins() throws {
+        let store = try makeTemporaryStore()
+        let entry = try store.add(time: utc(10, 24, 3, 30), what: "Toast", feltLikeABinge: false, createdAt: utc(10, 25, 10), utcOffsetSeconds: 0, deviceZone: londonZone)
+        XCTAssertEqual(entry.utcOffsetSeconds, 0)
+    }
+
     // MARK: Edit
 
     /// The edit screen of an entry saved in the device zone uses the device
@@ -104,12 +107,13 @@ final class EntryOffsetTests: XCTestCase {
         XCTAssertEqual(bounds.duration, 25 * 3600)
     }
 
-    /// An edit that moves the entry across the change, inside its own
-    /// record day, keeps the offset in effect at the edited time.
+    /// Scenario: Edit on the day of a clock change. An edit that moves the
+    /// entry across the change, inside its own record day, keeps the offset
+    /// in effect at the edited time.
     func testAnEditAcrossTheAutumnChangeTakesTheOffsetAtTheEditedTime() throws {
         let store = try makeTemporaryStore()
         let entry = try saveNew(utc(10, 24, 22), savedAt: utc(10, 24, 22), in: store) // Saturday 23:00 BST
-        let edited = try saveEdit(entry, time: utc(10, 25, 3, 30), what: entry.what, at: utc(10, 25, 9), in: store, deviceZone: londonZone)
+        let edited = try saveEdit(entry, time: utc(10, 25, 3, 30), what: entry.what, at: utc(10, 25, 9), in: store)
         XCTAssertEqual(edited.utcOffsetSeconds, 0, "03:30 on Sunday is GMT")
         XCTAssertEqual(edited.clockTime, "03:30")
         XCTAssertEqual(edited.dayKey, "2026-10-24", "the edit keeps the entry's record day")
@@ -120,36 +124,51 @@ final class EntryOffsetTests: XCTestCase {
     func testAnEditOfTheWhatChangesNothingElse() throws {
         let store = try makeTemporaryStore()
         let entry = try saveNew(utc(9, 25, 12, 5), savedAt: utc(9, 25, 12, 8), in: store)
-        let edited = try saveEdit(entry, time: entry.time, what: "Toast, tea and a biscuit", at: utc(9, 25, 17), in: store, deviceZone: londonZone)
+        let edited = try saveEdit(entry, time: entry.time, what: "Toast, tea and a biscuit", at: utc(9, 25, 17), in: store)
         XCTAssertEqual(edited.utcOffsetSeconds, entry.utcOffsetSeconds)
         XCTAssertEqual(edited.clockTime, "13:05")
     }
 
     /// An entry saved in another zone: the edit screen uses a fixed zone at
-    /// the entry's own offset, so an edit of the What in London does not
-    /// move a Tokyo entry's clock time.
-    func testAnEntryFromAnotherZoneKeepsItsOffsetOnEdit() throws {
+    /// the entry's own offset, and an edit that keeps the time keeps the
+    /// offset. So an edit of the What in London does not move a Tokyo
+    /// entry's clock time.
+    func testAnEntryFromAnotherZoneKeepsItsOffsetWhenTheTimeStays() throws {
         let store = try makeTemporaryStore()
-        let tokyo = TimeZone(identifier: "Asia/Tokyo")!
         let time = utc(9, 24, 23) // 08:00 on 25 September in Tokyo
-        let entry = try store.add(
-            time: time, what: "Rice", feltLikeABinge: false, createdAt: time,
-            utcOffsetSeconds: EntryOffset.seconds(at: time, in: tokyo), dayStartHour: 4
-        )
+        let entry = try saveNew(time, savedAt: time, in: store, deviceZone: tokyoZone)
+        XCTAssertEqual(entry.utcOffsetSeconds, 9 * 3600)
         let zone = EntryOffset.editZone(entryTime: entry.time, entryOffsetSeconds: entry.utcOffsetSeconds, deviceZone: londonZone)
         XCTAssertEqual(zone.secondsFromGMT(for: time), 9 * 3600)
 
-        let edited = try saveEdit(entry, time: entry.time, what: "Rice and egg", at: utc(9, 30, 12), in: store, deviceZone: londonZone)
+        let edited = try saveEdit(entry, time: entry.time, what: "Rice and egg", at: utc(9, 30, 12), in: store)
         XCTAssertEqual(edited.utcOffsetSeconds, 9 * 3600)
         XCTAssertEqual(edited.clockTime, "08:00")
         XCTAssertEqual(edited.dayKey, entry.dayKey)
     }
 
-    /// With no offset given, an edit keeps the current version's offset.
-    func testAnUpdateWithNoOffsetKeepsTheOffset() throws {
+    /// An entry saved in another zone, with a time change: the ruling
+    /// computes the offset again from the device's current zone rules at
+    /// the new time ("When an edit changes the entry's time, the app MUST
+    /// compute the offset again for the new time."). The entry keeps its
+    /// record day. mm-t12b.25 holds the clock-time question for Ash.
+    func testAnEntryFromAnotherZoneTakesTheDeviceOffsetWhenTheTimeChanges() throws {
         let store = try makeTemporaryStore()
-        let entry = try saveNew(utc(10, 24, 3, 30), savedAt: utc(10, 25, 10), in: store)
-        let edited = try store.update(entryId: entry.id, time: entry.time, what: "Porridge", feltLikeABinge: false, whereText: "", context: "", editedAt: utc(10, 25, 11))
-        XCTAssertEqual(edited.utcOffsetSeconds, 3600)
+        let time = utc(9, 24, 23) // 08:00 on 25 September in Tokyo
+        let entry = try saveNew(time, savedAt: time, in: store, deviceZone: tokyoZone)
+
+        let edited = try saveEdit(entry, time: utc(9, 24, 23, 30), what: entry.what, at: utc(9, 30, 12), in: store)
+
+        XCTAssertEqual(edited.utcOffsetSeconds, 3600, "the London offset at 23:30 UTC on 24 September, BST")
+        XCTAssertEqual(edited.clockTime, "00:30")
+        XCTAssertEqual(edited.dayKey, entry.dayKey, "the edit keeps the entry's record day")
+    }
+
+    /// The rule itself: the same minute keeps the entry's offset, and a new
+    /// minute takes the device zone's offset at that minute.
+    func testTheEditRuleComparesMinutes() {
+        let entryTime = utc(9, 24, 23)
+        XCTAssertEqual(EntryOffset.forEdit(entryTime: entryTime, entryOffsetSeconds: 9 * 3600, editedTime: entryTime.addingTimeInterval(30), deviceZone: londonZone), 9 * 3600)
+        XCTAssertEqual(EntryOffset.forEdit(entryTime: entryTime, entryOffsetSeconds: 9 * 3600, editedTime: entryTime.addingTimeInterval(60), deviceZone: londonZone), 3600)
     }
 }

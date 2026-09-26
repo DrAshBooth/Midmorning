@@ -154,17 +154,20 @@ public final class RecordStore {
     /// Saves one entry as a new `Item` and its first `ItemVersion`, and
     /// returns the row. Trims white space and line breaks from the ends of
     /// `what` and `context`. Truncates `time` to the minute. Throws on
-    /// failure with no entry data in the error. `utcOffsetSeconds` is the
-    /// offset in effect at `time`, not at `createdAt` (`EntryOffset`). The
-    /// record day key comes from `time`, that offset and the "Day starts at"
-    /// rows in force (record spec, "The record day"); `dayStartHour` sets
-    /// one fixed hour instead, for a test.
+    /// failure with no entry data in the error. The entry keeps the UTC
+    /// offset of `deviceZone` at `time`, not at `createdAt`
+    /// (`EntryOffset.forNewEntry`); the new-entry screen passes no offset.
+    /// `utcOffsetSeconds` sets one fixed offset instead, for a test or an
+    /// import. The record day key comes from `time`, that offset and the
+    /// "Day starts at" rows in force (record spec, "The record day");
+    /// `dayStartHour` sets one fixed hour instead, for a test.
     @discardableResult
     public func add(
-        time: Date, what: String, feltLikeABinge: Bool, createdAt: Date, utcOffsetSeconds: Int,
-        whereText: String = "", context: String = "", dayStartHour: Int? = nil
+        time: Date, what: String, feltLikeABinge: Bool, createdAt: Date, utcOffsetSeconds: Int? = nil,
+        whereText: String = "", context: String = "", dayStartHour: Int? = nil, deviceZone: TimeZone = .current
     ) throws -> RecordRow {
         let minute = Self.truncatedToMinute(time)
+        let utcOffsetSeconds = utcOffsetSeconds ?? EntryOffset.forNewEntry(at: minute, deviceZone: deviceZone)
         let entryId = UUID()
         let item = Item(id: entryId)
         let schedule = try dayStartHour.map(DayStartSchedule.constant) ?? dayStartSchedule()
@@ -189,21 +192,25 @@ public final class RecordStore {
     /// Writes a new version of `entryId` with the changed fields (record
     /// spec, "Edit an entry"). Keeps the entry's record day and creation
     /// moment as they were; only a fresh `changedAt` and the given fields
-    /// move. `utcOffsetSeconds` is the offset at the edited time
-    /// (`EntryOffset`); `nil` keeps the current version's offset. Throws
-    /// `Failure.saveFailed` when `entryId` has no current version.
+    /// move. When `time` is not the entry's time, the version keeps the
+    /// UTC offset of `deviceZone` at the new time; else it keeps the entry's
+    /// own offset (`EntryOffset.forEdit`). The edit screen passes no offset.
+    /// Throws `Failure.saveFailed` when `entryId` has no current version.
     @discardableResult
     public func update(
         entryId: UUID, time: Date, what: String, feltLikeABinge: Bool, whereText: String,
-        context: String, editedAt: Date, utcOffsetSeconds: Int? = nil
+        context: String, editedAt: Date, deviceZone: TimeZone = .current
     ) throws -> RecordRow {
         guard let current = try winningVersion(entryId: entryId) else { throw Failure.saveFailed }
+        let minute = Self.truncatedToMinute(time)
         let version = ItemVersion(
             entryId: entryId,
             changedAt: editedAt,
             dayKey: current.dayKey,
-            time: Self.truncatedToMinute(time),
-            utcOffsetSeconds: utcOffsetSeconds ?? current.utcOffsetSeconds,
+            time: minute,
+            utcOffsetSeconds: EntryOffset.forEdit(
+                entryTime: current.time, entryOffsetSeconds: current.utcOffsetSeconds, editedTime: minute, deviceZone: deviceZone
+            ),
             what: what.trimmingCharacters(in: .whitespacesAndNewlines),
             feltLikeABinge: feltLikeABinge,
             createdAt: current.createdAt,
@@ -319,7 +326,7 @@ public final class RecordStore {
         return try context.fetch(descriptor)
     }
 
-    static func truncatedToMinute(_ date: Date) -> Date {
+    nonisolated static func truncatedToMinute(_ date: Date) -> Date {
         Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60)
     }
 

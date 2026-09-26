@@ -156,7 +156,6 @@ struct NewEntryView: View {
                 what: what,
                 feltLikeABinge: feltLikeABinge,
                 createdAt: now,
-                utcOffsetSeconds: EntryOffset.seconds(at: min(time, now)),
                 whereText: place.whereText,
                 context: context
             )
