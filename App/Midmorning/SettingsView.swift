@@ -36,6 +36,7 @@ struct SettingsView: View {
     @State private var weighInWeekday: Int?
     @State private var weighInUnit: WeightUnit = .kg
     @State private var isShowingDeleteConfirmation = false
+    @State private var deleteOutcome: DeleteAllOutcome?
     @State private var contentInfo: ContentBundle?
     @State private var contactEmail = ""
     @State private var biometry: Biometry = .none
@@ -116,6 +117,12 @@ struct SettingsView: View {
                 Button("settings.privacy.deleteEverything", role: .destructive) {
                     isShowingDeleteConfirmation = true
                 }
+                // data-and-privacy spec, "Delete-all" (ruling r14-01): one
+                // line under the controls after a failed deletion.
+                if deleteOutcome == .failed {
+                    Text(DeleteAllOutcome.failureMessage.string)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             // The app lock's own switch, "Face ID only"/"Touch ID only" and
@@ -154,7 +161,8 @@ struct SettingsView: View {
             titleVisibility: .visible
         ) {
             Button("settings.privacy.deleteEverything", role: .destructive) {
-                if (try? deleteAllSeam.deleteEverything()) != nil {
+                deleteOutcome = DeleteAllOutcome.of { try deleteAllSeam.deleteEverything() }
+                if deleteOutcome == .deleted {
                     deletionNotifier.onEverythingDeleted()
                 }
             }

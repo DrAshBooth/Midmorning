@@ -79,6 +79,12 @@ struct CoverView: View {
                 Button("applock.cover.deleteEverything") { Task { await tapDeleteEverything() } }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                // data-and-privacy spec, "Delete-all" (ruling r14-01): one
+                // line under the controls after a failed deletion.
+                if controller.deleteEverythingOutcome == .failed {
+                    Text(DeleteAllOutcome.failureMessage.string)
+                        .foregroundStyle(.secondary)
+                }
             }
             .dynamicTypeSize(...(.accessibility5))
             .padding()

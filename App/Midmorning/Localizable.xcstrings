@@ -378,6 +378,17 @@
         }
       }
     },
+    "applock.deleteEverything.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not delete. Try again."
+          }
+        }
+      }
+    },
     "diagnostics.contentVersion": {
       "extractionState": "manual",
       "localizations": {

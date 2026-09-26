@@ -28,6 +28,48 @@ final class DeleteAllFailureTests: XCTestCase {
         XCTAssertFalse(deleted)
     }
 
+    /// Ruling r14-01 (mm-t41.26), scenario "Deletion fails from the
+    /// cover": the cover shows "Could not delete. Try again." under its
+    /// controls.
+    func testAFailedDeleteEverythingShowsTheFailureLineOnTheCover() async {
+        let controller = controller(seam: FailingDeleteAllSeam())
+
+        await controller.confirmDeleteEverything()
+
+        XCTAssertEqual(controller.deleteEverythingOutcome, .failed)
+        XCTAssertEqual(controller.state.coverMode, .locked, "the cover stays")
+        XCTAssertEqual(DeleteAllOutcome.failureMessage.english, "Could not delete. Try again.")
+    }
+
+    /// A new deletion removes the line while it runs; a success shows the
+    /// deleted screen, with no line.
+    func testASuccessfulDeletionShowsNoFailureLine() async {
+        let controller = controller(seam: RecordingDeleteAllSeam())
+
+        await controller.confirmDeleteEverything()
+
+        XCTAssertEqual(controller.deleteEverythingOutcome, .deleted)
+    }
+
+    /// "Unlock" takes the cover away, and the line with it: the next cover
+    /// shows no old failure.
+    func testUnlockRemovesTheFailureLine() async {
+        let controller = controller(seam: FailingDeleteAllSeam())
+        await controller.confirmDeleteEverything()
+
+        await controller.tapUnlock()
+
+        XCTAssertNil(controller.deleteEverythingOutcome)
+    }
+
+    /// The settings screen and the store-failure page call a deletion that
+    /// throws (`Record.DeleteAllSeam`): the same outcome and the same line.
+    func testTheOutcomeOfAThrowingDeletion() {
+        struct Failure: Error {}
+        XCTAssertEqual(DeleteAllOutcome.of { throw Failure() }, .failed)
+        XCTAssertEqual(DeleteAllOutcome.of {}, .deleted)
+    }
+
     func testASuccessfulDeletionReportsSuccess() async {
         let seam = RecordingDeleteAllSeam()
         let controller = controller(seam: seam)

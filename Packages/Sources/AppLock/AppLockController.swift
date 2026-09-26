@@ -25,6 +25,12 @@ public final class AppLockController: ObservableObject {
     /// not set it: after that tap, only "Unlock" asks.
     public private(set) var authenticationRequestDue: Bool
 
+    /// The last "Delete everything" from the cover (ruling r14-01,
+    /// mm-t41.26). The cover shows "Could not delete. Try again." under its
+    /// controls while this is `.failed`. A new deletion or a successful
+    /// authentication removes the line.
+    @Published public private(set) var deleteEverythingOutcome: DeleteAllOutcome?
+
     public init(
         state: AppLifecycleState,
         authenticator: AuthenticationPerforming,
@@ -55,6 +61,7 @@ public final class AppLockController: ObservableObject {
             }
         case .authenticationSucceeded:
             authenticationRequestDue = false
+            deleteEverythingOutcome = nil
         default:
             break
         }
@@ -157,10 +164,13 @@ public final class AppLockController: ObservableObject {
     /// screen follows the deletion).
     @discardableResult
     public func confirmDeleteEverything() async -> Bool {
+        deleteEverythingOutcome = nil
         do {
             try await deleteAllSeam.deleteEverything()
+            deleteEverythingOutcome = .deleted
             return true
         } catch {
+            deleteEverythingOutcome = .failed
             return false
         }
     }

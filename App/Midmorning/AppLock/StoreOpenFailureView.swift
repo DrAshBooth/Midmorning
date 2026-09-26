@@ -16,6 +16,7 @@ struct StoreOpenFailureView: View {
 
     @State private var isShowingSupportSheet = false
     @State private var isShowingDeleteConfirmation = false
+    @State private var deleteOutcome: DeleteAllOutcome?
 
     var body: some View {
         ZStack {
@@ -32,6 +33,12 @@ struct StoreOpenFailureView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                // data-and-privacy spec, "Delete-all" (ruling r14-01): one
+                // line under the controls after a failed deletion.
+                if deleteOutcome == .failed {
+                    Text(DeleteAllOutcome.failureMessage.string)
+                        .foregroundStyle(.secondary)
+                }
             }
             .dynamicTypeSize(...(.accessibility5))
             .padding()
@@ -46,8 +53,9 @@ struct StoreOpenFailureView: View {
         ) {
             Button("settings.privacy.deleteEverything", role: .destructive) {
                 // The deleted screen only after a deletion that succeeded;
-                // on failure this page stays.
-                if (try? seam.deleteEverything()) != nil { onDeleted() }
+                // on failure this page stays and shows the failure line.
+                deleteOutcome = DeleteAllOutcome.of { try seam.deleteEverything() }
+                if deleteOutcome == .deleted { onDeleted() }
             }
             Button("entry.cancel", role: .cancel) {}
         } message: {
