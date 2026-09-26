@@ -28,11 +28,32 @@ public enum ReminderClock {
         return string(hour: parts.hour ?? 0, minute: parts.minute ?? 0)
     }
 
-    /// `time` ("HH:mm") on the calendar day that contains `day`, or `nil`
-    /// when `time` does not parse.
-    public static func date(atTime time: String, on day: Date, calendar: Calendar) -> Date? {
-        guard let (hour, minute) = parse(time) else { return nil }
-        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)
+    /// `time` ("HH:mm") inside the record day that starts at `dayStart`, or
+    /// `nil` when `time` does not parse. A clock time earlier than the day
+    /// start's own clock time falls after midnight, so it goes on the next
+    /// calendar date (regular-eating-plan spec, "A planned meal after
+    /// midnight"; reminders spec, "Scheduling is local, lazy and bounded",
+    /// scenario "A later day start").
+    public static func date(atTime time: String, on dayStart: Date, calendar: Calendar) -> Date? {
+        guard let (hour, minute) = parse(time),
+              let sameDate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: dayStart)
+        else { return nil }
+        guard sameDate < dayStart else { return sameDate }
+        return calendar.date(byAdding: .day, value: 1, to: sameDate)
+    }
+
+    /// The minutes from the day start's clock time to `time`, from 0 to
+    /// 1439. Use this, not `minutesOfDay`, to order or compare two clock
+    /// times of one record day: a time after midnight comes after a time
+    /// in the evening.
+    public static func minutesSinceDayStart(_ time: String, dayStartMinute: Int) -> Int {
+        ((minutesOfDay(time) - dayStartMinute) % 1440 + 1440) % 1440
+    }
+
+    /// The clock minute of `dayStart` (for example 240 for 04:00).
+    public static func dayStartMinute(of dayStart: Date, calendar: Calendar) -> Int {
+        let parts = calendar.dateComponents([.hour, .minute], from: dayStart)
+        return (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
     }
 }
 
@@ -158,6 +179,14 @@ public enum ReminderQuietHours {
     /// equals the end, quiet hours are off").
     public static func isOn(start: String, end: String) -> Bool {
         start != end
+    }
+
+    /// The range the scheduler and the snooze rule read: the person's own
+    /// range while the "Quiet hours" switch is on, or an "off" range (the
+    /// start equal to the end) while it is off. This is the one place that
+    /// holds the on/off rule.
+    public static func effectiveRange(on: Bool, start: String, end: String) -> (start: String, end: String) {
+        on ? (start, end) : (start, start)
     }
 
     /// True for `time` inside the half-open range from `start`, included, to

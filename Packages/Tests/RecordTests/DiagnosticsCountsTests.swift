@@ -48,8 +48,30 @@ final class DiagnosticsCountsTests: XCTestCase {
         XCTAssertEqual(counts.launchFailures, 2)
         XCTAssertEqual(counts.crashCount, 1)
         XCTAssertEqual(counts.lastReconcileOutcome, .init(winners: 4, losers: 1))
-        XCTAssertEqual(counts.pendingReminders, 0, "2.4 (mm-t24.20) supplies the real value")
-        XCTAssertEqual(counts.queueLength, 0, "2.4 (mm-t24.20) supplies the real value")
+        XCTAssertEqual(counts.pendingReminders, 0, "a caller with no device to read passes zero")
+        XCTAssertEqual(counts.queueLength, 0, "a caller with no device to read passes zero")
+    }
+
+    /// mm-t24.33: the page shows the two counts the App target reads from
+    /// the device (`ReminderDiagnosticsSource`), here the actions in a real
+    /// queue file.
+    func testDiagnosticsShowTheDeviceCounts() throws {
+        struct DeviceCounts: DiagnosticsSourceCounts {
+            let pendingReminders: Int
+            let queueLength: Int
+        }
+        let (store, directory) = try makeStore()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let queueURL = directory.appendingPathComponent("queue.json")
+        var data = Data()
+        for slot in 0..<3 {
+            data = ActionQueueCodec.appending(QueuedAction(kind: .skipped, dayKey: "2026-10-06", slotIndex: slot, plannedTime: "13:00", snoozeCount: 0, moment: Date()), to: data)
+        }
+        try data.write(to: queueURL)
+        let source = DeviceCounts(pendingReminders: 41, queueLength: ActionQueueCodec.decode(try Data(contentsOf: queueURL)).count)
+        let counts = try store.diagnosticsCounts(contentVersion: 2, sourceCounts: source)
+        XCTAssertEqual(counts.pendingReminders, 41)
+        XCTAssertEqual(counts.queueLength, 3)
     }
 
     func testIncrementLaunchFailureCountReturnsTheNewCount() throws {

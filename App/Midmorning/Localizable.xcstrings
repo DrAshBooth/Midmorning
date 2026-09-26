@@ -1156,6 +1156,62 @@
         }
       }
     },
+    "settings.reminders.quietHoursNotSent": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This time is in quiet hours. The reminder will not be sent."
+          }
+        }
+      }
+    },
+    "reminders.action.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "reminders.action.skipped": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skipped"
+          }
+        }
+      }
+    },
+    "reminders.action.snooze %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Remind me in %lld minute"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Remind me in %lld minutes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "settings.reminders.switch.closeTheDay": {
       "extractionState": "manual",
       "localizations": {

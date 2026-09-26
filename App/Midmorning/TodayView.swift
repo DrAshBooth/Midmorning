@@ -63,12 +63,12 @@ struct TodayView: View {
     @State private var pendingCard: PendingCard?
     @State private var openCardId: String?
     @State private var planBuilderMode: PlanBuilderMode?
-    /// `mm-t24.21` wires the live notification-permission read (`onboarding`'s
-    /// own permission request result) into this fact; a fresh install reads
-    /// as not determined, the same fixture-fact pattern `stage2Open` uses
-    /// ahead of `programme-engine`.
-    @State private var notificationPermission: NotificationPermission = .notDetermined
+    /// The live notification permission, read on each reload
+    /// (`NotificationPermissionAccess`). Until the first read answers, Today
+    /// shows no permission line.
+    @State private var notificationPermission: NotificationPermission = .granted
     @State private var hasTappedNotificationsDeniedLineOnce = false
+    @State private var anyReminderSwitchOn = true
     @State private var isShowingCloseTheDay = false
 
     /// The live stage 2 state (programme spec, "Stage 2 opens after five
@@ -238,6 +238,9 @@ struct TodayView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }
+        // A queued "Skipped" reached the store (widgets-and-intents spec,
+        // "The action queue").
+        .onReceive(NotificationCenter.default.publisher(for: .reminderActionQueueApplied)) { _ in reload() }
         .task(id: day.end) {
             // Refresh at 04:00 while Today is on screen.
             let wait = day.end.timeIntervalSinceNow
@@ -252,7 +255,7 @@ struct TodayView: View {
             if let currentSection {
                 dayHeadingView(currentSection)
             }
-            if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce) != nil {
+            if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce, anySwitchOn: anyReminderSwitchOn) != nil {
                 Button(action: tapNotificationsLine) {
                     if notificationPermission == .notDetermined {
                         Text("today.reminders.notDetermined")
@@ -260,6 +263,9 @@ struct TodayView: View {
                         Text("today.reminders.denied")
                     }
                 }
+                // Its own tap target: a tap on the line never reaches "Add an
+                // entry" in the same row.
+                .buttonStyle(.borderless)
             }
             Button {
                 showingNewEntry = true
@@ -326,9 +332,18 @@ struct TodayView: View {
                     .listRowSeparator(.hidden)
             }
             if section.role == .current {
-                Button(section.states.contains(.paused) ? "today.pauseForToday.on" : "today.pauseForToday") {
-                    togglePause(section)
+                // reminders spec, "Close the day": "Close the day" sits
+                // beside "Pause for today" only after the gate time.
+                HStack {
+                    Button(section.states.contains(.paused) ? "today.pauseForToday.on" : "today.pauseForToday") {
+                        togglePause(section)
+                    }
+                    if closeTheDayShows(section) {
+                        Spacer()
+                        Button("closeTheDay.title") { isShowingCloseTheDay = true }
+                    }
                 }
+                .buttonStyle(.borderless)
                 .listRowSeparator(.hidden)
             }
         } else {
@@ -366,10 +381,6 @@ struct TodayView: View {
                     Button("today.earlierDays") {
                         navigationPath.append(EarlierDaysRoute.list)
                     }
-                }
-                if section.role == .current {
-                    Divider()
-                    Button("closeTheDay.title") { isShowingCloseTheDay = true }
                 }
                 if section.role == .current, PlanBuilderAccess.isOffered(stage2Open: stage2Open) {
                     Divider()
@@ -435,13 +446,32 @@ struct TodayView: View {
     /// A tap makes the system permission request (when not determined) or
     /// opens the iOS Settings app (when denied), and hides the denied line
     /// after one tap (reminders spec, "Reminder types and their switches").
-    /// `mm-t24.21` replaces the fixture request/open with the real
-    /// `UNUserNotificationCenter`/`UIApplication.openSettingsURLString` call.
+    /// After a grant, the scheduler computes the schedule.
     private func tapNotificationsLine() {
-        if notificationPermission == .denied {
+        switch notificationPermission {
+        case .notDetermined:
+            NotificationPermissionAccess.request { permission in
+                notificationPermission = permission
+                ReminderCoordinator.recomputeAndApply(store: store)
+            }
+        case .denied:
             try? store.setHasTappedNotificationsDeniedLineOnce(true)
             hasTappedNotificationsDeniedLineOnce = true
+            NotificationPermissionAccess.openSettings()
+        case .granted:
+            break
         }
+    }
+
+    /// reminders spec, "Close the day": after the last planned meal's
+    /// time, or after 17:00 in stage 1.
+    private func closeTheDayShows(_ section: DaySection) -> Bool {
+        CloseTheDayRule.controlShows(
+            nowClockTime: ReminderClock.string(from: Date(), calendar: .current),
+            dayStartMinute: ReminderClock.dayStartMinute(of: section.interval.start, calendar: .current),
+            stage2Open: stage2Open,
+            plannedMealTimes: section.plan?.rows.map(\.time) ?? []
+        )
     }
 
     private func togglePause(_ section: DaySection) {
@@ -476,6 +506,8 @@ struct TodayView: View {
         previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
         hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
+        anyReminderSwitchOn = RecordStore.ReminderSwitch.allCases.contains { (try? store.reminderSwitchOn($0)) ?? true }
+        NotificationPermissionAccess.read { notificationPermission = $0 }
 
         let starredToday = currentSection?.entries.contains { $0.feltLikeABinge } ?? false
         if let snapshot = programmeSnapshot {

@@ -22,9 +22,9 @@ struct RemindersSettingsView: View {
     @State private var quietHoursStart = ClockTime.date(hour: 22, minute: 0)
     @State private var quietHoursEnd = ClockTime.date(hour: 7, minute: 0)
     @State private var pausedAt: Date?
-    /// `mm-t24.21` wires the real `UNUserNotificationCenter` permission read
-    /// in; a fresh install reads as not determined.
-    @State private var notificationPermission: NotificationPermission = .notDetermined
+    /// The live permission (`NotificationPermissionAccess`); until the first
+    /// read answers, the group shows no permission section.
+    @State private var notificationPermission: NotificationPermission = .granted
 
     var body: some View {
         Form {
@@ -63,12 +63,16 @@ struct RemindersSettingsView: View {
             Section {
                 DatePicker("settings.reminders.time.setTodaysPlan", selection: $setTodaysPlanTime, displayedComponents: .hourAndMinute)
                     .onChange(of: setTodaysPlanTime) { store.trySetReminderTime($1, .setTodaysPlan); ReminderCoordinator.recomputeAndApply(store: store) }
+                quietHoursLine(for: setTodaysPlanTime)
                 DatePicker("settings.reminders.time.closeTheDay", selection: $closeTheDayTime, displayedComponents: .hourAndMinute)
                     .onChange(of: closeTheDayTime) { store.trySetReminderTime($1, .closeTheDay); ReminderCoordinator.recomputeAndApply(store: store) }
+                quietHoursLine(for: closeTheDayTime)
                 DatePicker("settings.reminders.time.weighIn", selection: $weighInTime, displayedComponents: .hourAndMinute)
                     .onChange(of: weighInTime) { store.trySetReminderTime($1, .weighIn); ReminderCoordinator.recomputeAndApply(store: store) }
+                quietHoursLine(for: weighInTime)
                 DatePicker("settings.reminders.time.weeklyReview", selection: $weeklyReviewTime, displayedComponents: .hourAndMinute)
                     .onChange(of: weeklyReviewTime) { store.trySetReminderTime($1, .weeklyReview); ReminderCoordinator.recomputeAndApply(store: store) }
+                quietHoursLine(for: weeklyReviewTime)
             } header: {
                 Text("settings.reminders.whenHeader")
             } footer: {
@@ -82,6 +86,8 @@ struct RemindersSettingsView: View {
                     Text("settings.reminders.remindAgain.15").tag(15)
                     Text("settings.reminders.remindAgain.30").tag(30)
                 }
+                // The store's change signal makes the scheduler register the
+                // snooze title again and compute the schedule.
                 .onChange(of: remindAgainMinutes) { _, minutes in try? store.setRemindAgainMinutes(minutes) }
             }
 
@@ -97,6 +103,20 @@ struct RemindersSettingsView: View {
         .navigationTitle("settings.reminders.title")
         .getSupport()
         .onAppear(perform: load)
+    }
+
+    /// reminders spec, "Quiet hours": "When the person sets a reminder time
+    /// inside quiet hours, the Reminders group MUST show 'This time is in
+    /// quiet hours. The reminder will not be sent.'" The group keeps the
+    /// time.
+    @ViewBuilder
+    private func quietHoursLine(for time: Date) -> some View {
+        let range = ReminderQuietHours.effectiveRange(on: quietHoursOn, start: ClockTime.text(from: quietHoursStart), end: ClockTime.text(from: quietHoursEnd))
+        if ReminderQuietHours.contains(time: ClockTime.text(from: time), start: range.start, end: range.end) {
+            Text("settings.reminders.quietHoursNotSent")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private func binding(for kind: RecordStore.ReminderSwitch) -> Binding<Bool> {
@@ -143,26 +163,18 @@ struct RemindersSettingsView: View {
     /// switches"). A device check proves the real system dialog and the
     /// resulting schedule (the epic's device-check bead).
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
-            DispatchQueue.main.async { loadNotificationPermission() }
+        NotificationPermissionAccess.request { permission in
+            notificationPermission = permission
+            ReminderCoordinator.recomputeAndApply(store: store)
         }
     }
 
     private func openIOSSettings() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        UIApplication.shared.open(url)
+        NotificationPermissionAccess.openSettings()
     }
 
     private func loadNotificationPermission() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            let permission: NotificationPermission
-            switch settings.authorizationStatus {
-            case .notDetermined: permission = .notDetermined
-            case .denied: permission = .denied
-            default: permission = .granted
-            }
-            DispatchQueue.main.async { notificationPermission = permission }
-        }
+        NotificationPermissionAccess.read { notificationPermission = $0 }
     }
 }
 

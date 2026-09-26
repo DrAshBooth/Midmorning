@@ -22,6 +22,12 @@ extension Foundation.Notification.Name {
     /// `AppLockRootView` presents `ReviewScreenView` over Today when it
     /// receives this.
     static let weeklyReviewReminderTapped = Foundation.Notification.Name("uk.midmorning.weeklyReviewReminderTapped")
+
+    /// Posted after the handler wrote an action to the queue. While the app
+    /// runs, `ReminderCoordinator` then applies the queue at once, so a
+    /// "Skipped" reaches Today and a snooze reaches `Local.store` with no
+    /// wait for the next activation.
+    static let reminderActionQueued = Foundation.Notification.Name("uk.midmorning.reminderActionQueued")
 }
 
 /// Handles a planned meal reminder's three actions. Registered as
@@ -46,6 +52,7 @@ final class NotificationActionHandling: NSObject, UNUserNotificationCenterDelega
         case PlannedMealReminderAction.skipped.identifier:
             if let dayKey, let slotIndex = intUserInfo(content, "slotIndex"), let plannedTime = content.userInfo["plannedTime"] as? String {
                 ActionQueueFile.append(QueuedAction(kind: .skipped, dayKey: dayKey, slotIndex: slotIndex, plannedTime: plannedTime, snoozeCount: 0, moment: Date()))
+                NotificationCenter.default.post(name: .reminderActionQueued, object: nil)
             }
 
         case PlannedMealReminderAction.snooze.identifier:
@@ -85,7 +92,8 @@ final class NotificationActionHandling: NSObject, UNUserNotificationCenterDelega
 
     private func handleSnooze(content: UNNotificationContent, center: UNUserNotificationCenter) {
         guard let userInfoDictionary = content.userInfo as? [String: String], let userInfo = ReminderUserInfo(dictionary: userInfoDictionary) else { return }
-        switch SnoozeDecision.decide(userInfo: userInfo, now: Date()) {
+        let now = Date()
+        switch SnoozeDecision.decide(userInfo: userInfo, now: now, calendar: .current) {
         case .drop:
             break
         case .scheduleAt(let when):
@@ -99,9 +107,10 @@ final class NotificationActionHandling: NSObject, UNUserNotificationCenterDelega
             newContent.threadIdentifier = content.threadIdentifier
             newContent.categoryIdentifier = content.categoryIdentifier
             newContent.userInfo = nextUserInfo.dictionary
-            let request = UNNotificationRequest(identifier: "snooze.\(userInfo.dayKey).\(userInfo.slotIndex).\(nextUserInfo.snoozeCount)", content: newContent, trigger: trigger)
-            center.add(request)
-            ActionQueueFile.append(QueuedAction(kind: .snooze, dayKey: userInfo.dayKey, slotIndex: userInfo.slotIndex, plannedTime: userInfo.plannedTime, snoozeCount: nextUserInfo.snoozeCount, moment: Date()))
+            let identifier = SnoozeDecision.requestIdentifier(dayKey: userInfo.dayKey, slotIndex: userInfo.slotIndex, snoozeCount: nextUserInfo.snoozeCount)
+            center.add(UNNotificationRequest(identifier: identifier, content: newContent, trigger: trigger))
+            ActionQueueFile.append(QueuedAction(kind: .snooze, dayKey: userInfo.dayKey, slotIndex: userInfo.slotIndex, plannedTime: userInfo.plannedTime, snoozeCount: nextUserInfo.snoozeCount, moment: now))
+            NotificationCenter.default.post(name: .reminderActionQueued, object: nil)
         }
     }
 
