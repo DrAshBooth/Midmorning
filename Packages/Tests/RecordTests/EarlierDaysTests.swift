@@ -55,6 +55,33 @@ final class EarlierDaysTests: XCTestCase {
         XCTAssertEqual(RecordDay.previous(tuesday, calendar: calendar, schedule: .standard).start, monday.start, "back to Monday")
     }
 
+    /// mm-t12b.23: in a zone of UTC-9 or further west, noon GMT on a key's
+    /// date falls before 04:00 local time. An earlier day's interval comes
+    /// from the key's own date at the day start in the device zone, so the
+    /// day opens on its own record day, and the next-day and previous-day
+    /// controls move by one day.
+    func testAnEarlierDayOpensItsOwnRecordDayAtUTCMinus9AndMinus10() throws {
+        let zones = [
+            TimeZone(secondsFromGMT: -9 * 3600)!,
+            TimeZone(secondsFromGMT: -10 * 3600)!,
+            TimeZone(identifier: "Pacific/Honolulu")!,
+            TimeZone(identifier: "Pacific/Pago_Pago")!,
+        ]
+        for zone in zones {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = zone
+            let monday = try XCTUnwrap(RecordDay.interval(forKey: "2026-09-21", calendar: calendar, schedule: .standard))
+            let start = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: monday.start)
+            XCTAssertEqual(start, DateComponents(year: 2026, month: 9, day: 21, hour: 4, minute: 0), "\(zone.identifier): Monday starts at 04:00 on Monday")
+            XCTAssertEqual(RecordDay.key(containing: monday.start, calendar: calendar, schedule: .standard), "2026-09-21", zone.identifier)
+            XCTAssertEqual(DayKeyText.weekdayAndDate(monday.start, calendar: calendar), "Monday 21 September", zone.identifier)
+            let tuesday = RecordDay.next(monday, calendar: calendar, schedule: .standard)
+            XCTAssertEqual(RecordDay.key(containing: tuesday.start, calendar: calendar, schedule: .standard), "2026-09-22", zone.identifier)
+            let sunday = RecordDay.previous(monday, calendar: calendar, schedule: .standard)
+            XCTAssertEqual(RecordDay.key(containing: sunday.start, calendar: calendar, schedule: .standard), "2026-09-20", zone.identifier)
+        }
+    }
+
     /// Scenario: No earlier day yet.
     func testNoEarlierDayYet() throws {
         let store = try makeTemporaryStore()
