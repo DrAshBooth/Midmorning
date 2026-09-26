@@ -20,13 +20,18 @@ struct PlannedMealRowView: View {
                 content
                 Spacer(minLength: 0)
             }
+            // record spec, "Today shows Where and Context": the Context
+            // shows under the What, as on an entry row (mm-t23.20).
+            if case .matched(let entry) = row.display, !entry.context.isEmpty {
+                Text(entry.context).font(.body)
+            }
             if let nextLine = row.nextLine {
                 Text(nextLine).font(.body)
             }
             if let prompt = row.prompt {
                 Text(MissedMealPrompt.line(for: prompt, timeText: clockTimeText))
                     .font(.body)
-                promptButtons(for: prompt)
+                promptButtons
             }
         }
         .padding(.vertical, 4)
@@ -51,30 +56,23 @@ struct PlannedMealRowView: View {
             EmptyView()
         case .skipped:
             Text("plan.skipped")
-        case .matched(let entryTime, let what):
-            Text(entryTime).font(.body.monospacedDigit())
-            if !what.isEmpty { Text(what) }
-            if row.matchedEntry?.feltLikeABinge == true { Text(verbatim: "*") }
+        case .matched(let entry):
+            Text(entry.time).font(.body.monospacedDigit())
+            if entry.starred { Text(verbatim: "*") }
+            if !entry.what.isEmpty { Text(entry.what) }
+            if !entry.whereText.isEmpty { Text(entry.whereText) }
         }
     }
 
-    @ViewBuilder
-    private func promptButtons(for form: MissedMealPrompt.Form) -> some View {
+    /// "Skipped" and "Add it". The first cut shows no "That was it" control
+    /// (mm-t23.22): `PlanTodayRows` never gives a row the "was that" form,
+    /// and mm-t33.14 adds the control with its action.
+    private var promptButtons: some View {
         HStack(spacing: 8) {
             Button("plan.skipped") { onSkip(row.slotIndex) }
                 .frame(minHeight: 44)
-            switch form {
-            case .skippedOrNotRecorded:
-                Button("plan.addIt") { onAddIt(row.sortTime) }
-                    .frame(minHeight: 44)
-            case .skippedOrWasThat:
-                // "That was it" is a visible placeholder; matching the
-                // candidate entry is deferred to mm-t33.14 (3.3
-                // problem-solving), the same pattern this change's other
-                // placeholders (record-full's "Get support") use.
-                Button("plan.thatWasIt") {}
-                    .frame(minHeight: 44)
-            }
+            Button("plan.addIt") { onAddIt(row.sortTime) }
+                .frame(minHeight: 44)
         }
         // Two controls in one List row: each needs its own tap target.
         .buttonStyle(.borderless)
@@ -88,17 +86,10 @@ struct PlannedMealRowView: View {
 private extension View {
     @ViewBuilder
     func accessibilityCustomActions(for row: PlanRowModel, onAddIt: @escaping (Date) -> Void, onSkip: @escaping (Int) -> Void) -> some View {
-        if let prompt = row.prompt {
-            switch prompt {
-            case .skippedOrNotRecorded:
-                self
-                    .accessibilityAction(named: Text("plan.skipped")) { onSkip(row.slotIndex) }
-                    .accessibilityAction(named: Text("plan.addIt")) { onAddIt(row.sortTime) }
-            case .skippedOrWasThat:
-                self
-                    .accessibilityAction(named: Text("plan.skipped")) { onSkip(row.slotIndex) }
-                    .accessibilityAction(named: Text("plan.thatWasIt")) {}
-            }
+        if row.prompt != nil {
+            self
+                .accessibilityAction(named: Text("plan.skipped")) { onSkip(row.slotIndex) }
+                .accessibilityAction(named: Text("plan.addIt")) { onAddIt(row.sortTime) }
         } else {
             self
         }

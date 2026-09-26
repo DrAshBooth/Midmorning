@@ -56,16 +56,6 @@ final class NextPlannedMealTests: XCTestCase {
         XCTAssertNil(next, "the entry matches Mid-afternoon and Today hides the line")
     }
 
-    /// `isTriggered` covers both wired scenarios structurally: a skip with
-    /// no later match, or a starred entry landing between the two slots,
-    /// matched or not (Skip lunch / A starred entry between planned meals /
-    /// A starred entry that matches a planned meal).
-    func testIsTriggeredBySkipOrByAStarredEntryEitherWay() {
-        XCTAssertTrue(NextPlannedMeal.isTriggered(previousSlotSkippedWithNoMatch: true, hasStarredEntryBetweenPreviousAndThis: false))
-        XCTAssertTrue(NextPlannedMeal.isTriggered(previousSlotSkippedWithNoMatch: false, hasStarredEntryBetweenPreviousAndThis: true))
-        XCTAssertFalse(NextPlannedMeal.isTriggered(previousSlotSkippedWithNoMatch: false, hasStarredEntryBetweenPreviousAndThis: false))
-    }
-
     /// Scenario: The window ends. Once Mid-afternoon's own window ends
     /// unmatched, it becomes the missed-planned-meal prompt's concern, not
     /// the next-planned-meal line's.

@@ -242,8 +242,10 @@ struct PlanBuilderView: View {
         meals = PlanCodec.removing(slotIndex, from: meals)
     }
 
+    /// A template change: `changeTemplate` first copies the templates onto
+    /// every elapsed record day, so the current day keeps its plan (mm-t23.21).
     private func copyToWeekend() {
-        try? store.setTemplateSlotsJSON(PlanCodec.encode(meals), kind: .weekend, changedAt: Date())
+        try? store.changeTemplate(PlanCodec.encode(meals), kind: .weekend, now: Date(), calendar: .current)
     }
 
     // MARK: Save
@@ -262,7 +264,7 @@ struct PlanBuilderView: View {
     private func performSave() {
         switch mode {
         case .day(let dateKey, _, _):
-            let plan = try? store.dayPlan(dateKey: dateKey)
+            let plan = try? store.resolvedPlan(dateKey: dateKey)
             try? store.setDayPlan(
                 dateKey: dateKey, slotsJSON: PlanCodec.encode(meals),
                 windowBeforeMinutes: plan?.windowBeforeMinutes ?? ProgrammeConstants.default.plannedMealWindowBeforeMinutes,
@@ -270,7 +272,7 @@ struct PlanBuilderView: View {
                 setAt: plan?.setAt ?? Date(), setBy: "device", changedAt: Date()
             )
         case .template(let kind, _):
-            try? store.setTemplateSlotsJSON(PlanCodec.encode(meals), kind: kind, changedAt: Date())
+            try? store.changeTemplate(PlanCodec.encode(meals), kind: kind, now: Date(), calendar: .current)
         }
         onSaved()
         dismiss()
@@ -281,22 +283,16 @@ struct PlanBuilderView: View {
     private func load() {
         switch mode {
         case .day(let dateKey, _, let isCurrentDay):
-            dayStartHour = (try? store.dayStartHour(effectiveOn: dateKey)) ?? RecordDay.startHour
-            if let plan = try? store.dayPlan(dateKey: dateKey) {
-                meals = PlanCodec.decode(plan.slotsJSON)
-            } else {
-                let calendar = Calendar.current
-                let weekday = calendar.component(.weekday, from: DayHeading.dayKeyDate(dateKey) ?? Date())
-                let kind = RecordStore.TemplateKind(rawValue: Materialisation.templateKind(forRecordDayStartingOnWeekday: weekday)) ?? .weekday
-                meals = PlanCodec.decode((try? store.templateSlotsJSON(kind)) ?? "[]")
-            }
+            // The one resolve that Today and the scheduler also use: the
+            // day's own row, or its template by the key's weekday (mm-t23.23).
+            let plan = try? store.resolvedPlan(dateKey: dateKey)
+            dayStartHour = plan?.dayStartHour ?? RecordDay.startHour
+            meals = plan?.meals ?? []
             isFastingDay = ((try? store.dayStates(dateKey: dateKey)) ?? []).contains(.fasting)
-            if isCurrentDay {
+            if isCurrentDay, let plan, let recordDay = plan.recordDay(calendar: .current) {
                 let answers = (try? store.plannedMealAnswers(dateKey: dateKey)) ?? [:]
                 let entries = (try? store.entries(dayKey: dateKey)) ?? []
-                let recordDay = RecordDay.interval(containing: Date(), calendar: .current)
-                let windows = PlanWindows.windows(for: meals, recordDay: recordDay, dayStartHour: dayStartHour, beforeMinutes: ProgrammeConstants.default.plannedMealWindowBeforeMinutes, afterMinutes: ProgrammeConstants.default.plannedMealWindowAfterMinutes, calendar: .current)
-                let matches = PlanMatching.match(windows: windows, entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) })
+                let matches = plan.match(entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) }, recordDay: recordDay, calendar: .current).matches
                 lockedSlots = Set(meals.map(\.slotIndex).filter { !PlanEditing.canChangeOrDelete(hasMatchedEntry: matches[$0] != nil, hasSkippedAnswer: answers[$0] == "Skipped") })
             } else {
                 lockedSlots = []

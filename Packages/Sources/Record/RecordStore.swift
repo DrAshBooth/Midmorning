@@ -881,6 +881,14 @@ public final class RecordStore {
         return true
     }
 
+    /// The key of every record day that has a `Day` row, from this device
+    /// or from another (mm-t23.21).
+    public func dayRowKeys() throws -> Set<String> {
+        var descriptor = FetchDescriptor<Day>()
+        descriptor.includePendingChanges = false
+        return Set(try context.fetch(descriptor).map(\.dateKey))
+    }
+
     /// The winning value of `dateKey`'s `slotIndex` planned-meal answer
     /// ("Skipped", or a later answer kind), or `nil` when unanswered.
     public func plannedMealAnswer(dateKey: String, slotIndex: Int) throws -> String? {

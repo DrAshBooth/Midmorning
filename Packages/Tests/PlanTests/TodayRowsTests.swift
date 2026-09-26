@@ -7,8 +7,8 @@ import XCTest
 final class TodayRowsTests: XCTestCase {
     /// Scenario: A matched planned meal.
     func testAMatchedPlannedMealShowsTheEntryBesideTheSlot() {
-        let content = PlannedMealDisplay.content(matchedEntry: (time: "13:10", what: "Toast and tea"), isSkipped: false)
-        XCTAssertEqual(content, .matched(entryTime: "13:10", what: "Toast and tea"))
+        let content = PlannedMealDisplay.content(matchedEntry: MatchedEntryText(time: "13:10", what: "Toast and tea"), isSkipped: false)
+        XCTAssertEqual(content, .matched(MatchedEntryText(time: "13:10", what: "Toast and tea")))
     }
 
     /// Scenario: A planned meal still to come.
@@ -25,8 +25,23 @@ final class TodayRowsTests: XCTestCase {
 
     /// Scenario: Skipped, then an entry matches.
     func testSkippedThenAnEntryMatchesShowsTheEntryNotSkipped() {
-        let content = PlannedMealDisplay.content(matchedEntry: (time: "13:20", what: "Soup"), isSkipped: true)
-        XCTAssertEqual(content, .matched(entryTime: "13:20", what: "Soup"), "the entry always wins over an earlier 'Skipped' answer")
+        let content = PlannedMealDisplay.content(matchedEntry: MatchedEntryText(time: "13:20", what: "Soup"), isSkipped: true)
+        XCTAssertEqual(content, .matched(MatchedEntryText(time: "13:20", what: "Soup")), "the entry always wins over an earlier 'Skipped' answer")
+    }
+
+    /// record spec, "Today shows Where and Context", scenario "Entry with
+    /// Where and Context", on a planned meal row (mm-t23.20). The row shows
+    /// the matched entry's Where, Context and star, as an entry row does.
+    func testAMatchedPlannedMealShowsTheEntrysWhereContextAndStar() {
+        let entry = MatchedEntryText(time: "13:05", what: "Toast and tea", whereText: "Home", context: "Row with my sister", starred: true)
+        guard case .matched(let shown) = PlannedMealDisplay.content(matchedEntry: entry, isSkipped: false) else {
+            return XCTFail("a matched entry shows on the row")
+        }
+        XCTAssertEqual(shown.time, "13:05")
+        XCTAssertEqual(shown.what, "Toast and tea")
+        XCTAssertEqual(shown.whereText, "Home")
+        XCTAssertEqual(shown.context, "Row with my sister")
+        XCTAssertTrue(shown.starred)
     }
 
     /// Scenario: An entry outside every window. No planned meal claims it,

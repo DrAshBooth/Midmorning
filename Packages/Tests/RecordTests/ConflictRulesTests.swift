@@ -109,7 +109,7 @@ final class ConflictRulesTests: XCTestCase {
         let isSkipped = try store.plannedMealAnswer(dateKey: "2026-10-06", slotIndex: 2) == "Skipped"
 
         XCTAssertTrue(isSkipped, "the store keeps the skip")
-        XCTAssertEqual(PlannedMealDisplay.content(matchedEntry: matched.map { ($0.clockTime, $0.what) }, isSkipped: isSkipped), .matched(entryTime: "13:45", what: "Soup"), "Today shows the entry beside lunch and no \"Skipped\"")
+        XCTAssertEqual(PlannedMealDisplay.content(matchedEntry: matched.map { MatchedEntryText(time: $0.clockTime, what: $0.what) }, isSkipped: isSkipped), .matched(MatchedEntryText(time: "13:45", what: "Soup")), "Today shows the entry beside lunch and no \"Skipped\"")
     }
 
     @MainActor

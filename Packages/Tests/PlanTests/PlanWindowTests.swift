@@ -95,4 +95,34 @@ final class PlanWindowTests: XCTestCase {
         let matches = PlanMatching.match(windows: w, entries: [PlanEntryFact(id: UUID(), time: at(13, 20))])
         XCTAssertNotNil(matches[2], "the entry matches Lunch regardless of the earlier 'Skipped' answer")
     }
+
+    // MARK: mm-t23.16, a record day that disagrees with the day start
+
+    /// A record day built at 04:00 with a day start of 07:00 puts a 06:00
+    /// planned meal on the next calendar date, after the record day's end.
+    /// The windows function must not trap. The window clips to an empty
+    /// interval at the record day's end and matches no entry.
+    func testAPlannedMealOutsideTheRecordDayGetsAnEmptyWindow() {
+        let breakfast = PlannedMeal(slotIndex: 0, time: "06:00")
+        let lunch = PlannedMeal(slotIndex: 2, time: "13:00")
+        let w = PlanWindows.windows(for: [breakfast, lunch], recordDay: recordDay(startHour: 4), dayStartHour: 7, beforeMinutes: 60, afterMinutes: 90, calendar: calendar)
+        XCTAssertEqual(w.count, 2)
+        let breakfastWindow = w.first { $0.slotIndex == 0 }!
+        XCTAssertEqual(breakfastWindow.interval.duration, 0, "the window is empty")
+        XCTAssertEqual(breakfastWindow.interval.start, recordDay(startHour: 4).end)
+        let lunchWindow = w.first { $0.slotIndex == 2 }!
+        XCTAssertEqual(lunchWindow.interval, DateInterval(start: at(12, 0), end: at(14, 30)), "a window inside the record day is unchanged")
+        let entry = PlanEntryFact(id: UUID(), time: at(3, 59, day: 25))
+        XCTAssertNil(PlanMatching.match(windows: w, entries: [entry])[0], "an empty window matches no entry")
+    }
+
+    /// The same disagreement in the other direction: a record day built at
+    /// 07:00 with a day start of 04:00 and a planned meal at 05:00 puts the
+    /// meal before the record day's start. The window clips to an empty
+    /// interval at the record day's start.
+    func testAPlannedMealBeforeTheRecordDayGetsAnEmptyWindow() {
+        let early = PlannedMeal(slotIndex: 0, time: "05:00")
+        let w = PlanWindows.windows(for: [early], recordDay: recordDay(startHour: 7), dayStartHour: 4, beforeMinutes: 60, afterMinutes: 90, calendar: calendar)
+        XCTAssertEqual(w.first?.interval, DateInterval(start: recordDay(startHour: 7).start, duration: 0))
+    }
 }

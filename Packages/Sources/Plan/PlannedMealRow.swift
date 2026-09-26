@@ -11,16 +11,38 @@ public enum PlannedMealDisplay: Sendable, Equatable {
     case pending
     /// No matched entry, and the answer is "Skipped".
     case skipped
-    /// A matched entry: its time and What show beside the slot. A skipped
-    /// answer, if any, MUST NOT show — the entry always wins
-    /// (data-and-privacy spec, "Conflict rules for the plan, weigh-ins and
-    /// lists": "readers MUST show the entry").
-    case matched(entryTime: String, what: String)
+    /// A matched entry: its time, What, star and Where show beside the slot,
+    /// and its Context shows under the What, the same way an entry row
+    /// shows them (record spec, "Today shows Where and Context";
+    /// mm-t23.20). A skipped answer, if any, MUST NOT show — the entry
+    /// always wins (data-and-privacy spec, "Conflict rules for the plan,
+    /// weigh-ins and lists": "readers MUST show the entry").
+    case matched(MatchedEntryText)
 
-    public static func content(matchedEntry: (time: String, what: String)?, isSkipped: Bool) -> PlannedMealDisplay {
-        if let matchedEntry { return .matched(entryTime: matchedEntry.time, what: matchedEntry.what) }
+    public static func content(matchedEntry: MatchedEntryText?, isSkipped: Bool) -> PlannedMealDisplay {
+        if let matchedEntry { return .matched(matchedEntry) }
         if isSkipped { return .skipped }
         return .pending
+    }
+}
+
+/// The text of the entry that a planned meal row shows beside the slot.
+public struct MatchedEntryText: Sendable, Equatable {
+    /// The entry's time, "HH:mm".
+    public let time: String
+    public let what: String
+    /// Empty when the entry has no Where.
+    public let whereText: String
+    /// Empty when the entry has no Context.
+    public let context: String
+    public let starred: Bool
+
+    public init(time: String, what: String, whereText: String = "", context: String = "", starred: Bool = false) {
+        self.time = time
+        self.what = what
+        self.whereText = whereText
+        self.context = context
+        self.starred = starred
     }
 }
 

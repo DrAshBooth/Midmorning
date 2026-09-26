@@ -291,14 +291,22 @@ enum ReminderCoordinator {
         store: RecordStore, dayKey: String, dayInterval: DateInterval, isCurrentDay: Bool,
         dayStartHour: Int, calendar: Calendar, constants: ProgrammeConstants
     ) -> [PlannedMealFact] {
-        let (meals, windows) = planAndWindows(store: store, dayKey: dayKey, dayInterval: dayInterval, dayStartHour: dayStartHour, calendar: calendar, constants: constants)
+        // The one resolve that Today and the plan builder also use (mm-t23.23).
+        guard let plan = try? store.resolvedPlan(dateKey: dayKey, constants: constants) else { return [] }
+        let meals = plan.meals
         guard isCurrentDay, !meals.isEmpty else {
             return meals.map { PlannedMealFact(slotIndex: $0.slotIndex, time: $0.time, matchedBeforeReminderTime: false) }
         }
 
         let entries = (try? store.entries(dayKey: dayKey)) ?? []
         let answers = (try? store.plannedMealAnswers(dateKey: dayKey)) ?? [:]
-        let matches = PlanMatching.match(windows: windows, entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) })
+        let dayMatch = PlanDayMatch(
+            meals: meals, recordDay: dayInterval, dayStartHour: dayStartHour,
+            beforeMinutes: plan.windowBeforeMinutes, afterMinutes: plan.windowAfterMinutes,
+            entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) }, calendar: calendar
+        )
+        let windows = dayMatch.windows
+        let matches = dayMatch.matches
         return meals.map { meal in
             let matchedEntryId = matches[meal.slotIndex]
             let matchedBefore = matchedEntryId.flatMap { id in entries.first { $0.id == id } }
@@ -310,27 +318,15 @@ enum ReminderCoordinator {
         }
     }
 
-    private static func planAndWindows(
+    /// The windows of the record day's resolved plan (mm-t23.23).
+    private static func planWindows(
         store: RecordStore, dayKey: String, dayInterval: DateInterval, dayStartHour: Int, calendar: Calendar, constants: ProgrammeConstants
-    ) -> (meals: [PlannedMeal], windows: [PlannedMealWindow]) {
-        let plan = try? store.dayPlan(dateKey: dayKey)
-        let slotsJSON: String
-        let beforeMinutes: Int
-        let afterMinutes: Int
-        if let plan {
-            slotsJSON = plan.slotsJSON
-            beforeMinutes = plan.windowBeforeMinutes
-            afterMinutes = plan.windowAfterMinutes
-        } else {
-            let weekday = calendar.component(.weekday, from: dayInterval.start)
-            let kind = Materialisation.templateKind(forRecordDayStartingOnWeekday: weekday)
-            slotsJSON = (try? store.templateSlotsJSON(kind == "weekend" ? .weekend : .weekday)) ?? "[]"
-            beforeMinutes = constants.plannedMealWindowBeforeMinutes
-            afterMinutes = constants.plannedMealWindowAfterMinutes
-        }
-        let meals = PlanCodec.decode(slotsJSON)
-        let windows = PlanWindows.windows(for: meals, recordDay: dayInterval, dayStartHour: dayStartHour, beforeMinutes: beforeMinutes, afterMinutes: afterMinutes, calendar: calendar)
-        return (meals, windows)
+    ) -> [PlannedMealWindow] {
+        guard let plan = try? store.resolvedPlan(dateKey: dayKey, constants: constants) else { return [] }
+        return PlanWindows.windows(
+            for: plan.meals, recordDay: dayInterval, dayStartHour: dayStartHour,
+            beforeMinutes: plan.windowBeforeMinutes, afterMinutes: plan.windowAfterMinutes, calendar: calendar
+        )
     }
 
     /// The current record day's planned meals by slot: each window's end as
@@ -338,7 +334,7 @@ enum ReminderCoordinator {
     private static func settledPlannedMeals(store: RecordStore, dayKey: String, dayInterval: DateInterval, calendar: Calendar) -> [Int: (windowEnd: String, recordedOrAnswered: Bool)] {
         let constants = ProgrammeConstants.default
         let dayStartHour = (try? store.dayStartHour(effectiveOn: dayKey)) ?? RecordDay.startHour
-        let (_, windows) = planAndWindows(store: store, dayKey: dayKey, dayInterval: dayInterval, dayStartHour: dayStartHour, calendar: calendar, constants: constants)
+        let windows = planWindows(store: store, dayKey: dayKey, dayInterval: dayInterval, dayStartHour: dayStartHour, calendar: calendar, constants: constants)
         let settled = resolvedPlannedMeals(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: true, dayStartHour: dayStartHour, calendar: calendar, constants: constants)
         var result: [Int: (windowEnd: String, recordedOrAnswered: Bool)] = [:]
         for window in windows {

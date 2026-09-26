@@ -493,7 +493,7 @@ struct TodayView: View {
     }
 
     private func entryIndex(of item: DaySection.DisplayItem, in entries: [RecordRow]) -> Int? {
-        guard case .entry(let row) = item else { return nil }
+        guard let row = item.recordEntry else { return nil }
         return entries.firstIndex { $0.id == row.id }
     }
 

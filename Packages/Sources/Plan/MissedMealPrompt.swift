@@ -19,9 +19,10 @@ public struct MissedPlannedMeal: Sendable, Equatable {
     public let laterSlotAnswered: Bool
     public let windowEndsInQuietHours: Bool
     /// An unmatched entry after this meal's own time and before the next
-    /// planned meal's time, if any (`MissedMealPrompt.candidateEntry`). First
-    /// cut shows this candidate but never acts on "That was it"
-    /// (deferred: mm-t33.14).
+    /// planned meal's time, if any (`MissedMealPrompt.candidateEntry`). The
+    /// first cut always passes `nil`, so Today shows only "Skipped" and
+    /// "Add it" (mm-t23.22). mm-t33.14 passes the candidate when it builds
+    /// "That was it".
     public let candidateEntryTime: Date?
 
     public init(
@@ -49,9 +50,9 @@ public enum MissedMealPrompt {
     public enum Form: Sendable, Equatable {
         /// "Skipped, or not recorded yet?" with "Skipped" and "Add it".
         case skippedOrNotRecorded
-        /// "Skipped, or was that %@?" with "Skipped" and "That was it". First
-        /// cut shows this form but its "That was it" action is deferred
-        /// (mm-t33.14); only "Skipped" is wired.
+        /// "Skipped, or was that %@?" with "Skipped" and "That was it". The
+        /// first cut does not show this form (mm-t23.22); mm-t33.14 builds
+        /// it with its "That was it" action.
         case skippedOrWasThat(candidateTime: Date)
     }
 
