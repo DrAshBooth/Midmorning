@@ -50,7 +50,7 @@ final class SchedulingLocalLazyBoundedTests: XCTestCase {
         let far = requests.first { $0.dayKey == "day6" }
         XCTAssertEqual(far?.kind, .closeTheDay)
         XCTAssertEqual(far?.body, "21:45")
-        XCTAssertEqual(far?.title, "")
+        XCTAssertEqual(far?.title.english, "")
     }
 
     /// Scenario: Three days without opening the app — the app re-runs the

@@ -10,7 +10,7 @@ final class PaginatorTests: XCTestCase {
             ExportEntryLine(clockTime: String(format: "%02d:00", i % 24), starred: false, what: "Entry \(i)", whereText: "", context: "")
         }
         let day = ExportDayBlock(dayKey: "2026-09-24", heading: "Thursday 24 September 2026", didntRecord: false, paused: false, entries: entries)
-        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: [day], weighInLines: [])
+        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: [day], weighInLines: [])
 
         let pages = Paginator.paginate(document: document, pageHeight: 400) { _ in 20 }
 
@@ -18,13 +18,13 @@ final class PaginatorTests: XCTestCase {
         for page in pages.dropFirst() {
             guard let firstDayLine = page.lines.first(where: { $0.dayIndex == 0 }) else { continue }
             XCTAssertTrue(firstDayLine.isDayHeading, "a page that continues day 0 must start with its heading")
-            XCTAssertEqual(firstDayLine.text, "Thursday 24 September 2026")
+            XCTAssertEqual(firstDayLine.text.english, "Thursday 24 September 2026")
         }
     }
 
     func testAShortDocumentFitsOnOnePage() {
         let day = ExportDayBlock(dayKey: "2026-09-24", heading: "Thursday 24 September 2026", didntRecord: false, paused: false, entries: [])
-        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: [day], weighInLines: [])
+        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: [day], weighInLines: [])
         let pages = Paginator.paginate(document: document, pageHeight: 1000) { _ in 20 }
         XCTAssertEqual(pages.count, 1)
     }
@@ -35,7 +35,7 @@ final class PaginatorTests: XCTestCase {
         let days = (21...23).map { day in
             ExportDayBlock(dayKey: "2026-09-\(day)", heading: "Day \(day)", didntRecord: false, paused: false, entries: [entry, entry])
         }
-        let document = ExportDocument(rangeText: "21 September\u{2009}–\u{2009}23 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: days, weighInLines: [])
+        let document = ExportDocument(rangeText: "21 September\u{2009}–\u{2009}23 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: days, weighInLines: [])
         let pages = Paginator.paginate(document: document, pageHeight: 1000) { _ in 20 }
         XCTAssertEqual(pages.count, 1, "three short days must flow onto the same page, one after another")
         XCTAssertEqual(pages[0].lines.filter(\.isDayHeading).count, 3)
@@ -62,7 +62,7 @@ final class PaginatorTests: XCTestCase {
         let entry = ExportEntryLine(clockTime: "08:00", starred: false, what: "Entry", whereText: "", context: "")
         let day0 = ExportDayBlock(dayKey: "2026-09-23", heading: "Wednesday 23 September 2026", didntRecord: false, paused: false, entries: Array(repeating: entry, count: 11))
         let day1 = ExportDayBlock(dayKey: "2026-09-24", heading: "Thursday 24 September 2026", didntRecord: false, paused: true, entries: [entry, entry])
-        let document = ExportDocument(rangeText: "23 September\u{2009}–\u{2009}24 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: [day0, day1], weighInLines: [])
+        let document = ExportDocument(rangeText: "23 September\u{2009}–\u{2009}24 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: [day0, day1], weighInLines: [])
 
         // Front matter 100 + day 0 (heading, column headings, 11 entries) 260 = 360: day 1's heading and
         // "Paused" (40) fit exactly, but its column headings and first entry do not.
@@ -80,7 +80,7 @@ final class PaginatorTests: XCTestCase {
         let day0 = ExportDayBlock(dayKey: "2026-09-22", heading: "Tuesday 22 September 2026", didntRecord: false, paused: false, entries: Array(repeating: entry, count: 12))
         let empty = ExportDayBlock(dayKey: "2026-09-23", heading: "Wednesday 23 September 2026", didntRecord: false, paused: false, entries: [])
         let day2 = ExportDayBlock(dayKey: "2026-09-24", heading: "Thursday 24 September 2026", didntRecord: false, paused: false, entries: [entry])
-        let document = ExportDocument(rangeText: "22 September\u{2009}–\u{2009}24 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: [day0, empty, day2], weighInLines: [])
+        let document = ExportDocument(rangeText: "22 September\u{2009}–\u{2009}24 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: [day0, empty, day2], weighInLines: [])
 
         let pages = Paginator.paginate(document: document, pageHeight: 400) { _ in 20 }
 
@@ -97,7 +97,7 @@ final class PaginatorTests: XCTestCase {
             ExportEntryLine(clockTime: String(format: "%02d:00", i % 24), starred: false, what: "Entry \(i)", whereText: "", context: "")
         }
         let day = ExportDayBlock(dayKey: "2026-09-24", heading: "Thursday 24 September 2026", didntRecord: false, paused: false, entries: entries)
-        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: [day], weighInLines: [])
+        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: [day], weighInLines: [])
 
         let pages = Paginator.paginate(document: document, pageHeight: 400) { _ in 20 }
 
@@ -114,7 +114,7 @@ final class PaginatorTests: XCTestCase {
         let entry = ExportEntryLine(clockTime: "08:00", starred: false, what: "Entry", whereText: "", context: "")
         let day0 = ExportDayBlock(dayKey: "2026-09-23", heading: "Wednesday 23 September 2026", didntRecord: false, paused: false, entries: Array(repeating: entry, count: firstDayEntries))
         let day1 = ExportDayBlock(dayKey: "2026-09-24", heading: "Thursday 24 September 2026", didntRecord: false, paused: false, entries: [entry, entry])
-        return ExportDocument(rangeText: "23 September\u{2009}–\u{2009}24 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: [day0, day1], weighInLines: [])
+        return ExportDocument(rangeText: "23 September\u{2009}–\u{2009}24 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: [day0, day1], weighInLines: [])
     }
 
     /// Scenario: No UIKit in the package. A source-level check (macOS has no

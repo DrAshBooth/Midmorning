@@ -52,7 +52,7 @@ struct WeighInScreenView: View {
                     Text(verbatim: WeighInRefusalText.text(
                         dayName: weighInWeekday.flatMap(Weekday.init)?.name ?? "",
                         nextDate: WeighInDayRule.formattedDate(dayKey: nextDayKey, calendar: calendar)
-                    ))
+                    ).string)
                 }
             }
 
@@ -61,7 +61,7 @@ struct WeighInScreenView: View {
                     WeighInChartView(points: series, unit: unit, calendar: calendar)
                         .listRowInsets(EdgeInsets())
                         .padding()
-                    Text(verbatim: WeighInExplanation.text(unit: unit))
+                    Text(verbatim: WeighInExplanation.text(unit: unit).string)
                 }
             }
 
@@ -73,7 +73,7 @@ struct WeighInScreenView: View {
             }
         }
         .recordListStyle()
-        .navigationTitle(WeighInContent.title)
+        .navigationTitle(WeighInContent.title.string)
         .getSupport()
         .onAppear(perform: reload)
         .fullScreenCover(isPresented: Binding(get: { notRightNowReasons != nil }, set: { if !$0 { notRightNowReasons = nil } })) {
@@ -87,11 +87,11 @@ struct WeighInScreenView: View {
     // MARK: Sections
 
     private var chooseDaySection: some View {
-        Section(header: Text(WeighInContent.chooseADayHeading).accessibilityAddTraits(.isHeader)) {
+        Section(header: Text(WeighInContent.chooseADayHeading.string).accessibilityAddTraits(.isHeader)) {
             ForEach(Weekday.mondayFirst, id: \.self) { weekday in
                 Button(weekday.name) { chooseWeighInDay(weekday.rawValue) }
             }
-            Text(verbatim: Screen3Content.weighInExplanation)
+            Text(verbatim: Screen3Content.weighInExplanation.string)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -101,40 +101,40 @@ struct WeighInScreenView: View {
     private var weightField: some View {
         switch unit {
         case .kg:
-            TextField(WeighInContent.kgChoice, text: $weightKgText)
+            TextField(WeighInContent.kgChoice.string, text: $weightKgText)
                 .keyboardType(.decimalPad)
-                .accessibilityLabel(WeighInContent.weightLabel)
+                .accessibilityLabel(WeighInContent.weightLabel.string)
         case .stLb:
             // Two fields, each its own accessibility element (so VoiceOver
             // can focus and edit each one) rather than one combined "Weight"
             // element, which would block direct entry into either field.
             HStack {
-                TextField("st", text: $weightStoneText)
+                TextField("unit.st", text: $weightStoneText)
                     .keyboardType(.numberPad)
-                    .accessibilityLabel(WeighInContent.stoneAccessibilityLabel)
-                TextField("lb", text: $weightPoundsText)
+                    .accessibilityLabel(WeighInContent.stoneAccessibilityLabel.string)
+                TextField("unit.lb", text: $weightPoundsText)
                     .keyboardType(.numberPad)
-                    .accessibilityLabel(WeighInContent.poundsAccessibilityLabel)
+                    .accessibilityLabel(WeighInContent.poundsAccessibilityLabel.string)
             }
         }
     }
 
     private var weighInDayPicker: some View {
-        Picker(Screen3Content.weighInDayHeading, selection: weighInDaySelection) {
+        Picker(Screen3Content.weighInDayHeading.string, selection: weighInDaySelection) {
             ForEach(Weekday.mondayFirst, id: \.self) { weekday in
                 Text(weekday.name).tag(Optional(weekday.rawValue))
             }
-            Text(Screen3Content.wontBeWeighingChoice).tag(Optional<Int>.none)
+            Text(Screen3Content.wontBeWeighingChoice.string).tag(Optional<Int>.none)
         }
-        .accessibilityLabel(Screen3Content.weighInDayHeading)
+        .accessibilityLabel(Screen3Content.weighInDayHeading.string)
     }
 
     private var unitPicker: some View {
-        Picker(WeighInContent.unitLabel, selection: $unit) {
-            Text(WeighInContent.kgChoice).tag(WeightUnit.kg)
-            Text(WeighInContent.stLbChoice).tag(WeightUnit.stLb)
+        Picker(WeighInContent.unitLabel.string, selection: $unit) {
+            Text(WeighInContent.kgChoice.string).tag(WeightUnit.kg)
+            Text(WeighInContent.stLbChoice.string).tag(WeightUnit.stLb)
         }
-        .accessibilityLabel(WeighInContent.unitLabel)
+        .accessibilityLabel(WeighInContent.unitLabel.string)
         .onChange(of: unit) { _, newUnit in try? store.setWeighInUnit(newUnit.rawValue) }
     }
 
@@ -197,7 +197,7 @@ struct WeighInScreenView: View {
             case .missing:
                 return
             case .partOutOfRange:
-                belowRangeMessage = WeighInWeight.belowRangeMessage
+                belowRangeMessage = WeighInWeight.belowRangeMessage.string
                 return
             case .value(let kg):
                 raw = kg
@@ -205,7 +205,7 @@ struct WeighInScreenView: View {
         }
         switch WeighInWeight.validate(kg: raw) {
         case .belowRange:
-            belowRangeMessage = WeighInWeight.belowRangeMessage
+            belowRangeMessage = WeighInWeight.belowRangeMessage.string
         case .valid(let kg):
             belowRangeMessage = nil
             let stored = WeighInWeight.storedKg(kg)

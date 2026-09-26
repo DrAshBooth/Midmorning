@@ -7,7 +7,7 @@ final class BiometryLabelsTests: XCTestCase {
     /// Scenario: Label function in a test.
     func testPasscodeOnlyReturnsLockWithPasscode() {
         let strings = BiometryLabels.strings(for: .passcodeOnly)
-        XCTAssertEqual(strings.lockLabel, "Lock with passcode")
+        XCTAssertEqual(strings.lockLabel.english, "Lock with passcode")
         XCTAssertTrue(strings.isLockEnabled)
         XCTAssertNil(strings.onlyLabel)
         XCTAssertNil(strings.enrolmentWarning)
@@ -18,16 +18,16 @@ final class BiometryLabelsTests: XCTestCase {
     func testNoneReturnsTheDisabledState() {
         let strings = BiometryLabels.strings(for: .none)
         XCTAssertFalse(strings.isLockEnabled)
-        XCTAssertEqual(strings.lockLabel, "Set a passcode on your device to lock Midmorning.")
+        XCTAssertEqual(strings.lockLabel.english, "Set a passcode on your device to lock Midmorning.")
     }
 
     /// Scenario: Touch ID strings.
     func testTouchIDReturnsAllThreeStrings() {
         let strings = BiometryLabels.strings(for: .touchID)
-        XCTAssertEqual(strings.lockLabel, "Lock with Touch ID")
-        XCTAssertEqual(strings.onlyLabel, "Touch ID only")
+        XCTAssertEqual(strings.lockLabel.english, "Lock with Touch ID")
+        XCTAssertEqual(strings.onlyLabel?.english, "Touch ID only")
         XCTAssertEqual(
-            strings.enrolmentWarning,
+            strings.enrolmentWarning?.english,
             "If Touch ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on."
         )
     }
@@ -35,10 +35,10 @@ final class BiometryLabelsTests: XCTestCase {
     /// Face ID's own triple, the mirror of "Touch ID strings".
     func testFaceIDReturnsAllThreeStrings() {
         let strings = BiometryLabels.strings(for: .faceID)
-        XCTAssertEqual(strings.lockLabel, "Lock with Face ID")
-        XCTAssertEqual(strings.onlyLabel, "Face ID only")
+        XCTAssertEqual(strings.lockLabel.english, "Lock with Face ID")
+        XCTAssertEqual(strings.onlyLabel?.english, "Face ID only")
         XCTAssertEqual(
-            strings.enrolmentWarning,
+            strings.enrolmentWarning?.english,
             "If Face ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on."
         )
     }
@@ -47,9 +47,9 @@ final class BiometryLabelsTests: XCTestCase {
     /// section MUST show the lock sentence for the device's `Biometry`
     /// value. The label function that `app-lock` defines returns it."
     func testOnboardingLockSentencePerBiometry() {
-        XCTAssertEqual(BiometryLabels.strings(for: .faceID).onboardingSentence, "Midmorning asks for Face ID or your passcode when it opens.")
-        XCTAssertEqual(BiometryLabels.strings(for: .touchID).onboardingSentence, "Midmorning asks for Touch ID or your passcode when it opens.")
-        XCTAssertEqual(BiometryLabels.strings(for: .passcodeOnly).onboardingSentence, "Midmorning asks for your passcode when it opens.")
+        XCTAssertEqual(BiometryLabels.strings(for: .faceID).onboardingSentence?.english, "Midmorning asks for Face ID or your passcode when it opens.")
+        XCTAssertEqual(BiometryLabels.strings(for: .touchID).onboardingSentence?.english, "Midmorning asks for Touch ID or your passcode when it opens.")
+        XCTAssertEqual(BiometryLabels.strings(for: .passcodeOnly).onboardingSentence?.english, "Midmorning asks for your passcode when it opens.")
     }
 
     /// Scenario: Same label at onboarding — onboarding and the settings
@@ -58,21 +58,29 @@ final class BiometryLabelsTests: XCTestCase {
         let onboarding = BiometryLabels.strings(for: .touchID).lockLabel
         let settings = BiometryLabels.strings(for: .touchID).lockLabel
         XCTAssertEqual(onboarding, settings)
-        XCTAssertEqual(onboarding, "Lock with Touch ID")
+        XCTAssertEqual(onboarding.english, "Lock with Touch ID")
     }
 
     /// Scenario: No passcode.
     func testNoPasscodeMessageMatchesTheDisabledState() {
         XCTAssertEqual(BiometryLabels.strings(for: .none).lockLabel, BiometryLabels.noPasscodeMessage)
+        XCTAssertEqual(BiometryLabels.noPasscodeMessage.english, "Set a passcode on your device to lock Midmorning.")
+        XCTAssertNil(BiometryLabels.strings(for: .none).onboardingSentence, "the app lock cannot turn on, so there is no lock sentence")
     }
 
-    /// Scenario: Face ID usage description.
+    /// Requirement: "When the app asks": the system authentication request
+    /// shows "Unlock Midmorning".
+    func testTheUnlockReasonReadsUnlockMidmorning() {
+        XCTAssertEqual(BiometryLabels.unlockReason.english, "Unlock Midmorning")
+    }
+
+    /// Scenario: Face ID usage description. iOS reads the sentence from
+    /// Info.plist, so the plist is its one home.
     func testInfoPlistHoldsTheFaceIDUsageDescription() throws {
         let infoPlistURL = RepositoryRoot.appDirectory.appendingPathComponent("Midmorning-Info.plist")
         let data = try Data(contentsOf: infoPlistURL)
         let plist = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
-        XCTAssertEqual(plist?["NSFaceIDUsageDescription"] as? String, BiometryLabels.faceIDUsageDescription)
-        XCTAssertEqual(BiometryLabels.faceIDUsageDescription, "Midmorning uses Face ID to unlock the app.")
+        XCTAssertEqual(plist?["NSFaceIDUsageDescription"] as? String, "Midmorning uses Face ID to unlock the app.")
     }
 
     // MARK: Requirement: Face ID only or Touch ID only

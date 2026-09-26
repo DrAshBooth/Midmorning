@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The eight counts the Diagnostics page shows, and nothing else (settings
 /// spec, "The About group"; data-and-privacy spec, "The Diagnostics counts
@@ -13,12 +14,20 @@ public struct DiagnosticsCounts: Sendable, Equatable {
             self.winners = winners
             self.losers = losers
         }
+
+        /// "4 kept, 1 removed": the winners are the rows the reconciler
+        /// kept, the losers the rows it removed. One count per catalogue
+        /// entry, each with its plural forms (content spec, "Catalogue
+        /// rules").
+        public var text: CatalogueText {
+            .list([.key("diagnostics.kept %lld", .count(winners)), .key("diagnostics.removed %lld", .count(losers))])
+        }
     }
 
     public let launchFailures: Int
     /// "Never" with sync off or before the first sync; `4.1b` writes a day
     /// key here once sync sends.
-    public let lastSuccessfulSyncDay: String
+    public let lastSuccessfulSyncDay: CatalogueText
     public let schemaVersion: String
     public let contentVersion: Int
     public let pendingReminders: Int
@@ -28,7 +37,7 @@ public struct DiagnosticsCounts: Sendable, Equatable {
 
     public init(
         launchFailures: Int,
-        lastSuccessfulSyncDay: String,
+        lastSuccessfulSyncDay: CatalogueText,
         schemaVersion: String,
         contentVersion: Int,
         pendingReminders: Int,
@@ -46,8 +55,9 @@ public struct DiagnosticsCounts: Sendable, Equatable {
         self.crashCount = crashCount
     }
 
-    /// "Never": the settings spec's own word for no successful sync yet.
-    public static let noSyncYet = "Never"
+    /// "Never": the data-and-privacy spec's own word for no successful sync
+    /// yet, a key in the app's string catalogue.
+    public static let noSyncYet: CatalogueText = .key("diagnostics.never")
 }
 
 /// The two counts `2.4` (reminders) and `2.5` (widgets-and-intents) own:

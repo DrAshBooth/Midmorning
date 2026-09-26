@@ -73,27 +73,27 @@ struct SettingsView: View {
                 // control." export spec, "Choose a date range": reachable
                 // from the settings screen in one tap, and from Today in two
                 // (Today's own "Settings" control is the first).
-                NavigationLink(ExportContent.screenTitle) {
+                NavigationLink(ExportContent.screenTitle.string) {
                     ExportScreenView(store: store)
                 }
             }
 
             Section("settings.group.weighIn") {
-                Picker(Screen3Content.weighInDayHeading, selection: weighInDaySelection) {
+                Picker(Screen3Content.weighInDayHeading.string, selection: weighInDaySelection) {
                     ForEach(Weekday.mondayFirst, id: \.self) { weekday in
                         Text(weekday.name).tag(Optional(weekday.rawValue))
                     }
-                    Text(Screen3Content.wontBeWeighingChoice).tag(Optional<Int>.none)
+                    Text(Screen3Content.wontBeWeighingChoice.string).tag(Optional<Int>.none)
                 }
-                .accessibilityLabel(Screen3Content.weighInDayHeading)
-                Picker(WeighInContent.unitLabel, selection: Binding(
+                .accessibilityLabel(Screen3Content.weighInDayHeading.string)
+                Picker(WeighInContent.unitLabel.string, selection: Binding(
                     get: { weighInUnit },
                     set: { unit in weighInUnit = unit; try? store.setWeighInUnit(unit.rawValue) }
                 )) {
-                    Text(WeighInContent.kgChoice).tag(WeightUnit.kg)
-                    Text(WeighInContent.stLbChoice).tag(WeightUnit.stLb)
+                    Text(WeighInContent.kgChoice.string).tag(WeightUnit.kg)
+                    Text(WeighInContent.stLbChoice.string).tag(WeightUnit.stLb)
                 }
-                .accessibilityLabel(WeighInContent.unitLabel)
+                .accessibilityLabel(WeighInContent.unitLabel.string)
             }
 
             Section("settings.group.privacy") {

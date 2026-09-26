@@ -30,13 +30,15 @@ final class LockPolicyTests: XCTestCase {
 
     /// Scenario: Default.
     func testDefaultLockAfterLabelIsAtOnce() {
-        XCTAssertEqual(LockGrace.label(forSeconds: 0), "At once")
+        XCTAssertEqual(LockGrace.label(forSeconds: 0).english, "At once")
     }
 
     func testEveryChoiceHasItsOwnLabel() {
-        XCTAssertEqual(LockGrace.label(forSeconds: 30), "30 seconds")
-        XCTAssertEqual(LockGrace.label(forSeconds: 120), "2 minutes")
-        XCTAssertEqual(LockGrace.label(forSeconds: 300), "5 minutes")
+        XCTAssertEqual(LockGrace.label(forSeconds: 30).english, "30 seconds")
+        XCTAssertEqual(LockGrace.label(forSeconds: 120).english, "2 minutes")
+        XCTAssertEqual(LockGrace.label(forSeconds: 300).english, "5 minutes")
+        XCTAssertEqual(LockGrace.label(forSeconds: 60).english, "1 minute", "the count picks the plural form")
+        XCTAssertEqual(LockGrace.choices.map { LockGrace.label(forSeconds: $0).english }, ["At once", "30 seconds", "2 minutes", "5 minutes"])
     }
 
     /// `LockGrace.choices` never drifts from `ProgrammeConstants`'s own

@@ -20,16 +20,29 @@ import XCTest
 /// names"/"Tap Save".
 final class WeighInAccessibilityTests: XCTestCase {
     func testTheFourVoiceOverLabels() {
-        XCTAssertEqual(WeighInContent.weightLabel, "Weight")
-        XCTAssertEqual(WeighInContent.unitLabel, "Unit")
-        XCTAssertEqual(Screen3Content.weighInDayHeading, "Weigh-in day")
+        XCTAssertEqual(WeighInContent.weightLabel.english, "Weight")
+        XCTAssertEqual(WeighInContent.unitLabel.english, "Unit")
+        XCTAssertEqual(Screen3Content.weighInDayHeading.english, "Weigh-in day")
         // "Save" is the shared `entry.save` catalogue key, already "Save"
         // (`RecordStore` / `Localizable.xcstrings`); this screen adds no
         // second constant for it.
     }
 
     func testTheChartsLabel() {
-        XCTAssertEqual(WeighInContent.rollingAverageAccessibilityLabel, "Rolling average")
+        XCTAssertEqual(WeighInContent.rollingAverageAccessibilityLabel.english, "Rolling average")
+        XCTAssertEqual(WeighInContent.chartDateLabel.english, "Date")
+    }
+
+    /// The screen's other words come from the app's catalogue (content
+    /// spec, "Strings live in catalogues") and read the weigh-in spec's
+    /// words.
+    func testTheScreensOtherWords() {
+        XCTAssertEqual(WeighInContent.title.english, "Weigh-in")
+        XCTAssertEqual(WeighInContent.chooseADayHeading.english, "Choose a weigh-in day")
+        XCTAssertEqual(WeighInContent.stoneAccessibilityLabel.english, "Stone")
+        XCTAssertEqual(WeighInContent.poundsAccessibilityLabel.english, "Pounds")
+        XCTAssertEqual([WeighInContent.kgChoice, WeighInContent.stLbChoice].map(\.english), ["kg", "st lb"])
+        XCTAssertEqual(Screen3Content.wontBeWeighingChoice.english, "I won't be weighing")
     }
 
     func testEachWeekdayChoiceLabelIsTheWeekdaysName() {
@@ -63,12 +76,12 @@ final class WeighInAccessibilityTests: XCTestCase {
         let repoRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let text = try String(contentsOf: repoRoot.appendingPathComponent("App/Midmorning/WeighIn/WeighInScreenView.swift"), encoding: .utf8)
-        XCTAssertTrue(text.contains("chooseADayHeading).accessibilityAddTraits(.isHeader)"), "\"Choose a weigh-in day\" is a VoiceOver heading")
-        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.weightLabel)"))
-        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.stoneAccessibilityLabel)"))
-        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.poundsAccessibilityLabel)"))
-        XCTAssertTrue(text.contains(".accessibilityLabel(Screen3Content.weighInDayHeading)"))
-        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.unitLabel)"))
+        XCTAssertTrue(text.contains("chooseADayHeading.string).accessibilityAddTraits(.isHeader)"), "\"Choose a weigh-in day\" is a VoiceOver heading")
+        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.weightLabel.string)"))
+        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.stoneAccessibilityLabel.string)"))
+        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.poundsAccessibilityLabel.string)"))
+        XCTAssertTrue(text.contains(".accessibilityLabel(Screen3Content.weighInDayHeading.string)"))
+        XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.unitLabel.string)"))
     }
 
     /// Every text style on the screen is a system style (`Form`/`Section`/

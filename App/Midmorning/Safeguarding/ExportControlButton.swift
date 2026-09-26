@@ -12,7 +12,7 @@ struct ExportControlButton: View {
     let store: RecordStore
 
     var body: some View {
-        NavigationLink(CommonLabels.exportControl) {
+        NavigationLink(CommonLabels.exportControl.string) {
             ExportScreenView(store: store)
         }
     }

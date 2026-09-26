@@ -23,6 +23,6 @@ final class SevenStagesTests: XCTestCase {
         XCTAssertFalse(state.isOpen(.alternatives))
         let screen = ProgrammeScreenBuilder.build(state: state, constants: .default, restartAt: nil, stagesWithToolInBuild: [1, 2])
         let row = screen.rows.first { $0.stage == .alternatives }!
-        XCTAssertTrue(row.toolNames.isEmpty, "no Urge button and no alternatives list while stage 3 is closed")
+        XCTAssertTrue(row.tools.isEmpty, "no Urge button and no alternatives list while stage 3 is closed")
     }
 }

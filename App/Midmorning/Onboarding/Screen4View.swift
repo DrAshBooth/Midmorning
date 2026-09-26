@@ -25,7 +25,7 @@ struct Screen4View: View {
                     // no image (product-rules spec, "Appearance": the app
                     // adds only four SF Symbols — plus, pin, lock, chevron —
                     // and a checkmark is not one of them).
-                    LabeledContent(Screen4Content.thisDeviceOnly, value: CommonLabels.chosen)
+                    LabeledContent(Screen4Content.thisDeviceOnly, value: CommonLabels.chosen.string)
                     Text(Screen4Content.iCloudLaterVersion).font(.footnote).foregroundStyle(.secondary)
                 }
 
@@ -41,9 +41,9 @@ struct Screen4View: View {
                 // passcode message under it (app-lock spec, "The app lock
                 // is on by default").
                 Section {
-                    Toggle(lockStrings.lockLabel, isOn: lockStrings.isLockEnabled ? $answers.appLockOn : .constant(false))
+                    Toggle(lockStrings.lockLabel.string, isOn: lockStrings.isLockEnabled ? $answers.appLockOn : .constant(false))
                         .disabled(!lockStrings.isLockEnabled)
-                    Text(lockStrings.isLockEnabled ? lockStrings.onboardingSentence : BiometryLabels.noPasscodeMessage)
+                    Text((lockStrings.onboardingSentence ?? BiometryLabels.noPasscodeMessage).string)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -74,7 +74,7 @@ struct Screen4View: View {
                             // shows Get support (safeguarding spec, "Get
                             // support on every screen").
                             ToolbarItem(placement: .cancellationAction) {
-                                Button(CommonLabels.close) { isShowingWidgetSheet = false }
+                                Button(CommonLabels.close.string) { isShowingWidgetSheet = false }
                             }
                         }
                 }

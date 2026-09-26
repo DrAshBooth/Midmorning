@@ -10,7 +10,7 @@ public struct StageRow: Sendable, Equatable {
     public var isNow: Bool
     public var isOpen: Bool
     /// Non-empty only for an open stage whose tool this build has.
-    public var toolNames: [String]
+    public var tools: [StageTool]
     /// Set only for a closed stage whose tool this build has.
     public var ruleString: String?
     /// Decision 102: true when this build lacks the stage's own tool. The
@@ -51,7 +51,7 @@ public struct StageScreenModel: Sendable, Equatable {
     /// day, is before week 1.
     public var line: String?
     /// Non-empty only when the stage is open.
-    public var toolNames: [String]
+    public var tools: [StageTool]
 }
 
 public enum ProgrammeScreenBuilder {
@@ -95,7 +95,7 @@ public enum ProgrammeScreenBuilder {
                 title: stage.title,
                 isNow: stage == marker,
                 isOpen: isOpen,
-                toolNames: (isOpen && hasTool) ? stage.toolNames : [],
+                tools: (isOpen && hasTool) ? stage.tools : [],
                 ruleString: (!isOpen && hasTool) ? StageRuleText.string(for: stage, constants: constants, recordedDaysCount: state.recordedDaysCount) : nil,
                 comesInALaterVersion: !hasTool
             )
@@ -123,6 +123,6 @@ public enum StageScreenBuilder {
         } else {
             line = StageRuleText.string(for: stage, constants: constants, recordedDaysCount: state.recordedDaysCount)
         }
-        return StageScreenModel(title: stage.title, line: line, toolNames: isOpen ? stage.toolNames : [])
+        return StageScreenModel(title: stage.title, line: line, tools: isOpen ? stage.tools : [])
     }
 }

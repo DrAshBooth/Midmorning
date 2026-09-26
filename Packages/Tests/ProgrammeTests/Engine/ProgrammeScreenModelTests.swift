@@ -78,8 +78,8 @@ final class ProgrammeScreenModelTests: XCTestCase {
 
     /// Scenario: The stage 6 row.
     func testTheStage6Row() {
-        XCTAssertEqual(Stage.modules.toolNames, ["Food rules", "Body image"])
-        XCTAssertFalse(Stage.orderedByStage.contains { $0.toolNames.contains { $0.localizedCaseInsensitiveContains("dieting") } })
+        XCTAssertEqual(Stage.modules.tools.map(\.label.english), ["Food rules", "Body image"])
+        XCTAssertFalse(Stage.orderedByStage.contains { $0.tools.contains { $0.label.english.localizedCaseInsensitiveContains("dieting") } })
     }
 
     /// Scenario: Every stage open.
@@ -121,7 +121,7 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let screen = StageScreenBuilder.build(stage: .gettingStarted, state: s, constants: .default, settings: ProgrammeSettings(startDay: dayKey(2026, 9, 28), dayStart: 4), currentRecordDay: dayKey(2026, 9, 30), calendar: engineTestCalendar)
         XCTAssertEqual(screen.title, "Getting started")
         XCTAssertEqual(screen.line, "Opened in week 1")
-        XCTAssertEqual(screen.toolNames, ["Weigh-in"])
+        XCTAssertEqual(screen.tools.map(\.label.english), ["Weigh-in"])
     }
 
     /// Scenario: A closed stage's screen.
@@ -132,7 +132,7 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let screen = StageScreenBuilder.build(stage: .regularEating, state: s, constants: .default, settings: defaultSettings, currentRecordDay: dayKey(2026, 10, 3), calendar: engineTestCalendar)
         XCTAssertEqual(screen.title, "Regular eating")
         XCTAssertEqual(screen.line, "Opens after 5 recorded days. You have 2.")
-        XCTAssertTrue(screen.toolNames.isEmpty)
+        XCTAssertTrue(screen.tools.isEmpty)
     }
 
     /// Scenario: An open stage's screen.
@@ -142,13 +142,23 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let s = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: settings, constants: .default, now: moment(2026, 10, 20), restartAt: nil, currentRecordDay: dayKey(2026, 10, 20), calendar: engineTestCalendar)
         let screen = StageScreenBuilder.build(stage: .regularEating, state: s, constants: .default, settings: settings, currentRecordDay: dayKey(2026, 10, 20), calendar: engineTestCalendar)
         XCTAssertEqual(screen.line, "Opened in week 2")
-        XCTAssertEqual(screen.toolNames, ["Plan"])
+        XCTAssertEqual(screen.tools.map(\.label.english), ["Plan"])
     }
 
-    /// Scenario: A tool row: `Stage.toolNames` names the row a tap opens;
+    /// Scenario: A tool row: `Stage.tools` names the row a tap opens;
     /// the app target's own view wires "Plan" to the plan builder.
     func testATooRow() {
-        XCTAssertEqual(Stage.regularEating.toolNames, ["Plan"])
+        XCTAssertEqual(Stage.regularEating.tools, [.plan])
+        XCTAssertEqual(StageTool.plan.label.english, "Plan")
+    }
+
+    /// Every tool row's words come from the app's catalogue (content spec,
+    /// "Strings live in catalogues"), in stage order.
+    func testEveryToolLabelReadsTheSpecsWords() {
+        XCTAssertEqual(Stage.orderedByStage.flatMap(\.tools).map(\.label.english), [
+            "Weigh-in", "Plan", "Alternatives list", "Problem solving", "Taking stock", "Food rules", "Body image", "Staying on track",
+        ])
+        XCTAssertEqual(Set(Stage.orderedByStage.flatMap(\.tools)), Set(StageTool.allCases), "every tool belongs to one stage")
     }
 
     /// Scenario: The stage 1 screen before week 1.
@@ -158,7 +168,7 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let s = StageEngine.state(facts: ProgrammeFacts(), openings: [], settings: settings, constants: .default, now: moment(2026, 9, 28), restartAt: nil, currentRecordDay: dayKey(2026, 9, 28), calendar: engineTestCalendar)
         let screen = StageScreenBuilder.build(stage: .gettingStarted, state: s, constants: .default, settings: settings, currentRecordDay: dayKey(2026, 9, 28), calendar: engineTestCalendar)
         XCTAssertNil(screen.line)
-        XCTAssertEqual(screen.toolNames, ["Weigh-in"])
+        XCTAssertEqual(screen.tools.map(\.label.english), ["Weigh-in"])
     }
 
     /// Scenario: A stage that opened before a restart.
@@ -168,6 +178,6 @@ final class ProgrammeScreenModelTests: XCTestCase {
         let s = StageEngine.state(facts: ProgrammeFacts(), openings: openings, settings: settings, constants: .default, now: moment(2027, 1, 6), restartAt: moment(2027, 1, 4, 9), currentRecordDay: dayKey(2027, 1, 6), calendar: engineTestCalendar)
         let screen = StageScreenBuilder.build(stage: .regularEating, state: s, constants: .default, settings: settings, currentRecordDay: dayKey(2027, 1, 6), calendar: engineTestCalendar)
         XCTAssertNil(screen.line)
-        XCTAssertEqual(screen.toolNames, ["Plan"])
+        XCTAssertEqual(screen.tools.map(\.label.english), ["Plan"])
     }
 }

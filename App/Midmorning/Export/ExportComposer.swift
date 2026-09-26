@@ -31,8 +31,8 @@ enum ExportComposer {
 
         let request = ExportBuildRequest(fromDayKey: fromDayKey, toDayKey: toDayKey, includeContext: includeContext, dayStartHour: dayStartHour)
         let document = ExportDocumentBuilder.build(request: request, days: days, weighInLines: weighInLines)
-        let data = ExportPDFRenderer.render(document: document, title: document.pdfTitle)
-        return (data, ExportFileName.name(fromDayKey: fromDayKey, toDayKey: toDayKey))
+        let data = ExportPDFRenderer.render(document: document, title: document.pdfTitle.string)
+        return (data, ExportFileName.name(fromDayKey: fromDayKey, toDayKey: toDayKey).string)
     }
 
     /// export spec, "Share sheet only": "The app MUST write the PDF to a

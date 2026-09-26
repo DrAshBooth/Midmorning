@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// One system authentication request. The App target's implementation wraps
 /// `LAContext.evaluatePolicy`; a test supplies a fake so `AppLockController`
@@ -6,7 +7,7 @@ import Foundation
 public protocol AuthenticationPerforming: Sendable {
     /// `true` on success; `false` on a cancel or a failure. Never throws:
     /// the caller only ever needs to know whether it can proceed.
-    func authenticate(reason: String, policy: AuthenticationPolicy) async -> Bool
+    func authenticate(reason: CatalogueText, policy: AuthenticationPolicy) async -> Bool
 }
 
 /// A test's fake authenticator: returns a fixed result and records every
@@ -14,7 +15,7 @@ public protocol AuthenticationPerforming: Sendable {
 /// caller asked for.
 public actor FakeAuthenticator: AuthenticationPerforming {
     public struct Request: Sendable, Equatable {
-        public let reason: String
+        public let reason: CatalogueText
         public let policy: AuthenticationPolicy
     }
 
@@ -29,7 +30,7 @@ public actor FakeAuthenticator: AuthenticationPerforming {
         self.result = result
     }
 
-    public func authenticate(reason: String, policy: AuthenticationPolicy) async -> Bool {
+    public func authenticate(reason: CatalogueText, policy: AuthenticationPolicy) async -> Bool {
         requests.append(Request(reason: reason, policy: policy))
         return result
     }

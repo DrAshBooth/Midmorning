@@ -11,15 +11,17 @@ public enum Weekday: Int, Sendable, Equatable, CaseIterable {
     /// to "Sunday"). `allCases` keeps `Calendar`'s own Sunday-first order.
     public static let mondayFirst: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
 
+    /// The weekday's name from the en_GB formatter, as every date the app
+    /// shows (content spec, "Catalogue rules": "Every date ... MUST enter a
+    /// string as %@, filled by the en_GB formatter"), not a literal in code.
     public var name: String {
-        switch self {
-        case .sunday: return "Sunday"
-        case .monday: return "Monday"
-        case .tuesday: return "Tuesday"
-        case .wednesday: return "Wednesday"
-        case .thursday: return "Thursday"
-        case .friday: return "Friday"
-        case .saturday: return "Saturday"
-        }
+        Self.names[rawValue - 1]
     }
+
+    /// Sunday first, as `Calendar`'s own `weekday` numbering.
+    private static let names: [String] = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_GB")
+        return formatter.standaloneWeekdaySymbols
+    }()
 }

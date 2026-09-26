@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The weigh-in day and the six-day gate (weigh-in spec, "The weigh-in day",
 /// "The app accepts a weight on the weigh-in day only"). `weekday` matches
@@ -54,11 +55,12 @@ public enum WeighInDayRule {
 }
 
 /// The refusal text (weigh-in spec, "The app accepts a weight on the
-/// weigh-in day only").
+/// weigh-in day only"). The words are a key in the app's string catalogue
+/// (content spec, "Strings live in catalogues").
 public enum WeighInRefusalText {
     /// "Your weigh-in day is %1$@. The app asks once a week, because
     /// day-to-day numbers move on their own. Next: %2$@."
-    public static func text(dayName: String, nextDate: String) -> String {
-        "Your weigh-in day is \(dayName). The app asks once a week, because day-to-day numbers move on their own. Next: \(nextDate)."
+    public static func text(dayName: String, nextDate: String) -> CatalogueText {
+        .key("weighIn.refusal", .verbatim(dayName), .verbatim(nextDate))
     }
 }

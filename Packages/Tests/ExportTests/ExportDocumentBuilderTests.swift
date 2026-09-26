@@ -32,18 +32,18 @@ final class ExportDocumentBuilderTests: XCTestCase {
         XCTAssertEqual(kinds[5], .dayHeading(dayIndex: 0))
 
         let lines = document.contentLines()
-        XCTAssertEqual(lines[0].text, "Record")
-        XCTAssertEqual(lines[1].text, "28 August\u{2009}–\u{2009}24 September 2026")
-        XCTAssertEqual(lines[2].text, "Self-recorded on a phone. Times and words are the person's own.")
-        XCTAssertEqual(lines[3].text, "* felt like a binge")
-        XCTAssertEqual(lines[4].text, "A day runs from 04:00 to 03:59.")
+        XCTAssertEqual(lines[0].text.english, "Record")
+        XCTAssertEqual(lines[1].text.english, "28 August\u{2009}–\u{2009}24 September 2026")
+        XCTAssertEqual(lines[2].text.english, "Self-recorded on a phone. Times and words are the person's own.")
+        XCTAssertEqual(lines[3].text.english, "* felt like a binge")
+        XCTAssertEqual(lines[4].text.english, "A day runs from 04:00 to 03:59.")
     }
 
     /// Scenario: A day start other than 04:00.
     func testADayStartOtherThan0400() {
         let request = ExportBuildRequest(fromDayKey: "2026-08-28", toDayKey: "2026-08-28", includeContext: true, dayStartHour: 5)
         let document = ExportDocumentBuilder.build(request: request, days: [])
-        XCTAssertEqual(document.dayRunLine, "A day runs from 05:00 to 04:59.")
+        XCTAssertEqual(document.dayRunLine.english, "A day runs from 05:00 to 04:59.")
     }
 
     // MARK: Two days in order / Days flow on one page
@@ -102,7 +102,8 @@ final class ExportDocumentBuilderTests: XCTestCase {
         let document = ExportDocumentBuilder.build(request: request, days: [day])
         let headingsLine = document.contentLines().first { if case .columnHeadings = $0.kind { return true } else { return false } }
         XCTAssertNotNil(headingsLine)
-        XCTAssertFalse(headingsLine!.text.contains("Context"))
+        XCTAssertFalse(headingsLine!.text.english.contains("Context"))
+        XCTAssertEqual(document.columnHeadings.map(\.english), ["Time", "What", "Where"])
         let entryLine = document.contentLines().first { if case .entryLine = $0.kind { return true } else { return false } }
         XCTAssertEqual(entryLine?.entry?.accessibilityText(includeContext: false), "08:00 Toast")
         XCTAssertFalse((entryLine?.entry?.accessibilityText(includeContext: false) ?? "").contains("Row with my sister"))
@@ -114,7 +115,8 @@ final class ExportDocumentBuilderTests: XCTestCase {
         let request = ExportBuildRequest(fromDayKey: "2026-09-24", toDayKey: "2026-09-24", includeContext: true, dayStartHour: 4)
         let document = ExportDocumentBuilder.build(request: request, days: [day])
         let headingsLine = document.contentLines().first { if case .columnHeadings = $0.kind { return true } else { return false } }
-        XCTAssertTrue(headingsLine!.text.contains("Context"))
+        XCTAssertTrue(headingsLine!.text.english.contains("Context"))
+        XCTAssertEqual(document.columnHeadings.map(\.english), ["Time", "What", "Where", "Context"])
     }
 
     // MARK: Days with no entries, "didn't record" and paused
@@ -136,7 +138,7 @@ final class ExportDocumentBuilderTests: XCTestCase {
         let day = ExportDayInput(dayKey: "2026-09-22", entries: [], states: [.didntRecord])
         let request = ExportBuildRequest(fromDayKey: "2026-09-22", toDayKey: "2026-09-22", includeContext: true, dayStartHour: 4)
         let document = ExportDocumentBuilder.build(request: request, days: [day])
-        XCTAssertEqual(document.days[0].stateLines, ["Didn't record"])
+        XCTAssertEqual(document.days[0].stateLines.map(\.english), ["Didn't record"])
     }
 
     /// Scenario: Paused day with entries.
@@ -145,7 +147,7 @@ final class ExportDocumentBuilderTests: XCTestCase {
         let day = ExportDayInput(dayKey: "2026-09-24", entries: entries, states: [.paused])
         let request = ExportBuildRequest(fromDayKey: "2026-09-24", toDayKey: "2026-09-24", includeContext: true, dayStartHour: 4)
         let document = ExportDocumentBuilder.build(request: request, days: [day])
-        XCTAssertEqual(document.days[0].stateLines, ["Paused"])
+        XCTAssertEqual(document.days[0].stateLines.map(\.english), ["Paused"])
         XCTAssertEqual(document.days[0].entries.count, 2)
     }
 
@@ -153,7 +155,7 @@ final class ExportDocumentBuilderTests: XCTestCase {
         let day = ExportDayInput(dayKey: "2026-09-24", entries: [], states: [.paused, .didntRecord])
         let request = ExportBuildRequest(fromDayKey: "2026-09-24", toDayKey: "2026-09-24", includeContext: true, dayStartHour: 4)
         let document = ExportDocumentBuilder.build(request: request, days: [day])
-        XCTAssertEqual(document.days[0].stateLines, ["Didn't record", "Paused"])
+        XCTAssertEqual(document.days[0].stateLines.map(\.english), ["Didn't record", "Paused"])
     }
 
     // MARK: Each entry in the PDF

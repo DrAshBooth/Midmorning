@@ -19,7 +19,7 @@ struct SafeModeView: View {
     var body: some View {
         NavigationStack {
             List {
-                NavigationLink(ExportContent.screenTitle) {
+                NavigationLink(ExportContent.screenTitle.string) {
                     ExportScreenView(store: store)
                 }
             }

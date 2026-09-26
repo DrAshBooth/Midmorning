@@ -73,8 +73,8 @@ private struct StageRowContent: View {
             } else if let ruleString = row.ruleString {
                 Text(ruleString).font(.footnote).foregroundStyle(.secondary)
             } else {
-                ForEach(row.toolNames, id: \.self) { name in
-                    Text(name).font(.footnote).foregroundStyle(.secondary)
+                ForEach(row.tools, id: \.self) { tool in
+                    Text(tool.label.string).font(.footnote).foregroundStyle(.secondary)
                 }
             }
         }

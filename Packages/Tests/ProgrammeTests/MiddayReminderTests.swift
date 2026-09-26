@@ -12,7 +12,7 @@ final class MiddayReminderTests: XCTestCase {
 
     /// Scenario: The explicit midday reminder.
     func testTheExplicitMiddayReminder() {
-        XCTAssertEqual(DiscreetText.title(kind: .midday, explicitWordingOn: true), "Anything to record from this morning?")
+        XCTAssertEqual(DiscreetText.title(kind: .midday, explicitWordingOn: true).english, "Anything to record from this morning?")
         XCTAssertEqual(DiscreetText.body(time: MiddayRule.time), "12:00")
     }
 

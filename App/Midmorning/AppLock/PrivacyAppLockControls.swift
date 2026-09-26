@@ -18,17 +18,17 @@ struct PrivacyAppLockControls: View {
     var body: some View {
         Section {
             appLockRow
-            if let onlyLabel = strings.onlyLabel {
+            if let onlyLabel = strings.onlyLabel?.string {
                 faceOrTouchOnlyRow(label: onlyLabel)
             }
             lockAfterRow
         } footer: {
             if !strings.isLockEnabled {
-                Text(strings.lockLabel)
+                Text(strings.lockLabel.string)
             }
         }
         .confirmationDialog(
-            strings.onlyLabel ?? "",
+            strings.onlyLabel?.string ?? "",
             isPresented: $isShowingFaceOrTouchOnlyWarning,
             titleVisibility: .visible
         ) {
@@ -37,7 +37,7 @@ struct PrivacyAppLockControls: View {
             }
             Button("applock.cancel", role: .cancel) {}
         } message: {
-            Text(strings.enrolmentWarning ?? "")
+            Text(strings.enrolmentWarning?.string ?? "")
         }
     }
 
@@ -55,7 +55,7 @@ struct PrivacyAppLockControls: View {
                 }
             }
         )) {
-            Text(strings.lockLabel)
+            Text(strings.lockLabel.string)
         }
         .disabled(!strings.isLockEnabled)
     }
@@ -85,7 +85,7 @@ struct PrivacyAppLockControls: View {
             )
         ) {
             ForEach(LockGrace.choices, id: \.self) { seconds in
-                Text(LockGrace.label(forSeconds: seconds)).tag(seconds)
+                Text(LockGrace.label(forSeconds: seconds).string).tag(seconds)
             }
         }
     }

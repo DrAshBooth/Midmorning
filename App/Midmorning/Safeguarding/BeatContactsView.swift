@@ -61,8 +61,8 @@ struct NumberRow: View {
             }
         }
         .confirmationDialog(SupportSheet.callRecentsWarning, isPresented: $isConfirmingCall, titleVisibility: .visible) {
-            Button(CommonLabels.call) { NumberRow.startCall(number) }
-            Button(CommonLabels.cancel, role: .cancel) {}
+            Button(CommonLabels.call.string) { NumberRow.startCall(number) }
+            Button(CommonLabels.cancel.string, role: .cancel) {}
         }
         .task(id: copyCount) {
             guard copyCount > 0 else { return }
@@ -81,9 +81,9 @@ struct NumberRow: View {
 
     @ViewBuilder
     private var controls: some View {
-        Button(CommonLabels.call) { isConfirmingCall = true }
+        Button(CommonLabels.call.string) { isConfirmingCall = true }
             .buttonStyle(.borderless)
-        Button(showsCopiedLabel ? CommonLabels.copied : CommonLabels.copyNumber) { copy() }
+        Button((showsCopiedLabel ? CommonLabels.copied : CommonLabels.copyNumber).string) { copy() }
             .buttonStyle(.borderless)
     }
 
@@ -98,7 +98,7 @@ struct NumberRow: View {
         copiedNumber = number
         showsCopiedLabel = true
         copyCount += 1
-        UIAccessibility.post(notification: .announcement, argument: CommonLabels.copied)
+        UIAccessibility.post(notification: .announcement, argument: CommonLabels.copied.string)
     }
 
     /// Starts the system call flow. `tel://` with digits only, per the

@@ -63,15 +63,15 @@ enum ExportPDFRenderer {
     private static func height(of line: ExportContentLine, includeContext: Bool) -> CGFloat {
         switch line.kind {
         case .documentTitle:
-            return textHeight(line.text, font: titleFont, width: contentWidth) + lineSpacing
+            return textHeight(line.text.string, font: titleFont, width: contentWidth) + lineSpacing
         case .dayHeading, .weighInHeading:
-            return textHeight(line.text, font: dayHeadingFont, width: contentWidth) + lineSpacing
+            return textHeight(line.text.string, font: dayHeadingFont, width: contentWidth) + lineSpacing
         case .rangeLine, .preambleLine, .starLegendLine, .dayRunLine, .stateLine, .weighInRow:
-            return textHeight(line.text, font: bodyFont, width: contentWidth) + lineSpacing
+            return textHeight(line.text.string, font: bodyFont, width: contentWidth) + lineSpacing
         case .columnHeadings:
-            return textHeight(ExportContent.timeColumnHeading, font: boldBodyFont, width: contentWidth) + lineSpacing
+            return textHeight(ExportContent.timeColumnHeading.string, font: boldBodyFont, width: contentWidth) + lineSpacing
         case .entryLine:
-            guard let entry = line.entry else { return textHeight(line.text, font: bodyFont, width: contentWidth) + lineSpacing }
+            guard let entry = line.entry else { return textHeight(line.text.string, font: bodyFont, width: contentWidth) + lineSpacing }
             let whatWidth = whatColumnWidth(includeContext: includeContext)
             let timeText = entry.starred ? "\(entry.clockTime) \(ExportContent.starredMark)" : entry.clockTime
             let heights = [
@@ -123,7 +123,7 @@ enum ExportPDFRenderer {
             switch line.kind {
             case .documentTitle:
                 CGPDFContextBeginTag(cg, .header1, languageProperties() as CFDictionary)
-                drawText(line.text, font: titleFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
+                drawText(line.text.string, font: titleFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
                 CGPDFContextEndTag(cg)
             case .dayHeading where line.isContinuation:
                 // The copy of the heading that `Paginator` repeats on a page
@@ -133,15 +133,15 @@ enum ExportPDFRenderer {
                 // cross a page: Core Graphics closes every open tag when the
                 // page ends (tested on macOS, 26 September 2026, mm-t42.26),
                 // so each page still opens its own list.
-                drawText(line.text, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
+                drawText(line.text.string, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
             case .dayHeading:
                 CGPDFContextBeginTag(cg, .header2, languageProperties() as CFDictionary)
-                drawText(line.text, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
+                drawText(line.text.string, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
                 CGPDFContextEndTag(cg)
             case .weighInHeading:
-                drawText(line.text, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
+                drawText(line.text.string, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
             case .rangeLine, .preambleLine, .starLegendLine, .dayRunLine, .stateLine:
-                drawText(line.text, font: bodyFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
+                drawText(line.text.string, font: bodyFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
             case .columnHeadings:
                 drawColumnHeadings(at: y, includeContext: includeContext)
             case .weighInRow:
@@ -177,15 +177,15 @@ enum ExportPDFRenderer {
 
     private static func drawColumnHeadings(at y: CGFloat, includeContext: Bool) {
         var x = margin
-        drawText(ExportContent.timeColumnHeading, font: boldBodyFont, in: CGRect(x: x, y: y, width: timeColumnWidth, height: boldBodyFont.lineHeight))
+        drawText(ExportContent.timeColumnHeading.string, font: boldBodyFont, in: CGRect(x: x, y: y, width: timeColumnWidth, height: boldBodyFont.lineHeight))
         x += timeColumnWidth + columnSpacing
         let whatWidth = whatColumnWidth(includeContext: includeContext)
-        drawText(ExportContent.whatColumnHeading, font: boldBodyFont, in: CGRect(x: x, y: y, width: whatWidth, height: boldBodyFont.lineHeight))
+        drawText(ExportContent.whatColumnHeading.string, font: boldBodyFont, in: CGRect(x: x, y: y, width: whatWidth, height: boldBodyFont.lineHeight))
         x += whatWidth + columnSpacing
-        drawText(ExportContent.whereColumnHeading, font: boldBodyFont, in: CGRect(x: x, y: y, width: whereColumnWidth, height: boldBodyFont.lineHeight))
+        drawText(ExportContent.whereColumnHeading.string, font: boldBodyFont, in: CGRect(x: x, y: y, width: whereColumnWidth, height: boldBodyFont.lineHeight))
         x += whereColumnWidth + columnSpacing
         if includeContext {
-            drawText(ExportContent.contextColumnHeading, font: boldBodyFont, in: CGRect(x: x, y: y, width: contextColumnWidth, height: boldBodyFont.lineHeight))
+            drawText(ExportContent.contextColumnHeading.string, font: boldBodyFont, in: CGRect(x: x, y: y, width: contextColumnWidth, height: boldBodyFont.lineHeight))
         }
     }
 

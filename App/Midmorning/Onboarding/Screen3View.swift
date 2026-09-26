@@ -21,8 +21,8 @@ struct Screen3View: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text(Screen3Content.startDayQuestion)) {
-                    Picker(Screen3Content.startDayQuestion, selection: $answers.startDayChoice) {
+                Section(header: Text(Screen3Content.startDayQuestion.string)) {
+                    Picker(Screen3Content.startDayQuestion.string, selection: $answers.startDayChoice) {
                         Text(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: dayStartSchedule).string).tag(StartDayChoice.Choice.today)
                         Text(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: dayStartSchedule).string).tag(StartDayChoice.Choice.tomorrow)
                     }
@@ -31,43 +31,43 @@ struct Screen3View: View {
 
                 Section {
                     ForEach(0..<Screen3Content.threeSentences.count, id: \.self) { index in
-                        Text(Screen3Content.threeSentences[index])
+                        Text(Screen3Content.threeSentences[index].string)
                     }
                     HStack {
                         Text(Screen3Content.exampleTime)
-                        Text(Screen3Content.exampleWhat)
+                        Text(Screen3Content.exampleWhat.string)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel(Screen3Content.exampleVoiceOverLabel)
+                    .accessibilityLabel(Screen3Content.exampleVoiceOverLabel.string)
                     Text(DayBoundaryLine.text(startHour: dayStartHour).string)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
 
-                Section(header: Text(Screen3Content.weighInDayHeading)) {
-                    Picker(Screen3Content.weighInDayHeading, selection: weighInSelection) {
+                Section(header: Text(Screen3Content.weighInDayHeading.string)) {
+                    Picker(Screen3Content.weighInDayHeading.string, selection: weighInSelection) {
                         ForEach(weekdays, id: \.self) { weekday in
                             Text(weekday.name).tag(Optional(WeighInSelection.weekday(weekday.rawValue)))
                         }
-                        Text(Screen3Content.wontBeWeighingChoice).tag(Optional(WeighInSelection.wontBeWeighing))
+                        Text(Screen3Content.wontBeWeighingChoice.string).tag(Optional(WeighInSelection.wontBeWeighing))
                     }
                     .pickerStyle(.inline)
-                    Text(Screen3Content.weighInExplanation).font(.footnote).foregroundStyle(.secondary)
+                    Text(Screen3Content.weighInExplanation.string).font(.footnote).foregroundStyle(.secondary)
                     if weighInDayInvalid {
-                        Text(Screen3Content.unansweredMessage).foregroundStyle(.red)
+                        Text(Screen3Content.unansweredMessage.string).foregroundStyle(.red)
                     }
                 }
                 .accessibilityFocused($weighInDayFocused)
 
-                Section(header: Text(Screen3Content.quietHoursHeading)) {
-                    Toggle(Screen3Content.quietHoursHeading, isOn: $answers.quietHoursOn)
+                Section(header: Text(Screen3Content.quietHoursHeading.string)) {
+                    Toggle(Screen3Content.quietHoursHeading.string, isOn: $answers.quietHoursOn)
                     if answers.quietHoursOn {
-                        DatePicker("Start", selection: timeBinding($answers.quietHoursStart), displayedComponents: .hourAndMinute)
-                        DatePicker("End", selection: timeBinding($answers.quietHoursEnd), displayedComponents: .hourAndMinute)
+                        DatePicker("settings.reminders.quietHours.start", selection: timeBinding($answers.quietHoursStart), displayedComponents: .hourAndMinute)
+                        DatePicker("settings.reminders.quietHours.end", selection: timeBinding($answers.quietHoursEnd), displayedComponents: .hourAndMinute)
                     }
                 }
             }
-            .navigationTitle(Screen3Content.title)
+            .navigationTitle(Screen3Content.title.string)
             .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
                 FullWidthConfirmButton(CommonLabels.continueLabel, action: attemptContinue)

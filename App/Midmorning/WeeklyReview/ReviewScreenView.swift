@@ -107,8 +107,8 @@ struct ReviewScreenView: View {
                     .accessibilityLabel(ReviewContent.selfHarmAnsweredLine)
             } else {
                 Picker(ScreeningQuestionCatalog.questions[5], selection: $selfHarmFirst) {
-                    Text(CommonLabels.no).tag(SelfHarmFirstAnswer?.some(.no))
-                    Text(CommonLabels.yes).tag(SelfHarmFirstAnswer?.some(.yes))
+                    Text(CommonLabels.no.string).tag(SelfHarmFirstAnswer?.some(.no))
+                    Text(CommonLabels.yes.string).tag(SelfHarmFirstAnswer?.some(.yes))
                     Text(CommonLabels.ratherNotSay).tag(SelfHarmFirstAnswer?.some(.ratherNotSay))
                 }
                 .pickerStyle(.inline)
@@ -116,8 +116,8 @@ struct ReviewScreenView: View {
 
                 if selfHarmFirst == .yes {
                     Picker(ScreeningQuestionCatalog.selfHarmSecondQuestion, selection: $selfHarmSecond) {
-                        Text(CommonLabels.no).tag(SelfHarmSecondAnswer?.some(.no))
-                        Text(CommonLabels.yes).tag(SelfHarmSecondAnswer?.some(.yes))
+                        Text(CommonLabels.no.string).tag(SelfHarmSecondAnswer?.some(.no))
+                        Text(CommonLabels.yes.string).tag(SelfHarmSecondAnswer?.some(.yes))
                     }
                     .pickerStyle(.inline)
                     .accessibilityLabel(ScreeningQuestionCatalog.selfHarmSecondQuestion)

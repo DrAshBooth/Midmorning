@@ -35,20 +35,20 @@ struct ScreeningQuestionSections: View {
         }
 
         Section {
-            Picker("Unit", selection: $answers.heightUnit) {
-                ForEach(HeightUnitChoice.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            Picker("unit.label", selection: $answers.heightUnit) {
+                ForEach(HeightUnitChoice.allCases, id: \.self) { Text($0.labelKey).tag($0) }
             }
             .pickerStyle(.segmented)
             if answers.heightUnit == .centimetres {
-                TextField("cm", text: $answers.heightCmText)
+                TextField("unit.cm", text: $answers.heightCmText)
                     .keyboardType(.numberPad)
                     .accessibilityLabel("screening.height.centimetres")
             } else {
                 HStack {
-                    TextField("ft", text: $answers.heightFeetText)
+                    TextField("unit.ft", text: $answers.heightFeetText)
                         .keyboardType(.numberPad)
                         .accessibilityLabel("screening.height.feet")
-                    TextField("in", text: $answers.heightInchesText)
+                    TextField("unit.in", text: $answers.heightInchesText)
                         .keyboardType(.numberPad)
                         .accessibilityLabel("screening.height.inches")
                 }
@@ -58,20 +58,20 @@ struct ScreeningQuestionSections: View {
         .accessibilityFocused(focusedField, equals: .height)
 
         Section {
-            Picker("Unit", selection: $answers.weightUnit) {
-                ForEach(WeightUnitChoice.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            Picker("unit.label", selection: $answers.weightUnit) {
+                ForEach(WeightUnitChoice.allCases, id: \.self) { Text($0.labelKey).tag($0) }
             }
             .pickerStyle(.segmented)
             if answers.weightUnit == .kilograms {
-                TextField("kg", text: $answers.weightKgText)
+                TextField("unit.kg", text: $answers.weightKgText)
                     .keyboardType(.numberPad)
                     .accessibilityLabel("screening.weight.kilograms")
             } else {
                 HStack {
-                    TextField("st", text: $answers.weightStoneText)
+                    TextField("unit.st", text: $answers.weightStoneText)
                         .keyboardType(.numberPad)
                         .accessibilityLabel("screening.weight.stone")
-                    TextField("lb", text: $answers.weightPoundsText)
+                    TextField("unit.lb", text: $answers.weightPoundsText)
                         .keyboardType(.numberPad)
                         .accessibilityLabel("screening.weight.pounds")
                 }
@@ -82,9 +82,9 @@ struct ScreeningQuestionSections: View {
 
         Section {
             Picker(Screen2Content.treatmentQuestion, selection: $answers.treatmentAnswer) {
-                Text(CommonLabels.no).tag(TreatmentAnswer?.some(.no))
+                Text(CommonLabels.no.string).tag(TreatmentAnswer?.some(.no))
                 Text(CommonLabels.treatmentYesWithAgreement).tag(TreatmentAnswer?.some(.yesWithAgreement))
-                Text(CommonLabels.yes).tag(TreatmentAnswer?.some(.yes))
+                Text(CommonLabels.yes.string).tag(TreatmentAnswer?.some(.yes))
             }
             .pickerStyle(.inline)
             message(for: .treatment)
@@ -93,8 +93,8 @@ struct ScreeningQuestionSections: View {
 
         Section {
             Picker(Screen2Content.pregnancyQuestion, selection: $answers.pregnancyAnswer) {
-                Text(CommonLabels.no).tag(PregnancyAnswer?.some(.no))
-                Text(CommonLabels.yes).tag(PregnancyAnswer?.some(.yes))
+                Text(CommonLabels.no.string).tag(PregnancyAnswer?.some(.no))
+                Text(CommonLabels.yes.string).tag(PregnancyAnswer?.some(.yes))
                 Text(CommonLabels.doesNotApplyToMe).tag(PregnancyAnswer?.some(.doesNotApply))
             }
             .pickerStyle(.inline)
@@ -104,8 +104,8 @@ struct ScreeningQuestionSections: View {
 
         Section {
             Picker(ScreeningQuestionCatalog.questions[5], selection: $answers.selfHarmFirst) {
-                Text(CommonLabels.no).tag(SelfHarmFirstAnswer?.some(.no))
-                Text(CommonLabels.yes).tag(SelfHarmFirstAnswer?.some(.yes))
+                Text(CommonLabels.no.string).tag(SelfHarmFirstAnswer?.some(.no))
+                Text(CommonLabels.yes.string).tag(SelfHarmFirstAnswer?.some(.yes))
                 Text(CommonLabels.ratherNotSay).tag(SelfHarmFirstAnswer?.some(.ratherNotSay))
             }
             .pickerStyle(.inline)
@@ -121,8 +121,8 @@ struct ScreeningQuestionSections: View {
         if answers.selfHarmFirst == .yes {
             Section {
                 Picker(ScreeningQuestionCatalog.selfHarmSecondQuestion, selection: $answers.selfHarmSecond) {
-                    Text(CommonLabels.no).tag(SelfHarmSecondAnswer?.some(.no))
-                    Text(CommonLabels.yes).tag(SelfHarmSecondAnswer?.some(.yes))
+                    Text(CommonLabels.no.string).tag(SelfHarmSecondAnswer?.some(.no))
+                    Text(CommonLabels.yes.string).tag(SelfHarmSecondAnswer?.some(.yes))
                 }
                 .pickerStyle(.inline)
                 message(for: .selfHarmSecond)
@@ -142,6 +142,26 @@ struct ScreeningQuestionSections: View {
     private func message(for field: ScreeningField) -> some View {
         if let issue, issue.field == field {
             Text(issue.problem.message()).foregroundStyle(.red)
+        }
+    }
+}
+
+/// Each unit segment's label, a key in Localizable.xcstrings (content spec,
+/// "Strings live in catalogues"). The weigh-in screen shows the same keys.
+private extension HeightUnitChoice {
+    var labelKey: LocalizedStringKey {
+        switch self {
+        case .centimetres: return "unit.cm"
+        case .feetInches: return "unit.ftIn"
+        }
+    }
+}
+
+private extension WeightUnitChoice {
+    var labelKey: LocalizedStringKey {
+        switch self {
+        case .kilograms: return "unit.kg"
+        case .stonePounds: return "unit.stLb"
         }
     }
 }

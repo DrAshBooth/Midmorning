@@ -22,7 +22,7 @@ public enum WeighInWeightValidity: Sendable, Equatable {
 /// Every conversion reuses `BMI`'s own stone/pound constants, the one place
 /// this package already holds them.
 public enum WeighInWeight {
-    public static let belowRangeMessage = "That number is outside the range the app accepts. Check it and try again."
+    public static let belowRangeMessage: CatalogueText = .key("weighIn.belowRange")
 
     /// Kilograms from a stone-and-pounds entry.
     public static func kg(stone: Int, pounds: Int) -> Double {

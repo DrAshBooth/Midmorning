@@ -38,7 +38,7 @@ final class WeekOpeningsTests: XCTestCase {
         let facts = ProgrammeFacts(takingStockCompletedAt: moment(2026, 11, 20, 10))
         let s = StageEngine.state(facts: facts, openings: [stage2Opened], settings: defaultSettings, constants: .default, now: moment(2026, 11, 20, 11), restartAt: nil, currentRecordDay: dayKey(2026, 11, 20), calendar: engineTestCalendar)
         XCTAssertTrue(s.isOpen(.modules))
-        XCTAssertEqual(Stage.modules.toolNames, ["Food rules", "Body image"], "both modules open together")
+        XCTAssertEqual(Stage.modules.tools.map(\.label.english), ["Food rules", "Body image"], "both modules open together")
     }
 
     /// Scenario: Week 10 of regular eating without taking stock.

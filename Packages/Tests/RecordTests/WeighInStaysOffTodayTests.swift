@@ -34,6 +34,6 @@ final class WeighInStaysOffTodayTests: XCTestCase {
     /// names only the reminder, never a number.
     func testTheWeighInDayReminderCarriesNoWeightValue() {
         XCTAssertEqual(DiscreetText.body(time: "07:30"), "07:30")
-        XCTAssertEqual(ReminderKind.weighInDay.explicitTitle(), "Weigh-in day")
+        XCTAssertEqual(ReminderKind.weighInDay.explicitTitle().english, "Weigh-in day")
     }
 }

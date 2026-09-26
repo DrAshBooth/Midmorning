@@ -6,8 +6,8 @@ final class DeliveredRemindersGroupedAndRemovedTests: XCTestCase {
     /// Scenario: One thread — every request this capability builds shares
     /// the one thread identifier.
     func testOneThread() {
-        let breakfast = ReminderRequest(id: "a", kind: .plannedMeal, dayKey: "2026-09-24", slotIndex: 0, time: Date(), title: "", body: "08:00", userInfo: [:], category: "plannedMeal")
-        let lunch = ReminderRequest(id: "b", kind: .plannedMeal, dayKey: "2026-09-24", slotIndex: 2, time: Date(), title: "", body: "13:00", userInfo: [:], category: "plannedMeal")
+        let breakfast = ReminderRequest(id: "a", kind: .plannedMeal, dayKey: "2026-09-24", slotIndex: 0, time: Date(), title: .verbatim(""), body: "08:00", userInfo: [:], category: "plannedMeal")
+        let lunch = ReminderRequest(id: "b", kind: .plannedMeal, dayKey: "2026-09-24", slotIndex: 2, time: Date(), title: .verbatim(""), body: "13:00", userInfo: [:], category: "plannedMeal")
         XCTAssertEqual(breakfast.threadIdentifier, lunch.threadIdentifier)
     }
 

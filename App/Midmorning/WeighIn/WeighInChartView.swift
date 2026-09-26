@@ -17,15 +17,15 @@ struct WeighInChartView: View {
         Chart {
             ForEach(points, id: \.dayKey) { point in
                 LineMark(
-                    x: .value("Date", date(for: point.dayKey)),
-                    y: .value("Rolling average", displayValue(point.averageKg))
+                    x: .value(WeighInContent.chartDateLabel.string, date(for: point.dayKey)),
+                    y: .value(WeighInContent.rollingAverageAccessibilityLabel.string, displayValue(point.averageKg))
                 )
                 .foregroundStyle(.primary)
             }
             ForEach(points, id: \.dayKey) { point in
                 PointMark(
-                    x: .value("Date", date(for: point.dayKey)),
-                    y: .value("Weight", displayValue(point.weightKg))
+                    x: .value(WeighInContent.chartDateLabel.string, date(for: point.dayKey)),
+                    y: .value(WeighInContent.weightLabel.string, displayValue(point.weightKg))
                 )
                 .symbolSize(60)
                 .foregroundStyle(.secondary)
@@ -38,7 +38,7 @@ struct WeighInChartView: View {
             AxisMarks(values: .stride(by: .month))
         }
         .frame(height: 180)
-        .accessibilityLabel(WeighInContent.rollingAverageAccessibilityLabel)
+        .accessibilityLabel(WeighInContent.rollingAverageAccessibilityLabel.string)
         .accessibilityElement(children: .ignore)
     }
 
