@@ -1,96 +1,9 @@
-# reminders
+# reminders Specification
 
 ## Purpose
-
 A reminder is a notification the app schedules. Reminders hold the structure of the day for the person. They cover each planned meal, the morning plan, midday, the close of the day, the weigh-in day and the weekly review. They also cover a worksheet review and a check-in. Every reminder is discreet by default, capped, silent inside quiet hours, and switchable one type at a time.
 
-## ADDED Requirements
-
-### Requirement: The weigh-in day reminder
-
-The Reminders group MUST show a "Weigh-in reminder time" control that defaults to 07:30. The scheduler MUST schedule the weigh-in day reminder on the weigh-in day at that time. The scheduler MUST NOT schedule it on any other day. When a weigh-in exists for the weigh-in day before that time, the scheduler MUST cancel the reminder. A tap MUST open the weigh-in screen. The `weigh-in` capability owns that screen.
-
-When the onboarding choice is "I won't be weighing", the scheduler MUST NOT schedule a weigh-in day reminder. The `onboarding` capability owns that choice, and the choice syncs. When the person later picks a weigh-in day, the scheduler MUST schedule the reminder from that day on.
-
-#### Scenario: The weigh-in day
-- **WHEN** the weigh-in day is Monday and the time reaches 07:30 on Monday
-- **THEN** the reminder fires, reads "Midmorning, 07:30", and a tap opens the weigh-in screen
-
-#### Scenario: I won't be weighing
-- **WHEN** the person chose "I won't be weighing" at onboarding
-- **THEN** no weigh-in day reminder fires on any day, and the "Weigh-in day reminder" switch stays on
-
-#### Scenario: A weigh-in day chosen later
-- **WHEN** the person chose "I won't be weighing" and picks Monday on the weigh-in screen on Thursday 1 October
-- **THEN** the weigh-in day reminder fires at 07:30 on Monday 5 October
-
-#### Scenario: A weigh-in before the reminder
-- **WHEN** the person saves a weigh-in at 07:15 on Monday
-- **THEN** no weigh-in day reminder fires at 07:30
-
-#### Scenario: Another day
-- **WHEN** the weigh-in day is Monday and the day is Tuesday
-- **THEN** no weigh-in day reminder fires
-
-### Requirement: The weekly review reminder
-
-The Reminders group MUST show a "Weekly review time" control that defaults to 18:00. The scheduler MUST schedule the weekly review reminder at that time on the day the weekly review becomes due. The `weekly-review` capability defines that day. When the person completes the review before that time, the scheduler MUST cancel the reminder. The scheduler MUST schedule at most one weekly review reminder per review.
-
-A tap MUST open the weekly review. After the finish, the `weekly-review` capability makes no weekly review due, so the scheduler MUST schedule none.
-
-#### Scenario: The seventh day
-- **WHEN** the weekly review becomes due on Sunday 4 October and the time reaches 18:00
-- **THEN** the reminder fires, reads "Midmorning, 18:00", and a tap opens the weekly review
-
-#### Scenario: The review done early
-- **WHEN** the person completes the weekly review at 17:00 on Sunday 4 October
-- **THEN** no weekly review reminder fires at 18:00
-
-#### Scenario: Mid-week
-- **WHEN** the day is Wednesday 30 September and no weekly review is due
-- **THEN** no weekly review reminder fires
-
-#### Scenario: After the finish
-- **WHEN** the person finished the programme on Sunday 20 December
-- **THEN** no weekly review reminder fires on Sunday 27 December
-
-### Requirement: Worksheet review and check-in reminders
-
-The `problem-solving` capability asks the scheduler for a worksheet review reminder one week after the person saves a worksheet. That capability sets its day and time. The `staying-on-track` capability asks for a check-in reminder at CHECK_IN_WEEKS = 4, 8 and 12 weeks after the finish, at the weekly review time. The scheduler MUST schedule both types under their own switches, "Worksheet review" and "Check-in". The scheduler MUST hold each as a far single reminder outside the rolling horizon.
-
-A tap on a worksheet review reminder MUST open that worksheet. A tap on a check-in reminder MUST open the check-in. Both types MUST use the discreet text by default. Their explicit titles MUST be "Worksheet review" and "Check-in". In the drop order, both types MUST sit with the other capabilities' reminders. When the scheduler drops one for the cap, it MUST move to the next record day.
-
-#### Scenario: A worksheet review reminder
-- **WHEN** the person saves a worksheet on Monday 5 October and the `problem-solving` capability asks for a review at 18:00 on Monday 12 October
-- **THEN** the reminder fires at 18:00 on Monday 12 October, reads "Midmorning, 18:00", and a tap opens that worksheet
-
-#### Scenario: A check-in reminder
-- **WHEN** the person finished on Sunday 20 December and the weekly review time is 18:00
-- **THEN** a check-in reminder fires at 18:00 on Sunday 17 January, and a tap opens the check-in
-
-#### Scenario: Check-in off
-- **WHEN** "Check-in" is off
-- **THEN** no check-in reminder fires, and the Today line "Check-in" still appears as the `staying-on-track` capability defines
-
-### Requirement: Time Sensitive is opt-in
-
-The Reminders group MUST show a switch "Break through Focus for planned meals" that defaults to off. That switch is the Time Sensitive setting. The app MUST hold the entitlement `com.apple.developer.usernotifications.time-sensitive`.
-
-With the switch on, planned meal reminders MUST use the Time Sensitive interruption level. With the switch off, planned meal reminders MUST use the active interruption level. Every other reminder type MUST use the active interruption level. Quiet hours MUST apply to a Time Sensitive reminder as to any other.
-
-#### Scenario: Default
-- **WHEN** "Break through Focus for planned meals" is off and a Focus is on
-- **THEN** the Lunch reminder uses the active interruption level, and the Focus decides its delivery
-
-#### Scenario: Opted in
-- **WHEN** "Break through Focus for planned meals" is on and a Focus that allows Time Sensitive notifications is on
-- **THEN** iOS delivers the Lunch reminder as Time Sensitive
-
-#### Scenario: Opted in during quiet hours
-- **WHEN** "Break through Focus for planned meals" is on and Evening snack is at 22:30 inside quiet hours
-- **THEN** no reminder fires for Evening snack
-
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: Reminder types and their switches
 
@@ -143,10 +56,6 @@ The app MUST keep that tap as a device flag in `Local.store`. From stage 2 with 
 #### Scenario: Turn a type back on
 - **WHEN** the person turns "Planned meals" on at 10:00 with Lunch at 13:00 in today's plan
 - **THEN** the scheduler schedules the 13:00 reminder
-
-#### Scenario: Worksheet review off
-- **WHEN** "Worksheet review" is off and the person saves a worksheet
-- **THEN** the scheduler schedules no worksheet review reminder
 
 #### Scenario: Two devices
 - **WHEN** the person turns off "Midday reminder" on one device
@@ -297,10 +206,6 @@ The `product-rules` capability lists what a notification never shows. The app MU
 #### Scenario: An explicit close-the-day reminder
 - **WHEN** "Say what each reminder is for" is on and the close-the-day time is 21:45
 - **THEN** the reminder has the title "Close the day" and the body "21:45"
-
-#### Scenario: An explicit check-in reminder
-- **WHEN** "Say what each reminder is for" is on and a check-in reminder fires at 18:00
-- **THEN** the reminder has the title "Check-in" and the body "18:00"
 
 #### Scenario: The reminder sound
 - **WHEN** "Say what each reminder is for" is off and the scheduler schedules the 13:00 Lunch reminder and the 21:45 close-the-day reminder
@@ -504,10 +409,6 @@ A dropped worksheet review or check-in reminder MUST move to the next record day
 - **WHEN** Sunday has the weigh-in day reminder, the weekly review reminder and the close-the-day reminder
 - **THEN** the scheduler drops the weigh-in day reminder, and the weekly review and close-the-day reminders fire
 
-#### Scenario: A worksheet review moves a day
-- **WHEN** Sunday has the weekly review reminder, the close-the-day reminder and a worksheet review reminder, and Monday has the close-the-day reminder only
-- **THEN** the worksheet review reminder fires on Monday at its time, with Monday's close-the-day reminder
-
 #### Scenario: Six planned meals and two others
 - **WHEN** a day has six planned meals, the weigh-in day reminder and the close-the-day reminder
 - **THEN** all eight reminders fire
@@ -606,14 +507,6 @@ A reminder that step 7 drops MUST still count toward the cap in step 5. A remind
 - **WHEN** the person tapped "Pause for today" at 08:00 and `remindersPausedAt` is cleared at 09:00 the same day
 - **THEN** no reminder fires for the rest of that record day, and Breakfast fires the next day
 
-#### Scenario: A paused day after the finish
-- **WHEN** the reduced cadence is in force and the person taps "Pause for today" at 08:00
-- **THEN** no reminder fires that day, and the reduced cadence applies the next day
-
-#### Scenario: The reduced cadence runs before the cap
-- **WHEN** the reduced cadence leaves the close-the-day reminder only on Tuesday, and a worksheet review reminder is due at 18:00 on Tuesday
-- **THEN** both fire on Tuesday, and the cap counts two
-
 #### Scenario: A dropped reminder takes no part in the shift
 - **WHEN** a day has the morning plan reminder and the weigh-in day reminder both at 07:30, the midday reminder and the close-the-day reminder
 - **THEN** the cap drops the midday and morning plan reminders, and the weigh-in day reminder fires at 07:30 with nothing at 07:35
@@ -663,14 +556,6 @@ The scheduler MUST compute the schedule again when a synced setting arrives by p
 #### Scenario: The far reminder
 - **WHEN** the person does not open the app from Monday to the following Sunday
 - **THEN** the far reminder fires at 21:45 on Sunday, reads "Midmorning, 21:45", and a tap opens Today
-
-#### Scenario: The background refresh task runs
-- **WHEN** the system runs the background refresh task at 03:00 on Thursday
-- **THEN** the scheduler holds reminders for up to twelve record days from Thursday, within 60 pending requests
-
-#### Scenario: The background refresh task never runs
-- **WHEN** the system never runs the background refresh task
-- **THEN** every reminder in the horizon and the far reminder still fire at their times
 
 #### Scenario: Three days without opening the app
 - **WHEN** the person last opened the app on Monday and opens it at 09:00 on Thursday

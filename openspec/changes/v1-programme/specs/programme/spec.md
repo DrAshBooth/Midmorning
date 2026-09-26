@@ -6,6 +6,123 @@ The programme is the twelve-week sequence of seven stages that the person moves 
 
 ## ADDED Requirements
 
+### Requirement: A gate change never closes a stage
+
+The team can change a gate constant in a later version. When a gate lowers, the app MUST open a stage whose evidence already reaches the new value. The opening moment MUST be the computed moment the evidence reached the new value, not the update moment. When a gate rises, the app MUST NOT close a stage.
+
+The app MUST match past planned meals with the window constants the store kept with the planned day at materialisation. Regular-eating-plan owns the planned day. The change README MUST hold a dated line for every constant change, with the app version.
+
+#### Scenario: A gate lowers
+- **WHEN** the person has four recorded days, the fourth from an entry saved at 19:20 on Thursday 8 October 2026, and an update sets RECORDED_DAYS_FOR_STAGE_2 to 3
+- **THEN** stage 2 is open after the update, and the opening moment in the store is the save moment of the entry that made the third recorded day
+
+#### Scenario: A gate rises
+- **WHEN** stage 2 is open with five recorded days and an update sets RECORDED_DAYS_FOR_STAGE_2 to 7
+- **THEN** stage 2 stays open
+
+#### Scenario: Window constants after an update
+- **WHEN** an update changes PLANNED_MEAL_WINDOW_AFTER_MINUTES to 120 and the person opens a planned day from before the update
+- **THEN** that day's planned meals match entries with the window constants the store kept with that day
+
+#### Scenario: The README line
+- **WHEN** the team changes DAYS_ON_PLAN_FOR_STAGE_3 in version 1.2
+- **THEN** the change README holds a dated line that names the constant, the old value, the new value and version 1.2
+
+### Requirement: The Focus card after stage 2 opens
+
+The Focus card is due on the record day after the record day on which stage 2 opened. The app MUST show it in the Today card slot. The card reads "If you use a Focus at work, let planned meal reminders through?" with two controls, "Yes" and "Close". Content bundles that text. The card MUST use the same text style as an entry row. The app MUST show the card from the first Today load on or after that record day.
+
+"Yes" MUST turn on "Break through Focus for planned meals" on this device. Reminders owns that switch. "Yes" MUST then take the card off Today. "Close" MUST take the card off Today. "Close" MUST NOT change any switch. The card returns no more after either control.
+
+When "Break through Focus for planned meals" is already on, the app MUST NOT show the card. When notification permission is denied, the app MUST NOT show the card.
+
+#### Scenario: The day after stage 2 opened
+- **WHEN** stage 2 opened on Monday 5 October 2026 and Today appears at 07:50 on Tuesday 6 October
+- **THEN** Today shows a card that reads "If you use a Focus at work, let planned meal reminders through?" with "Yes" and "Close"
+
+#### Scenario: Yes
+- **WHEN** the person taps "Yes" on the Focus card
+- **THEN** "Break through Focus for planned meals" is on in the Reminders group, and the card leaves Today
+
+#### Scenario: Close
+- **WHEN** the person taps "Close" on the Focus card
+- **THEN** "Break through Focus for planned meals" stays off, and the card leaves Today
+
+#### Scenario: The switch is already on
+- **WHEN** "Break through Focus for planned meals" is on when the record day after stage 2 opened begins
+- **THEN** Today shows no Focus card
+
+#### Scenario: Permission denied
+- **WHEN** the person declined notification permission and the record day after stage 2 opened begins
+- **THEN** Today shows no Focus card
+
+## MODIFIED Requirements
+
+### Requirement: The constants live in one value
+
+The app MUST hold every programme constant in one value type, ProgrammeConstants. ProgrammeConstants MUST have a `.default` value. The `.default` value MUST hold these names and values:
+
+- DEFAULT_DAY_START_HOUR = 4
+- PROGRAMME_WEEKS = 12
+- MIN_HEIGHT_CM = 100
+- MAX_HEIGHT_CM = 250
+- MIN_WEIGHT_KG = 30
+- RECORDED_DAYS_FOR_STAGE_2 = 5
+- DAYS_ON_PLAN_FOR_STAGE_3 = 7
+- RECORD_DAYS_FOR_STAGE_3_FALLBACK = 14
+- RECORDED_DAYS_FOR_STAGE_4_FALLBACK = 7
+- WEEK_OF_TAKING_STOCK = 6
+- WEEK_OF_STAYING_ON_TRACK = 10
+- MAX_AWAKE_GAP_HOURS = 4
+- MAX_OTHER_REMINDERS_PER_DAY = 2
+- SNOOZE_MINUTES = 15 or 30
+- MAX_SNOOZES = 2
+- ROLLING_AVERAGE_WEEKS = 4
+- URGE_TIMER_MINUTES = 20
+- DETERIORATION_WEEKS = 3
+- CHECK_IN_WEEKS = 4, 8, 12
+- PATTERN_WINDOW_DAYS = 28
+- PATTERN_MIN_STARRED = 5
+- PATTERN_MIN_GROUP = 3
+- LOCK_GRACE_SECONDS = 0, 30, 120 or 300; the default is 0
+- PLANNED_MEAL_WINDOW_BEFORE_MINUTES = 60
+- PLANNED_MEAL_WINDOW_AFTER_MINUTES = 90
+- REMINDER_HORIZON_DAYS = 6
+
+Every capability MUST read its constant from ProgrammeConstants. The code MUST NOT repeat a constant's value as a literal elsewhere. The type MUST live in the `Constants` target, not in the UI. `Constants` is a leaf target that `Record`, `Plan` and `Programme` import. A test MUST check each value of `.default`.
+
+LOCK_GRACE_SECONDS is a set of four values. App-lock owns the "Lock after" setting that picks one. Its default is 0.
+
+Every threshold test MUST construct a modified ProgrammeConstants value. A test MUST NOT edit `.default`.
+
+DEFAULT_DAY_START_HOUR is the default of the "Day starts at" setting. Settings owns the setting. Every capability that uses the record day MUST read the day start from the setting, not from the constant. The constant MUST NOT stand in for the setting anywhere.
+
+DEFAULT_DAY_START_HOUR MUST stay 4 in every version. A test MUST assert that DEFAULT_DAY_START_HOUR is 4. The team MUST keep that test in every version.
+
+#### Scenario: The values
+- **WHEN** the test suite runs
+- **THEN** a test reads each constant from ProgrammeConstants.default and checks its value
+
+#### Scenario: The lock grace set
+- **WHEN** the test suite runs
+- **THEN** a test reads LOCK_GRACE_SECONDS from ProgrammeConstants.default and checks that it holds 0, 30, 120 and 300, with 0 as the default
+
+#### Scenario: A threshold test
+- **WHEN** a test checks that stage 2 opens after 3 recorded days
+- **THEN** the test constructs a ProgrammeConstants value with RECORDED_DAYS_FOR_STAGE_2 = 3 and passes it to the engine, and `.default` still holds 5
+
+#### Scenario: The default day start never changes
+- **WHEN** a version sets DEFAULT_DAY_START_HOUR to 5
+- **THEN** the test that asserts DEFAULT_DAY_START_HOUR is 4 fails
+
+#### Scenario: A capability reads the day start from the setting
+- **WHEN** "Day starts at" is 05:00 and the app computes the current record day
+- **THEN** the app uses 05:00 as the day start, and DEFAULT_DAY_START_HOUR still holds 4
+
+#### Scenario: A capability reads a constant
+- **WHEN** the urge timer starts
+- **THEN** it reads URGE_TIMER_MINUTES from ProgrammeConstants and runs for 20 minutes
+
 ### Requirement: The seven stages and their tools
 
 The programme has seven stages in a fixed order. The app MUST hold the stages in this order, with these titles:
@@ -295,28 +412,6 @@ The app MUST show the count in the same text style as every row. The screen MUST
 - **WHEN** the team sets RECORDED_DAYS_FOR_STAGE_2 to 3 and the person has one recorded day
 - **THEN** stage 2 opens after 3 recorded days and its rule string reads "Opens after 3 recorded days. You have 1."
 
-### Requirement: A gate change never closes a stage
-
-The team can change a gate constant in a later version. When a gate lowers, the app MUST open a stage whose evidence already reaches the new value. The opening moment MUST be the computed moment the evidence reached the new value, not the update moment. When a gate rises, the app MUST NOT close a stage.
-
-The app MUST match past planned meals with the window constants the store kept with the planned day at materialisation. Regular-eating-plan owns the planned day. The change README MUST hold a dated line for every constant change, with the app version.
-
-#### Scenario: A gate lowers
-- **WHEN** the person has four recorded days, the fourth from an entry saved at 19:20 on Thursday 8 October 2026, and an update sets RECORDED_DAYS_FOR_STAGE_2 to 3
-- **THEN** stage 2 is open after the update, and the opening moment in the store is the save moment of the entry that made the third recorded day
-
-#### Scenario: A gate rises
-- **WHEN** stage 2 is open with five recorded days and an update sets RECORDED_DAYS_FOR_STAGE_2 to 7
-- **THEN** stage 2 stays open
-
-#### Scenario: Window constants after an update
-- **WHEN** an update changes PLANNED_MEAL_WINDOW_AFTER_MINUTES to 120 and the person opens a planned day from before the update
-- **THEN** that day's planned meals match entries with the window constants the store kept with that day
-
-#### Scenario: The README line
-- **WHEN** the team changes DAYS_ON_PLAN_FOR_STAGE_3 in version 1.2
-- **THEN** the change README holds a dated line that names the constant, the old value, the new value and version 1.2
-
 ### Requirement: A stage opening shows one card
 
 When a stage opens, the app MUST show one opening card. When the build does not have the stage's tool, a later paragraph states when the card shows. The card MUST sit in the Today card slot. Record defines the Today stack. The card MUST also sit at the top of the Programme screen. The card MUST show the stage title, one opening sentence from the content bundle, and two controls, "Open" and "Close".
@@ -477,34 +572,6 @@ The app MUST show the card from the first Today load on or after day 3. The seco
 #### Scenario: The first Today load after a missed day
 - **WHEN** the store holds no Template row, the person did not open the app on Thursday 8 October 2026, and Today appears on Saturday 10 October
 - **THEN** Today shows the plan card
-
-### Requirement: The Focus card after stage 2 opens
-
-The Focus card is due on the record day after the record day on which stage 2 opened. The app MUST show it in the Today card slot. The card reads "If you use a Focus at work, let planned meal reminders through?" with two controls, "Yes" and "Close". Content bundles that text. The card MUST use the same text style as an entry row. The app MUST show the card from the first Today load on or after that record day.
-
-"Yes" MUST turn on "Break through Focus for planned meals" on this device. Reminders owns that switch. "Yes" MUST then take the card off Today. "Close" MUST take the card off Today. "Close" MUST NOT change any switch. The card returns no more after either control.
-
-When "Break through Focus for planned meals" is already on, the app MUST NOT show the card. When notification permission is denied, the app MUST NOT show the card.
-
-#### Scenario: The day after stage 2 opened
-- **WHEN** stage 2 opened on Monday 5 October 2026 and Today appears at 07:50 on Tuesday 6 October
-- **THEN** Today shows a card that reads "If you use a Focus at work, let planned meal reminders through?" with "Yes" and "Close"
-
-#### Scenario: Yes
-- **WHEN** the person taps "Yes" on the Focus card
-- **THEN** "Break through Focus for planned meals" is on in the Reminders group, and the card leaves Today
-
-#### Scenario: Close
-- **WHEN** the person taps "Close" on the Focus card
-- **THEN** "Break through Focus for planned meals" stays off, and the card leaves Today
-
-#### Scenario: The switch is already on
-- **WHEN** "Break through Focus for planned meals" is on when the record day after stage 2 opened begins
-- **THEN** Today shows no Focus card
-
-#### Scenario: Permission denied
-- **WHEN** the person declined notification permission and the record day after stage 2 opened begins
-- **THEN** Today shows no Focus card
 
 ### Requirement: The Programme screen shows where the person is
 
@@ -783,70 +850,3 @@ Text on the Programme screen and the opening card MUST use system text styles. T
 #### Scenario: Largest text size
 - **WHEN** the person sets the largest accessibility text size
 - **THEN** the Programme screen and the opening card show all text without truncation
-## MODIFIED Requirements
-
-### Requirement: The constants live in one value
-
-The app MUST hold every programme constant in one value type, ProgrammeConstants. ProgrammeConstants MUST have a `.default` value. The `.default` value MUST hold these names and values:
-
-- DEFAULT_DAY_START_HOUR = 4
-- PROGRAMME_WEEKS = 12
-- MIN_HEIGHT_CM = 100
-- MAX_HEIGHT_CM = 250
-- MIN_WEIGHT_KG = 30
-- RECORDED_DAYS_FOR_STAGE_2 = 5
-- DAYS_ON_PLAN_FOR_STAGE_3 = 7
-- RECORD_DAYS_FOR_STAGE_3_FALLBACK = 14
-- RECORDED_DAYS_FOR_STAGE_4_FALLBACK = 7
-- WEEK_OF_TAKING_STOCK = 6
-- WEEK_OF_STAYING_ON_TRACK = 10
-- MAX_AWAKE_GAP_HOURS = 4
-- MAX_OTHER_REMINDERS_PER_DAY = 2
-- SNOOZE_MINUTES = 15 or 30
-- MAX_SNOOZES = 2
-- ROLLING_AVERAGE_WEEKS = 4
-- URGE_TIMER_MINUTES = 20
-- DETERIORATION_WEEKS = 3
-- CHECK_IN_WEEKS = 4, 8, 12
-- PATTERN_WINDOW_DAYS = 28
-- PATTERN_MIN_STARRED = 5
-- PATTERN_MIN_GROUP = 3
-- LOCK_GRACE_SECONDS = 0, 30, 120 or 300; the default is 0
-- PLANNED_MEAL_WINDOW_BEFORE_MINUTES = 60
-- PLANNED_MEAL_WINDOW_AFTER_MINUTES = 90
-- REMINDER_HORIZON_DAYS = 6
-
-Every capability MUST read its constant from ProgrammeConstants. The code MUST NOT repeat a constant's value as a literal elsewhere. The type MUST live in the `Constants` target, not in the UI. `Constants` is a leaf target that `Record`, `Plan` and `Programme` import. A test MUST check each value of `.default`.
-
-LOCK_GRACE_SECONDS is a set of four values. App-lock owns the "Lock after" setting that picks one. Its default is 0.
-
-Every threshold test MUST construct a modified ProgrammeConstants value. A test MUST NOT edit `.default`.
-
-DEFAULT_DAY_START_HOUR is the default of the "Day starts at" setting. Settings owns the setting. Every capability that uses the record day MUST read the day start from the setting, not from the constant. The constant MUST NOT stand in for the setting anywhere.
-
-DEFAULT_DAY_START_HOUR MUST stay 4 in every version. A test MUST assert that DEFAULT_DAY_START_HOUR is 4. The team MUST keep that test in every version.
-
-#### Scenario: The values
-- **WHEN** the test suite runs
-- **THEN** a test reads each constant from ProgrammeConstants.default and checks its value
-
-#### Scenario: The lock grace set
-- **WHEN** the test suite runs
-- **THEN** a test reads LOCK_GRACE_SECONDS from ProgrammeConstants.default and checks that it holds 0, 30, 120 and 300, with 0 as the default
-
-#### Scenario: A threshold test
-- **WHEN** a test checks that stage 2 opens after 3 recorded days
-- **THEN** the test constructs a ProgrammeConstants value with RECORDED_DAYS_FOR_STAGE_2 = 3 and passes it to the engine, and `.default` still holds 5
-
-#### Scenario: The default day start never changes
-- **WHEN** a version sets DEFAULT_DAY_START_HOUR to 5
-- **THEN** the test that asserts DEFAULT_DAY_START_HOUR is 4 fails
-
-#### Scenario: A capability reads the day start from the setting
-- **WHEN** "Day starts at" is 05:00 and the app computes the current record day
-- **THEN** the app uses 05:00 as the day start, and DEFAULT_DAY_START_HOUR still holds 4
-
-#### Scenario: A capability reads a constant
-- **WHEN** the urge timer starts
-- **THEN** it reads URGE_TIMER_MINUTES from ProgrammeConstants and runs for 20 minutes
-

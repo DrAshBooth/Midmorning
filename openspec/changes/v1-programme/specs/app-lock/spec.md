@@ -8,6 +8,8 @@ Get support appears only after authentication, because the cover names nothing. 
 
 ## ADDED Requirements
 
+## MODIFIED Requirements
+
 ### Requirement: The app lock is on by default
 
 The app lock MUST be on by default. The person MUST choose it at onboarding, as the onboarding capability states. The settings screen MUST show a switch for it. The switch's label MUST be "Lock with Face ID" on a device with Face ID enrolled. The label MUST be "Lock with Touch ID" on a device with Touch ID enrolled. The label MUST be "Lock with passcode" on a device with a passcode and no biometric enrolled.
