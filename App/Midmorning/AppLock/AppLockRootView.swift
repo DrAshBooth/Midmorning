@@ -120,8 +120,8 @@ struct AppLockRootView: View {
         let launchMarker = launch.begin()
         let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory)
         launch.countLaunchFailureIfNeeded(in: store)
-        metricKitSubscriber.onDiagnostics = { [weak store] in
-            _ = try? store?.incrementCrashCount()
+        metricKitSubscriber.connect { [weak store] crashes in
+            for _ in 0..<crashes { _ = try? store?.incrementCrashCount() }
         }
         return (store, makeController(store: store), launchMarker.launchOutcome.enterSafeMode)
     }
