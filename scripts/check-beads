@@ -6,6 +6,15 @@
    `- [ ] <n> ` item in tasks.md.
 2. Every `- <id> builds "<scenario>"` line in an acceptance names a bead
    whose description lists `"<scenario>" from <this bead>`.
+3. Every deferred pointer in a tasks.md under openspec/changes (archive
+   included) names a bead that lists the scenario. Two forms are read:
+   `Deferred: "<scenario>" (<id>)`, and a `deferred: <id>` pointer with
+   the quoted scenario names right before or after it, or with a sentence
+   that opens `Scenario "<scenario>"`. The target bead must name
+   the scenario in its description, acceptance, notes, close reason or a
+   comment. A miss says whether the target is open or closed. A closed
+   target that lists the scenario, but names it in no close reason and no
+   comment, prints a note. A note does not fail the run.
 """
 import json, pathlib, re, subprocess, sys
 root = pathlib.Path(__file__).resolve().parents[1]
@@ -38,8 +47,118 @@ for i, row in rows.items():
             misses.append(f"{i}: points at missing bead {target}")
         elif f'"{scen}" from {i}' not in (t.get("description") or ""):
             misses.append(f'{i}: {target} does not list "{scen}" from {i}')
+
+# 3. Deferred pointers in tasks.md.
+BEAD = r"mm-[a-z0-9]+(?:\.[0-9]+)*"
+TASK_BEAD = re.compile(rf"^\s*- \[[ x]\] [0-9][\w.]* ({BEAD})\b")
+# `Deferred: "<scenario>" (<id>)`, one or more in a list.
+DEFERRED_LIST = re.compile(r'Deferred: (?=")')
+SCENARIO_THEN_ID = re.compile(rf'"([^"]+)" \(({BEAD})\b')
+# A `deferred: <id>` pointer, with or without backticks.
+DEFERRED_ID = re.compile(rf"[Dd]eferred:? `?({BEAD})`?")
+QUOTE_LIST = r'"[^"]+"(?:(?:,\s+and\s+|,\s+|\s+and\s+)"[^"]+")*'
+# The scenarios right after the pointer: `builds "A" and "B"`, `— "A", "B"`,
+# `builds all four scenarios ("A", ...)`, `("A", only ...)`.
+AFTER = re.compile(rf'^\s*(?:builds(?: all \w+ scenarios)?\s*\(?|—|-|:|\()\s*({QUOTE_LIST})')
+# The scenarios right before the pointer: `"A" and "B" are`, `"A" —`, `"A", is`.
+BEFORE = re.compile(rf'({QUOTE_LIST}),?\s*(?:—|-|are|is|:)?\s*[`(]*$')
+# The scenarios a sentence opens with: `Scenario "A" ...`, `Scenarios "A" and "B" ...`.
+SUBJECT = re.compile(rf'^\s*Scenarios? ({QUOTE_LIST})')
+QUOTED = re.compile(r'"([^"]+)"')
+
+
+def split_outside(text, stops):
+    """Splits `text` after a stop character that a space follows, outside
+    quotes and backticks. Returns (start, part) pairs."""
+    parts, start, in_quote, in_code = [], 0, False, False
+    for n, ch in enumerate(text):
+        if ch == '"' and not in_code:
+            in_quote = not in_quote
+        elif ch == "`" and not in_quote:
+            in_code = not in_code
+        elif ch in stops and not in_quote and not in_code and text[n + 1:n + 2] == " ":
+            parts.append((start, text[start:n]))
+            start = n + 1
+    parts.append((start, text[start:]))
+    return parts
+
+
+def deferred_pairs(line):
+    """(scenario, target) for every deferred pointer on one tasks.md line."""
+    pairs, rest = [], line
+    # `Deferred: "A" (x), "B" (y)`: read only after the marker, to the end of
+    # its sentence, so a device-check list such as `"A" (x)` is not a pointer.
+    for start, sentence in split_outside(line, "."):
+        marker = DEFERRED_LIST.search(sentence)
+        if not marker:
+            continue
+        for m in SCENARIO_THEN_ID.finditer(sentence, marker.end()):
+            pairs.append((m.group(1), m.group(2)))
+            a, b = start + m.start(), start + m.end()
+            rest = rest[:a] + " " * (b - a) + rest[b:]
+    sentences = split_outside(rest, ".")
+    for start, clause in split_outside(rest, ";."):
+        for p in DEFERRED_ID.finditer(clause):
+            found = []
+            m = AFTER.match(clause[p.end():])
+            if m:
+                found += QUOTED.findall(m.group(1))
+            m = BEFORE.search(clause[:p.start()])
+            if m:
+                found += QUOTED.findall(m.group(1))
+            if not found:
+                at = start + p.start()
+                sentence = next(s for s_start, s in reversed(sentences) if s_start <= at)
+                m = SUBJECT.match(sentence)
+                if m:
+                    found += QUOTED.findall(m.group(1))
+            pairs += [(scen, p.group(1)) for scen in found]
+    return pairs
+
+
+def plain(text):
+    """Folds the quote marks, so 'X "Y"' and "X 'Y'" compare equal."""
+    return re.sub(r"[\"'‘’“”]", "'", text)
+
+
+def named_in(bead, scen, fields):
+    """True when the scenario name stands as whole words in one of the
+    bead's `fields` or in a comment ("Export" does not match "ExportComposer")."""
+    texts = [bead.get(k) or "" for k in fields]
+    texts += [c.get("text") or "" for c in bead.get("comments") or []]
+    pattern = re.compile(rf"(?<!\w){re.escape(plain(scen))}(?!\w)")
+    return any(pattern.search(plain(t)) for t in texts)
+
+
+deferred_count, notes = 0, []
+LISTED = ("description", "acceptance_criteria", "notes", "close_reason")
+for tasks in sorted((root / "openspec" / "changes").rglob("tasks.md")):
+    source = None
+    for number, line in enumerate(tasks.read_text().splitlines(), 1):
+        m = TASK_BEAD.match(line)
+        if m:
+            source = m.group(1)
+        for scen, target in deferred_pairs(line):
+            deferred_count += 1
+            where = f"{tasks.relative_to(root)}:{number}"
+            frm = f" from {source}" if source else ""
+            t = rows.get(target)
+            closed = t is not None and t.get("status") == "closed"
+            if t is None:
+                misses.append(f'{where}: defers "{scen}"{frm} to missing bead {target}')
+            elif not named_in(t, scen, LISTED):
+                state = "closed without naming it" if closed else "does not list it"
+                misses.append(f'{where}: defers "{scen}"{frm} to {target}, which {state}')
+            elif closed and not named_in(t, scen, ("close_reason",)):
+                # Not a miss: the target lists the scenario, but its close
+                # reason and comments do not say that it built it.
+                notes.append(f'{where}: "{scen}"{frm}: {target} lists it; its close reason and comments do not name it')
+
 for m in misses:
     print(m)
+for n in notes:
+    print(f"note: {n}")
+print(f"{deferred_count} deferred pointer(s) read, {len(notes)} note(s) to confirm by hand")
 print(f"{len(empty)} bead(s) with no spec_id: {', '.join(sorted(empty)) or 'none'}")
 print(f"{len(misses)} miss(es)")
 sys.exit(1 if misses else 0)
