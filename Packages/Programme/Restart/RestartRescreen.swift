@@ -60,10 +60,13 @@ public struct RescreenResult: Sendable, Equatable {
 /// Evaluates a restart re-screen's answers, reusing the onboarding screening
 /// rules and the not-right-now page's fixed reason order (safeguarding
 /// spec, "Re-screening at a restart": "The app MUST apply every screening
-/// rule except the age rule to the answers.").
+/// rule except the age rule to the answers."). The rules read the unrounded
+/// BMI, and the Profile keeps it unrounded, as at onboarding ("The app MUST
+/// compute the BMI as `onboarding` defines"; onboarding spec, "The one-time
+/// BMI": "The app MUST pass the unrounded BMI to `safeguarding`.").
 public enum RestartRescreen {
     public static func evaluate(_ answers: RescreenAnswers, now: Date) -> RescreenResult {
-        let bmi = BMI.rounded(BMI.value(heightCm: answers.heightCm, weightKg: answers.weightKg))
+        let bmi = BMI.value(heightCm: answers.heightCm, weightKg: answers.weightKg)
         let selfHarm = SelfHarmItem.outcome(first: answers.selfHarmFirst, second: answers.selfHarmSecond)
         var reasons: [ExclusionReason] = []
         if selfHarm == .excludes { reasons.append(.selfHarm) }

@@ -38,7 +38,7 @@ final class RestartRescreenTests: XCTestCase {
         let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
         XCTAssertFalse(result.excluded)
         XCTAssertEqual(result.newHeightCm, 170)
-        XCTAssertEqual(result.newOnboardingBMI, 22.49, accuracy: 0.001)
+        XCTAssertEqual(result.newOnboardingBMI, 22.49, accuracy: 0.01)
     }
 
     /// Scenario: Excluded at a restart.
@@ -66,7 +66,7 @@ final class RestartRescreenTests: XCTestCase {
         let answers = RescreenAnswers(heightCm: 172, weightKg: 65, pregnancy: .no, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
         let result = RestartRescreen.evaluate(answers, now: firstAskedAt)
         XCTAssertFalse(result.excluded)
-        XCTAssertEqual(result.newOnboardingBMI, 21.97, accuracy: 0.001)
+        XCTAssertEqual(result.newOnboardingBMI, 21.97, accuracy: 0.01)
         // 56 record days after the re-screen's own askedAt, not the original.
         let required = RestartGate.rescreenRequired(askedAt: result.newAskedAt, now: moment(2026, 3, 2), currentRecordDay: dayKey(2026, 3, 2), dayStart: dayStart, calendar: engineTestCalendar)
         XCTAssertFalse(required)
@@ -103,6 +103,40 @@ final class RestartRescreenTests: XCTestCase {
         let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
         XCTAssertEqual(result.reasons, [.weight])
         XCTAssertTrue(result.remindersPausedByWeightReason)
+    }
+
+    // MARK: mm-t21.25, the rules read the unrounded BMI ("The app MUST
+    // compute the BMI as `onboarding` defines"; onboarding spec, "The
+    // one-time BMI": "The app MUST pass the unrounded BMI to
+    // `safeguarding`.").
+
+    /// 174 cm and 56 kg is a BMI of 18.4965. Rounded to 2 dp it is 18.50,
+    /// which does not exclude; the unrounded value is below 18.5.
+    func testUnroundedBMIJustBelow18Point5Excludes() {
+        for (heightCm, weightKg) in [(174.0, 56.0), (186.0, 64.0), (BMI.heightCm(feet: 6, inches: 3), BMI.weightKg(stone: 10, pounds: 8))] {
+            let answers = RescreenAnswers(heightCm: heightCm, weightKg: weightKg, pregnancy: .no, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
+            let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+            XCTAssertEqual(result.reasons, [.weight], "\(heightCm) cm, \(weightKg) kg")
+            XCTAssertTrue(result.remindersPausedByWeightReason)
+        }
+    }
+
+    /// 214 cm and 87 kg is a BMI of 18.997. Rounded to 2 dp it is 19.00,
+    /// which loses the caution flag; the unrounded value is below 19.0.
+    func testUnroundedBMIJustBelow19SetsTheCautionFlag() {
+        let answers = RescreenAnswers(heightCm: 214, weightKg: 87, pregnancy: .no, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertFalse(result.excluded)
+        XCTAssertTrue(result.newCautionFlag)
+        XCTAssertEqual(result.newOnboardingBMI, BMI.value(heightCm: 214, weightKg: 87), "the Profile keeps the unrounded BMI, as at onboarding")
+    }
+
+    /// Scenario "Caution band" at a re-screen: 170 cm and 54 kg.
+    func testCautionBandAtARescreen() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 54, pregnancy: .no, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertFalse(result.excluded)
+        XCTAssertTrue(result.newCautionFlag, "the re-screen shows the caution sheet before the start-day choice")
     }
 
     // MARK: mm-t21.23, "wiring: scenarios that need 2.1, end to end" — the
