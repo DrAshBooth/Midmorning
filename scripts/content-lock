@@ -1,6 +1,10 @@
 #!/bin/bash
 # Writes Packages/Content/Resources/content-lock.json for the bundle as it
-# is on disk. Run by hand after a content change; not part of ./verify.
+# is on disk. The hash covers the cards, the bundle strings and the keys of
+# App/Midmorning/Localizable.xcstrings that
+# Packages/Content/Resources/signed-catalogue-keys.json names. Run by hand
+# after a content change or a change to a signed catalogue string; not part
+# of ./verify.
 #
 # Usage: scripts/content-lock <version>
 set -euo pipefail
