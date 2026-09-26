@@ -1,5 +1,4 @@
 import Foundation
-import Constants
 
 /// The GP suggestion page's fixed content (safeguarding spec, "The GP
 /// suggestion page"). `mm-t22` (the underweight check, Rules B and C) and
@@ -13,15 +12,17 @@ public enum GPSuggestionPage {
     public static let heading = "It might help to see your GP"
     public static let diagnosisLine = "This is not a diagnosis, and nothing here is closed to you."
 
-    /// A reason's line MUST NOT give a cause for the weight change.
-    public static func line(for reason: GPSuggestionReason, constants: ProgrammeConstants = .default) -> String {
+    /// A reason's line MUST NOT give a cause for the weight change. The
+    /// deterioration line holds no count (ruling r13-09), because the page
+    /// MUST NOT show a number.
+    public static func line(for reason: GPSuggestionReason) -> String {
         switch reason {
         case .fallingWeight:
             return "Your weight has come down since you started."
         case .quickChange:
             return "Your weight has changed quickly over the last four weeks."
         case .deterioration:
-            return "Your starred entries have gone up for \(constants.deteriorationWeeks) weeks in a row."
+            return "Your starred entries have gone up each week lately."
         case .gettingWorse:
             return "You said things are getting worse."
         }

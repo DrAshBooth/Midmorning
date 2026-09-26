@@ -205,12 +205,7 @@
   },
   {
     "id": "gpsuggestion.deterioration",
-    "text": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on.",
-    "plural": {
-      "zero": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on.",
-      "one": "Your starred entries have gone up for %lld week in a row. That's worth talking through with your GP. Your plan stays on.",
-      "other": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on."
-    }
+    "text": "Your starred entries have gone up each week lately. That's worth talking through with your GP. Your plan stays on."
   },
   {
     "id": "gpsuggestion.gettingworse",

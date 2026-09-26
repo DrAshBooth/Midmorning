@@ -16,10 +16,12 @@ final class GPSuggestionPageTests: XCTestCase {
         XCTAssertEqual(GPSuggestionPage.line(for: .quickChange), "Your weight has changed quickly over the last four weeks.")
     }
 
-    func testDeteriorationLineFillsFromTheConstant() {
-        var constants = ProgrammeConstants.default
-        constants.deteriorationWeeks = 3
-        XCTAssertEqual(GPSuggestionPage.line(for: .deterioration, constants: constants), "Your starred entries have gone up for 3 weeks in a row.")
+    /// Ruling r13-09: the line holds no count, because the page MUST NOT
+    /// show a number.
+    func testDeteriorationLineHoldsNoNumber() {
+        let line = GPSuggestionPage.line(for: .deterioration)
+        XCTAssertEqual(line, "Your starred entries have gone up each week lately.")
+        XCTAssertFalse(line.contains { $0.isNumber })
     }
 
     func testGettingWorseLine() {

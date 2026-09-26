@@ -108,14 +108,17 @@ final class SafeguardingStringsTests: XCTestCase {
         )
     }
 
-    func testGPSuggestionDeteriorationFillsFromDeteriorationWeeks() {
+    /// Ruling r13-09: the deterioration string holds no count and no
+    /// number, because the page MUST NOT show one.
+    func testGPSuggestionDeteriorationHoldsNoCount() {
         let entry = Shipped.bundle.string(id: "gpsuggestion.deterioration")!
-        XCTAssertTrue(CatalogueRules.requiresPluralForms(entry.text))
-        XCTAssertNotNil(entry.plural)
         XCTAssertEqual(
-            PositionalFormat.fill(entry.plural!.other, with: [3]),
-            "Your starred entries have gone up for 3 weeks in a row. That's worth talking through with your GP. Your plan stays on."
+            entry.text,
+            "Your starred entries have gone up each week lately. That's worth talking through with your GP. Your plan stays on."
         )
+        XCTAssertFalse(CatalogueRules.requiresPluralForms(entry.text))
+        XCTAssertNil(entry.plural)
+        XCTAssertFalse(entry.text.contains { $0.isNumber })
     }
 
     // MARK: - mm-t11.38: the exclusion page reason strings
