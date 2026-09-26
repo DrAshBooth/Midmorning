@@ -34,6 +34,12 @@ public enum PlanWindows {
     /// The app sorts by time, ends the earlier window of any overlapping
     /// adjacent pair at the midpoint between their times, starts the later
     /// window there, and only then clips every window to the record day.
+    ///
+    /// The function is total. A window that falls wholly outside
+    /// `recordDay` clips to an empty interval at the nearer bound, and an
+    /// empty window matches no entry. This happens when `recordDay` and
+    /// `dayStartHour` disagree, for example a record day built at 04:00 with
+    /// a day start of 07:00 and a planned meal at 06:00 (mm-t23.16).
     public static func windows(
         for meals: [PlannedMeal],
         recordDay: DateInterval,
@@ -53,7 +59,7 @@ public enum PlanWindows {
             starts[i + 1] = midpoint
         }
         return (0..<ordered.count).map { i in
-            let clippedStart = max(starts[i], recordDay.start)
+            let clippedStart = min(max(starts[i], recordDay.start), recordDay.end)
             let clippedEnd = min(max(ends[i], clippedStart), recordDay.end)
             return PlannedMealWindow(slotIndex: ordered[i].slotIndex, time: times[i], interval: DateInterval(start: clippedStart, end: clippedEnd))
         }
