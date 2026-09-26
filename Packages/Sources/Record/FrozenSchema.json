@@ -12,7 +12,7 @@
   "Review": ["id", "kind", "dueDateKey", "frozenAt", "answersJSON", "selfHarmAnswered", "pinnedNote", "changedAt"],
   "Profile": ["id", "heightCm", "onboardingBMI", "cautionFlag", "askedAt", "changedAt"],
   "Settings": ["id", "key", "value", "changedAt"],
-  "Seen": ["id", "cardId", "seenAt"],
+  "Seen": ["id", "cardId", "seenAt", "contentVersion"],
   "Place": ["id"],
   "Device": ["id", "installId", "joinedDay", "lastSeenDay", "leftAt", "changedAt"]
 }

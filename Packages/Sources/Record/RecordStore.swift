@@ -864,6 +864,163 @@ public final class RecordStore {
     public func setSlotLabel(_ label: String?, index: Int, changedAt: Date) throws {
         try setSettingValue(label ?? "", key: Settings.slotLabelKey(index), changedAt: changedAt)
     }
+
+    // MARK: - Programme: stage-opened rows, card answers and the restart
+    // moment (programme spec, "A pure stage engine with stored openings as
+    // input", "The card's answer is kept in the record", "Start week 1
+    // again"). Every write here is a new row; the caller applies the
+    // engine's own ignore rules on read.
+
+    /// One `StageOpened` row as the store keeps it: an `Answer` row of kind
+    /// "stageOpened", keyed by the stage number in `cardId` (data-and-privacy
+    /// spec, "Model names, singletons and the account binding").
+    public struct StageOpenedRow: Sendable, Equatable {
+        public let stage: Int
+        public let moment: Date
+    }
+
+    /// Every `StageOpened` row the store holds, for every stage, unfiltered.
+    /// The caller passes this straight to `Programme.state`'s `openings`
+    /// parameter, which applies the ignore-future and ignore-pre-restart
+    /// rules itself.
+    public func stageOpenedRows() throws -> [StageOpenedRow] {
+        var descriptor = FetchDescriptor<Answer>(predicate: #Predicate { $0.kind == "stageOpened" })
+        descriptor.includePendingChanges = false
+        return try context.fetch(descriptor).compactMap { row in
+            Int(row.cardId).map { StageOpenedRow(stage: $0, moment: row.changedAt) }
+        }
+    }
+
+    /// Writes a new `StageOpened` row for `stage` at `moment` (programme
+    /// spec: "When the engine computes an opening the store lacks, the app
+    /// MUST write that moment to the store."). Never overwrites or deletes
+    /// an existing row — a stage can end up with more than one, and the
+    /// engine reads the earliest.
+    public func recordStageOpened(_ stage: Int, at moment: Date) throws {
+        context.insert(Answer(kind: StageOpenedReconciler.kind, cardId: String(stage), value: "", changedAt: moment))
+        try persist()
+    }
+
+    /// The winning value of a card's answer ("Open", "Close", "Read", "Yes",
+    /// "Set it up"), or `nil` when unanswered (programme spec, "The card's
+    /// answer is kept in the record").
+    public func cardAnswer(id: String) throws -> String? {
+        var descriptor = FetchDescriptor<Answer>(predicate: #Predicate { $0.kind == "card" && $0.cardId == id })
+        descriptor.includePendingChanges = false
+        return AnswerReconciler.winners(in: try context.fetch(descriptor))["card|\(id)"]?.value
+    }
+
+    /// Every card id that has an answer on any device, for the engine's
+    /// pending-card picker: "A card whose Answer row exists on any device
+    /// MUST NOT show again."
+    public func answeredCardIds() throws -> Set<String> {
+        var descriptor = FetchDescriptor<Answer>(predicate: #Predicate { $0.kind == "card" })
+        descriptor.includePendingChanges = false
+        return Set(AnswerReconciler.winners(in: try context.fetch(descriptor)).values.map(\.cardId))
+    }
+
+    /// Writes a new card-answer `Answer` row.
+    public func setCardAnswer(_ value: String, id: String, changedAt: Date) throws {
+        context.insert(Answer(kind: "card", cardId: id, value: value, changedAt: changedAt))
+        try persist()
+    }
+
+    private static let restartAtSettingKey = "programme.restartAt"
+
+    /// The moment of the last restart, or `nil` before any restart (programme
+    /// spec, "Start week 1 again": "The restart MUST write the restart
+    /// moment to its Settings key. The engine reads it as restartAt.").
+    public func restartAt() throws -> Date? {
+        try settingValue(key: Self.restartAtSettingKey).flatMap { ISO8601DateFormatter().date(from: $0) }
+    }
+
+    public func setRestartAt(_ moment: Date, changedAt: Date = .now) throws {
+        try setSettingValue(ISO8601DateFormatter().string(from: moment), key: Self.restartAtSettingKey, changedAt: changedAt)
+    }
+
+    // MARK: - Content: which content version the person saw (content spec,
+    // "The store keeps which content version the person saw").
+
+    /// Writes a new `Seen` row: the card opened, at the content version in
+    /// force, at `seenAt`. Never overwrites or merges with an earlier view of
+    /// the same card — "the same card after an update" keeps both.
+    public func recordCardSeen(cardId: String, contentVersion: Int, seenAt: Date) throws {
+        context.insert(Seen(cardId: cardId, seenAt: seenAt, contentVersion: contentVersion))
+        try persist()
+    }
+
+    /// Every `Seen` row for `cardId`, most recent first — never shown to the
+    /// person; a test or a diagnostic reads this.
+    public func cardViews(cardId: String) throws -> [Seen] {
+        var descriptor = FetchDescriptor<Seen>(predicate: #Predicate { $0.cardId == cardId })
+        descriptor.includePendingChanges = false
+        return try context.fetch(descriptor).sorted { $0.seenAt > $1.seenAt }
+    }
+
+    // MARK: - Programme: value facts for the engine (programme spec, "A pure
+    // stage engine with stored openings as input"). The App target maps each
+    // one to `Programme`'s own fact type; `Programme` never imports `Record`.
+
+    /// One winning, non-deleted entry, as the engine needs it: its record
+    /// day, whether it is starred, and the moment the store actually saved
+    /// it (`createdAt`, not `time` — a backdated entry's own `time` can
+    /// differ from the moment it was saved).
+    public struct RecordedEntryFact: Sendable, Equatable {
+        public let dayKey: String
+        public let starred: Bool
+        public let savedAt: Date
+    }
+
+    /// Every winning, non-deleted entry in the whole store.
+    public func recordedEntryFacts() throws -> [RecordedEntryFact] {
+        var descriptor = FetchDescriptor<ItemVersion>()
+        descriptor.includePendingChanges = false
+        let winners = EntryWinner.winners(in: try context.fetch(descriptor))
+        return winners.values.filter { !$0.deleted }.map { RecordedEntryFact(dayKey: $0.dayKey, starred: $0.feltLikeABinge, savedAt: $0.createdAt) }
+    }
+
+    /// Every record day that counts as "planned" (regular-eating-plan spec,
+    /// "A planned day": explicitly set, or holding an entry, and never a
+    /// paused day), for the stage 3 count. `PlannedDay.isPlanned` in `Plan`
+    /// is the rule; this gathers the store-wide facts it needs, since no
+    /// single `Day`/`ItemVersion` row already carries "is this day paused".
+    public func plannedDayKeys() throws -> Set<String> {
+        var versionDescriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { !$0.deleted })
+        versionDescriptor.includePendingChanges = false
+        let entryDayKeys = Set(try context.fetch(versionDescriptor).map(\.dayKey))
+
+        var dayDescriptor = FetchDescriptor<Day>()
+        dayDescriptor.includePendingChanges = false
+        let setDayKeys = Set(DayReconciler.winners(in: try context.fetch(dayDescriptor)).values.filter { $0.setAt != nil }.map(\.dateKey))
+
+        var pausedDescriptor = FetchDescriptor<DayState>(predicate: #Predicate { $0.kind == "paused" })
+        pausedDescriptor.includePendingChanges = false
+        let pausedDayKeys = Set(DayStateReconciler.winners(in: try context.fetch(pausedDescriptor)).values.filter { $0.value == "on" }.map(\.dateKey))
+
+        return entryDayKeys.union(setDayKeys).subtracting(pausedDayKeys)
+    }
+
+    /// One urge outcome, as the engine needs it (`urge-toolkit` owns the
+    /// outcome's own vocabulary; the engine only needs that one exists).
+    public struct UrgeOutcomeRow: Sendable, Equatable {
+        public let dayKey: String
+        public let outcomeAt: Date
+    }
+
+    public func urgeOutcomeFacts() throws -> [UrgeOutcomeRow] {
+        var descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.outcome != "" })
+        descriptor.includePendingChanges = false
+        return try context.fetch(descriptor).compactMap { session in
+            session.outcomeAt.map { UrgeOutcomeRow(dayKey: session.outcomeDayKey, outcomeAt: $0) }
+        }
+    }
+
+    /// Whether the store holds any `Template` row (programme spec, "A card
+    /// when the plan is not set": "The plan card shows while the store
+    /// holds no Template row.").
+    public func hasAnyTemplate() throws -> Bool {
+        try !context.fetch(FetchDescriptor<Template>()).isEmpty
+    }
 }
 
 /// The store directory inside the app's own `Application Support` directory

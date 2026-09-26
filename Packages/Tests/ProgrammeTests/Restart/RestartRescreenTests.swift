@@ -1,0 +1,131 @@
+import XCTest
+@testable import Programme
+
+/// Covers safeguarding spec.md, "Re-screening at a restart" (mm-t36.1).
+/// "Restart from a check-in" is `deferred: mm-t36.19`. "The restart's height
+/// wins on another device" is a store-level scenario, in
+/// `RecordTests.RestartStoreTests`. "Self-harm Yes then Yes at a restart"
+/// and "Underweight at a re-screen" are built here over fixture facts, with
+/// no live dependency on `weekly-review`; `mm-t32.16` runs each end to end.
+final class RestartRescreenTests: XCTestCase {
+    private let dayStart = 4
+
+    /// Scenario: Restart a year later.
+    func testRestartAYearLater() {
+        let askedAt = moment(2026, 1, 5, 9)
+        let required = RestartGate.rescreenRequired(askedAt: askedAt, now: moment(2027, 1, 20), currentRecordDay: dayKey(2027, 1, 20), dayStart: dayStart, calendar: engineTestCalendar)
+        XCTAssertTrue(required)
+    }
+
+    /// Scenario: Restart within 84 record days.
+    func testRestartWithin84RecordDays() {
+        let askedAt = moment(2026, 1, 5, 9)
+        // 56 record days later.
+        let required = RestartGate.rescreenRequired(askedAt: askedAt, now: moment(2026, 3, 2), currentRecordDay: dayKey(2026, 3, 2), dayStart: dayStart, calendar: engineTestCalendar)
+        XCTAssertFalse(required)
+    }
+
+    /// Scenario: Restart on the 84th record day.
+    func testRestartOnThe84thRecordDay() {
+        let askedAt = moment(2026, 1, 5, 9)
+        let required = RestartGate.rescreenRequired(askedAt: askedAt, now: moment(2026, 3, 30), currentRecordDay: dayKey(2026, 3, 30), dayStart: dayStart, calendar: engineTestCalendar)
+        XCTAssertFalse(required, "exactly 84 record days later still asks nothing")
+    }
+
+    /// Scenario: New BMI.
+    func testNewBMI() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 65, pregnancy: .no, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertFalse(result.excluded)
+        XCTAssertEqual(result.newHeightCm, 170)
+        XCTAssertEqual(result.newOnboardingBMI, 22.49, accuracy: 0.001)
+    }
+
+    /// Scenario: Excluded at a restart.
+    func testExcludedAtARestart() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 65, pregnancy: .yes, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertEqual(result.reasons, [.pregnancy])
+        XCTAssertTrue(result.excluded)
+    }
+
+    /// Scenario: Self-harm Yes then No at a restart.
+    func testSelfHarmYesThenNoAtARestart() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 65, pregnancy: .no, treatment: .no, selfHarmFirst: .yes, selfHarmSecond: .no)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertFalse(result.excluded)
+        XCTAssertTrue(result.selfHarmSupportLineShows)
+    }
+
+    /// Scenario: Cancel after a re-screen. The replacement fields are ready
+    /// to write regardless of the start-day choice that follows; the app
+    /// layer writes them once, on any outcome but exclusion, and only the
+    /// start day write depends on "Today"/"Tomorrow" vs "Cancel".
+    func testCancelAfterARescreen() {
+        let firstAskedAt = moment(2026, 1, 5, 9)
+        let answers = RescreenAnswers(heightCm: 172, weightKg: 65, pregnancy: .no, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
+        let result = RestartRescreen.evaluate(answers, now: firstAskedAt)
+        XCTAssertFalse(result.excluded)
+        XCTAssertEqual(result.newOnboardingBMI, 21.97, accuracy: 0.001)
+        // 56 record days after the re-screen's own askedAt, not the original.
+        let required = RestartGate.rescreenRequired(askedAt: result.newAskedAt, now: moment(2026, 3, 2), currentRecordDay: dayKey(2026, 3, 2), dayStart: dayStart, calendar: engineTestCalendar)
+        XCTAssertFalse(required)
+    }
+
+    /// Scenario: askedAt in the future.
+    func testAskedAtInTheFuture() {
+        let required = RestartGate.rescreenRequired(askedAt: moment(2027, 1, 1), now: moment(2026, 10, 1), currentRecordDay: dayKey(2026, 10, 1), dayStart: dayStart, calendar: engineTestCalendar)
+        XCTAssertTrue(required)
+    }
+
+    /// Scenario: Restarts less than 84 record days apart.
+    func testRestartsLessThan84RecordDaysApart() {
+        let firstAskedAt = moment(2026, 1, 5, 9)
+        // Restart on 6 March, 60 record days later: no re-screen; the last
+        // screening stays 5 January (no re-screen ran, so `askedAt` is
+        // unchanged).
+        XCTAssertFalse(RestartGate.rescreenRequired(askedAt: firstAskedAt, now: moment(2026, 3, 6), currentRecordDay: dayKey(2026, 3, 6), dayStart: dayStart, calendar: engineTestCalendar))
+        // Restart on 5 April, 90 record days after the 5 January screening:
+        // re-screens before the start-day choice.
+        XCTAssertTrue(RestartGate.rescreenRequired(askedAt: firstAskedAt, now: moment(2026, 4, 5), currentRecordDay: dayKey(2026, 4, 5), dayStart: dayStart, calendar: engineTestCalendar))
+    }
+
+    /// Scenario: Self-harm Yes then Yes at a restart.
+    func testSelfHarmYesThenYesAtARestart() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 65, pregnancy: .no, treatment: .no, selfHarmFirst: .yes, selfHarmSecond: .yes)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertEqual(result.reasons, [.selfHarm])
+    }
+
+    /// Scenario: Underweight at a re-screen.
+    func testUnderweightAtARescreen() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 53, pregnancy: .no, treatment: .no, selfHarmFirst: .no, selfHarmSecond: nil)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertEqual(result.reasons, [.weight])
+        XCTAssertTrue(result.remindersPausedByWeightReason)
+    }
+
+    // MARK: mm-t21.23, "wiring: scenarios that need 2.1, end to end" — the
+    // not-right-now page's own reason ordering (safeguarding spec, "The
+    // not-right-now page"), run from a real re-screen's answers rather than
+    // a fixture reasons array.
+
+    /// Scenario: Two reasons at a re-screen.
+    func testTwoReasonsAtARescreen() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 53, pregnancy: .no, treatment: .no, selfHarmFirst: .yes, selfHarmSecond: .yes)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertEqual(result.reasons, [.selfHarm, .weight], "self-harm above weight")
+        XCTAssertEqual(NotRightNowPage.paragraph(for: .selfHarm), NotRightNowPage.selfHarmReason)
+        XCTAssertTrue(result.remindersPausedByWeightReason)
+        XCTAssertEqual(NotRightNowPage.remindersLine(for: result.reasons), NotRightNowPage.remindersPausedLine)
+    }
+
+    /// Scenario: Four reasons at a re-screen.
+    func testFourReasonsAtARescreen() {
+        let answers = RescreenAnswers(heightCm: 170, weightKg: 53, pregnancy: .yes, treatment: .yes, selfHarmFirst: .yes, selfHarmSecond: .yes)
+        let result = RestartRescreen.evaluate(answers, now: moment(2026, 6, 1))
+        XCTAssertEqual(result.reasons, [.selfHarm, .weight, .pregnancy, .treatment])
+        XCTAssertEqual(NotRightNowPage.paragraph(for: .pregnancy), ExclusionPage.paragraph(for: .pregnancy))
+        XCTAssertEqual(NotRightNowPage.paragraph(for: .treatment), ExclusionPage.paragraph(for: .treatment))
+    }
+}
