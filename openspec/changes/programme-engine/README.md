@@ -76,6 +76,12 @@ Programme screen, which already has the control — the spec's own exemption,
 the same pattern the new-entry sheet uses. The excluded outcome reuses
 `NotRightNowPageView` (1.4), which already carries its own Get support.
 
+## Constant changes
+
+No `ProgrammeConstants` value changed during this build (programme spec, "A
+gate change never closes a stage"). `mm-t36.16` owns the clock-guard
+scenarios for when one does.
+
 ## Scope notes
 
 - `weigh-in` (2.2) is not built. The stage 1 "Weigh-in" tool row shows the
