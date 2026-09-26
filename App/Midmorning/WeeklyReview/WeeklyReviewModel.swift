@@ -139,8 +139,7 @@ enum WeeklyReviewModel {
 
         let weekDaySet = Set(weekDayKeys)
         let urgeDetails = ((try? store.urgeOutcomeDetails()) ?? []).filter { weekDaySet.contains($0.dayKey) }
-        let weighInDayChosen: Bool
-        if case .weekday = try? store.weighInDayChoice() { weighInDayChosen = true } else { weighInDayChosen = false }
+        let weighInDayChosen = (try? store.weighInDayChoice())?.weekday != nil
         let weighInDayKey = ReviewWeekFacts.weighInDoneDayKey(
             weighInDayKeys: ((try? store.weighIns()) ?? []).map(\.dateKey), weekDayKeys: weekDayKeys, weighInDayChosen: weighInDayChosen
         )
@@ -169,7 +168,7 @@ enum WeeklyReviewModel {
 
     /// The review's opening summary, or `[]` when "Weekly summary" is off.
     static func summary(store: RecordStore, week: Int, startDay: String, calendar: Calendar, now: Date) -> [String] {
-        guard (try? store.weeklySummaryOn()) ?? true else { return [] }
+        guard (try? store.weeklySummaryOn()) ?? RecordStore.Defaults.weeklySummaryOn else { return [] }
         return ReviewSummary.parts(weekFacts(store: store, week: week, startDay: startDay, calendar: calendar, now: now), calendar: calendar)
     }
 
@@ -259,7 +258,7 @@ enum WeeklyReviewModel {
 
     static func reviewsListRows(store: RecordStore, calendar: Calendar, now: Date) -> [ReviewListRow] {
         let startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: now, calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
-        let summaryOn = (try? store.weeklySummaryOn()) ?? true
+        let summaryOn = (try? store.weeklySummaryOn()) ?? RecordStore.Defaults.weeklySummaryOn
         let allWinners = (try? store.reviewRowWinners(kind: .weeklyReview, now: now, calendar: calendar)) ?? []
         let runs = runWeeks(allWinners, currentStartDay: startDay, calendar: calendar)
         let winners = allWinners

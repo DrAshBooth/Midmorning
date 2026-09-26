@@ -131,7 +131,7 @@ struct RemindersSettingsView: View {
 
     private func binding(for kind: RecordStore.ReminderSwitch) -> Binding<Bool> {
         Binding(
-            get: { switches[kind] ?? true },
+            get: { switches[kind] ?? RecordStore.Defaults.reminderSwitchOn },
             set: { on in
                 switches[kind] = on
                 try? store.setReminderSwitch(on, kind)
@@ -145,15 +145,15 @@ struct RemindersSettingsView: View {
 
     private func load() {
         for kind in RecordStore.ReminderSwitch.allCases {
-            switches[kind] = (try? store.reminderSwitchOn(kind)) ?? true
+            switches[kind] = (try? store.reminderSwitchOn(kind)) ?? RecordStore.Defaults.reminderSwitchOn
         }
         if let time = try? store.reminderTime(.setTodaysPlan) { setTodaysPlanTime = ClockTime.date(from: time) }
         if let time = try? store.reminderTime(.closeTheDay) { closeTheDayTime = ClockTime.date(from: time) }
         if let time = try? store.reminderTime(.weighIn) { weighInTime = ClockTime.date(from: time) }
         if let time = try? store.reminderTime(.weeklyReview) { weeklyReviewTime = ClockTime.date(from: time) }
-        explicitWordingOn = (try? store.explicitWordingOn()) ?? false
-        remindAgainMinutes = (try? store.remindAgainMinutes()) ?? 15
-        quietHoursOn = (try? store.quietHoursOn()) ?? true
+        explicitWordingOn = (try? store.explicitWordingOn()) ?? RecordStore.Defaults.explicitWordingOn
+        remindAgainMinutes = (try? store.remindAgainMinutes()) ?? RecordStore.Defaults.remindAgainMinutes
+        quietHoursOn = (try? store.quietHoursOn()) ?? RecordStore.Defaults.quietHours.isOn
         if let time = try? store.quietHoursStart() { quietHoursStart = ClockTime.date(from: time) }
         if let time = try? store.quietHoursEnd() { quietHoursEnd = ClockTime.date(from: time) }
         pausedAt = try? store.remindersPausedAt()
