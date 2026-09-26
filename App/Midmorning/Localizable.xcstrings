@@ -1052,6 +1052,253 @@
         }
       }
     },
+    "screening.limit.height": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a height between %1$@ and %2$@."
+          }
+        }
+      }
+    },
+    "screening.limit.weight": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a weight of %@ or more."
+          }
+        }
+      }
+    },
+    "screening.limit.number %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "screening.limit.cm %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld cm"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld cm"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld cm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "screening.limit.kg %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld kg"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld kg"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld kg"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "screening.limit.ftIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "screening.limit.ft %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ft"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ft"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ft"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "screening.limit.in %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld in"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld in"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld in"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "screening.limit.stLb": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "screening.limit.st %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld st"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld st"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld st"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "screening.limit.lb %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld lb"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld lb"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld lb"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "unit.label": {
       "extractionState": "manual",
       "localizations": {

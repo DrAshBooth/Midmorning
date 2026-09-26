@@ -14,6 +14,26 @@ enum WeightUnitChoice: String, CaseIterable {
     case stonePounds = "st lb"
 }
 
+extension HeightUnitChoice {
+    /// The unit the height limit message uses (ruling r13-11).
+    var limitUnit: HeightUnit {
+        switch self {
+        case .centimetres: return .cm
+        case .feetInches: return .ftIn
+        }
+    }
+}
+
+extension WeightUnitChoice {
+    /// The unit the weight limit message uses (ruling r13-11).
+    var limitUnit: WeightUnit {
+        switch self {
+        case .kilograms: return .kg
+        case .stonePounds: return .stLb
+        }
+    }
+}
+
 /// Everything onboarding collects across its four screens, held only until
 /// "Start" writes the four values the store keeps (onboarding spec, "What
 /// onboarding keeps and what it never keeps": the app never keeps the typed

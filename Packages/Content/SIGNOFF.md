@@ -105,6 +105,17 @@ screening.answer.treatmentyes
 screening.height.centimetres
 screening.height.feet
 screening.height.inches
+screening.limit.cm %lld
+screening.limit.ft %lld
+screening.limit.ftIn
+screening.limit.height
+screening.limit.in %lld
+screening.limit.kg %lld
+screening.limit.lb %lld
+screening.limit.number %lld
+screening.limit.st %lld
+screening.limit.stLb
+screening.limit.weight
 screening.question.age
 screening.question.height
 screening.question.pregnancy
