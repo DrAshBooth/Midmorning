@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "No record content in the system log or crash
 /// reports", Scenario: MetricKit diagnostic; "The Diagnostics counts come
@@ -32,9 +33,7 @@ final class CrashCountRelayTests: XCTestCase {
     /// The count reaches `Local.store` through the store's own counter,
     /// which the Diagnostics page reads.
     func testTheWaitingCrashesReachTheDiagnosticsCount() throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("CrashCountRelayTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
+        let root = try makeTemporaryDirectory()
         var relay = CrashCountRelay()
         _ = relay.receive(crashes: CrashCountRelay.crashCount(inPayloadCrashCounts: [1, nil]))
         let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root)

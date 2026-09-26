@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// record spec, "Create an entry" and "The new-entry screen's controls":
 /// the time control's segments and wheel, end to end from the wheel's clock
@@ -19,14 +20,6 @@ final class NewEntryTimeWiringTests: XCTestCase {
 
     private func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
         london.date(from: DateComponents(year: 2026, month: 9, day: day, hour: hour, minute: minute))!
-    }
-
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("NewEntryTimeWiringTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        return try RecordStore(directory: directory)
     }
 
     private struct Segment {
@@ -60,7 +53,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
 
     /// Scenario: Save last night's entry the next morning.
     func testSaveLastNightsEntryTheNextMorning() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let now = at(25, 7, 30)
         let (previous, current) = try segments(store: store, now: now)
         XCTAssertEqual([previous.key, current.key], ["2026-09-24", "2026-09-25"])
@@ -74,7 +67,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
 
     /// Scenario: Save an evening entry after midnight.
     func testSaveAnEveningEntryAfterMidnight() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let now = at(25, 1)
         let (_, current) = try segments(store: store, now: now)
         XCTAssertEqual(current.key, "2026-09-24")
@@ -85,7 +78,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
 
     /// Scenario: Last night's time after midnight.
     func testLastNightsTimeAfterMidnight() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let now = at(25, 2)
         let (previous, current) = try segments(store: store, now: now)
         XCTAssertEqual([previous.key, current.key], ["2026-09-23", "2026-09-24"])
@@ -96,7 +89,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
 
     /// Scenario: A time before the day start.
     func testATimeBeforeTheDayStart() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let now = at(25, 2)
         let (_, current) = try segments(store: store, now: now)
         let row = try save(wheel(1, 30, in: current, now: now), in: store, now: now)
@@ -108,7 +101,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
     /// previous segment offers its whole record day, up to one minute
     /// before the current one starts.
     func testTimeRange() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let now = at(25, 7, 30)
         let (previous, current) = try segments(store: store, now: now)
         XCTAssertEqual(wheel(9, 0, in: current, now: now), now, "no time after the current moment")
@@ -121,7 +114,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
     /// A change of segment keeps the wheel's clock time and moves it to the
     /// other record day, as `RecordTimeControl.select` does.
     func testSegmentChangeKeepsTheClockTime() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let now = at(25, 7, 30)
         let (previous, _) = try segments(store: store, now: now)
         XCTAssertEqual(wheel(7, 30, in: previous, now: now), at(24, 7, 30))
@@ -132,7 +125,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
     /// runs 26 hours, to 06:00 on Friday. 05:00 is then on the wheel twice;
     /// a turn from 05:30 on Friday stays on Friday.
     func testWheelFollowsTheDayStartInForce() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayStartHour(6, now: at(24, 13), calendar: london, changedAt: at(24, 13))
         let now = at(25, 5, 30)
         let (previous, current) = try segments(store: store, now: now)
@@ -148,7 +141,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
     /// Edit an entry: a 21:00 entry can move to 01:00 inside its own
     /// record day, and keeps its key (record spec, "Edit an entry").
     func testEditMovesAnEveningEntryAfterMidnight() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let entry = try store.add(time: at(23, 21), what: "Pasta", feltLikeABinge: false, createdAt: at(23, 21), utcOffsetSeconds: 3600)
         let schedule = try store.dayStartSchedule()
         let ownDay = try XCTUnwrap(RecordDay.interval(forKey: entry.dayKey, calendar: london, schedule: schedule))
@@ -175,7 +168,7 @@ final class NewEntryTimeWiringTests: XCTestCase {
     /// Scenario: Save last night's entry the next morning, with VoiceOver.
     /// The swipes cross from the current record day into the previous one.
     func testVoiceOverReachesLastNightFromTheMorning() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let now = at(25, 7, 30)
         let (previous, current) = try segments(store: store, now: now)
         let range = previous.interval.start...NewEntryTime.range(of: current.interval, notAfter: now).upperBound

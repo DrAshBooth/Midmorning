@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// The store-level scenarios of programme spec, "The app keeps the stage
 /// state" (mm-t21.20), "The card's answer is kept in the record" (mm-t21.11)
@@ -9,20 +10,11 @@ import XCTest
 /// just the pure engine over fixed facts.
 @MainActor
 final class ProgrammeStoreTests: XCTestCase {
-    private func makeStore(at directory: URL) throws -> RecordStore {
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
-    private func makeStore() throws -> RecordStore {
-        try makeStore(at: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true))
-    }
-
     // MARK: mm-t21.20, "The app keeps the stage state"
 
     /// Scenario: The opening stays in the store.
     func testTheOpeningStaysInTheStore() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let opened = Date(timeIntervalSince1970: 1_760_000_000)
         try store.recordStageOpened(3, at: opened)
         let rows = try store.stageOpenedRows()
@@ -33,9 +25,9 @@ final class ProgrammeStoreTests: XCTestCase {
     /// directory reads the same row, the same as the app closing and
     /// reopening.
     func testRestartOfTheAppKeepsTheStageOpenedRow() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let directory = try makeTemporaryDirectory()
         let opened = Date(timeIntervalSince1970: 1_760_000_000)
-        try makeStore(at: directory).recordStageOpened(3, at: opened)
+        try RecordStore(directory: directory).recordStageOpened(3, at: opened)
         let reopened = try RecordStore(directory: directory)
         XCTAssertEqual(try reopened.stageOpenedRows(), [RecordStore.StageOpenedRow(stage: 3, moment: opened)])
     }
@@ -46,7 +38,7 @@ final class ProgrammeStoreTests: XCTestCase {
     /// row and no card answer. `DeleteAllWiringTests` (`mm-t42.20`, the
     /// export epic's wiring bead) runs the real erasure end to end.
     func testDeleteAllLeavesNoStageOpenedRowAndNoCardAnswer() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertEqual(try store.stageOpenedRows(), [])
         XCTAssertEqual(try store.answeredCardIds(), [])
     }
@@ -55,7 +47,7 @@ final class ProgrammeStoreTests: XCTestCase {
 
     /// Scenario: The answer row.
     func testTheAnswerRow() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let moment = Date(timeIntervalSince1970: 1_759_654_320)
         try store.setCardAnswer("Open", id: "opening.2", changedAt: moment)
         XCTAssertEqual(try store.cardAnswer(id: "opening.2"), "Open")
@@ -66,7 +58,7 @@ final class ProgrammeStoreTests: XCTestCase {
     /// the same card id, as sync would deliver, still resolve to one
     /// suppressed card.
     func testACardAnsweredOnAnotherDeviceShowsNoCardOnTheOther() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setCardAnswer("Close", id: "opening.3", changedAt: Date(timeIntervalSince1970: 1_760_000_000))
         // A second device's own write of the same card id, synced in.
         try store.setCardAnswer("Close", id: "opening.3", changedAt: Date(timeIntervalSince1970: 1_760_000_100))
@@ -77,7 +69,7 @@ final class ProgrammeStoreTests: XCTestCase {
 
     /// Scenario: A card opens.
     func testACardOpens() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let opened = Date(timeIntervalSince1970: 1_759_064_700) // 13:05 UTC
         try store.recordCardSeen(cardId: "stage1.why", contentVersion: 1, language: "en-GB", seenAt: opened)
         let views = try store.cardViews(cardId: "stage1.why")
@@ -88,7 +80,7 @@ final class ProgrammeStoreTests: XCTestCase {
 
     /// Scenario: The same card after an update.
     func testTheSameCardAfterAnUpdateKeepsBothViews() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.recordCardSeen(cardId: "stage1.why", contentVersion: 1, language: "en-GB", seenAt: Date(timeIntervalSince1970: 1_759_064_700))
         try store.recordCardSeen(cardId: "stage1.why", contentVersion: 2, language: "en-GB", seenAt: Date(timeIntervalSince1970: 1_759_100_000))
         let views = try store.cardViews(cardId: "stage1.why")
@@ -102,7 +94,7 @@ final class ProgrammeStoreTests: XCTestCase {
     /// bundle's own language (`ContentTests.CardViewLanguageTests` proves
     /// that the shipped bundle is en-GB).
     func testACardViewsLanguage() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.recordCardSeen(cardId: "stage1.why", contentVersion: 2, language: "en-GB", seenAt: Date(timeIntervalSince1970: 1_759_064_700))
         XCTAssertEqual(try store.cardViews(cardId: "stage1.why").first?.language, "en-GB", "the card view holds the language en-GB")
     }

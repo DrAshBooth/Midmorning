@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec: "The store lives in the app's own container",
 /// "Two store configurations in one directory", "What syncs and what stays
@@ -33,8 +34,7 @@ final class StoreLayoutTests: XCTestCase {
     /// a fresh install.
     @MainActor
     func testANewDeviceWithNoRestoredStoreFileOpensEmpty() throws {
-        let directory = try tempDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).isEmpty, "nothing restored: the directory a backup would have excluded")
 
         let store = try RecordStore(directory: directory)
@@ -49,8 +49,7 @@ final class StoreLayoutTests: XCTestCase {
     /// device's `Local.store` cannot reach a second device.
     @MainActor
     func testAppLockIsADeviceOnlyLocalSetting() throws {
-        let directory = try tempDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
         let deviceA = try RecordStore(directory: directory)
         withExtendedLifetime(deviceA) {}
         // Confirmed structurally: `LocalSetting` lives only in
@@ -105,11 +104,5 @@ final class StoreLayoutTests: XCTestCase {
     func testPausedRemindersIsASyncedSettingsRowEachDeviceComputesLocally() {
         let pausedAt = Settings(key: "remindersPausedAt", value: "2026-10-06T09:00:00Z", changedAt: .now)
         XCTAssertEqual(SettingsReconciler.winners(in: [pausedAt])["remindersPausedAt"]?.value, pausedAt.value)
-    }
-
-    private func tempDirectory() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("StoreLayoutTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory
     }
 }

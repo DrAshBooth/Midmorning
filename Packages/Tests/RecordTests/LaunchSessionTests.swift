@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "Launch safety" and "File protection" (mm-t41.17,
 /// mm-t41.19, mm-t41.21). `AppLockRootView` and `App/Midmorning/
@@ -12,12 +13,7 @@ final class LaunchSessionTests: XCTestCase {
     private var markerURL: URL { StoreLayout.launchMarkerURL(applicationSupportDirectory: root) }
 
     override func setUpWithError() throws {
-        root = FileManager.default.temporaryDirectory.appendingPathComponent("LaunchSessionTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-    }
-
-    override func tearDownWithError() throws {
-        try? FileManager.default.removeItem(at: root)
+        root = try makeTemporaryDirectory()
     }
 
     private func markerContent() -> String? {

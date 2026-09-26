@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 import Programme
 
 /// Onboarding spec, "Finish": "The app MUST NOT keep answers from an
@@ -11,14 +12,6 @@ import Programme
 /// composition over a real store.
 @MainActor
 final class OnboardingScreeningStoreTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OnboardingScreeningStoreTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        return try RecordStore(directory: directory)
-    }
-
     /// The four kept values reach the store only at "Start".
     private func start(_ store: RecordStore, kept: ScreeningKeptValues?) throws {
         if let kept {
@@ -31,7 +24,7 @@ final class OnboardingScreeningStoreTests: XCTestCase {
     /// a second attempt excludes. The store holds no height, BMI, caution
     /// flag or `askedAt` at any point.
     func testLeaveThenExcludeKeepsNothing() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let first = OnboardingScreening.evaluate(age: 34, heightCm: 170, weightKg: 60, pregnancy: .no, treatment: .no, selfHarm: .noFollowUp, now: Date(timeIntervalSince1970: 1_758_700_000))
         guard case .continues = first else { return XCTFail("the first attempt continues to \"Your start\"") }
         // Screen 2's "Continue" writes nothing. The person closes the app on
@@ -47,7 +40,7 @@ final class OnboardingScreeningStoreTests: XCTestCase {
     /// The caution sheet path: the flag is set, and the store holds it only
     /// after "Start".
     func testCautionThenStartWritesTheFourValues() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let screenedAt = Date(timeIntervalSince1970: 1_758_700_000)
         let outcome = OnboardingScreening.evaluate(age: 34, heightCm: 170, weightKg: 54, pregnancy: .no, treatment: .no, selfHarm: .noFollowUp, now: screenedAt)
         guard case .cautionSheet(let kept) = outcome else { return XCTFail("170 cm and 54 kg shows the caution sheet") }
@@ -64,7 +57,7 @@ final class OnboardingScreeningStoreTests: XCTestCase {
     /// Scenario "The store after onboarding": 170 cm and 60 kg keeps 170,
     /// 20.76 and the caution flag off.
     func testStartAfterAScreeningThatContinues() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let outcome = OnboardingScreening.evaluate(age: 34, heightCm: 170, weightKg: 60, pregnancy: .no, treatment: .no, selfHarm: .supportLine, now: .now)
         guard case .continues(let kept) = outcome else { return XCTFail("Yes then No to the self-harm item does not exclude") }
         try start(store, kept: kept)

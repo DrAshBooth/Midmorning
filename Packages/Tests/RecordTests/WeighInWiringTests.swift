@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Programme
 
 /// mm-t22.15, the wiring bead: the four scenarios that need the weigh-in
@@ -11,12 +12,6 @@ import XCTest
 /// this file drives directly.
 @MainActor
 final class WeighInWiringTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var utc: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
@@ -34,7 +29,7 @@ final class WeighInWiringTests: XCTestCase {
     /// Scenario: Weight reason (safeguarding spec, "The not-right-now
     /// page"), reached from a real Rule A over a real saved weigh-in.
     func testWeightReason() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setProfile(heightCm: 170, onboardingBMI: 24.2, cautionFlag: false, askedAt: at(2026, 1, 1))
         try store.saveWeighIn(dateKey: dayKey(2026, 9, 28), weightKg: 53.0, unit: "kg", at: at(2026, 9, 28))
 
@@ -51,7 +46,7 @@ final class WeighInWiringTests: XCTestCase {
 
     /// Scenario: Reminders paused by the weight reason.
     func testRemindersPausedByTheWeightReason() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.pauseReminders(at: at(2026, 9, 28, 12, 0))
 
         let settings = SchedulerSettings(
@@ -74,7 +69,7 @@ final class WeighInWiringTests: XCTestCase {
     /// Scenario: From the weigh-in (safeguarding spec, "The GP suggestion
     /// page"), reached from a real Rule C over two real saved weigh-ins.
     func testFromTheWeighIn() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setProfile(heightCm: 170, onboardingBMI: 24.2, cautionFlag: false, askedAt: at(2026, 1, 1))
         try store.saveWeighIn(dateKey: dayKey(2026, 8, 24), weightKg: 70.0, unit: "kg", at: at(2026, 8, 24))
         try store.saveWeighIn(dateKey: dayKey(2026, 9, 28), weightKg: 66.0, unit: "kg", at: at(2026, 9, 28))
@@ -97,7 +92,7 @@ final class WeighInWiringTests: XCTestCase {
     /// Scenario: I won't be weighing (onboarding spec, "Screen 3: weigh-in
     /// day and quiet hours"), over the real onboarding store row.
     func testIWontBeWeighing() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setWeighInDayChoice(.wontBeWeighing)
 
         let weighInWeekday: Int?

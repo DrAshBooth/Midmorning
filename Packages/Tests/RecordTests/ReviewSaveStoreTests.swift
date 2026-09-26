@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Programme
 
 /// The review fixes of the code review of 26 September 2026 (mm-t32.19,
@@ -12,12 +13,6 @@ import XCTest
 /// themselves are the `Programme` functions that the App calls.
 @MainActor
 final class ReviewSaveStoreTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var utc: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
@@ -103,7 +98,7 @@ final class ReviewSaveStoreTests: XCTestCase {
     /// so Today keeps the "Weekly review" line, and Today's pinned note is
     /// still week 1's.
     func testGettingWorseKeepsTheReviewDueAndThePinnedNote() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try freeze(store, week: 1, at: at(2026, 10, 5, 4))
         try save(.done, store, week: 1, oneThing: "Eat lunch at work", selfHarmStepOneAnswered: true, at: at(2026, 10, 5, 9))
         try freeze(store, week: 2, at: at(2026, 10, 12, 4))
@@ -119,7 +114,7 @@ final class ReviewSaveStoreTests: XCTestCase {
 
     /// Scenario: Yes, then Yes. The answers stay; the review stays due.
     func testYesThenYesSavesWithoutFinishing() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try freeze(store, week: 2, at: at(2026, 10, 12, 4))
         try save(.answersSoFar, store, week: 2, reflection: ["", "Evenings were hard", ""], selfHarmStepOneAnswered: true, at: at(2026, 10, 12, 9))
         let row = try store.review(kind: .weeklyReview, dueDateKey: dueDayKey(2), now: readNow)
@@ -133,7 +128,7 @@ final class ReviewSaveStoreTests: XCTestCase {
     /// Answer No, tap "Done", reopen (the item is hidden, so it has no
     /// answer on this visit) and tap "Done" again: the row keeps `true`.
     func testReopenThenDoneKeepsSelfHarmAnswered() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try freeze(store, week: 2, at: at(2026, 10, 12, 4))
         try save(.done, store, week: 2, selfHarmStepOneAnswered: true, at: at(2026, 10, 12, 9))
         try save(.done, store, week: 2, reflection: ["Better", "", ""], selfHarmStepOneAnswered: false, at: at(2026, 10, 14, 9))
@@ -147,7 +142,7 @@ final class ReviewSaveStoreTests: XCTestCase {
     /// Scenario: Three rising weeks. The page shows when the review of
     /// week 5 first opens, and not on a reopen.
     func testTheDeteriorationPageShowsOncePerReview() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         for (week, starred) in [(2, 2), (3, 3), (4, 4), (5, 5)] {
             try freeze(store, week: week, starred: starred, at: at(2026, 9, 28 + 7 * week, 4))
         }
@@ -165,7 +160,7 @@ final class ReviewSaveStoreTests: XCTestCase {
     /// finished first-run reviews keep their own weeks, and the second run
     /// uses its own due-day keys.
     func testTheReviewsListShowsBothRunsAfterARestart() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setStartDayKey(startDay, changedAt: at(2026, 9, 28))
         for week in 1...3 {
             try freeze(store, week: week, starred: week, at: at(2026, 9, 28 + 7 * week, 4))
@@ -191,7 +186,7 @@ final class ReviewSaveStoreTests: XCTestCase {
     /// Scenario: I won't be weighing. The store keeps the weigh-in, and the
     /// summary leaves the part out until the person chooses a day again.
     func testIWontBeWeighingOverTheRealStore() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setWeighInDayChoice(.weekday(2), changedAt: at(2026, 9, 28))
         _ = try store.saveWeighIn(dateKey: "2026-10-05", weightKg: 70, unit: "kg", at: at(2026, 10, 5))
         try store.setWeighInDayChoice(.wontBeWeighing, changedAt: at(2026, 10, 6))

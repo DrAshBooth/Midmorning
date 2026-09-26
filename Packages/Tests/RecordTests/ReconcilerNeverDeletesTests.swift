@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "The Reconciler never deletes a row".
 final class ReconcilerNeverDeletesTests: XCTestCase {
@@ -34,9 +35,7 @@ final class ReconcilerNeverDeletesTests: XCTestCase {
     /// Reviews list, the pinned note and the freeze step call.
     @MainActor
     func testFutureDatedReviewThroughTheStoreIsIgnoredTodayKeptAndReadTomorrow() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
         let store = try RecordStore(directory: directory)
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = .gmt

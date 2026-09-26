@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 import Programme
 @testable import Record
+import RecordTestSupport
 
 /// The store half of the reminder wiring from the code review of 26
 /// September 2026 (mm-t24.23, mm-t24.24, mm-t24.27, mm-t24.28, mm-t24.33).
@@ -10,25 +11,6 @@ import Programme
 /// file and the real `Programme` rules.
 @MainActor
 final class ReminderWiringTests: XCTestCase {
-    private var directories: [URL] = []
-
-    override func tearDown() {
-        for directory in directories { try? FileManager.default.removeItem(at: directory) }
-        directories = []
-        super.tearDown()
-    }
-
-    private func makeDirectory() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ReminderWiringTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        directories.append(directory)
-        return directory
-    }
-
-    private func makeStore() throws -> RecordStore {
-        try RecordStore(directory: makeDirectory())
-    }
-
     private let calendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
@@ -45,7 +27,7 @@ final class ReminderWiringTests: XCTestCase {
     /// each post the store's one change signal, which the App target's
     /// scheduler listens for.
     func testEveryWriteThatTheSchedulerReadsPostsTheChangeSignal() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         var signals = 0
         let observer = NotificationCenter.default.addObserver(forName: RecordStore.didSaveNotification, object: store, queue: nil) { _ in signals += 1 }
         defer { NotificationCenter.default.removeObserver(observer) }
@@ -65,7 +47,7 @@ final class ReminderWiringTests: XCTestCase {
     /// Scenario: Pause at 14:00 — the paused day the store now holds gives
     /// no reminder for the rest of that record day.
     func testPauseForTodayLeavesNoReminderForTheRestOfTheDay() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayState(.paused, on: true, dateKey: "2026-10-06", changedAt: at(14))
         let meals = [
             PlannedMealFact(slotIndex: 3, time: "16:00", matchedBeforeReminderTime: false),
@@ -82,8 +64,8 @@ final class ReminderWiringTests: XCTestCase {
     /// the queue file the handler wrote reaches the store with each
     /// action's own moment, and the file is then empty.
     func testTheQueueFileIsAppliedWithEachMomentAndThenEmptied() throws {
-        let store = try makeStore()
-        let queueURL = try makeDirectory().appendingPathComponent("queue.json")
+        let store = try makeTemporaryStore()
+        let queueURL = try makeTemporaryDirectory().appendingPathComponent("queue.json")
         let skipped = QueuedAction(kind: .skipped, dayKey: "2026-10-06", slotIndex: 2, plannedTime: "13:00", snoozeCount: 0, moment: at(13, 40))
         let snooze = QueuedAction(kind: .snooze, dayKey: "2026-10-06", slotIndex: 3, plannedTime: "16:00", snoozeCount: 1, moment: at(16))
         try ActionQueueCodec.appending(snooze, to: ActionQueueCodec.appending(skipped, to: Data())).write(to: queueURL)
@@ -106,7 +88,7 @@ final class ReminderWiringTests: XCTestCase {
     }
 
     func testAQueuedSkipWithNoLaterAnswerSetsTheMealSkipped() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let skipped = QueuedAction(kind: .skipped, dayKey: "2026-10-06", slotIndex: 2, plannedTime: "13:00", snoozeCount: 0, moment: at(13, 40))
         try store.applyQueuedActions([skipped], currentRecordDayKey: "2026-10-06")
         XCTAssertEqual(try store.plannedMealAnswer(dateKey: "2026-10-06", slotIndex: 2), "Skipped")
@@ -118,7 +100,7 @@ final class ReminderWiringTests: XCTestCase {
     /// store, the scheduler schedules the 13:15 reminder again from
     /// `Local.store` alone, so replacing every pending request keeps it.
     func testASnoozeFromTheQueueIsScheduledAgainAfterARecompute() throws {
-        let directory = try makeDirectory()
+        let directory = try makeTemporaryDirectory()
         do {
             let store = try RecordStore(directory: directory)
             let snooze = QueuedAction(kind: .snooze, dayKey: "2026-10-06", slotIndex: 2, plannedTime: "13:00", snoozeCount: 1, moment: at(13))
@@ -140,7 +122,7 @@ final class ReminderWiringTests: XCTestCase {
     // MARK: mm-t24.28 — the stop counts live in Local.store
 
     func testTheStopCountsAndTheFoldMarkSurviveARestart() throws {
-        let directory = try makeDirectory()
+        let directory = try makeTemporaryDirectory()
         do {
             let store = try RecordStore(directory: directory)
             let days = (5...11).map { ElapsedReminderDay(dayKey: String(format: "2026-10-%02d", $0), morningPlanDelivered: false, middayOrCloseTheDayDelivered: true, hadEntry: false, wasPaused: false, setItsOwnPlan: false) }

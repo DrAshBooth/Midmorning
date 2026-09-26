@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Plan
 
 /// regular-eating-plan spec: "A planned day" (mm-t23.8), "Weekday and weekend
@@ -12,12 +13,6 @@ import XCTest
 /// directory.
 @MainActor
 final class PlanStoreTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var london: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
@@ -32,7 +27,7 @@ final class PlanStoreTests: XCTestCase {
 
     /// Scenario: A day start change keeps the key.
     func testADayStartChangeKeepsTheKey() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayPlan(dateKey: "2026-10-02", slotsJSON: "[]", windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: at(2026, 10, 2, 8), setBy: "device-a", changedAt: at(2026, 10, 2, 8))
         try store.setDayStartHour(5, now: at(2026, 10, 3, 6), calendar: london)
         let plan = try store.dayPlan(dateKey: "2026-10-02")
@@ -43,7 +38,7 @@ final class PlanStoreTests: XCTestCase {
     /// Scenario: The set event row from another device — the sticky rule
     /// through the store (the pure Reconciler rule is `ConflictRulesTests`).
     func testTheSetEventRowFromAnotherDeviceThroughTheStore() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayPlan(dateKey: "2026-10-06", slotsJSON: "[]", windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: at(2026, 10, 6, 22), setBy: "device-a", changedAt: at(2026, 10, 6, 22))
         XCTAssertTrue(try store.isSetDay(dateKey: "2026-10-06"), "device B reads the set event and treats the day as set")
     }
@@ -52,7 +47,7 @@ final class PlanStoreTests: XCTestCase {
 
     /// Scenario: A template change during the day.
     func testATemplateChangeDuringTheDayDoesNotChangeTodaysPlan() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(PlanCodec.encode([PlannedMeal(slotIndex: 2, time: "13:00")]), kind: .weekday, changedAt: at(2026, 9, 28, 9))
         let originalTemplate = try store.templateSlotsJSON(.weekday)
         try store.materialiseDayFromTemplate(dateKey: "2026-09-29", slotsJSON: originalTemplate, windowBeforeMinutes: 60, windowAfterMinutes: 90)
@@ -68,7 +63,7 @@ final class PlanStoreTests: XCTestCase {
 
     /// Scenario: Three days without opening the app.
     func testThreeDaysWithoutOpeningTheAppMaterialisesEachElapsedDay() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let weekdayJSON = PlanCodec.encode([PlannedMeal(slotIndex: 2, time: "13:00")])
         try store.setTemplateSlotsJSON(weekdayJSON, kind: .weekday, changedAt: at(2026, 9, 20, 9))
 
@@ -94,7 +89,7 @@ final class PlanStoreTests: XCTestCase {
 
     /// Scenario: Tonight for tomorrow.
     func testTonightForTomorrow() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         // 22:00 Thursday 24 September; "Tomorrow's plan" targets Friday 25 September.
         let today = RecordDay.interval(containing: at(2026, 9, 24, 22), calendar: london, schedule: .standard)
         let tomorrow = RecordDay.next(today, calendar: london, schedule: .standard)
@@ -107,7 +102,7 @@ final class PlanStoreTests: XCTestCase {
 
     /// Scenario: This morning for today.
     func testThisMorningForToday() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         // 07:30 Friday 25 September; "Today's plan" targets Friday.
         let today = RecordDay.interval(containing: at(2026, 9, 25, 7, 30), calendar: london, schedule: .standard)
         let todayKey = RecordDay.key(containing: today.start, calendar: london, schedule: .standard)
@@ -131,8 +126,7 @@ final class PlanStoreTests: XCTestCase {
 
     /// Scenario: Close and open the app.
     func testCloseAndOpenTheAppKeepsTheWeekdayTemplate() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let directory = try makeTemporaryDirectory()
         let json = PlanCodec.encode([PlannedMeal(slotIndex: 0, time: "08:00")])
         do {
             let store = try RecordStore(directory: directory)
@@ -147,7 +141,7 @@ final class PlanStoreTests: XCTestCase {
     /// this file's calls, so the person can edit the plan and see it on
     /// Today with no network connection.
     func testNoNetworkEditingWorksOffline() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayPlan(dateKey: "2026-10-06", slotsJSON: PlanCodec.encode([PlannedMeal(slotIndex: 2, time: "13:00")]), windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: .now, setBy: "device", changedAt: .now)
         XCTAssertNotNil(try store.dayPlan(dateKey: "2026-10-06"))
     }
@@ -157,7 +151,7 @@ final class PlanStoreTests: XCTestCase {
     /// Delete-all deletes them, with the whole store directory"); a fresh
     /// store at a fresh directory is exactly that post-delete state.
     func testDeleteAllLeavesNoTemplateNoDayAndDefaultLabels() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertEqual(try store.templateSlotsJSON(.weekday), "[]")
         XCTAssertNil(try store.dayPlan(dateKey: "2026-10-06"))
         XCTAssertNil(try store.slotLabel(index: 1), "the default labels apply")
@@ -165,7 +159,7 @@ final class PlanStoreTests: XCTestCase {
 
     /// Scenario: A rename on two devices.
     func testARenameOnTwoDevicesTheLaterOneWins() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setSlotLabel("Elevenses", index: 1, changedAt: at(2026, 9, 26, 10, 0))
         try store.setSlotLabel("Brunch", index: 1, changedAt: at(2026, 9, 26, 10, 5))
         XCTAssertEqual(try store.slotLabel(index: 1), "Brunch", "both devices show the later rename")
@@ -174,7 +168,7 @@ final class PlanStoreTests: XCTestCase {
     // MARK: Slot labels apply everywhere (mm-t23.4)
 
     func testASavedLabelAppliesAtOnce() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertNil(try store.slotLabel(index: 1))
         try store.setSlotLabel("Elevenses", index: 1, changedAt: .now)
         XCTAssertEqual(try store.slotLabel(index: 1), "Elevenses")
@@ -182,7 +176,7 @@ final class PlanStoreTests: XCTestCase {
     }
 
     func testAnEmptyLabelRevertsToTheDefaultThroughTheStore() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setSlotLabel("Elevenses", index: 1, changedAt: at(2026, 9, 26, 9))
         try store.setSlotLabel("", index: 1, changedAt: at(2026, 9, 26, 9, 30))
         XCTAssertEqual(Plan.SlotLabel.effective(stored: try store.slotLabel(index: 1), defaultLabel: "Mid-morning"), "Mid-morning")

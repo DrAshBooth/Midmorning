@@ -2,18 +2,13 @@ import Foundation
 import XCTest
 @testable import Export
 @testable import Record
+import RecordTestSupport
 
 /// export spec, "The PDF is formatted like the paper record", "Each entry
 /// in the PDF", "Days with no entries, \"didn't record\" days and paused
 /// days", "What the PDF never contains".
 @MainActor
 final class ExportDocumentBuilderTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private func row(time: String, dayKey: String, what: String = "", starred: Bool = false, whereText: String = "", context: String = "") -> RecordRow {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
@@ -224,7 +219,7 @@ final class ExportDocumentBuilderTests: XCTestCase {
     /// `RecordStore.entries(dayKey:)` is what filters a deleted version out
     /// before the builder ever sees it.
     func testADeletedEntryNeverReachesTheDocument() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let saved = try store.add(time: Date(timeIntervalSince1970: 1_758_531_900), what: "Crisps", feltLikeABinge: false, createdAt: .now, utcOffsetSeconds: 0, dayStartHour: 4)
         try store.delete(entryId: saved.id, deletedAt: .now.addingTimeInterval(60))
         let rows = try store.entries(dayKey: saved.dayKey)

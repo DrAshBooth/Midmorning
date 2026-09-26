@@ -1,24 +1,17 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "The Diagnostics counts come from the device";
 /// settings spec, "The About group".
 @MainActor
 final class DiagnosticsCountsTests: XCTestCase {
-    private func makeStore() throws -> (RecordStore, URL) {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("DiagnosticsCountsTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return (try RecordStore(directory: directory), directory)
-    }
-
     /// Scenario: Sync off. Built here: every count this change can compute
     /// with no sync — "last successful sync day" is the one count `4.1b`
     /// (`mm-t41b.11`) writes for real.
     func testSyncOffReadsNeverForTheLastSuccessfulSyncDay() throws {
-        let (store, directory) = try makeStore()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try makeTemporaryStore()
         let counts = try store.diagnosticsCounts(contentVersion: 2)
         XCTAssertEqual(counts.lastSuccessfulSyncDay, "Never")
     }
@@ -26,8 +19,7 @@ final class DiagnosticsCountsTests: XCTestCase {
     /// Scenario: Managed device — no code path reads or reacts to MDM, so
     /// the counts are the same on any device; this is that same computation.
     func testManagedDeviceComputesTheSameCounts() throws {
-        let (store, directory) = try makeStore()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try makeTemporaryStore()
         let counts = try store.diagnosticsCounts(contentVersion: 2)
         XCTAssertEqual(counts.schemaVersion, "\(RecordSchemaV1.versionIdentifier)")
         XCTAssertEqual(counts.contentVersion, 2)
@@ -36,8 +28,7 @@ final class DiagnosticsCountsTests: XCTestCase {
     /// Scenario: Diagnostics content (built here for six of the eight
     /// counts; the sync-on half is `deferred: mm-t41b.11`).
     func testDiagnosticsCountsReflectEveryStoredCounter() throws {
-        let (store, directory) = try makeStore()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try makeTemporaryStore()
         try store.incrementLaunchFailureCount()
         try store.incrementLaunchFailureCount()
         try store.incrementCrashCount()
@@ -60,8 +51,8 @@ final class DiagnosticsCountsTests: XCTestCase {
             let pendingReminders: Int
             let queueLength: Int
         }
-        let (store, directory) = try makeStore()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
+        let store = try RecordStore(directory: directory)
         let queueURL = directory.appendingPathComponent("queue.json")
         var data = Data()
         for slot in 0..<3 {
@@ -75,8 +66,7 @@ final class DiagnosticsCountsTests: XCTestCase {
     }
 
     func testIncrementLaunchFailureCountReturnsTheNewCount() throws {
-        let (store, directory) = try makeStore()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try makeTemporaryStore()
         XCTAssertEqual(try store.incrementLaunchFailureCount(), 1)
         XCTAssertEqual(try store.incrementLaunchFailureCount(), 2)
     }
@@ -84,8 +74,8 @@ final class DiagnosticsCountsTests: XCTestCase {
     /// data-and-privacy spec, "No record content in the system log or
     /// crash reports": "MetricKit diagnostic".
     func testIncrementCrashCountKeepsOnlyTheCountAndSurvivesReopening() throws {
-        let (store, directory) = try makeStore()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
+        let store = try RecordStore(directory: directory)
         try store.incrementCrashCount()
         let reopened = try RecordStore(directory: directory)
         XCTAssertEqual(try reopened.diagnosticsCounts(contentVersion: 1).crashCount, 1)

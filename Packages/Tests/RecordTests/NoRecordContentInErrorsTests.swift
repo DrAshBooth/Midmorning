@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "No record content in the system log or crash
 /// reports". `weigh-in` (2.2) has not built its own save path yet, so this
@@ -14,8 +15,7 @@ final class NoRecordContentInErrorsTests: XCTestCase {
     /// `weigh-in`'s own save reuses the same `Failure.saveFailed` case, so
     /// this is the same guarantee a weigh-in save failure would carry).
     func testASaveFailureCarriesNoData() throws {
-        let directory = try tempDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
         let store = try RecordStore(directory: directory)
 
         do {
@@ -44,11 +44,5 @@ final class NoRecordContentInErrorsTests: XCTestCase {
         for forbidden in ["print(", "os_log(", "NSLog(", "debugPrint("] {
             XCTAssertFalse(text.contains(forbidden), "RecordStore.swift calls \(forbidden), which could write record content to the system log")
         }
-    }
-
-    private func tempDirectory() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("NoRecordContentInErrorsTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory
     }
 }

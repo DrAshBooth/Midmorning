@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Programme
 
 /// weigh-in spec, "The trend feeds safeguarding" (mm-t22.11): every weigh-in
@@ -12,12 +13,6 @@ import XCTest
 /// same pattern `ProgrammeFactsWiringTests` uses ahead of an App-target seam.
 @MainActor
 final class WeighInSafeguardingFactsTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var utc: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
@@ -40,7 +35,7 @@ final class WeighInSafeguardingFactsTests: XCTestCase {
 
     /// Scenario: The rolling average falls.
     func testTheRollingAverageFalls() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.saveWeighIn(dateKey: dayKey(2026, 9, 28), weightKg: 70.0, unit: "kg", at: at(2026, 9, 28))
         try store.saveWeighIn(dateKey: dayKey(2026, 10, 5), weightKg: 68.0, unit: "kg", at: at(2026, 10, 5))
         try store.saveWeighIn(dateKey: dayKey(2026, 10, 12), weightKg: 66.0, unit: "kg", at: at(2026, 10, 12))
@@ -52,7 +47,7 @@ final class WeighInSafeguardingFactsTests: XCTestCase {
 
     /// Scenario: Rule A applies after a weigh-in.
     func testRuleAAppliesAfterAWeighIn() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setProfile(heightCm: 170, onboardingBMI: 24.2, cautionFlag: false, askedAt: at(2026, 1, 1))
         try store.saveWeighIn(dateKey: dayKey(2026, 9, 28), weightKg: 53.0, unit: "kg", at: at(2026, 9, 28))
         let profile = try store.profile()!
@@ -65,7 +60,7 @@ final class WeighInSafeguardingFactsTests: XCTestCase {
 
     /// Scenario: Rule B or Rule C applies after a weigh-in.
     func testRuleBOrRuleCAppliesAfterAWeighIn() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: at(2026, 1, 1))
         try store.saveWeighIn(dateKey: dayKey(2026, 9, 28), weightKg: 56.0, unit: "kg", at: at(2026, 9, 28))
         let profile = try store.profile()!
@@ -78,7 +73,7 @@ final class WeighInSafeguardingFactsTests: XCTestCase {
 
     /// Scenario: No weigh-in, no check.
     func testNoWeighInNoCheck() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertTrue(try store.weighIns().isEmpty, "the App target's own guard (\"run only when at least one weigh-in exists\") reads this before ever building an UnderweightCheckInput")
     }
 }

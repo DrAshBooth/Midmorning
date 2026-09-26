@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// Onboarding spec, "What onboarding keeps and what it never keeps"
 /// (mm-t14.12), "Screen 3: the start day" (mm-t14.6), "Screen 3: weigh-in
@@ -8,19 +9,11 @@ import XCTest
 /// "Finish" (mm-t14.14).
 @MainActor
 final class OnboardingStoreTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("OnboardingStoreTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        return try RecordStore(directory: directory)
-    }
-
     /// "The store after onboarding": the store holds exactly the four
     /// screening values, the start day, quiet hours and the weigh-in day —
     /// no age, weight, other date, creation moment or yes-or-no answer.
     func testTheStoreAfterOnboarding() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let askedAt = Date(timeIntervalSince1970: 1_758_700_000)
 
         try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: askedAt)
@@ -50,7 +43,7 @@ final class OnboardingStoreTests: XCTestCase {
     /// "First weigh-in day": the store keeps no weight from onboarding for a
     /// rolling average to read.
     func testFirstWeighInDayHasNoOnboardingWeight() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: .now)
         // Profile carries height and BMI, never the typed weight itself.
         let mirror = Mirror(reflecting: try XCTUnwrap(store.profile()))
@@ -62,14 +55,14 @@ final class OnboardingStoreTests: XCTestCase {
     /// store that never received a `setProfile` call (an exclusion writes
     /// nothing) holds no Profile row at all.
     func testNoProfileRowBeforeAnyWrite() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertNil(try store.profile())
         XCTAssertNil(try store.startDayKey())
         XCTAssertFalse(try store.onboardingCompleted())
     }
 
     func testWeighInDayWontBeWeighing() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setWeighInDayChoice(.wontBeWeighing)
         XCTAssertEqual(try store.weighInDayChoice(), .wontBeWeighing)
     }
@@ -77,7 +70,7 @@ final class OnboardingStoreTests: XCTestCase {
     /// "A later start day wins": a restart's write, with a later
     /// `changedAt`, replaces the earlier start day on read.
     func testALaterStartDayWins() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let earlier = Date(timeIntervalSince1970: 1_000)
         let later = Date(timeIntervalSince1970: 2_000)
         try store.setStartDayKey("2026-09-24", changedAt: earlier)
@@ -88,12 +81,12 @@ final class OnboardingStoreTests: XCTestCase {
     /// "This device only" (Screen 4): the sync choice is off until a later
     /// change turns it on.
     func testSyncOffByDefault() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertFalse(try store.syncOn())
     }
 
     func testInstallMomentRoundTrips() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let moment = Date(timeIntervalSince1970: 1_758_600_000)
         try store.setInstallMoment(moment)
         let read = try XCTUnwrap(store.installMoment())
