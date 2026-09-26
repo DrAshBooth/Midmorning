@@ -79,10 +79,21 @@ public enum TemplateReconciler {
 /// (data-and-privacy spec, "Conflict rules for the plan, weigh-ins and
 /// lists").
 public enum DayReconciler {
+    /// The row per `dateKey` with the later `changedAt`: the stored row that
+    /// holds the winning plan payload. An edit of the plan writes into this
+    /// row (data-and-privacy spec, "Rows reference each other by key").
+    public static func payloadWinners(in rows: [Day]) -> [String: Day] {
+        Reconciler.latestWins(rows, key: \.dateKey, changedAt: \.changedAt)
+    }
+
+    /// The winner a reader sees per `dateKey`: the payload winner, with the
+    /// earliest set event of any row for the key when the payload winner
+    /// has none. That value can be a new `Day` value that no context holds,
+    /// so a write MUST use `payloadWinners(in:)` instead.
     public static func winners(in rows: [Day]) -> [String: Day] {
         let groups = Dictionary(grouping: rows, by: \.dateKey)
         return groups.compactMapValues { group -> Day? in
-            guard let payloadWinner = Reconciler.latestWins(group, key: { _ in 0 }, changedAt: \.changedAt).values.first else { return nil }
+            guard let payloadWinner = payloadWinners(in: group).values.first else { return nil }
             let sticky = group.filter { $0.setAt != nil }.min { $0.setAt! < $1.setAt! }
             guard let sticky, payloadWinner.setAt == nil else { return payloadWinner }
             return Day(
@@ -200,6 +211,23 @@ public enum ReviewReconciler {
     /// clock. It MUST NOT delete such a row.").
     public static func winners(in rows: [Review], now: Date, currentDayKey: String) -> [String: Review] {
         winners(in: rows.filter { !isFutureDated($0, now: now, currentDayKey: currentDayKey) })
+    }
+
+    /// The row that a write of one (`kind`, `dueDateKey`) goes into, from
+    /// that key's rows, or `nil` when the write must insert a new row
+    /// (data-and-privacy spec, "Rows reference each other by key"; "Day
+    /// states, sessions and reviews": "When two frozen rows share a key,
+    /// the store MUST keep the row with the earliest freeze moment. An edit
+    /// MUST write into that row."). The target is the frozen winner that a
+    /// read at `now` shows. When no row is frozen, the target is the
+    /// unfrozen row with the latest `changedAt`, so a freeze or an answer
+    /// before the freeze also writes into one row. A future-dated row is
+    /// never the target: the read ignores it, and the write keeps it as it
+    /// is. `rows` MUST hold the rows of one key only.
+    public static func writeTarget(in rows: [Review], now: Date, currentDayKey: String) -> Review? {
+        let current = rows.filter { !isFutureDated($0, now: now, currentDayKey: currentDayKey) }
+        if let frozen = winners(in: current).values.first { return frozen }
+        return current.filter { $0.frozenAt == nil }.max { $0.changedAt < $1.changedAt }
     }
 
     /// A row is future-dated when its due moment or its freeze moment is
