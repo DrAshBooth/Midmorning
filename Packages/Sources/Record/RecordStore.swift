@@ -1150,10 +1150,11 @@ public final class RecordStore {
     // "The store keeps which content version the person saw").
 
     /// Writes a new `Seen` row: the card opened, at the content version in
-    /// force, at `seenAt`. Never overwrites or merges with an earlier view of
-    /// the same card — "the same card after an update" keeps both.
-    public func recordCardSeen(cardId: String, contentVersion: Int, seenAt: Date) throws {
-        context.insert(Seen(cardId: cardId, seenAt: seenAt, contentVersion: contentVersion))
+    /// force, in the card's language, at `seenAt`. Never overwrites or
+    /// merges with an earlier view of the same card — "the same card after
+    /// an update" keeps both.
+    public func recordCardSeen(cardId: String, contentVersion: Int, language: String, seenAt: Date) throws {
+        context.insert(Seen(cardId: cardId, seenAt: seenAt, contentVersion: contentVersion, language: language))
         try persist()
     }
 

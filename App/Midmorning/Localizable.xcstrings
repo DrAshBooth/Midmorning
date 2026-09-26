@@ -518,6 +518,17 @@
         }
       }
     },
+    "programme.card.draft": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draft"
+          }
+        }
+      }
+    },
     "programme.card.open": {
       "extractionState": "manual",
       "localizations": {

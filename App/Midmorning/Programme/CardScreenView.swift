@@ -16,12 +16,21 @@ struct CardScreenView: View {
     var recordsAnswerOnAppear: Bool = false
 
     @State private var screen: Content.CardScreen?
+    /// `true` when the bundle carries the "Draft" flag (content spec,
+    /// "Clinical sign-off per content version": "When the bundle carries
+    /// the 'Draft' flag, the app MUST show 'Draft' at the top of every
+    /// card.").
+    @State private var isDraft = false
     @State private var isShowingSafari = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let screen {
+                    if isDraft {
+                        Text("programme.card.draft")
+                            .font(.headline)
+                    }
                     Text(screen.title)
                         .font(.title.bold())
                         .accessibilityAddTraits(.isHeader)
@@ -44,7 +53,8 @@ struct CardScreenView: View {
     private func load() {
         guard let bundle = try? BundleLoader.loadShipped(), let card = bundle.card(id: cardId) else { return }
         screen = Content.CardScreen(card: card)
-        try? store.recordCardSeen(cardId: cardId, contentVersion: bundle.contentVersion, seenAt: Date())
+        isDraft = bundle.isDraft
+        try? store.recordCardSeen(cardId: cardId, contentVersion: bundle.contentVersion, language: bundle.language, seenAt: Date())
         if recordsAnswerOnAppear {
             try? store.setCardAnswer("Read", id: cardId, changedAt: Date())
         }
