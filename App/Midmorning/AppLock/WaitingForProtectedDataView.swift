@@ -26,7 +26,7 @@ struct WaitingForProtectedDataView: View {
             }
         }
         .sheet(isPresented: $isShowingSupportSheet) {
-            GetSupportPlaceholderSheet()
+            SupportSheetView()
         }
     }
 }
