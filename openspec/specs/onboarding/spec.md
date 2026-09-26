@@ -196,6 +196,10 @@ With "I won't be weighing" chosen, the scheduler MUST NOT schedule a weigh-in da
 - **WHEN** the person taps "Sunday" and completes onboarding
 - **THEN** the store keeps Sunday as the weigh-in day
 
+#### Scenario: I won't be weighing
+- **WHEN** the person taps "I won't be weighing" and completes onboarding
+- **THEN** the store keeps the choice, the scheduler holds no weigh-in day reminder, and the weigh-in screen shows "Choose a weigh-in day"
+
 #### Scenario: Default quiet hours
 - **WHEN** the person changes nothing under "Quiet hours" and completes onboarding
 - **THEN** the store keeps quiet hours on, from 22:00 to 07:00

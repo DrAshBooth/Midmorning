@@ -84,3 +84,11 @@ Every control on the settings screen MUST have a VoiceOver label equal to its vi
 #### Scenario: VoiceOver on a switch
 - **WHEN** VoiceOver reads "Weekly summary"
 - **THEN** it reads the label, "switch", and "on" or "off"
+
+### Requirement: The Weigh-in group
+
+The Weigh-in group MUST hold "Weigh-in day" (a weekday or "I won't be weighing", syncs) and "Unit" ("kg" or "st lb", default "kg", syncs).
+
+#### Scenario: Change the unit
+- **WHEN** the person changes the unit to "st lb"
+- **THEN** the weigh-in screen and the export show weights in stone and pounds from then on
