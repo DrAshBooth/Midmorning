@@ -267,25 +267,15 @@ public final class RecordStore {
     /// The earliest record day key with a non-deleted entry, or `nil` when
     /// none exists (export spec, "Choose a date range": "When the earliest
     /// record day with an entry is later, 'From' MUST default to that
-    /// day."). A coarse presence check, like `dateKeysWithContent(before:)`:
-    /// any surviving `ItemVersion` for the day counts, with no per-entry
-    /// winner picked first.
+    /// day.").
     public func earliestEntryDayKey() throws -> String? {
-        var descriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { !$0.deleted }, sortBy: [SortDescriptor(\.dayKey)])
-        descriptor.includePendingChanges = false
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first?.dayKey
+        try liveEntryDayKeys(before: nil).min()
     }
 
     /// Every date key before `dateKey` that has a non-deleted entry or an
-    /// active day state, for "Earlier record days". A coarse presence check:
-    /// any surviving `ItemVersion` for the day counts, without picking a
-    /// per-entry winner first — cheap, and `entries(dayKey:)` is still the
-    /// source of truth for what a day shows once opened.
+    /// active day state, for "Earlier record days".
     public func dateKeysWithContent(before dateKey: String) throws -> Set<String> {
-        var versionDescriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { $0.dayKey < dateKey && !$0.deleted })
-        versionDescriptor.includePendingChanges = false
-        let entryDayKeys = Set(try context.fetch(versionDescriptor).map(\.dayKey))
+        let entryDayKeys = try liveEntryDayKeys(before: dateKey)
 
         var stateDescriptor = FetchDescriptor<DayState>(predicate: #Predicate { $0.dateKey < dateKey })
         stateDescriptor.includePendingChanges = false
@@ -293,6 +283,23 @@ public final class RecordStore {
         let activeStateDayKeys = Set(stateWinners.values.filter { $0.value == "on" }.map(\.dateKey))
 
         return entryDayKeys.union(activeStateDayKeys)
+    }
+
+    /// The record day keys (before `dateKey`, when given) of every entry
+    /// whose winning version is not deleted. A delete appends a deleted
+    /// version and keeps the earlier ones (data-and-privacy spec, "Entries
+    /// are append-only versions"), so a plain `!deleted` filter on versions
+    /// still matches a deleted entry's earlier version. Every version of an
+    /// entry holds the same key, because an entry never changes record day.
+    private func liveEntryDayKeys(before dateKey: String?) throws -> Set<String> {
+        var descriptor: FetchDescriptor<ItemVersion>
+        if let dateKey {
+            descriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { $0.dayKey < dateKey })
+        } else {
+            descriptor = FetchDescriptor<ItemVersion>()
+        }
+        descriptor.includePendingChanges = false
+        return Set(EntryWinner.winners(in: try context.fetch(descriptor)).values.filter { !$0.deleted }.map(\.dayKey))
     }
 
     private func winningVersion(entryId: UUID) throws -> ItemVersion? {
@@ -1202,9 +1209,7 @@ public final class RecordStore {
     /// is the rule; this gathers the store-wide facts it needs, since no
     /// single `Day`/`ItemVersion` row already carries "is this day paused".
     public func plannedDayKeys() throws -> Set<String> {
-        var versionDescriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { !$0.deleted })
-        versionDescriptor.includePendingChanges = false
-        let entryDayKeys = Set(try context.fetch(versionDescriptor).map(\.dayKey))
+        let entryDayKeys = try liveEntryDayKeys(before: nil)
 
         var dayDescriptor = FetchDescriptor<Day>()
         dayDescriptor.includePendingChanges = false
