@@ -46,7 +46,8 @@ public final class ItemVersion {
     @Attribute(.allowsCloudEncryption) public var dayKey: String = ""
     /// The moment the person set, to the minute.
     @Attribute(.allowsCloudEncryption) public var time: Date = Date()
-    /// The device's UTC offset when the person saved.
+    /// The device zone's UTC offset at the entry's own time, not at the
+    /// save moment (`EntryOffset`).
     @Attribute(.allowsCloudEncryption) public var utcOffsetSeconds: Int = 0
     /// Free text. Can be empty.
     @Attribute(.allowsCloudEncryption) public var what: String = ""

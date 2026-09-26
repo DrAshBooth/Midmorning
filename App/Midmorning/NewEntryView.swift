@@ -189,7 +189,6 @@ struct NewEntryView: View {
                 what: what,
                 feltLikeABinge: feltLikeABinge,
                 createdAt: now,
-                utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: now),
                 whereText: place.whereText,
                 context: context
             )

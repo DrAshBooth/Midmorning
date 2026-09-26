@@ -181,10 +181,12 @@ enum WeeklyReviewModel {
         let syncOn = (try? store.syncOn()) ?? false
         guard ReviewFreeze.readyToFreeze(dueDayKey: dueDayKey, dayStart: (try? store.dayStartHour(effectiveOn: dueDayKey)) ?? RecordDay.startHour, calendar: calendar, now: now, syncOn: syncOn, lastSyncMoment: nil) else { return }
         let facts = weekFacts(store: store, week: week, startDay: startDay, calendar: calendar, now: now)
-        var payload = ReviewAnswersPayload()
-        payload.frozenCounts = FrozenReviewCounts.from(facts)
-        payload.runStartDay = startDay
-        try? store.upsertReview(kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: now, answersJSON: payload.encoded(), selfHarmAnswered: false, pinnedNote: "", changedAt: now)
+        let pending = try? store.reviewWriteTarget(kind: .weeklyReview, dueDateKey: dueDayKey, now: now, calendar: calendar)
+        let frozen = ReviewFreeze.frozenValues(pending: pending.map(rowValues), counts: FrozenReviewCounts.from(facts), runStartDay: startDay)
+        try? store.upsertReview(
+            kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: now, answersJSON: frozen.answersJSON,
+            selfHarmAnswered: frozen.selfHarmAnswered, pinnedNote: frozen.pinnedNote, changedAt: now, calendar: calendar
+        )
     }
 
     /// Saves `week`'s review: merges the person's own answers into the row
@@ -209,7 +211,7 @@ enum WeeklyReviewModel {
         )
         return try? store.upsertReview(
             kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: existing?.frozenAt, answersJSON: values.answersJSON,
-            selfHarmAnswered: values.selfHarmAnswered, pinnedNote: values.pinnedNote, changedAt: now
+            selfHarmAnswered: values.selfHarmAnswered, pinnedNote: values.pinnedNote, changedAt: now, calendar: calendar
         )
     }
 
@@ -237,7 +239,7 @@ enum WeeklyReviewModel {
         let marked = ReviewSave.deteriorationPageShown(existing: rowValues(current))
         try? store.upsertReview(
             kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: current.frozenAt, answersJSON: marked.answersJSON,
-            selfHarmAnswered: marked.selfHarmAnswered, pinnedNote: marked.pinnedNote, changedAt: now
+            selfHarmAnswered: marked.selfHarmAnswered, pinnedNote: marked.pinnedNote, changedAt: now, calendar: calendar
         )
         return true
     }

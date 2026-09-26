@@ -73,4 +73,43 @@ final class ReviewFreezeTests: XCTestCase {
         XCTAssertFalse(ReviewFreeze.readyToFreeze(dueDayKey: dueDayKey, dayStart: 4, calendar: calendar, now: moment(2026, 10, 19, 9), syncOn: true, lastSyncMoment: moment(2026, 10, 18, 22)))
         XCTAssertTrue(ReviewFreeze.readyToFreeze(dueDayKey: dueDayKey, dayStart: 4, calendar: calendar, now: moment(2026, 10, 19, 9), syncOn: true, lastSyncMoment: dueMoment.addingTimeInterval(1)))
     }
+
+    // MARK: The freeze keeps the answers saved before it
+
+    private let counts = FrozenReviewCounts(daysWithEntry: 5, starred: 2, plan: nil, paused: 0, urges: 1, urgesPassed: 1)
+
+    /// With no row before the freeze, the frozen row holds the counts, the
+    /// run's start day and no answers.
+    func testAFreezeWithNoEarlierRowHoldsOnlyTheCounts() {
+        let values = ReviewFreeze.frozenValues(pending: nil, counts: counts, runStartDay: "2026-09-28")
+        let payload = ReviewAnswersPayload.decode(values.answersJSON)
+        XCTAssertEqual(payload.frozenCounts, counts)
+        XCTAssertEqual(payload.runStartDay, "2026-09-28")
+        XCTAssertEqual(payload.reflectionAnswers, ["", "", ""])
+        XCTAssertFalse(values.selfHarmAnswered)
+        XCTAssertEqual(values.pinnedNote, "")
+    }
+
+    /// With sync on, the person can save answers before the freeze. The
+    /// freeze keeps them, keeps `selfHarmAnswered: true` ("When step 1 has
+    /// an answer, the store MUST keep `selfHarmAnswered: true` for the
+    /// review.") and keeps the pinned note.
+    func testAFreezeKeepsTheAnswersSavedBeforeIt() {
+        var earlier = ReviewAnswersPayload()
+        earlier.finished = true
+        earlier.reflectionAnswers = ["Tired", "Work", "Walks"]
+        earlier.oneThingToChange = "Lunch at 13:00"
+        earlier.runStartDay = "2026-09-28"
+        let pending = ReviewRowValues(answersJSON: earlier.encoded(), selfHarmAnswered: true, pinnedNote: "Lunch at 13:00")
+
+        let values = ReviewFreeze.frozenValues(pending: pending, counts: counts, runStartDay: "2026-09-28")
+
+        let payload = ReviewAnswersPayload.decode(values.answersJSON)
+        XCTAssertEqual(payload.frozenCounts, counts)
+        XCTAssertEqual(payload.reflectionAnswers, ["Tired", "Work", "Walks"])
+        XCTAssertEqual(payload.oneThingToChange, "Lunch at 13:00")
+        XCTAssertTrue(payload.finished)
+        XCTAssertTrue(values.selfHarmAnswered)
+        XCTAssertEqual(values.pinnedNote, "Lunch at 13:00")
+    }
 }

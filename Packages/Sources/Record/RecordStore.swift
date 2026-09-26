@@ -165,15 +165,20 @@ public final class RecordStore {
     /// Saves one entry as a new `Item` and its first `ItemVersion`, and
     /// returns the row. Trims white space and line breaks from the ends of
     /// `what` and `context`. Truncates `time` to the minute. Throws on
-    /// failure with no entry data in the error. The record day key comes from
-    /// the "Day starts at" rows in force (record spec, "The record day");
+    /// failure with no entry data in the error. The entry keeps the UTC
+    /// offset of `deviceZone` at `time`, not at `createdAt`
+    /// (`EntryOffset.forNewEntry`); the new-entry screen passes no offset.
+    /// `utcOffsetSeconds` sets one fixed offset instead, for a test or an
+    /// import. The record day key comes from `time`, that offset and the
+    /// "Day starts at" rows in force (record spec, "The record day");
     /// `dayStartHour` sets one fixed hour instead, for a test.
     @discardableResult
     public func add(
-        time: Date, what: String, feltLikeABinge: Bool, createdAt: Date, utcOffsetSeconds: Int,
-        whereText: String = "", context: String = "", dayStartHour: Int? = nil
+        time: Date, what: String, feltLikeABinge: Bool, createdAt: Date, utcOffsetSeconds: Int? = nil,
+        whereText: String = "", context: String = "", dayStartHour: Int? = nil, deviceZone: TimeZone = .current
     ) throws -> RecordRow {
         let minute = Self.truncatedToMinute(time)
+        let utcOffsetSeconds = utcOffsetSeconds ?? EntryOffset.forNewEntry(at: minute, deviceZone: deviceZone)
         let entryId = UUID()
         let item = Item(id: entryId)
         let schedule = try dayStartHour.map(DayStartSchedule.constant) ?? dayStartSchedule()
@@ -196,22 +201,30 @@ public final class RecordStore {
     }
 
     /// Writes a new version of `entryId` with the changed fields (record
-    /// spec, "Edit an entry"). Keeps the entry's record day, UTC offset and
-    /// creation moment as they were; only a fresh `changedAt` and the given
-    /// fields move. Throws `Failure.saveFailed` when `entryId` has no
-    /// current version.
+    /// spec, "Edit an entry"). Keeps the entry's record day and creation
+    /// moment as they were; only a fresh `changedAt` and the given fields
+    /// move. The version keeps the UTC offset of the entry's edit zone at
+    /// `time` (`EntryOffset.forEdit`, `EntryOffset.editZone`): for an entry
+    /// from `deviceZone`, that zone's offset at the edited time; for an
+    /// entry from another zone, the entry's own offset. So the edited time
+    /// and the kept offset still give the kept record day key. The edit
+    /// screen passes no offset.
+    /// Throws `Failure.saveFailed` when `entryId` has no current version.
     @discardableResult
     public func update(
         entryId: UUID, time: Date, what: String, feltLikeABinge: Bool, whereText: String,
-        context: String, editedAt: Date
+        context: String, editedAt: Date, deviceZone: TimeZone = .current
     ) throws -> RecordRow {
         guard let current = try winningVersion(entryId: entryId) else { throw Failure.saveFailed }
+        let minute = Self.truncatedToMinute(time)
         let version = ItemVersion(
             entryId: entryId,
             changedAt: editedAt,
             dayKey: current.dayKey,
-            time: Self.truncatedToMinute(time),
-            utcOffsetSeconds: current.utcOffsetSeconds,
+            time: minute,
+            utcOffsetSeconds: EntryOffset.forEdit(
+                entryTime: current.time, entryOffsetSeconds: current.utcOffsetSeconds, editedTime: minute, deviceZone: deviceZone
+            ),
             what: what.trimmingCharacters(in: .whitespacesAndNewlines),
             feltLikeABinge: feltLikeABinge,
             createdAt: current.createdAt,
@@ -327,7 +340,7 @@ public final class RecordStore {
         return try context.fetch(descriptor)
     }
 
-    static func truncatedToMinute(_ date: Date) -> Date {
+    nonisolated static func truncatedToMinute(_ date: Date) -> Date {
         Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60)
     }
 
@@ -347,11 +360,28 @@ public final class RecordStore {
         return active
     }
 
-    /// Writes a new `DayState` row turning `kind` on or off for `dateKey`.
-    /// Every write is a new row; the Reconciler's later-`changedAt` rule
-    /// picks the winner on every read, on this device and across devices.
+    /// Turns `kind` on or off for `dateKey`. Writes into the winning
+    /// `DayState` row of (`dateKey`, `kind`), or inserts the first row for
+    /// that key (`writeDayState`).
     public func setDayState(_ kind: DayStateKind, on: Bool, dateKey: String, changedAt: Date) throws {
-        context.insert(DayState(dateKey: dateKey, kind: kind.rawValue, value: on ? "on" : "off", changedAt: changedAt))
+        try writeDayState(kind: kind.rawValue, value: on ? "on" : "off", dateKey: dateKey, changedAt: changedAt)
+    }
+
+    /// Writes into the winning `DayState` row of (`dateKey`, `kind`) after a
+    /// reconciled fetch, or inserts the first row when no row exists for
+    /// that key (data-and-privacy spec, "Rows reference each other by key":
+    /// "An edit of a row other than an entry MUST write into the winning
+    /// row"). A losing row stays as it is. A write that is earlier than the
+    /// winner loses (`Self.wins`) and changes nothing.
+    private func writeDayState(kind: String, value: String, dateKey: String, changedAt: Date) throws {
+        let descriptor = FetchDescriptor<DayState>(predicate: #Predicate { $0.dateKey == dateKey && $0.kind == kind })
+        if let winner = DayStateReconciler.winners(in: try context.fetch(descriptor))["\(dateKey)|\(kind)"] {
+            guard Self.wins(changedAt, over: winner.changedAt) else { return }
+            winner.value = value
+            winner.changedAt = changedAt
+        } else {
+            context.insert(DayState(dateKey: dateKey, kind: kind, value: value, changedAt: changedAt))
+        }
         try persist()
     }
 
@@ -367,11 +397,10 @@ public final class RecordStore {
         return winners["\(dateKey)|\(kindRaw)"]?.value
     }
 
-    /// Writes a new feeling-word row. A new row every time, like every
-    /// synced row; the Reconciler's later-`changedAt` rule picks the winner.
+    /// Keeps `word` as the feeling word of `dateKey`, in the winning
+    /// feeling-word row (`writeDayState`).
     public func setFeelingWord(_ word: String, dateKey: String, changedAt: Date) throws {
-        context.insert(DayState(dateKey: dateKey, kind: DayStateKind.feelingWord.rawValue, value: word, changedAt: changedAt))
-        try persist()
+        try writeDayState(kind: DayStateKind.feelingWord.rawValue, value: word, dateKey: dateKey, changedAt: changedAt)
     }
 
     // MARK: Collapse choice
@@ -416,12 +445,17 @@ public final class RecordStore {
 
     /// Keeps `text` as a custom place, touching its `changedAt` (its recency
     /// moment) when it already exists. Does nothing for an empty or a fixed
-    /// chip's text.
+    /// chip's text. The touch writes into the winning row of the place: of
+    /// the winners per id, the one with the latest `changedAt`. A touch that
+    /// is earlier than that row changes nothing (`Self.wins`), so the
+    /// recency moment never goes back.
     public func touchCustomPlace(_ text: String, at moment: Date) throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !WhereChip.fixed.map(\.rawValue).contains(trimmed) else { return }
         let descriptor = FetchDescriptor<ListItem>(predicate: #Predicate { $0.kind == "customPlace" && $0.text == trimmed })
-        if let existing = try context.fetch(descriptor).first {
+        let winners = Reconciler.latestWins(try context.fetch(descriptor), key: \.id, changedAt: \.changedAt).values
+        if let existing = winners.max(by: { $0.changedAt < $1.changedAt }) {
+            guard Self.wins(moment, over: existing.changedAt) else { return }
             existing.changedAt = moment
             existing.deleted = false
         } else {
@@ -441,6 +475,18 @@ public final class RecordStore {
 
     // MARK: Persistence
 
+    /// Whether a write at `changedAt` wins over the winning row's own
+    /// `changedAt` under the later-`changedAt` rule (data-and-privacy spec,
+    /// "Conflict rules for the plan, weigh-ins and lists": "the store MUST
+    /// keep the version with the later `changedAt` whole"). A write that
+    /// loses changes nothing, which is what a read shows after a losing
+    /// row: for example a queued "Skipped" at 13:40 that the app applies
+    /// after an in-app answer at 13:50. An equal moment wins, so a second
+    /// write in the same instant is not lost.
+    static func wins(_ changedAt: Date, over winnerChangedAt: Date) -> Bool {
+        changedAt >= winnerChangedAt
+    }
+
     private func persist() throws {
         do {
             try context.save()
@@ -455,18 +501,32 @@ public final class RecordStore {
     // labels and the day start are Settings rows")
 
     /// The winning value for a synced `Settings` key, or `nil` when no row
-    /// has ever been written for it.
+    /// has ever been written for it. Fetches only the rows of `key`.
     public func settingValue(key: String) throws -> String? {
-        let rows = try context.fetch(FetchDescriptor<Settings>())
-        return SettingsReconciler.winners(in: rows)[key]?.value
+        try settingsWinner(key: key)?.value
     }
 
-    /// Writes a new `Settings` row for `key`. Append-only, like every synced
-    /// row: this never edits or replaces an earlier row; `SettingsReconciler`
-    /// picks the winner on read.
+    /// Writes `value` into the winning `Settings` row for `key` after a
+    /// reconciled fetch, or inserts the first row when no row exists for
+    /// the key (data-and-privacy spec, "Rows reference each other by key":
+    /// "An edit of a row other than an entry MUST write into the winning
+    /// row"). A losing row stays as it is, and a write that is earlier than
+    /// the winner changes nothing (`Self.wins`). The day start rows do not
+    /// come here: they are append-only (`setDayStartHour`).
     public func setSettingValue(_ value: String, key: String, changedAt: Date = .now) throws {
-        context.insert(Settings(key: key, value: value, changedAt: changedAt))
+        if let winner = try settingsWinner(key: key) {
+            guard Self.wins(changedAt, over: winner.changedAt) else { return }
+            winner.value = value
+            winner.changedAt = changedAt
+        } else {
+            context.insert(Settings(key: key, value: value, changedAt: changedAt))
+        }
         try persist()
+    }
+
+    private func settingsWinner(key: String) throws -> Settings? {
+        let descriptor = FetchDescriptor<Settings>(predicate: #Predicate { $0.key == key })
+        return SettingsReconciler.winners(in: try context.fetch(descriptor))[key]
     }
 
     // MARK: - LocalSetting: device-only key/value rows
@@ -564,10 +624,11 @@ public final class RecordStore {
     /// each day's start all use the day start in force, with no two-step
     /// lookup (record spec, "The record day").
     public func dayStartSchedule() throws -> DayStartSchedule {
-        let rows = try context.fetch(FetchDescriptor<Settings>())
+        let prefix = DayStartSetting.key(effectiveFromDayKey: "")
+        let rows = try context.fetch(FetchDescriptor<Settings>(predicate: #Predicate { $0.key.starts(with: prefix) }))
         let changes = SettingsReconciler.winners(in: rows).values.compactMap { row -> DayStartSchedule.Change? in
-            guard row.key.hasPrefix("dayStart."), let hour = Int(row.value) else { return nil }
-            return DayStartSchedule.Change(effectiveFromDayKey: String(row.key.dropFirst("dayStart.".count)), hour: hour)
+            guard row.key.hasPrefix(prefix), let hour = Int(row.value) else { return nil }
+            return DayStartSchedule.Change(effectiveFromDayKey: String(row.key.dropFirst(prefix.count)), hour: hour)
         }
         return DayStartSchedule(changes: changes)
     }
@@ -581,11 +642,15 @@ public final class RecordStore {
 
     /// Writes a new "Day starts at" hour, effective from the record day
     /// right after `now` — never from `now`'s own record day, so no saved
-    /// entry's record day changes.
+    /// entry's record day changes. Always a new row: the day start rows are
+    /// append-only (data-and-privacy spec, "Slot labels and the day start
+    /// are Settings rows"), so this does not write into an earlier row.
     public func setDayStartHour(_ hour: Int, now: Date, calendar: Calendar, changedAt: Date = .now) throws {
         let choices = RecordDay.startHourChoices
         let nextDayKey = RecordDay.nextDayKey(after: now, calendar: calendar, schedule: try dayStartSchedule())
-        try setSettingValue(String(min(max(hour, choices.lowerBound), choices.upperBound)), key: DayStartSetting.key(effectiveFromDayKey: nextDayKey), changedAt: changedAt)
+        let value = String(min(max(hour, choices.lowerBound), choices.upperBound))
+        context.insert(Settings(key: DayStartSetting.key(effectiveFromDayKey: nextDayKey), value: value, changedAt: changedAt))
+        try persist()
     }
 
     /// The hour the "Day starts at" row shows: the hour in force from the
@@ -600,20 +665,24 @@ public final class RecordStore {
     // keeps and what it never keeps"; safeguarding spec, "Re-screening at a
     // restart")
 
-    /// The one `Profile` row: height, the onboarding BMI, the caution flag
-    /// and `askedAt`, or `nil` before onboarding writes it.
+    /// The winning `Profile` row: height, the onboarding BMI, the caution
+    /// flag and `askedAt`, or `nil` before onboarding writes it. Sync can
+    /// bring a second row with the same fixed id; `ProfileReconciler` picks
+    /// the winner.
     public func profile() throws -> Profile? {
         let fixedId = Profile.fixedId
-        var descriptor = FetchDescriptor<Profile>(predicate: #Predicate { $0.id == fixedId })
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first
+        let descriptor = FetchDescriptor<Profile>(predicate: #Predicate { $0.id == fixedId })
+        return ProfileReconciler.winner(in: try context.fetch(descriptor))
     }
 
-    /// Upserts the one `Profile` row. Onboarding calls this once, at
-    /// "Start"; a later re-screen calls it again with a later `changedAt`,
-    /// the field `data-and-privacy` keeps on sync.
+    /// Writes into the winning `Profile` row, or inserts the first one.
+    /// Onboarding calls this once, at "Start"; a later re-screen calls it
+    /// again with a later `changedAt`, the field `data-and-privacy` keeps on
+    /// sync. A write that is earlier than the winning row changes nothing
+    /// (`Self.wins`), so an older screening never replaces a newer one.
     public func setProfile(heightCm: Double, onboardingBMI: Double, cautionFlag: Bool, askedAt: Date, changedAt: Date = .now) throws {
         if let existing = try profile() {
+            guard Self.wins(changedAt, over: existing.changedAt) else { return }
             existing.heightCm = heightCm
             existing.onboardingBMI = onboardingBMI
             existing.cautionFlag = cautionFlag
@@ -716,24 +785,39 @@ public final class RecordStore {
 
     // MARK: - Plan: templates, days and planned-meal answers (regular-eating-
     // plan spec, "Weekday and weekend templates", "A planned day", "The
-    // plan's data stays on the device"). Every write here is a new row, like
-    // every synced row; the Reconciler picks the winner on read.
+    // plan's data stays on the device"). An edit writes into the winning row
+    // of its natural key after a reconciled fetch, and inserts a row only
+    // when no row exists for the key (data-and-privacy spec, "Rows reference
+    // each other by key"). The Reconciler picks the winner on read.
 
     public enum TemplateKind: String, Sendable, CaseIterable, Equatable {
         case weekday, weekend
     }
 
     /// The winning `slotsJSON` for `kind`'s template, or "[]" when none
-    /// exists yet.
+    /// exists yet. Fetches only the rows of `kind`.
     public func templateSlotsJSON(_ kind: TemplateKind) throws -> String {
-        let rows = try context.fetch(FetchDescriptor<Template>())
-        return TemplateReconciler.winners(in: rows)[kind.rawValue]?.slotsJSON ?? "[]"
+        try templateWinner(kind)?.slotsJSON ?? "[]"
     }
 
-    /// Writes a new `Template` row for `kind`.
+    /// Writes `json` into the winning `Template` row for `kind`, or inserts
+    /// the first row for `kind`. A write that is earlier than the winner
+    /// changes nothing (`Self.wins`).
     public func setTemplateSlotsJSON(_ json: String, kind: TemplateKind, changedAt: Date) throws {
-        context.insert(Template(kind: kind.rawValue, slotsJSON: json, changedAt: changedAt))
+        if let winner = try templateWinner(kind) {
+            guard Self.wins(changedAt, over: winner.changedAt) else { return }
+            winner.slotsJSON = json
+            winner.changedAt = changedAt
+        } else {
+            context.insert(Template(kind: kind.rawValue, slotsJSON: json, changedAt: changedAt))
+        }
         try persist()
+    }
+
+    private func templateWinner(_ kind: TemplateKind) throws -> Template? {
+        let kindValue = kind.rawValue
+        let descriptor = FetchDescriptor<Template>(predicate: #Predicate { $0.kind == kindValue })
+        return TemplateReconciler.winners(in: try context.fetch(descriptor))[kindValue]
     }
 
     /// One record day's plan, as the store keeps it (regular-eating-plan
@@ -770,16 +854,44 @@ public final class RecordStore {
     /// Writes the person's edit to `dateKey`'s plan from "Today's plan" or
     /// "Tomorrow's plan", and sets the day (regular-eating-plan spec, "A
     /// planned day": "The person taps 'Save' on an edit ... for that day").
-    /// Always inserts a new row; `DayReconciler` keeps the sticky set event
-    /// across any earlier or later row for the same key.
+    /// Writes into the plan winner of `dateKey` (the row with the later
+    /// `changedAt`, often the materialised row), or inserts the first row
+    /// for the key. An existing row keeps its window constants from its
+    /// materialisation, and keeps its set event when it has one: "set" is
+    /// sticky, and the store never removes or moves a set event.
+    /// `windowBeforeMinutes` and `windowAfterMinutes` apply only to a new
+    /// row. A plan that is earlier than the winner does not change the
+    /// winner's plan (`Self.wins`), but its set event still applies: a set
+    /// event on any device means the day is set. `DayReconciler` still keeps
+    /// the earliest set event of any row for the key.
     public func setDayPlan(
         dateKey: String, slotsJSON: String, windowBeforeMinutes: Int, windowAfterMinutes: Int,
         setAt: Date, setBy: String, changedAt: Date
     ) throws {
-        context.insert(Day(
-            dateKey: dateKey, slotsJSON: slotsJSON, windowBeforeMinutes: windowBeforeMinutes,
-            windowAfterMinutes: windowAfterMinutes, changedAt: changedAt, setAt: setAt, setBy: setBy
-        ))
+        let rows = try context.fetch(FetchDescriptor<Day>(predicate: #Predicate { $0.dateKey == dateKey }))
+        if let winner = DayReconciler.payloadWinners(in: rows)[dateKey] {
+            if Self.wins(changedAt, over: winner.changedAt) {
+                winner.slotsJSON = slotsJSON
+                winner.changedAt = changedAt
+            }
+            if winner.setAt == nil {
+                // The set event a reader already sees (the earliest of any
+                // row for the key) stays; only an unset day takes this one.
+                let seen = DayReconciler.winners(in: rows)[dateKey]
+                if let seen, let seenSetAt = seen.setAt {
+                    winner.setAt = seenSetAt
+                    winner.setBy = seen.setBy
+                } else {
+                    winner.setAt = setAt
+                    winner.setBy = setBy
+                }
+            }
+        } else {
+            context.insert(Day(
+                dateKey: dateKey, slotsJSON: slotsJSON, windowBeforeMinutes: windowBeforeMinutes,
+                windowAfterMinutes: windowAfterMinutes, changedAt: changedAt, setAt: setAt, setBy: setBy
+            ))
+        }
         try persist()
     }
 
@@ -820,9 +932,26 @@ public final class RecordStore {
         return Dictionary(uniqueKeysWithValues: winners.values.map { ($0.slotIndex, $0.value) })
     }
 
-    /// Writes a new planned-meal `Answer` row.
+    /// Writes `value` into the winning planned-meal `Answer` row of
+    /// (`dateKey`, `slotIndex`), or inserts the first row for that key.
     public func setPlannedMealAnswer(_ value: String, dateKey: String, slotIndex: Int, changedAt: Date) throws {
-        context.insert(Answer(kind: "plannedMeal", dateKey: dateKey, slotIndex: slotIndex, value: value, changedAt: changedAt))
+        let descriptor = FetchDescriptor<Answer>(predicate: #Predicate { $0.kind == "plannedMeal" && $0.dateKey == dateKey && $0.slotIndex == slotIndex })
+        let row = Answer(kind: "plannedMeal", dateKey: dateKey, slotIndex: slotIndex, value: value, changedAt: changedAt)
+        try writeAnswer(row, winner: AnswerReconciler.winners(in: try context.fetch(descriptor))[AnswerReconciler.naturalKey(row)])
+    }
+
+    /// Writes the value and the moment of `row` into `winner`, the winning
+    /// `Answer` row of the same natural key, or inserts `row` when no row
+    /// exists for the key. A write that is earlier than the winner changes
+    /// nothing (`Self.wins`).
+    private func writeAnswer(_ row: Answer, winner: Answer?) throws {
+        if let winner {
+            guard Self.wins(row.changedAt, over: winner.changedAt) else { return }
+            winner.value = row.value
+            winner.changedAt = row.changedAt
+        } else {
+            context.insert(row)
+        }
         try persist()
     }
 
@@ -838,8 +967,8 @@ public final class RecordStore {
         try settingValue(key: Settings.slotLabelKey(index))
     }
 
-    /// Writes a new `Settings` row for the slot's label. `nil` writes an
-    /// empty row, which reverts the slot to its default label — the store
+    /// Writes the slot's label into its `Settings` row. `nil` writes an
+    /// empty value, which reverts the slot to its default label — the store
     /// never deletes a row, even to clear one (data-and-privacy spec, "The
     /// Reconciler never deletes a row").
     public func setSlotLabel(_ label: String?, index: Int, changedAt: Date) throws {
@@ -849,9 +978,8 @@ public final class RecordStore {
     // MARK: - Weigh-in: the kept row and the Weigh-in group's unit (weigh-in
     // spec, "The store keeps the weigh-in on the device and away from
     // HealthKit"; settings spec, "The Weigh-in group"). The row is a
-    // `Measure` row, one per record day key; every write is a new row, like
-    // every other synced row, and `MeasureReconciler` picks the winner on
-    // read (model-foundation's own append-only pattern).
+    // `Measure` row, one per record day key. A change writes into the
+    // winning row of the key; `MeasureReconciler` picks the winner on read.
 
     /// One saved weigh-in as the app reads it: its record day key, its kept
     /// kilogram value, the unit the person used, and its `savedAt` and
@@ -868,8 +996,7 @@ public final class RecordStore {
     public func weighIn(dateKey: String) throws -> WeighInRow? {
         var descriptor = FetchDescriptor<Measure>(predicate: #Predicate { $0.dateKey == dateKey })
         descriptor.includePendingChanges = false
-        guard let winner = MeasureReconciler.winners(in: try context.fetch(descriptor))[dateKey] else { return nil }
-        return WeighInRow(dateKey: winner.dateKey, weightKg: winner.weightKg, unit: winner.unit, savedAt: winner.savedAt, changedAt: winner.changedAt)
+        return MeasureReconciler.winners(in: try context.fetch(descriptor))[dateKey].map(weighInRow)
     }
 
     /// Every kept weigh-in, one per record day key, oldest first (weigh-in
@@ -879,24 +1006,41 @@ public final class RecordStore {
     public func weighIns() throws -> [WeighInRow] {
         let winners = MeasureReconciler.winners(in: try context.fetch(FetchDescriptor<Measure>()))
         return winners.values
-            .map { WeighInRow(dateKey: $0.dateKey, weightKg: $0.weightKg, unit: $0.unit, savedAt: $0.savedAt, changedAt: $0.changedAt) }
+            .map(weighInRow)
             .sorted { $0.dateKey < $1.dateKey }
     }
 
     /// Saves `weightKg` for `dateKey` (weigh-in spec, "The app accepts a
     /// weight on the weigh-in day only": "For 10 minutes after 'Save', the
     /// person MUST be able to change the number."). A later call for the
-    /// same `dateKey` keeps the first call's `savedAt` and writes a new
-    /// `changedAt`; the caller (the weigh-in screen) only offers a second
-    /// call inside the 10-minute window. `weightKg` MUST already be rounded
-    /// to two decimal places (`WeighInWeight.storedKg`); this call does not
-    /// round it again.
+    /// same `dateKey` writes into the winning row of that key: it keeps the
+    /// row's `savedAt` and writes a new `changedAt` ("A change within the 10
+    /// minutes MUST write into the same row with a later `changedAt`"). The
+    /// caller (the weigh-in screen) only offers a second call inside the
+    /// 10-minute window. `weightKg` MUST already be rounded to two decimal
+    /// places (`WeighInWeight.storedKg`); this call does not round it again.
+    /// A save that is earlier than the winner changes nothing
+    /// (`Self.wins`). Returns the weigh-in the store then holds.
     @discardableResult
     public func saveWeighIn(dateKey: String, weightKg: Double, unit: String, at moment: Date) throws -> WeighInRow {
-        let savedAt = try weighIn(dateKey: dateKey)?.savedAt ?? moment
-        context.insert(Measure(dateKey: dateKey, weightKg: weightKg, unit: unit, savedAt: savedAt, changedAt: moment))
+        let descriptor = FetchDescriptor<Measure>(predicate: #Predicate { $0.dateKey == dateKey })
+        let row: Measure
+        if let winner = MeasureReconciler.winners(in: try context.fetch(descriptor))[dateKey] {
+            row = winner
+            guard Self.wins(moment, over: winner.changedAt) else { return weighInRow(row) }
+            winner.weightKg = weightKg
+            winner.unit = unit
+            winner.changedAt = moment
+        } else {
+            row = Measure(dateKey: dateKey, weightKg: weightKg, unit: unit, savedAt: moment, changedAt: moment)
+            context.insert(row)
+        }
         try persist()
-        return WeighInRow(dateKey: dateKey, weightKg: weightKg, unit: unit, savedAt: savedAt, changedAt: moment)
+        return weighInRow(row)
+    }
+
+    private func weighInRow(_ model: Measure) -> WeighInRow {
+        WeighInRow(dateKey: model.dateKey, weightKg: model.weightKg, unit: model.unit, savedAt: model.savedAt, changedAt: model.changedAt)
     }
 
     private static let weighInUnitKey = "weighIn.unit"
@@ -915,8 +1059,8 @@ public final class RecordStore {
     // MARK: - Reviews: weekly reviews and check-ins (weekly-review spec,
     // "Finish and reopen a review", "The week's counts are frozen in the
     // Review row"; data-and-privacy spec, "Day states, sessions and
-    // reviews"). A `Review` row's natural key is (`kind`, `dueDateKey`);
-    // every write is a new row, append-only like every other synced row,
+    // reviews"). A `Review` row's natural key is (`kind`, `dueDateKey`); a
+    // write goes into the row that `ReviewReconciler.writeTarget` names,
     // and `ReviewReconciler` picks the earliest-frozen winner on read.
     // `weekly-review` (3.2) owns `answersJSON`'s shape — a JSON payload of
     // the review's own answers and its frozen counts, opaque to this store
@@ -993,26 +1137,76 @@ public final class RecordStore {
         return RecordDay.key(containing: now, calendar: calendar, schedule: try dayStartSchedule())
     }
 
-    /// Writes a fresh row for (`kind`, `dueDateKey`), append-only like every
-    /// other synced row (`saveWeighIn`'s own pattern: a new `id` every call;
-    /// the natural key and `ReviewReconciler`'s policy decide the winner, not
-    /// row identity). Pass `frozenAt` to freeze (or re-freeze) the row, or
-    /// the existing frozen row's own `frozenAt` back unchanged to save an
-    /// answer with no freeze effect — `ReviewReconciler` then reads this
-    /// edit's row as that same frozen review's latest content ("An edit
-    /// MUST write into that row."). The caller passes the complete,
-    /// already-merged `answersJSON`; this store never reads or writes its
-    /// shape.
+    /// The row that a review write of (`kind`, `dueDateKey`) at `now` goes
+    /// into, or `nil` when that write inserts a new row
+    /// (`ReviewReconciler.writeTarget`). Before the freeze, this is the
+    /// unfrozen row with the answers that the person saved so far. A read
+    /// (`review`) never shows that row, so the freeze reads it here and
+    /// keeps those answers in the frozen row (`ReviewFreeze.frozenValues`).
+    public func reviewWriteTarget(kind: ReviewKind, dueDateKey: String, now: Date, calendar: Calendar? = nil) throws -> ReviewRow? {
+        let rows = try reviewWriteRows(kind: kind, dueDateKey: dueDateKey)
+        let currentDayKey = try reviewReadDayKey(now: now, calendar: calendar)
+        return ReviewReconciler.writeTarget(in: rows, now: now, currentDayKey: currentDayKey).map(reviewRow)
+    }
+
+    private func reviewWriteRows(kind: ReviewKind, dueDateKey: String) throws -> [Review] {
+        let kindValue = kind.rawValue
+        return try context.fetch(FetchDescriptor<Review>(predicate: #Predicate { $0.kind == kindValue && $0.dueDateKey == dueDateKey }))
+    }
+
+    /// Writes the review of (`kind`, `dueDateKey`) after a reconciled fetch
+    /// (weekly-review spec, "The week's counts are frozen in the Review
+    /// row": "When one key has more than one row, the app MUST read the row
+    /// with the earliest freeze moment. Every edit to the review MUST write
+    /// into that row."). The target is `ReviewReconciler.writeTarget` at
+    /// `changedAt`: the frozen winner that a read at that moment shows, else
+    /// the latest unfrozen row, else a new row. A future-dated row is never
+    /// the target, so the write never changes it. A frozen target keeps its
+    /// own freeze moment: pass `frozenAt` to freeze an unfrozen or a new
+    /// row, or the frozen row's own `frozenAt` back to save an answer. The
+    /// caller passes the complete, already-merged `answersJSON`; this store
+    /// never reads or writes its shape. `calendar` gives the device zone
+    /// for the future-dated test, and `nil` means the device's own zone.
+    ///
+    /// An edit of the target changes its content only when `changedAt` is
+    /// not earlier than the target's own `changedAt`, the same
+    /// later-changedAt rule as every other row (`wins`). So an edit after
+    /// the device clock goes back, or after a device with a clock ahead
+    /// edits the row, does not replace newer answers. A write that freezes
+    /// an unfrozen target always applies, because the freeze must happen;
+    /// the caller merges that row's own answers into it
+    /// (`reviewWriteTarget`), and its `changedAt` never goes back. A
+    /// `selfHarmAnswered` of `true` always stays `true` (weekly-review spec,
+    /// "The self-harm item at the review": "When step 1 has an answer, the
+    /// store MUST keep `selfHarmAnswered: true` for the review.").
     @discardableResult
     public func upsertReview(
         kind: ReviewKind, dueDateKey: String, frozenAt: Date?, answersJSON: String,
-        selfHarmAnswered: Bool, pinnedNote: String, changedAt: Date
+        selfHarmAnswered: Bool, pinnedNote: String, changedAt: Date, calendar: Calendar? = nil
     ) throws -> ReviewRow {
-        let model = Review(
-            kind: kind.rawValue, dueDateKey: dueDateKey, frozenAt: frozenAt,
-            answersJSON: answersJSON, selfHarmAnswered: selfHarmAnswered, pinnedNote: pinnedNote, changedAt: changedAt
-        )
-        context.insert(model)
+        let rows = try reviewWriteRows(kind: kind, dueDateKey: dueDateKey)
+        let currentDayKey = try reviewReadDayKey(now: changedAt, calendar: calendar)
+        let model: Review
+        if let target = ReviewReconciler.writeTarget(in: rows, now: changedAt, currentDayKey: currentDayKey) {
+            model = target
+            if selfHarmAnswered { model.selfHarmAnswered = true }
+            if model.frozenAt == nil, let frozenAt {
+                model.frozenAt = frozenAt
+                model.answersJSON = answersJSON
+                model.pinnedNote = pinnedNote
+                model.changedAt = max(model.changedAt, changedAt)
+            } else if Self.wins(changedAt, over: model.changedAt) {
+                model.answersJSON = answersJSON
+                model.pinnedNote = pinnedNote
+                model.changedAt = changedAt
+            }
+        } else {
+            model = Review(
+                kind: kind.rawValue, dueDateKey: dueDateKey, frozenAt: frozenAt,
+                answersJSON: answersJSON, selfHarmAnswered: selfHarmAnswered, pinnedNote: pinnedNote, changedAt: changedAt
+            )
+            context.insert(model)
+        }
         try persist()
         return reviewRow(model)
     }
@@ -1020,8 +1214,9 @@ public final class RecordStore {
     // MARK: - Programme: stage-opened rows, card answers and the restart
     // moment (programme spec, "A pure stage engine with stored openings as
     // input", "The card's answer is kept in the record", "Start week 1
-    // again"). Every write here is a new row; the caller applies the
-    // engine's own ignore rules on read.
+    // again"). A stage opening is an event: each one is a new row, and the
+    // caller applies the engine's own ignore rules on read. A card answer
+    // and the restart moment write into the winning row of their key.
 
     /// One `StageOpened` row as the store keeps it: an `Answer` row of kind
     /// "stageOpened", keyed by the stage number in `cardId` (data-and-privacy
@@ -1071,10 +1266,14 @@ public final class RecordStore {
         return Set(AnswerReconciler.winners(in: try context.fetch(descriptor)).values.map(\.cardId))
     }
 
-    /// Writes a new card-answer `Answer` row.
+    /// Writes `value` into the winning card-answer `Answer` row of `id`, or
+    /// inserts the first row for `id` (data-and-privacy spec, "Card answers
+    /// live in the record": "one card answer row ... for each answered
+    /// card").
     public func setCardAnswer(_ value: String, id: String, changedAt: Date) throws {
-        context.insert(Answer(kind: "card", cardId: id, value: value, changedAt: changedAt))
-        try persist()
+        let descriptor = FetchDescriptor<Answer>(predicate: #Predicate { $0.kind == "card" && $0.cardId == id })
+        let row = Answer(kind: "card", cardId: id, value: value, changedAt: changedAt)
+        try writeAnswer(row, winner: AnswerReconciler.winners(in: try context.fetch(descriptor))[AnswerReconciler.naturalKey(row)])
     }
 
     private static let restartAtSettingKey = "programme.restartAt"

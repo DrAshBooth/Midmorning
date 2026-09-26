@@ -27,21 +27,23 @@ struct EditEntryView: View {
 
     /// The entry's own record day, the one segment of the time control.
     private let ownDay: RecordTimeControl.Segment
-    /// The entry's own UTC offset, so the wheel shows the time Today shows
-    /// on the row.
+    /// The entry's edit zone (`EntryOffset.editZone`), so the wheel shows
+    /// the time Today shows on the row. The store keeps the offset of the
+    /// same zone at the edited time (`EntryOffset.forEdit`), so Today then
+    /// shows the time that the wheel showed.
     private let calendar: Calendar
     @State private var openedAt = Date()
 
-    /// The record day's bounds come from the entry's own key, its UTC offset
-    /// and the day start row in force for that key (record spec, "Edit an
-    /// entry").
+    /// The record day's bounds come from the entry's own key, the zone of
+    /// `EntryOffset.editZone` and the day start row in force for that key
+    /// (record spec, "Edit an entry").
     init(store: RecordStore, entry: RecordRow, onSave: @escaping (RecordRow) -> Void, onDelete: @escaping () -> Void) {
         self.store = store
         self.entry = entry
         self.onSave = onSave
         self.onDelete = onDelete
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: entry.utcOffsetSeconds) ?? .current
+        calendar.timeZone = EntryOffset.editZone(entryTime: entry.time, entryOffsetSeconds: entry.utcOffsetSeconds)
         self.calendar = calendar
         let schedule = (try? store.dayStartSchedule()) ?? .standard
         let bounds = RecordDay.interval(forKey: entry.dayKey, calendar: calendar, schedule: schedule)

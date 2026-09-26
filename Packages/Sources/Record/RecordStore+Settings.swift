@@ -174,8 +174,8 @@ extension RecordStore {
         try setSettingValue(ISO8601DateFormatter().string(from: date), key: Self.remindersPausedAtKey, changedAt: changedAt)
     }
 
-    /// "Turn reminders on": clears `remindersPausedAt` with a new, later row
-    /// (settings spec, "The Reminders group": "the app clears
+    /// "Turn reminders on": clears `remindersPausedAt` with a later, empty
+    /// value in its row (settings spec, "The Reminders group": "the app clears
     /// `remindersPausedAt`"). The scheduler recomputing the schedule is
     /// `reminders`' (2.4) own work; this store only clears the flag.
     public func turnRemindersOn(changedAt: Date = .now) throws {

@@ -23,7 +23,8 @@ final class RelationshipTests: XCTestCase {
     }
 
     /// Scenario: Edit after a conflict. Two versions of a list item exist;
-    /// an edit writes into the winning version's row.
+    /// an edit writes into the winning version's row. This test checks the
+    /// reconciler; `NonEntryEditInPlaceTests` checks the store's own write.
     func testEditAfterAConflictWritesIntoTheWinningRow() {
         let id = UUID()
         let deviceA = ListItem(id: id, kind: "alternative", text: "Ring Sam", changedAt: Date(timeIntervalSince1970: 100))
