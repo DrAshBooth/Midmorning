@@ -64,6 +64,7 @@ final class ProgrammeScreenTextTests: XCTestCase {
         let draftLine = try XCTUnwrap(card.range(of: "Text(\"programme.card.draft\")"), "the card screen shows \"Draft\"")
         let title = try XCTUnwrap(card.range(of: "Text(screen.title)"), "the card screen shows the title")
         XCTAssertLessThan(draftLine.lowerBound, title.lowerBound, "\"Draft\" shows above the card title")
+        XCTAssertTrue(card.contains("isDraft = bundle.isDraft"), "the card screen reads the flag from the bundle it shows")
         try ScreenText.assertScreen("SettingsView.swift", shows: ["if contentInfo?.isDraft == true", "Text(\"settings.about.draftBadge\")"])
     }
 }
