@@ -20,6 +20,11 @@ struct PlannedMealRowView: View {
                 content
                 Spacer(minLength: 0)
             }
+            // record spec, "Today shows Where and Context": the Context
+            // shows under the What, as on an entry row (mm-t23.20).
+            if case .matched(let entry) = row.display, !entry.context.isEmpty {
+                Text(entry.context).font(.body)
+            }
             if let nextLine = row.nextLine {
                 Text(nextLine).font(.body)
             }
@@ -51,10 +56,11 @@ struct PlannedMealRowView: View {
             EmptyView()
         case .skipped:
             Text("plan.skipped")
-        case .matched(let entryTime, let what):
-            Text(entryTime).font(.body.monospacedDigit())
-            if !what.isEmpty { Text(what) }
-            if row.matchedEntry?.feltLikeABinge == true { Text(verbatim: "*") }
+        case .matched(let entry):
+            Text(entry.time).font(.body.monospacedDigit())
+            if entry.starred { Text(verbatim: "*") }
+            if !entry.what.isEmpty { Text(entry.what) }
+            if !entry.whereText.isEmpty { Text(entry.whereText) }
         }
     }
 

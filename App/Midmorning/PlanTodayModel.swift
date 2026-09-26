@@ -59,7 +59,7 @@ enum PlanToday {
             let label = label(for: row.slotIndex, store: store)
             return PlanRowModel(
                 slotIndex: row.slotIndex, label: label, time: row.time, sortTime: row.sortTime,
-                display: PlannedMealDisplay.content(matchedEntry: matchedEntry.map { ($0.clockTime, $0.what) }, isSkipped: row.isSkipped),
+                display: PlannedMealDisplay.content(matchedEntry: matchedEntry.map(matchedEntryText), isSkipped: row.isSkipped),
                 matchedEntry: matchedEntry, prompt: row.prompt,
                 nextLine: row.showsNextLine ? nextLine(slotIndex: row.slotIndex, time: row.time, label: label) : nil
             )
@@ -94,5 +94,22 @@ enum PlanToday {
             start: (try? store.quietHoursStart()) ?? "22:00",
             end: (try? store.quietHoursEnd()) ?? "07:00"
         )
+    }
+
+    private static func matchedEntryText(_ entry: RecordRow) -> MatchedEntryText {
+        MatchedEntryText(time: entry.clockTime, what: entry.what, whereText: entry.whereText, context: entry.context, starred: entry.feltLikeABinge)
+    }
+}
+
+extension DaySection.DisplayItem {
+    /// The entry this item shows: a plain entry row's own entry, or the
+    /// entry that a planned meal row matches. Today puts the gap band after
+    /// the row that shows the earlier entry of the gap (record spec, "The
+    /// gap band"; mm-t23.18).
+    var recordEntry: RecordRow? {
+        switch self {
+        case .entry(let row): return row
+        case .planned(let row): return row.matchedEntry
+        }
     }
 }
