@@ -513,6 +513,42 @@
     "text": "We ask for your height and weight to check this programme is safe for you. The app never shows them again and never sets a goal from them."
   },
   {
+    "id": "onboarding.start.title",
+    "text": "Your start"
+  },
+  {
+    "id": "onboarding.start.question",
+    "text": "When do you want to start?"
+  },
+  {
+    "id": "onboarding.start.today",
+    "text": "Today, %@"
+  },
+  {
+    "id": "onboarding.start.tomorrow",
+    "text": "Tomorrow, %@"
+  },
+  {
+    "id": "onboarding.start.dayboundary",
+    "text": "A day runs from %1$@ to %2$@."
+  },
+  {
+    "id": "onboarding.start.weighinday",
+    "text": "Weigh-in day"
+  },
+  {
+    "id": "onboarding.start.wontweigh",
+    "text": "I won't be weighing"
+  },
+  {
+    "id": "onboarding.start.weighin",
+    "text": "Once a week, on this day, the app asks for your weight and shows the trend. There is no goal and no target."
+  },
+  {
+    "id": "onboarding.pleaseanswer",
+    "text": "Please answer this one."
+  },
+  {
     "id": "onboarding.screen4.title",
     "text": "Permissions"
   },

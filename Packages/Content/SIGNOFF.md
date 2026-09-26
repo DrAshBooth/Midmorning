@@ -65,6 +65,7 @@ notrightnowpage.reminderspaused
 notrightnowpage.remindersstayon
 onboarding.continue
 onboarding.example.what
+onboarding.pleaseanswer
 onboarding.record.sentence1
 onboarding.record.sentence2
 onboarding.record.sentence3
@@ -86,6 +87,14 @@ onboarding.screen4.thisdevice
 onboarding.screen4.title
 onboarding.screen4.widget
 onboarding.screen4.widgetinstructions
+onboarding.start.dayboundary
+onboarding.start.question
+onboarding.start.title
+onboarding.start.today
+onboarding.start.tomorrow
+onboarding.start.weighin
+onboarding.start.weighinday
+onboarding.start.wontweigh
 opening.stage2
 opening.stage3
 opening.stage4

@@ -193,6 +193,34 @@ final class SignedTextCopiesTests: XCTestCase {
         assertCopy(Screen4Content.startLabel, "onboarding.screen4.start")
     }
 
+    /// Onboarding screen 3 and the unanswered message are keys in the app's
+    /// string catalogue. Each key that no signed prefix names (ruling r13-01)
+    /// has a bundle copy with the same text.
+    func testTheOnboardingCatalogueTextEqualsItsBundleCopies() throws {
+        let catalogue = try XCStringsCatalogue.read(from: RepositoryRoot.appCatalogueURL)
+        let copies: [(key: String, id: String)] = [
+            ("onboarding.screen3.title", "onboarding.start.title"),
+            ("onboarding.startDay.question", "onboarding.start.question"),
+            ("onboarding.startDay.today", "onboarding.start.today"),
+            ("onboarding.startDay.tomorrow", "onboarding.start.tomorrow"),
+            ("onboarding.dayBoundary", "onboarding.start.dayboundary"),
+            ("weighIn.day", "onboarding.start.weighinday"),
+            ("weighIn.wontBeWeighing", "onboarding.start.wontweigh"),
+            ("onboarding.weighIn.explanation", "onboarding.start.weighin"),
+            ("onboarding.unanswered", "onboarding.pleaseanswer"),
+        ]
+        for copy in copies {
+            XCTAssertEqual(catalogue[copy.key], bundleText(copy.id), copy.id)
+        }
+        XCTAssertEqual(Screen3Content.weighInExplanation, .key("onboarding.weighIn.explanation"))
+        XCTAssertEqual(Screen3Content.unansweredMessage, .key("onboarding.unanswered"))
+        let signed = try SignedCatalogueKeys.read(from: RepositoryRoot.contentResourcesDirectory)
+        let bundleTexts = Set(Shipped.bundle.strings.flatMap(\.readableTexts))
+        for (key, value) in catalogue where key.hasPrefix("onboarding.") && !signed.isSigned(key) {
+            XCTAssertTrue(bundleTexts.contains(value), "\(key) has no bundle copy and no signed prefix")
+        }
+    }
+
     // MARK: - Every signed-off Swift constant has a bundle copy
 
     /// Scenario "A signed-off Swift constant with no bundle copy": each
