@@ -6,6 +6,11 @@ import Record
 let args = CommandLine.arguments
 let url = URL(fileURLWithPath: args[1])
 let scenario = args.count > 2 ? args[2] : "today"
+// The stores for AutomatedChecks (ruling r13-19) live in AutomatedScenarios.swift.
+if AutomatedScenarios.names.contains(scenario) {
+    MainActor.assumeIsolated { try! AutomatedScenarios.seed(scenario, storeURL: url) }
+    exit(0)
+}
 var cal = Calendar(identifier: .gregorian)
 cal.timeZone = TimeZone(identifier: "Europe/London")!
 let now = Date()

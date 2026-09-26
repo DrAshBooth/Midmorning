@@ -27,6 +27,9 @@ let package = Package(
         // imports `Record`, so there is no cycle.
         .target(name: "Record", dependencies: ["Constants", "Plan"], resources: [.copy("FrozenSchema.json")]),
         .testTarget(name: "ConstantsTests", dependencies: ["Constants"]),
+        // Ruling r13-19: device checks that a test can do from the App
+        // target's own files (the manifest, the string catalogue).
+        .testTarget(name: "AutomatedDeviceChecksTests", dependencies: ["Constants", "Record", "Plan", "Programme", "Content", "RecordTestSupport"]),
         // Also depends on `Programme` (test-only; `Record` itself never
         // does) so a test can drive `Programme`'s rules over a real store,
         // the way the App target wires them (`v1-programme/design.md`,

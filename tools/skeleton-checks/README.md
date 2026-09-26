@@ -41,3 +41,33 @@ The first keyboard use shows an iOS tip; the tests dismiss it.
 | `testAudit` | today | Xcode's accessibility audit of Today and the new-entry screen; logs every issue |
 
 Each run writes screenshots and `evidence.log` to `out/`.
+
+## Automated device checks (ruling r13-19)
+
+Ash ruled on 26 September 2026 (r13-19, mm-t43.30) that navigation, text
+and manifest checks move off the device-check beads into tests.
+
+- Text and manifest checks are package tests in
+  `Packages/Tests/AutomatedDeviceChecksTests`. `./verify` runs them.
+- Navigation checks are UI tests in `HarnessUITests/AutomatedChecks.swift`.
+  Each test names its device-check bead. Run them with one command:
+
+```bash
+tools/skeleton-checks/automated-checks.sh            # every check
+tools/skeleton-checks/automated-checks.sh testPrivacyNotice testDiagnosticsShowsTheEightCounts
+```
+
+The script makes and boots its own simulator (`mm-automated-checks`), so it
+does not disturb a simulator that another session uses. It builds and
+installs the app, builds the UI tests, and seeds three stores with
+`seeder` (`week1`, `review` and `corrupt`; `seeder/Sources/Seeder/AutomatedScenarios.swift`
+tells what each holds). Before each launch, a test copies one seeded store
+into the app's container. The app then opens on Today with the app lock off.
+The log and the result bundle go to `out/automated/`.
+
+The UI tests are not part of `./verify`. A simulator run needs a booted
+simulator of its own, and parallel worktrees share one simulator service.
+On 26 September 2026 that service stopped: every `simctl` call waited with
+no end while four simulators stayed in "Shutting Down". A `./verify` that
+needs the simulator would then fail for every worktree. The package tests
+stay in `./verify`.
