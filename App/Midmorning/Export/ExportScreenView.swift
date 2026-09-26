@@ -86,9 +86,7 @@ struct ExportScreenView: View {
 
     private func loadDefaultsIfNeeded() {
         guard !isLoaded else { return }
-        let today = RecordDay.key(containing: now(), calendar: calendar)
-        let dayStart = (try? store.dayStartHour(effectiveOn: today)) ?? RecordDay.startHour
-        currentDayKey = RecordDay.key(containing: now(), calendar: calendar, startHour: dayStart)
+        currentDayKey = RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         let earliest = try? store.earliestEntryDayKey()
         let defaults = ExportRange.defaultRange(currentDayKey: currentDayKey, earliestEntryDayKey: earliest ?? nil)
         fromDayKey = defaults.from

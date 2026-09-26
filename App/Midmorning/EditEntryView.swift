@@ -23,28 +23,37 @@ struct EditEntryView: View {
     @State private var saveOutcome: SaveOutcome = .saved
     @State private var showingDeleteConfirm = false
 
-    private let ownDayBounds: DateInterval
+    /// The entry's own record day, the one segment of the time control.
+    private let ownDay: RecordTimeControl.Segment
+    /// The entry's own UTC offset, so the wheel shows the time Today shows
+    /// on the row.
+    private let calendar: Calendar
+    @State private var openedAt = Date()
 
-    init(store: RecordStore, entry: RecordRow, dayStartHour: Int, onSave: @escaping (RecordRow) -> Void, onDelete: @escaping () -> Void) {
+    /// The record day's bounds come from the entry's own key, its UTC offset
+    /// and the day start row in force for that key (record spec, "Edit an
+    /// entry").
+    init(store: RecordStore, entry: RecordRow, onSave: @escaping (RecordRow) -> Void, onDelete: @escaping () -> Void) {
         self.store = store
         self.entry = entry
         self.onSave = onSave
         self.onDelete = onDelete
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: entry.utcOffsetSeconds) ?? .current
-        self.ownDayBounds = RecordDay.interval(containing: entry.time, calendar: calendar, startHour: dayStartHour)
+        self.calendar = calendar
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let bounds = RecordDay.interval(forKey: entry.dayKey, calendar: calendar, schedule: schedule)
+            ?? RecordDay.interval(containing: entry.time, calendar: calendar, schedule: schedule)
+        self.ownDay = RecordTimeControl.Segment(
+            interval: bounds,
+            startHour: schedule.hour(effectiveOn: entry.dayKey),
+            title: DayHeading.dateOnly(forDayKey: entry.dayKey)
+        )
         self._time = State(initialValue: entry.time)
         self._what = State(initialValue: entry.what)
         self._whereSelection = State(initialValue: entry.whereText.isEmpty ? nil : entry.whereText)
         self._feltLikeABinge = State(initialValue: entry.feltLikeABinge)
         self._context = State(initialValue: entry.context)
-    }
-
-    /// The time control MUST NOT offer a time after the current moment.
-    private var wheelRange: ClosedRange<Date> {
-        let lower = ownDayBounds.start
-        let upper = min(ownDayBounds.end, Date())
-        return lower...max(lower, upper)
     }
 
     var body: some View {
@@ -88,6 +97,7 @@ struct EditEntryView: View {
         .privacySensitive()
         .redacted(reason: scenePhase == .active ? [] : .privacy)
         .onAppear {
+            openedAt = Date()
             customPlaces = (try? store.customPlaces()) ?? []
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
@@ -129,17 +139,10 @@ struct EditEntryView: View {
         }
     }
 
+    /// One segment, the entry's own record day; the time control MUST NOT
+    /// offer a time after the current moment.
     private var timeControl: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(DayHeading.dateOnly(ownDayBounds.start))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            DatePicker("", selection: $time, in: wheelRange, displayedComponents: [.hourAndMinute])
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-                .accessibilityLabel("entry.time.accessibilityLabel")
-                .accessibilityValue(NewEntryView.spokenTime(time))
-        }
+        RecordTimeControl(segments: [ownDay], time: $time, notAfter: openedAt, calendar: calendar)
     }
 
     private func save() {

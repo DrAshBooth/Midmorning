@@ -151,7 +151,7 @@ final class EntryVersionTests: XCTestCase {
         var london = Calendar(identifier: .gregorian)
         london.timeZone = TimeZone(identifier: "Europe/London")!
         let savedAt = london.date(from: DateComponents(year: 2026, month: 10, day: 6, hour: 23, minute: 30))!
-        let dayKey = RecordDay.key(for: savedAt, utcOffsetSeconds: 3600)
+        let dayKey = RecordDay.key(for: savedAt, utcOffsetSeconds: 3600, schedule: .standard)
         XCTAssertEqual(dayKey, "2026-10-06")
         // Tokyo's zone never recomputes it: the key was written at save.
         let entryVersion = version(entryId: UUID(), changedAt: savedAt, what: "Late snack")

@@ -36,25 +36,25 @@ final class PendingCardsCompositionTests: XCTestCase {
         let settings = ProgrammeSettings(startDay: "2026-09-28", dayStart: RecordDay.startHour)
         let unstarredDays = [29, 30].map { at(2026, 9, $0, 9) } + [at(2026, 10, 1, 9), at(2026, 10, 2, 9)]
         let entries = unstarredDays.enumerated().map { i, moment in
-            EntryFact(id: "\(i)", dayKey: RecordDay.key(containing: moment, calendar: london), starred: false, savedAt: moment)
+            EntryFact(id: "\(i)", dayKey: RecordDay.key(containing: moment, calendar: london, schedule: .standard), starred: false, savedAt: moment)
         }
         let starredMoment = at(2026, 10, 3, 22, 10)
-        let starred = EntryFact(id: "starred", dayKey: RecordDay.key(containing: starredMoment, calendar: london), starred: true, savedAt: starredMoment)
+        let starred = EntryFact(id: "starred", dayKey: RecordDay.key(containing: starredMoment, calendar: london, schedule: .standard), starred: true, savedAt: starredMoment)
         let facts = ProgrammeFacts(entries: entries + [starred])
 
         let sameDayNow = at(2026, 10, 3, 22, 15)
-        let sameDayKey = RecordDay.key(containing: sameDayNow, calendar: london)
+        let sameDayKey = RecordDay.key(containing: sameDayNow, calendar: london, schedule: .standard)
         let state = StageEngine.state(facts: facts, openings: [], settings: settings, constants: .default, now: sameDayNow, restartAt: nil, currentRecordDay: sameDayKey, calendar: london)
         XCTAssertTrue(state.isOpen(.regularEating), "the stage opens at once")
 
         let pending = StageEngine.pendingCards(state: state, facts: facts, cardAnswers: [], stagesWithToolInBuild: [1, 2], hasTemplate: true, currentRecordDay: sameDayKey, settings: settings, calendar: london)
             .map(map)
 
-        let sameDayInterval = RecordDay.interval(containing: sameDayNow, calendar: london)
+        let sameDayInterval = RecordDay.interval(containing: sameDayNow, calendar: london, schedule: .standard)
         XCTAssertNil(TodayCardSlot.next(pending: pending, starredEntryOrOutcomeAt: starredMoment, currentRecordDay: sameDayInterval), "no opening card that record day")
 
         let nextMorning = at(2026, 10, 4, 9)
-        let nextDayInterval = RecordDay.interval(containing: nextMorning, calendar: london)
+        let nextDayInterval = RecordDay.interval(containing: nextMorning, calendar: london, schedule: .standard)
         XCTAssertEqual(TodayCardSlot.next(pending: pending, starredEntryOrOutcomeAt: nil, currentRecordDay: nextDayInterval), pending.first, "the card appears the first time Today appears after 04:00")
     }
 
@@ -65,20 +65,20 @@ final class PendingCardsCompositionTests: XCTestCase {
         let first = at(2026, 10, 1, 9)
         let starredMoment = at(2026, 10, 2, 21)
         let entries = [
-            EntryFact(id: "1", dayKey: RecordDay.key(containing: first, calendar: london), starred: false, savedAt: first),
-            EntryFact(id: "2", dayKey: RecordDay.key(containing: starredMoment, calendar: london), starred: true, savedAt: starredMoment),
+            EntryFact(id: "1", dayKey: RecordDay.key(containing: first, calendar: london, schedule: .standard), starred: false, savedAt: first),
+            EntryFact(id: "2", dayKey: RecordDay.key(containing: starredMoment, calendar: london, schedule: .standard), starred: true, savedAt: starredMoment),
         ]
         let facts = ProgrammeFacts(entries: entries)
         let sameDayNow = at(2026, 10, 2, 21, 5)
-        let sameDayKey = RecordDay.key(containing: sameDayNow, calendar: london)
+        let sameDayKey = RecordDay.key(containing: sameDayNow, calendar: london, schedule: .standard)
         let state = StageEngine.state(facts: facts, openings: [], settings: settings, constants: .default, now: sameDayNow, restartAt: nil, currentRecordDay: sameDayKey, calendar: london)
         let pending = StageEngine.pendingCards(state: state, facts: facts, cardAnswers: [], stagesWithToolInBuild: [1, 2], hasTemplate: true, currentRecordDay: sameDayKey, settings: settings, calendar: london).map(map)
 
-        let sameDayInterval = RecordDay.interval(containing: sameDayNow, calendar: london)
+        let sameDayInterval = RecordDay.interval(containing: sameDayNow, calendar: london, schedule: .standard)
         XCTAssertNil(TodayCardSlot.next(pending: pending, starredEntryOrOutcomeAt: starredMoment, currentRecordDay: sameDayInterval), "no card that record day")
 
         let nextMorning = at(2026, 10, 3, 9)
-        let nextDayInterval = RecordDay.interval(containing: nextMorning, calendar: london)
+        let nextDayInterval = RecordDay.interval(containing: nextMorning, calendar: london, schedule: .standard)
         let winner = TodayCardSlot.next(pending: pending, starredEntryOrOutcomeAt: nil, currentRecordDay: nextDayInterval)
         XCTAssertEqual(winner?.kind, .stage1, "'Why write it down' shows the first time Today appears after 04:00")
     }

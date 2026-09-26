@@ -154,7 +154,8 @@ struct SettingsView: View {
     }
 
     private func load() {
-        let dayKey = RecordDay.key(containing: Date(), calendar: .current)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let dayKey = RecordDay.key(containing: Date(), calendar: .current, schedule: schedule)
         if let hour = try? store.dayStartHour(effectiveOn: dayKey) {
             dayStartsAt = ClockTime.date(hour: hour, minute: 0)
         }

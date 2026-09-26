@@ -47,7 +47,7 @@ struct TodayView: View {
     // spec, "The lock control on Today").
     @EnvironmentObject private var appLockController: AppLockController
     @Environment(\.scenePhase) private var scenePhase
-    @State private var day = RecordDay.interval(containing: Date(), calendar: .current)
+    @State private var day = DateInterval() // `reload()` sets it under the day start in force
     @State private var currentSection: DaySection?
     @State private var previousSection: DaySection?
     @State private var earlierDaysAvailable = false
@@ -190,8 +190,8 @@ struct TodayView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingNewEntry) {
-                NewEntryView(store: store, day: day, initialTime: newEntryInitialTime) { saved in
+            .sheet(isPresented: $showingNewEntry, onDismiss: newEntryDismissed) {
+                NewEntryView(store: store, initialTime: newEntryInitialTime) { saved in
                     reload()
                     scrollTarget = saved.id
                     addEntryFocused = true
@@ -201,7 +201,7 @@ struct TodayView: View {
                 PlanBuilderView(store: store, mode: mode) { reload() }
             }
             .sheet(item: $editingEntry) { entry in
-                EditEntryView(store: store, entry: entry, dayStartHour: RecordDay.startHour) { _ in
+                EditEntryView(store: store, entry: entry) { _ in
                     reload()
                 } onDelete: {
                     reload()
@@ -386,8 +386,9 @@ struct TodayView: View {
                         planBuilderMode = .day(dateKey: section.id, titleKey: "plan.today", isCurrentDay: true)
                     }
                     Button("plan.tomorrow") {
-                        let tomorrow = RecordDay.next(section.interval, calendar: .current)
-                        planBuilderMode = .day(dateKey: RecordDay.key(containing: tomorrow.start, calendar: .current), titleKey: "plan.tomorrow", isCurrentDay: false)
+                        let schedule = (try? store.dayStartSchedule()) ?? .standard
+                        let tomorrow = RecordDay.next(section.interval, calendar: .current, schedule: schedule)
+                        planBuilderMode = .day(dateKey: RecordDay.key(containing: tomorrow.start, calendar: .current, schedule: schedule), titleKey: "plan.tomorrow", isCurrentDay: false)
                     }
                     Button("plan.weekday") {
                         planBuilderMode = .template(kind: .weekday, titleKey: "plan.weekday")
@@ -469,6 +470,14 @@ struct TodayView: View {
         reload()
     }
 
+    /// After Save or Cancel, VoiceOver focus returns to "Add an entry"
+    /// (record spec, "The Today stack"), and the next new entry opens at
+    /// the current time again, not at an earlier "Add it" planned time.
+    private func newEntryDismissed() {
+        newEntryInitialTime = nil
+        addEntryFocused = true
+    }
+
     private func entryIndex(of item: DaySection.DisplayItem, in entries: [RecordRow]) -> Int? {
         guard case .entry(let row) = item else { return nil }
         return entries.firstIndex { $0.id == row.id }
@@ -477,10 +486,11 @@ struct TodayView: View {
     private func reload() {
         let now = Date()
         programmeSnapshot = ProgrammeModel.load(store: store, now: now, calendar: .current)
-        day = RecordDay.interval(containing: now, calendar: .current)
-        let previous = RecordDay.previous(day, calendar: .current)
-        let currentKey = RecordDay.key(containing: now, calendar: .current)
-        let previousKey = RecordDay.key(containing: previous.start, calendar: .current)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        day = RecordDay.interval(containing: now, calendar: .current, schedule: schedule)
+        let previous = RecordDay.previous(day, calendar: .current, schedule: schedule)
+        let currentKey = RecordDay.key(containing: now, calendar: .current, schedule: schedule)
+        let previousKey = RecordDay.key(containing: previous.start, calendar: .current, schedule: schedule)
         currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open)
         previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false

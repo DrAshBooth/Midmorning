@@ -237,7 +237,7 @@ private struct RunningRootView: View {
                 get: { controller.state.pendingRoute == .newEntry },
                 set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
             )) {
-                NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
+                NewEntryView(store: store, initialTime: nil) { _ in
                     controller.handle(.pendingRouteResolved)
                 }
             }

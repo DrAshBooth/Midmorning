@@ -20,7 +20,7 @@ struct DaySection: Identifiable {
     let plan: PlanDaySection?
 
     var heading: String {
-        let night = role == .current && RecordDay.isNight(Date(), calendar: .current)
+        let night = role == .current && RecordDay.isNight(Date(), inRecordDay: interval, calendar: .current)
         return DayHeading.text(for: interval.start, night: night)
     }
 

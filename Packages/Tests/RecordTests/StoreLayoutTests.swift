@@ -38,7 +38,7 @@ final class StoreLayoutTests: XCTestCase {
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).isEmpty, "nothing restored: the directory a backup would have excluded")
 
         let store = try RecordStore(directory: directory)
-        let today = try store.entries(dayKey: RecordDay.key(containing: Date(), calendar: .current))
+        let today = try store.entries(dayKey: RecordDay.key(containing: Date(), calendar: .current, schedule: .standard))
         XCTAssertTrue(today.isEmpty, "a new device with no restored store file starts with no entry")
     }
 

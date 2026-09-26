@@ -22,8 +22,8 @@ struct Screen3View: View {
             Form {
                 Section(header: Text(Screen3Content.startDayQuestion)) {
                     Picker(Screen3Content.startDayQuestion, selection: $answers.startDayChoice) {
-                        Text(StartDayChoice.label(for: .today, now: now, calendar: calendar)).tag(StartDayChoice.Choice.today)
-                        Text(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar)).tag(StartDayChoice.Choice.tomorrow)
+                        Text(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: dayStartSchedule)).tag(StartDayChoice.Choice.today)
+                        Text(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: dayStartSchedule)).tag(StartDayChoice.Choice.tomorrow)
                     }
                     .pickerStyle(.inline)
                 }
@@ -106,8 +106,13 @@ struct Screen3View: View {
         )
     }
 
+    private var dayStartSchedule: DayStartSchedule {
+        (try? store.dayStartSchedule()) ?? .standard
+    }
+
     private var dayStartHour: Int {
-        (try? store.dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar))) ?? RecordDay.startHour
+        let schedule = dayStartSchedule
+        return schedule.hour(effectiveOn: RecordDay.key(containing: now, calendar: calendar, schedule: schedule))
     }
 
     private func attemptContinue() {

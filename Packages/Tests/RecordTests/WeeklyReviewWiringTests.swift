@@ -30,7 +30,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     }
 
     private func dayKey(_ year: Int, _ month: Int, _ day: Int) -> String {
-        RecordDay.key(containing: at(year, month, day), calendar: utc)
+        RecordDay.key(containing: at(year, month, day), calendar: utc, schedule: .standard)
     }
 
     /// The live `stage2Open` fact, the same composition
@@ -38,7 +38,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// `StageEngine.state`.
     private func stage2Open(_ store: RecordStore, now: Date) -> Bool {
         let entries = ((try? store.recordedEntryFacts()) ?? []).map { EntryFact(id: UUID().uuidString, dayKey: $0.dayKey, starred: $0.starred, savedAt: $0.savedAt) }
-        let currentRecordDay = RecordDay.key(containing: now, calendar: utc)
+        let currentRecordDay = RecordDay.key(containing: now, calendar: utc, schedule: .standard)
         let settings = ProgrammeSettings(startDay: (try? store.startDayKey()) ?? currentRecordDay, dayStart: RecordDay.startHour)
         let state = StageEngine.state(facts: ProgrammeFacts(entries: entries), openings: [], settings: settings, constants: .default, now: now, restartAt: nil, currentRecordDay: currentRecordDay, calendar: utc)
         return state.isOpen(.regularEating)

@@ -19,19 +19,19 @@ final class StartDayChoiceTests: XCTestCase {
 
     func testDefault() {
         let now = date(2026, 9, 24, 14, 0) // Thursday 24 September, 14:00
-        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar), "Today, Thursday 24 September")
-        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar), "Tomorrow, Friday 25 September")
+        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: .standard), "Today, Thursday 24 September")
+        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: .standard), "Tomorrow, Friday 25 September")
     }
 
     func testTomorrowKeepsFridayAsTheStartDay() {
         let now = date(2026, 9, 24, 14, 0)
-        XCTAssertEqual(StartDayChoice.dayKey(for: .tomorrow, now: now, calendar: calendar), "2026-09-25")
+        XCTAssertEqual(StartDayChoice.dayKey(for: .tomorrow, now: now, calendar: calendar, schedule: .standard), "2026-09-25")
     }
 
     func testAfterMidnight() {
         let now = date(2026, 9, 25, 1, 0) // Friday 01:00, default day start 04:00
-        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar), "Today, Thursday 24 September")
-        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar), "Tomorrow, Friday 25 September")
+        XCTAssertEqual(StartDayChoice.label(for: .today, now: now, calendar: calendar, schedule: .standard), "Today, Thursday 24 September")
+        XCTAssertEqual(StartDayChoice.label(for: .tomorrow, now: now, calendar: calendar, schedule: .standard), "Tomorrow, Friday 25 September")
     }
 
     func testDayBoundaryLineWithDefaultDayStart() {

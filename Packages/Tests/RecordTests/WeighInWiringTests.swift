@@ -28,7 +28,7 @@ final class WeighInWiringTests: XCTestCase {
     }
 
     private func dayKey(_ year: Int, _ month: Int, _ day: Int) -> String {
-        RecordDay.key(containing: at(year, month, day), calendar: utc)
+        RecordDay.key(containing: at(year, month, day), calendar: utc, schedule: .standard)
     }
 
     /// Scenario: Weight reason (safeguarding spec, "The not-right-now

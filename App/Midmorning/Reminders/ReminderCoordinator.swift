@@ -39,16 +39,17 @@ enum ReminderCoordinator {
         let constants = ProgrammeConstants.default
         let stage2Open = ProgrammeModel.load(store: store, now: now, calendar: calendar).state.isOpen(.regularEating)
         var days: [SchedulerDay] = []
-        var previousDayKey = RecordDay.key(containing: RecordDay.previous(RecordDay.interval(containing: now, calendar: calendar), calendar: calendar).start, calendar: calendar)
-        var dayInterval = RecordDay.interval(containing: now, calendar: calendar)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        var previousDayKey = RecordDay.key(containing: RecordDay.previous(RecordDay.interval(containing: now, calendar: calendar, schedule: schedule), calendar: calendar, schedule: schedule).start, calendar: calendar, schedule: schedule)
+        var dayInterval = RecordDay.interval(containing: now, calendar: calendar, schedule: schedule)
 
         for index in 0..<constants.reminderHorizonDays {
-            let dayKey = RecordDay.key(containing: dayInterval.start, calendar: calendar)
+            let dayKey = RecordDay.key(containing: dayInterval.start, calendar: calendar, schedule: schedule)
             days.append(schedulerDay(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: index == 0, previousDayKey: previousDayKey, stage2Open: stage2Open, calendar: calendar, constants: constants))
             previousDayKey = dayKey
-            dayInterval = RecordDay.next(dayInterval, calendar: calendar)
+            dayInterval = RecordDay.next(dayInterval, calendar: calendar, schedule: schedule)
         }
-        let farDay = schedulerDay(store: store, dayKey: RecordDay.key(containing: dayInterval.start, calendar: calendar), dayInterval: dayInterval, isCurrentDay: false, previousDayKey: previousDayKey, stage2Open: stage2Open, calendar: calendar, constants: constants)
+        let farDay = schedulerDay(store: store, dayKey: RecordDay.key(containing: dayInterval.start, calendar: calendar, schedule: schedule), dayInterval: dayInterval, isCurrentDay: false, previousDayKey: previousDayKey, stage2Open: stage2Open, calendar: calendar, constants: constants)
 
         let settings = schedulerSettings(store: store, notificationPermissionGranted: notificationPermissionGranted)
         let dayKeys = days.map(\.dayKey)

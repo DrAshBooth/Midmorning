@@ -32,8 +32,7 @@ enum WeeklyReviewModel {
     }
 
     static func load(store: RecordStore, now: Date = Date(), calendar: Calendar = .current) -> Snapshot {
-        let dayStart = (try? store.dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar))) ?? RecordDay.startHour
-        let currentRecordDay = RecordDay.key(containing: now, calendar: calendar, startHour: dayStart)
+        let currentRecordDay = RecordDay.key(containing: now, calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         let startDay = (try? store.startDayKey()) ?? currentRecordDay
         freezeAllDueWeeks(store: store, startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar, now: now)
         let dueWeek = ReviewDue.todayLineWeek(
@@ -211,7 +210,7 @@ enum WeeklyReviewModel {
     }
 
     static func reviewsListRows(store: RecordStore, calendar: Calendar) -> [ReviewListRow] {
-        let startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: Date(), calendar: calendar)
+        let startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: Date(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         let summaryOn = (try? store.weeklySummaryOn()) ?? true
         let winners = ((try? store.reviewRowWinners(kind: .weeklyReview)) ?? [])
             .filter { ReviewAnswersPayload.decode($0.answersJSON).finished }

@@ -241,8 +241,7 @@ struct WeighInScreenView: View {
     }
 
     private func reload() {
-        let dayStart = (try? store.dayStartHour(effectiveOn: RecordDay.key(containing: now(), calendar: calendar))) ?? RecordDay.startHour
-        currentDayKey = RecordDay.key(containing: now(), calendar: calendar, startHour: dayStart)
+        currentDayKey = RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
 
         switch try? store.weighInDayChoice() {
         case .weekday(let weekday): weighInWeekday = weekday

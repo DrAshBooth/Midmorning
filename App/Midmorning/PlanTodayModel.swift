@@ -141,8 +141,9 @@ enum PlanToday {
             let lastSkippedNoMatch = answers[last.slotIndex] == "Skipped" && matches[last.slotIndex] == nil
             let starredAfter = entries.contains { $0.feltLikeABinge && $0.time >= lastWindow.time && $0.time < recordDay.end }
             if NextPlannedMeal.isTriggered(previousSlotSkippedWithNoMatch: lastSkippedNoMatch, hasStarredEntryBetweenPreviousAndThis: starredAfter) {
-                let nextDay = RecordDay.next(recordDay, calendar: calendar)
-                let nextDateKey = RecordDay.key(containing: nextDay.start, calendar: calendar)
+                let schedule = (try? store.dayStartSchedule()) ?? .standard
+                let nextDay = RecordDay.next(recordDay, calendar: calendar, schedule: schedule)
+                let nextDateKey = RecordDay.key(containing: nextDay.start, calendar: calendar, schedule: schedule)
                 let nextPlan = try? store.dayPlan(dateKey: nextDateKey)
                 let nextSlotsJSON: String
                 if let nextPlan {

@@ -152,19 +152,22 @@ public final class RecordStore {
     /// Saves one entry as a new `Item` and its first `ItemVersion`, and
     /// returns the row. Trims white space and line breaks from the ends of
     /// `what` and `context`. Truncates `time` to the minute. Throws on
-    /// failure with no entry data in the error.
+    /// failure with no entry data in the error. The record day key comes from
+    /// the "Day starts at" rows in force (record spec, "The record day");
+    /// `dayStartHour` sets one fixed hour instead, for a test.
     @discardableResult
     public func add(
         time: Date, what: String, feltLikeABinge: Bool, createdAt: Date, utcOffsetSeconds: Int,
-        whereText: String = "", context: String = "", dayStartHour: Int = RecordDay.startHour
+        whereText: String = "", context: String = "", dayStartHour: Int? = nil
     ) throws -> RecordRow {
         let minute = Self.truncatedToMinute(time)
         let entryId = UUID()
         let item = Item(id: entryId)
+        let schedule = try dayStartHour.map(DayStartSchedule.constant) ?? dayStartSchedule()
         let version = ItemVersion(
             entryId: entryId,
             changedAt: createdAt,
-            dayKey: RecordDay.key(for: minute, utcOffsetSeconds: utcOffsetSeconds, startHour: dayStartHour),
+            dayKey: RecordDay.key(for: minute, utcOffsetSeconds: utcOffsetSeconds, schedule: schedule),
             time: minute,
             utcOffsetSeconds: utcOffsetSeconds,
             what: what.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -236,8 +239,9 @@ public final class RecordStore {
     /// in the calendar's zone, ordered by time, then by creation moment. An
     /// entry's day was fixed at save, so this matches by key, never by
     /// recomputing the entry's day.
-    public func entries(recordDayContaining moment: Date, calendar: Calendar, dayStartHour: Int = RecordDay.startHour) throws -> [RecordRow] {
-        try entries(dayKey: RecordDay.key(containing: moment, calendar: calendar, startHour: dayStartHour))
+    public func entries(recordDayContaining moment: Date, calendar: Calendar, dayStartHour: Int? = nil) throws -> [RecordRow] {
+        let schedule = try dayStartHour.map(DayStartSchedule.constant) ?? dayStartSchedule()
+        return try entries(dayKey: RecordDay.key(containing: moment, calendar: calendar, schedule: schedule))
     }
 
     /// The winning, non-deleted row per entry id whose winning version keys
@@ -524,27 +528,32 @@ public final class RecordStore {
     // MARK: - The Record group: "Day starts at" and "Gap bands" (settings
     // spec, "The Record group"; decision 65)
 
+    /// Every append-only `DayStartSetting` row, one winner per effective day,
+    /// as one schedule. A screen reads it once per load and passes it to
+    /// every `RecordDay` call, so the current record day, its neighbours and
+    /// each day's start all use the day start in force, with no two-step
+    /// lookup (record spec, "The record day").
+    public func dayStartSchedule() throws -> DayStartSchedule {
+        let rows = try context.fetch(FetchDescriptor<Settings>())
+        let changes = SettingsReconciler.winners(in: rows).values.compactMap { row -> DayStartSchedule.Change? in
+            guard row.key.hasPrefix("dayStart."), let hour = Int(row.value) else { return nil }
+            return DayStartSchedule.Change(effectiveFromDayKey: String(row.key.dropFirst("dayStart.".count)), hour: hour)
+        }
+        return DayStartSchedule(changes: changes)
+    }
+
     /// The day-start hour in effect for the record day keyed `dayKey`: the
     /// latest append-only `DayStartSetting` row whose effective day is
     /// `dayKey` or earlier, or `RecordDay.startHour` when no row applies yet.
     public func dayStartHour(effectiveOn dayKey: String) throws -> Int {
-        let rows = try context.fetch(FetchDescriptor<Settings>())
-        let winner = SettingsReconciler.winners(in: rows).values
-            .compactMap { row -> (effectiveFromDayKey: String, hour: Int)? in
-                guard row.key.hasPrefix("dayStart."), let hour = Int(row.value) else { return nil }
-                return (String(row.key.dropFirst("dayStart.".count)), hour)
-            }
-            .filter { $0.effectiveFromDayKey <= dayKey }
-            .max { $0.effectiveFromDayKey < $1.effectiveFromDayKey }
-        return winner?.hour ?? RecordDay.startHour
+        try dayStartSchedule().hour(effectiveOn: dayKey)
     }
 
     /// Writes a new "Day starts at" hour, effective from the record day
     /// right after `now` — never from `now`'s own record day, so no saved
     /// entry's record day changes.
     public func setDayStartHour(_ hour: Int, now: Date, calendar: Calendar, changedAt: Date = .now) throws {
-        let currentHour = try dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar))
-        let nextDayKey = RecordDay.nextDayKey(after: now, calendar: calendar, startHour: currentHour)
+        let nextDayKey = RecordDay.nextDayKey(after: now, calendar: calendar, schedule: try dayStartSchedule())
         try setSettingValue(String(hour), key: DayStartSetting.key(effectiveFromDayKey: nextDayKey), changedAt: changedAt)
     }
 

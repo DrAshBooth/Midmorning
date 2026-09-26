@@ -292,7 +292,7 @@ struct PlanBuilderView: View {
             if isCurrentDay {
                 let answers = (try? store.plannedMealAnswers(dateKey: dateKey)) ?? [:]
                 let entries = (try? store.entries(dayKey: dateKey)) ?? []
-                let recordDay = RecordDay.interval(containing: Date(), calendar: .current)
+                let recordDay = RecordDay.interval(containing: Date(), calendar: .current, schedule: (try? store.dayStartSchedule()) ?? .standard)
                 let windows = PlanWindows.windows(for: meals, recordDay: recordDay, dayStartHour: dayStartHour, beforeMinutes: ProgrammeConstants.default.plannedMealWindowBeforeMinutes, afterMinutes: ProgrammeConstants.default.plannedMealWindowAfterMinutes, calendar: .current)
                 let matches = PlanMatching.match(windows: windows, entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) })
                 lockedSlots = Set(meals.map(\.slotIndex).filter { !PlanEditing.canChangeOrDelete(hasMatchedEntry: matches[$0] != nil, hasSkippedAnswer: answers[$0] == "Skipped") })

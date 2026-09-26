@@ -24,7 +24,7 @@ final class TodayStackTests: XCTestCase {
             c.timeZone = TimeZone(identifier: "Europe/London")!
             return c
         }()
-        let today = RecordDay.interval(containing: Date(timeIntervalSince1970: 1_758_700_800), calendar: calendar)
+        let today = RecordDay.interval(containing: Date(timeIntervalSince1970: 1_758_700_800), calendar: calendar, schedule: .standard)
         XCTAssertNil(TodayCardSlot.next(pending: [], starredEntryOrOutcomeAt: nil, currentRecordDay: today))
     }
 }

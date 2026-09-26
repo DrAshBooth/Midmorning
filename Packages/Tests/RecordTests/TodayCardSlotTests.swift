@@ -16,7 +16,7 @@ final class TodayCardSlotTests: XCTestCase {
     private func recordDay(_ day: Int) -> DateInterval {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
-        return RecordDay.interval(containing: at(12, 0, day: day), calendar: calendar)
+        return RecordDay.interval(containing: at(12, 0, day: day), calendar: calendar, schedule: .standard)
     }
 
     /// Scenario: Card after a starred entry.

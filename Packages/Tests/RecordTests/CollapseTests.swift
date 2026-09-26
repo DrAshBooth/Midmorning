@@ -48,7 +48,7 @@ final class CollapseTests: XCTestCase {
         for i in 0..<8 {
             try store.add(time: at(8, i), what: "Entry \(i)", feltLikeABinge: false, createdAt: at(8, i), utcOffsetSeconds: 3600)
         }
-        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600)
+        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600, schedule: .standard)
         XCTAssertEqual(try store.entryCount(dayKey: dayKey), 8)
 
         let oneEntryStore = try makeStore()
@@ -62,7 +62,7 @@ final class CollapseTests: XCTestCase {
     /// keep the expanded state as the last choice".
     func testExpandAndSaveIntoACollapsedDayBothKeepExpanded() throws {
         let store = try makeStore()
-        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600)
+        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600, schedule: .standard)
         try store.setCollapseChoice(.collapsed, dateKey: dayKey)
         XCTAssertEqual(try store.collapseChoice(dateKey: dayKey), .collapsed)
 
@@ -76,7 +76,7 @@ final class CollapseTests: XCTestCase {
     /// which the view reads directly from a zero entry count.
     func testEmptyDayHasNoEntries() throws {
         let store = try makeStore()
-        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600)
+        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600, schedule: .standard)
         XCTAssertEqual(try store.entryCount(dayKey: dayKey), 0)
     }
 
@@ -85,7 +85,7 @@ final class CollapseTests: XCTestCase {
     func testKeptChoiceSurvivesReopeningTheStore() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600)
+        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600, schedule: .standard)
         do {
             let store = try RecordStore(directory: directory)
             try store.setCollapseChoice(.expanded, dateKey: dayKey)
@@ -98,7 +98,7 @@ final class CollapseTests: XCTestCase {
     /// keeps one choice per day, not a history.
     func testALaterChoiceReplacesTheEarlierOne() throws {
         let store = try makeStore()
-        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600)
+        let dayKey = RecordDay.key(for: at(8, 0), utcOffsetSeconds: 3600, schedule: .standard)
         try store.setCollapseChoice(.expanded, dateKey: dayKey)
         try store.setCollapseChoice(.collapsed, dateKey: dayKey)
         XCTAssertEqual(try store.collapseChoice(dateKey: dayKey), .collapsed)
