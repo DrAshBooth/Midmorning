@@ -63,5 +63,5 @@ Verify for every task below: `swift test --package-path Packages --filter Conten
 ## 9. Close
 
 - [ ] 9.1 mm-t11.37 device checks for 1.1: list "Rendering at AX5" (task 6.3) as the one pending device check. Ash does it and adds a date and a screenshot to this README.
-- [ ] 9.2 Write the rules-checklist and safeguarding lines in this README.
-- [ ] 9.3 Run `./verify` cold and warm; write both times in this README.
+- [x] 9.2 Write the rules-checklist and safeguarding lines in this README.
+- [x] 9.3 Run `./verify` cold and warm; write both times in this README.

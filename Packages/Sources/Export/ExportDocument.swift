@@ -163,12 +163,26 @@ public struct ExportContentLine: Sendable, Equatable {
     public let text: String
     public let entry: ExportEntryLine?
     public let weighIn: ExportWeighInLine?
+    /// True for a heading that `Paginator` repeats at the top of a page
+    /// that continues its day or the weigh-in page (export spec, "The PDF
+    /// is formatted like the paper record": "When a day continues on a new
+    /// page, the PDF MUST repeat the day's heading on that page."). The
+    /// renderer draws it but does not tag it as a second H2 (export spec,
+    /// "Accessibility of the export": "The PDF MUST tag each day heading as
+    /// an H2.").
+    public let isContinuation: Bool
 
-    public init(kind: Kind, text: String, entry: ExportEntryLine? = nil, weighIn: ExportWeighInLine? = nil) {
+    public init(kind: Kind, text: String, entry: ExportEntryLine? = nil, weighIn: ExportWeighInLine? = nil, isContinuation: Bool = false) {
         self.kind = kind
         self.text = text
         self.entry = entry
         self.weighIn = weighIn
+        self.isContinuation = isContinuation
+    }
+
+    /// This heading, marked as the copy `Paginator` repeats on a new page.
+    public var asContinuation: ExportContentLine {
+        ExportContentLine(kind: kind, text: text, entry: entry, weighIn: weighIn, isContinuation: true)
     }
 
     /// The day this line belongs to, or `nil` for a line that appears once
@@ -184,5 +198,22 @@ public struct ExportContentLine: Sendable, Equatable {
     public var isDayHeading: Bool {
         if case .dayHeading = kind { return true }
         return false
+    }
+
+    /// A line that `Paginator` keeps on the same page as the line after
+    /// it: a day heading, a state line, the column headings and the
+    /// "Weigh-ins" heading. None of them may end a page on its own.
+    var keepsWithNext: Bool {
+        switch kind {
+        case .dayHeading, .stateLine, .columnHeadings, .weighInHeading: return true
+        default: return false
+        }
+    }
+
+    /// Whether `next` belongs to the same day, or to the same weigh-in
+    /// page, as this line.
+    func sharesSection(with next: ExportContentLine) -> Bool {
+        if let dayIndex { return next.dayIndex == dayIndex }
+        return kind == .weighInHeading && next.kind == .weighInRow
     }
 }

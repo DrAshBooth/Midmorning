@@ -125,6 +125,15 @@ enum ExportPDFRenderer {
                 CGPDFContextBeginTag(cg, .header1, languageProperties() as CFDictionary)
                 drawText(line.text, font: titleFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
                 CGPDFContextEndTag(cg)
+            case .dayHeading where line.isContinuation:
+                // The copy of the heading that `Paginator` repeats on a page
+                // that continues the day: drawn for the eye, but outside any
+                // tag, so the tag tree holds one H2 per day (export spec,
+                // "Accessibility of the export"). A structure element cannot
+                // cross a page: Core Graphics closes every open tag when the
+                // page ends (tested on macOS, 26 September 2026, mm-t42.26),
+                // so each page still opens its own list.
+                drawText(line.text, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
             case .dayHeading:
                 CGPDFContextBeginTag(cg, .header2, languageProperties() as CFDictionary)
                 drawText(line.text, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))

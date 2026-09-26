@@ -1035,18 +1035,35 @@ public final class RecordStore {
     /// The winning row for (`kind`, `dueDateKey`): the frozen row with the
     /// earliest freeze moment, or `nil` when none is frozen yet ("Freeze
     /// waits for sync": an unfrozen row is never a winner).
-    public func review(kind: ReviewKind, dueDateKey: String) throws -> ReviewRow? {
+    /// A row dated later than `now` is ignored and kept
+    /// (`ReviewReconciler.winners(in:now:currentDayKey:)`); `calendar`
+    /// gives the device zone, and `nil` means the device's own zone.
+    public func review(kind: ReviewKind, dueDateKey: String, now: Date = .now, calendar: Calendar? = nil) throws -> ReviewRow? {
         let rows = try reviewModels(kind: kind, dueDateKey: dueDateKey)
-        guard let winner = ReviewReconciler.winners(in: rows)["\(kind.rawValue)|\(dueDateKey)"] else { return nil }
+        let winners = ReviewReconciler.winners(in: rows, now: now, currentDayKey: try reviewReadDayKey(now: now, calendar: calendar))
+        guard let winner = winners["\(kind.rawValue)|\(dueDateKey)"] else { return nil }
         return reviewRow(winner)
     }
 
     /// Every `dueDateKey`'s winning row for `kind` — one per key, frozen
     /// rows only (the "Reviews" list, the deterioration rule's last four
-    /// frozen counts, and "Today's pinned note" all read from this).
-    public func reviewRowWinners(kind: ReviewKind) throws -> [ReviewRow] {
+    /// frozen counts, and "Today's pinned note" all read from this). A row
+    /// dated later than `now` is ignored and kept.
+    public func reviewRowWinners(kind: ReviewKind, now: Date = .now, calendar: Calendar? = nil) throws -> [ReviewRow] {
         let rows = try reviewModels(kind: kind)
-        return ReviewReconciler.winners(in: rows).values.map(reviewRow)
+        return ReviewReconciler.winners(in: rows, now: now, currentDayKey: try reviewReadDayKey(now: now, calendar: calendar)).values.map(reviewRow)
+    }
+
+    /// The key of the record day that holds `now`, with the day start in
+    /// effect on it, for the future-dated test of a review read.
+    private func reviewReadDayKey(now: Date, calendar: Calendar?) throws -> String {
+        let calendar = calendar ?? {
+            var device = Calendar(identifier: .gregorian)
+            device.timeZone = .current
+            return device
+        }()
+        let hour = try dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar, startHour: RecordDay.startHour))
+        return RecordDay.key(containing: now, calendar: calendar, startHour: hour)
     }
 
     /// Writes a fresh row for (`kind`, `dueDateKey`), append-only like every

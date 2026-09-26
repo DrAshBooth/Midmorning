@@ -192,6 +192,27 @@ public enum ReviewReconciler {
         }
         return result
     }
+
+    /// The winners a reader sees at `now`. A future-dated row stays in the
+    /// store, but the read ignores it (data-and-privacy spec, "The
+    /// Reconciler never deletes a row": "The Reconciler MUST ignore on read
+    /// a review, a stage opening or a check-in dated later than the device
+    /// clock. It MUST NOT delete such a row.").
+    public static func winners(in rows: [Review], now: Date, currentDayKey: String) -> [String: Review] {
+        winners(in: rows.filter { !isFutureDated($0, now: now, currentDayKey: currentDayKey) })
+    }
+
+    /// A row is future-dated when its due moment or its freeze moment is
+    /// later than `now` (weekly-review spec, "The week's counts are frozen
+    /// in the Review row"; `Programme.ReviewFreeze.isFutureDated` states the
+    /// same rule). The due moment is the day start of `dueDateKey`, so it is
+    /// later than `now` exactly when `dueDateKey` is later than
+    /// `currentDayKey`, the record day that holds `now`.
+    public static func isFutureDated(_ row: Review, now: Date, currentDayKey: String) -> Bool {
+        if row.dueDateKey > currentDayKey { return true }
+        if let frozenAt = row.frozenAt, frozenAt > now { return true }
+        return false
+    }
 }
 
 /// One row per `installId`; winner: later `changedAt`.
