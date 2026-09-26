@@ -366,6 +366,53 @@ final class NonEntryEditInPlaceTests: XCTestCase {
         XCTAssertEqual(try store.profile()?.cautionFlag, true)
     }
 
+    /// A profile write that is earlier than the winning row, for example a
+    /// re-screen after the device clock goes back, changes nothing.
+    func testAnEarlierProfileWriteChangesNothing() throws {
+        let store = try makeTemporaryStore()
+        try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: moment(200), changedAt: moment(200))
+        try store.setProfile(heightCm: 160, onboardingBMI: 18, cautionFlag: true, askedAt: moment(100), changedAt: moment(100))
+        let profiles = try rows(Profile.self, in: store)
+        XCTAssertEqual(profiles.count, 1)
+        XCTAssertEqual(profiles.first?.heightCm, 170)
+        XCTAssertEqual(profiles.first?.cautionFlag, false)
+        XCTAssertEqual(profiles.first?.changedAt, moment(200), "changedAt does not go back")
+    }
+
+    // MARK: List items
+
+    /// Scenario: Edit after a conflict, over `ListItem` rows. Two versions
+    /// of one custom place exist; a touch writes into the winning row, adds
+    /// no row, and the losing row stays as it is.
+    func testEditAfterAConflictWritesIntoTheWinningListItemRow() throws {
+        let store = try makeTemporaryStore()
+        let id = UUID()
+        let deviceA = ListItem(id: id, kind: "customPlace", text: "Mum's", position: 0, changedAt: moment(100))
+        let deviceB = ListItem(id: id, kind: "customPlace", text: "Mum's", position: 1, changedAt: moment(200))
+        try insertFixture([deviceA], into: store)
+        try insertFixture([deviceB], into: store)
+
+        try store.touchCustomPlace("Mum's", at: moment(300))
+
+        let items = try rows(ListItem.self, in: store)
+        XCTAssertEqual(items.count, 2, "the touch adds no row")
+        XCTAssertEqual(Set(items.map(\.id)), [id])
+        XCTAssertEqual(items.first { $0.position == 1 }?.changedAt, moment(300), "the touch is in the winning row")
+        XCTAssertEqual(items.first { $0.position == 0 }?.changedAt, moment(100), "the losing row stays as it is")
+        XCTAssertEqual(try store.customPlaces(), ["Mum's"])
+    }
+
+    /// A touch that is earlier than the winning row changes nothing, so the
+    /// place's recency moment never goes back.
+    func testAnEarlierCustomPlaceTouchChangesNothing() throws {
+        let store = try makeTemporaryStore()
+        try store.touchCustomPlace("Mum's", at: moment(200))
+        try store.touchCustomPlace("Mum's", at: moment(100))
+        let items = try rows(ListItem.self, in: store)
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items.first?.changedAt, moment(200))
+    }
+
     // MARK: Entries keep their version rows
 
     func testAnEntryEditStillWritesANewVersion() throws {

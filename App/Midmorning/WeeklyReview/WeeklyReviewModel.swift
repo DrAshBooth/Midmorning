@@ -185,7 +185,7 @@ enum WeeklyReviewModel {
         let frozen = ReviewFreeze.frozenValues(pending: pending.map(rowValues), counts: FrozenReviewCounts.from(facts), runStartDay: startDay)
         try? store.upsertReview(
             kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: now, answersJSON: frozen.answersJSON,
-            selfHarmAnswered: frozen.selfHarmAnswered, pinnedNote: frozen.pinnedNote, changedAt: now
+            selfHarmAnswered: frozen.selfHarmAnswered, pinnedNote: frozen.pinnedNote, changedAt: now, calendar: calendar
         )
     }
 
@@ -211,7 +211,7 @@ enum WeeklyReviewModel {
         )
         return try? store.upsertReview(
             kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: existing?.frozenAt, answersJSON: values.answersJSON,
-            selfHarmAnswered: values.selfHarmAnswered, pinnedNote: values.pinnedNote, changedAt: now
+            selfHarmAnswered: values.selfHarmAnswered, pinnedNote: values.pinnedNote, changedAt: now, calendar: calendar
         )
     }
 
@@ -239,7 +239,7 @@ enum WeeklyReviewModel {
         let marked = ReviewSave.deteriorationPageShown(existing: rowValues(current))
         try? store.upsertReview(
             kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: current.frozenAt, answersJSON: marked.answersJSON,
-            selfHarmAnswered: marked.selfHarmAnswered, pinnedNote: marked.pinnedNote, changedAt: now
+            selfHarmAnswered: marked.selfHarmAnswered, pinnedNote: marked.pinnedNote, changedAt: now, calendar: calendar
         )
         return true
     }

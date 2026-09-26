@@ -192,9 +192,12 @@ public final class RecordStore {
     /// Writes a new version of `entryId` with the changed fields (record
     /// spec, "Edit an entry"). Keeps the entry's record day and creation
     /// moment as they were; only a fresh `changedAt` and the given fields
-    /// move. When `time` is not the entry's time, the version keeps the
-    /// UTC offset of `deviceZone` at the new time; else it keeps the entry's
-    /// own offset (`EntryOffset.forEdit`). The edit screen passes no offset.
+    /// move. The version keeps the UTC offset of the entry's edit zone at
+    /// `time` (`EntryOffset.forEdit`, `EntryOffset.editZone`): for an entry
+    /// from `deviceZone`, that zone's offset at the edited time; for an
+    /// entry from another zone, the entry's own offset. So the edited time
+    /// and the kept offset still give the kept record day key. The edit
+    /// screen passes no offset.
     /// Throws `Failure.saveFailed` when `entryId` has no current version.
     @discardableResult
     public func update(
@@ -432,13 +435,16 @@ public final class RecordStore {
     /// Keeps `text` as a custom place, touching its `changedAt` (its recency
     /// moment) when it already exists. Does nothing for an empty or a fixed
     /// chip's text. The touch writes into the winning row of the place: of
-    /// the winners per id, the one with the latest `changedAt`.
+    /// the winners per id, the one with the latest `changedAt`. A touch that
+    /// is earlier than that row changes nothing (`Self.wins`), so the
+    /// recency moment never goes back.
     public func touchCustomPlace(_ text: String, at moment: Date) throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !WhereChip.fixed.map(\.rawValue).contains(trimmed) else { return }
         let descriptor = FetchDescriptor<ListItem>(predicate: #Predicate { $0.kind == "customPlace" && $0.text == trimmed })
         let winners = Reconciler.latestWins(try context.fetch(descriptor), key: \.id, changedAt: \.changedAt).values
         if let existing = winners.max(by: { $0.changedAt < $1.changedAt }) {
+            guard Self.wins(moment, over: existing.changedAt) else { return }
             existing.changedAt = moment
             existing.deleted = false
         } else {
@@ -652,9 +658,11 @@ public final class RecordStore {
     /// Writes into the winning `Profile` row, or inserts the first one.
     /// Onboarding calls this once, at "Start"; a later re-screen calls it
     /// again with a later `changedAt`, the field `data-and-privacy` keeps on
-    /// sync.
+    /// sync. A write that is earlier than the winning row changes nothing
+    /// (`Self.wins`), so an older screening never replaces a newer one.
     public func setProfile(heightCm: Double, onboardingBMI: Double, cautionFlag: Bool, askedAt: Date, changedAt: Date = .now) throws {
         if let existing = try profile() {
+            guard Self.wins(changedAt, over: existing.changedAt) else { return }
             existing.heightCm = heightCm
             existing.onboardingBMI = onboardingBMI
             existing.cautionFlag = cautionFlag

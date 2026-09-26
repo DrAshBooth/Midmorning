@@ -27,9 +27,10 @@ struct EditEntryView: View {
 
     /// The entry's own record day, the one segment of the time control.
     private let ownDay: RecordTimeControl.Segment
-    /// The entry's own zone (`EntryOffset.editZone`), so the wheel shows the
-    /// time Today shows on the row. The store keeps the offset at the
-    /// edited time (`EntryOffset.forEdit`).
+    /// The entry's edit zone (`EntryOffset.editZone`), so the wheel shows
+    /// the time Today shows on the row. The store keeps the offset of the
+    /// same zone at the edited time (`EntryOffset.forEdit`), so Today then
+    /// shows the time that the wheel showed.
     private let calendar: Calendar
     @State private var openedAt = Date()
 
