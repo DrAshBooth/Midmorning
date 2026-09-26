@@ -106,9 +106,55 @@ final class SafeModeLaunchTests: XCTestCase {
         XCTAssertEqual(LaunchMarkerFile.Content(text: "2"), .init(streak: 2, uncountedFailures: 0))
         XCTAssertEqual(LaunchMarkerFile.Content(text: "2 1\n"), .init(streak: 2, uncountedFailures: 1))
         XCTAssertEqual(LaunchMarkerFile.Content(text: "- 3"), .init(streak: nil, uncountedFailures: 3))
+        XCTAssertEqual(LaunchMarkerFile.Content(text: "2 1 4"), .init(streak: 2, uncountedFailures: 1, uncountedCrashes: 4))
+        XCTAssertEqual(LaunchMarkerFile.Content(text: "- 0 2"), .init(streak: nil, uncountedFailures: 0, uncountedCrashes: 2))
         XCTAssertEqual(LaunchMarkerFile.Content(text: "?"), .init(streak: 0, uncountedFailures: 0))
         XCTAssertEqual(LaunchMarkerFile.Content(streak: 4, uncountedFailures: 0).text, "4")
         XCTAssertEqual(LaunchMarkerFile.Content(streak: nil, uncountedFailures: 2).text, "- 2")
+        XCTAssertEqual(LaunchMarkerFile.Content(streak: 2, uncountedFailures: 1, uncountedCrashes: 3).text, "2 1 3")
+        XCTAssertEqual(LaunchMarkerFile.Content(streak: nil, uncountedFailures: 0, uncountedCrashes: 1).text, "- 0 1")
+    }
+
+    /// MetricKit delivers each payload once. Safe mode writes nothing to
+    /// `Local.store`, so the marker keeps the crash count that safe mode
+    /// receives, before and after its Today appears. The next launch that
+    /// opens the store for writing adds the count to `Local.store`.
+    func testTheNextOrdinaryLaunchAddsSafeModesCrashes() throws {
+        _ = launch()
+        _ = launch()
+        let safeMode = launch()
+        XCTAssertEqual(safeMode.store?.isReadOnly, true)
+
+        safeMode.session.keepCrashesForTheNextLaunch(2)
+        XCTAssertEqual(markerContent(), "2 1 2")
+        safeMode.session.clearAfterTodayAppears()
+        XCTAssertEqual(markerContent(), "- 1 2")
+        safeMode.session.keepCrashesForTheNextLaunch(1)
+        XCTAssertEqual(markerContent(), "- 1 3", "a delivery after Today appears keeps the marker cleared")
+        XCTAssertEqual(try safeMode.store?.diagnosticsCounts(contentVersion: 1).crashCount, 0, "safe mode adds nothing to Local.store")
+
+        let next = launch()
+
+        XCTAssertEqual(next.session.outcome?.launchOutcome.enterSafeMode, false)
+        XCTAssertEqual(try next.store?.diagnosticsCounts(contentVersion: 1).crashCount, 3)
+        XCTAssertEqual(try next.store?.diagnosticsCounts(contentVersion: 1).launchFailures, 2)
+        XCTAssertEqual(next.session.uncountedCrashes, 0)
+        XCTAssertEqual(markerContent(), "0")
+    }
+
+    /// Delete-all deletes the marker file. A later MetricKit delivery in
+    /// the same process writes no marker again.
+    func testASessionWritesNoMarkerAfterADeletion() throws {
+        _ = launch()
+        _ = launch()
+        let safeMode = launch()
+        LaunchMarkerFile.clear(at: markerURL)
+
+        safeMode.session.endAfterDeletion()
+        safeMode.session.keepCrashesForTheNextLaunch(1)
+        safeMode.session.clearAfterTodayAppears()
+
+        XCTAssertNil(markerContent())
     }
 
     /// A cleared marker that keeps uncounted failures is not an uncleared

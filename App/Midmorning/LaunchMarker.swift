@@ -30,4 +30,10 @@ enum LaunchMarker {
             session?.clearAfterTodayAppears()
         }
     }
+
+    /// Delete-all and "Delete from this device" finished. A later MetricKit
+    /// delivery in safe mode then writes no marker file again.
+    static func endAfterDeletion() {
+        session?.endAfterDeletion()
+    }
 }

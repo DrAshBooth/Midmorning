@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import XCTest
 @testable import Record
 import RecordTestSupport
@@ -80,6 +81,39 @@ final class SafeModeReadOnlyStoreTests: XCTestCase {
         XCTAssertEqual(try reopened.entries(dayKey: "2026-09-21").map(\.what), ["Toast and tea"])
         XCTAssertEqual(try reopened.localSettingValue(key: "test.value"), "kept")
         XCTAssertEqual(try reopened.diagnosticsCounts(contentVersion: 1).launchFailures, 0)
+    }
+
+    /// Scenario "Safe mode with a pending migration": no migration step
+    /// writes to the store. The `Record.store` here holds only `Item`, as
+    /// an earlier schema with fewer record types would, so the current
+    /// schema needs a migration. SwiftData migrates in place, and a
+    /// read-only open cannot write, so the open throws and neither file
+    /// changes. The app then shows the store-failure page, not safe mode's
+    /// Today with Export: bead mm-t42.28 (label human) asks Ash how safe
+    /// mode reads a store that needs a migration.
+    func testASafeModeOpenOfAStoreThatNeedsAMigrationWritesNothing() throws {
+        let root = try makeRecordOnDisk()
+        let directory = StoreLayout.storeDirectory(applicationSupportDirectory: root)
+        for name in ["Record.store", "Record.store-wal", "Record.store-shm"] {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+        }
+        try autoreleasepool {
+            let smaller = Schema([Item.self])
+            let container = try ModelContainer(
+                for: smaller,
+                configurations: ModelConfiguration("Record", schema: smaller, url: directory.appendingPathComponent("Record.store"), cloudKitDatabase: .none)
+            )
+            let context = ModelContext(container)
+            context.insert(Item(id: UUID()))
+            try context.save()
+        }
+        waitUntilTheWriteAheadLogsAreEmpty(root: root)
+        let before = storeBytes(root: root)
+        XCTAssertNotNil(before["Record.store"])
+
+        XCTAssertThrowsError(try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root, readOnly: true))
+
+        XCTAssertEqual(storeBytes(root: root), before, "no migration step writes to the store")
     }
 
     /// A safe-mode open never makes a store: with no store on the device,

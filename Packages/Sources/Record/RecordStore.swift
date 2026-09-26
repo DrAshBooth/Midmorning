@@ -112,7 +112,10 @@ public final class RecordStore {
     /// True for safe mode's open (data-and-privacy spec, "Launch safety":
     /// "In safe mode the app MUST open the store read-only"; ruling r13-05,
     /// mm-t42.23). Both configurations then carry `allowsSave: false`, so
-    /// no save and no migration can write to either file.
+    /// no save and no migration can write to either file. A store that
+    /// needs a migration cannot open read-only: SwiftData migrates in
+    /// place, so the open throws and the files do not change. Bead
+    /// mm-t42.28 (label human) asks Ash how safe mode reads that store.
     public let isReadOnly: Bool
 
     /// Opens the store from the two files in `directory`: `Record.store` and

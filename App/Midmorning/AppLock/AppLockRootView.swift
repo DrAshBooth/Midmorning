@@ -45,14 +45,14 @@ struct AppLockRootView: View {
                 OnboardingGatedRootView(
                     store: store,
                     controller: controller,
-                    onEverythingDeleted: { phase = .deleted(.everything) },
-                    onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
+                    onEverythingDeleted: { showDeleted(.everything) },
+                    onDeleteFromThisDevice: { showDeleted(.thisDeviceOnly) }
                 )
             case .safeMode(let store):
                 SafeModeRootView(
                     store: store,
-                    onEverythingDeleted: { phase = .deleted(.everything) },
-                    onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
+                    onEverythingDeleted: { showDeleted(.everything) },
+                    onDeleteFromThisDevice: { showDeleted(.thisDeviceOnly) }
                 )
             case .deleted(let kind):
                 DeletedScreen(kind: kind)
@@ -60,7 +60,7 @@ struct AppLockRootView: View {
                 StoreOpenFailureView(
                     seam: Self.makeSeam(),
                     onTryAgain: { attemptOpen() },
-                    onDeleted: { phase = .deleted(.everything) }
+                    onDeleted: { showDeleted(.everything) }
                 )
             }
         }
@@ -68,6 +68,13 @@ struct AppLockRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)) { _ in
             attemptOpen()
         }
+    }
+
+    /// The deletion removed the launch marker file, so the launch session
+    /// writes no marker again in this process.
+    private func showDeleted(_ kind: DeletedScreen.Kind) {
+        LaunchMarker.endAfterDeletion()
+        phase = .deleted(kind)
     }
 
     /// Checks protected data first, before ever constructing a
@@ -115,8 +122,9 @@ struct AppLockRootView: View {
     /// mm-t42.23): the marker chooses safe mode before the open, so a
     /// pending migration cannot write, and safe mode writes nothing. The
     /// launch failure then stays in the marker for the next ordinary launch
-    /// (`LaunchSession.countLaunchFailureIfNeeded`). MetricKit connects
-    /// only to a store that can save its crash count.
+    /// (`LaunchSession.countLaunchFailureIfNeeded`). So does each MetricKit
+    /// crash that safe mode receives: MetricKit delivers each payload once,
+    /// and those crashes are the ones that started safe mode.
     private static func openStoreAndController(metricKitSubscriber: MetricKitSubscriber) throws -> (store: RecordStore, controller: AppLockController, enterSafeMode: Bool) {
         let applicationSupportDirectory = try StoreLocation.applicationSupportDirectory()
         let launch = LaunchMarker.session(applicationSupportDirectory: applicationSupportDirectory)
@@ -124,7 +132,11 @@ struct AppLockRootView: View {
         let enterSafeMode = launchMarker.launchOutcome.enterSafeMode
         let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory, readOnly: enterSafeMode)
         launch.countLaunchFailureIfNeeded(in: store)
-        if !store.isReadOnly {
+        if store.isReadOnly {
+            metricKitSubscriber.connect { crashes in
+                launch.keepCrashesForTheNextLaunch(crashes)
+            }
+        } else {
             metricKitSubscriber.connect { [weak store] crashes in
                 for _ in 0..<crashes { _ = try? store?.incrementCrashCount() }
             }
