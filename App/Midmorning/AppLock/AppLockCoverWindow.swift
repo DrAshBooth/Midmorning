@@ -156,6 +156,7 @@ private struct AppLockCoverModifier: ViewModifier {
     let onDeleteFromThisDevice: () -> Void
 
     @StateObject private var coverWindow = AppLockCoverWindow()
+    @Environment(\.scenePhase) private var scenePhase
 
     func body(content: Content) -> some View {
         content
@@ -179,6 +180,18 @@ private struct AppLockCoverModifier: ViewModifier {
                     }
                 ))
             })
+            .onAppear {
+                if scenePhase == .active { noteDevice() }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { noteDevice() }
+            }
+    }
+
+    /// The device can lose its passcode while the app runs; then the app
+    /// lock is off (mm-t15.16).
+    private func noteDevice() {
+        controller.noteDeviceBiometry(BiometryDetector.current())
     }
 }
 

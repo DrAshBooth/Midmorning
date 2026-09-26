@@ -3,15 +3,6 @@ import UIKit
 import Record
 import AppLock
 
-/// The `LocalSetting` keys the app lock owns in `Local.store`
-/// (data-and-privacy spec, "Two store configurations in one directory").
-enum AppLockSettingsKeys {
-    static let enabled = "appLock.enabled"
-    static let faceOrTouchOnly = "appLock.faceOrTouchOnly"
-    static let lockAfterSeconds = "appLock.lockAfterSeconds"
-    static let enrolmentStateHash = "appLock.enrolmentStateHash"
-}
-
 /// The app's root: opens `RecordStore` lazily, only once protected data is
 /// available, and shows one of four phases (data-and-privacy spec, "Launch
 /// safety", "File protection": "Launch before the first unlock"; design.md,
@@ -119,18 +110,7 @@ struct AppLockRootView: View {
     }
 
     private static func makeController(store: RecordStore) -> AppLockController {
-        let enabledSetting = (try? store.localSettingValue(key: AppLockSettingsKeys.enabled)) ?? nil
-        // Requirement: "The app lock is on by default" — no saved row yet
-        // means the person has not turned it off, so it is on.
-        let appLockEnabled = enabledSetting.map { $0 == "true" } ?? true
-        let faceOrTouchOnly = ((try? store.localSettingValue(key: AppLockSettingsKeys.faceOrTouchOnly)) ?? nil) == "true"
-        let lockAfterSeconds = ((try? store.localSettingValue(key: AppLockSettingsKeys.lockAfterSeconds)) ?? nil)
-            .flatMap { TimeInterval($0) } ?? 0
-        return AppLockController(
-            state: .launch(appLockEnabled: appLockEnabled, faceOrTouchOnlyEnabled: faceOrTouchOnly, lockAfterSeconds: lockAfterSeconds),
-            authenticator: LAContextAuthenticator(),
-            deleteAllSeam: Self.makeSeam()
-        )
+        AppLockControllerFactory.make(store: store)
     }
 
     /// The Privacy group's "Delete everything" (`Record.DeleteAllSeam`) and
@@ -190,7 +170,10 @@ private struct OnboardingGatedRootView: View {
                 onDeleteFromThisDevice: onDeleteFromThisDevice
             )
         } else {
-            OnboardingRootView(store: store) { isOnboardingCompleted = true }
+            OnboardingRootView(store: store) {
+                AppLockControllerFactory.applyOnboardingChoice(to: controller, store: store)
+                isOnboardingCompleted = true
+            }
         }
     }
 }
@@ -276,16 +259,8 @@ private struct RunningRootView: View {
 
     /// Requirement: "Face ID only or Touch ID only" — "compare the
     /// enrolment state with the kept hash before each system authentication
-    /// request." Only relevant while the setting is on and the app is
-    /// about to ask; the first run has no kept hash, so it only saves one.
+    /// request." `AppLockEnrolmentCheck` holds the check.
     private func checkEnrolmentStateIfNeeded() {
-        guard controller.state.faceOrTouchOnlyEnabled, controller.state.isLocked else { return }
-        guard let current = EnrolmentHash.current() else { return }
-        let kept = (try? store.localSettingValue(key: AppLockSettingsKeys.enrolmentStateHash)) ?? nil
-        if kept == nil {
-            try? store.setLocalSettingValue(current, key: AppLockSettingsKeys.enrolmentStateHash)
-            return
-        }
-        controller.noteEnrolmentState(current: current, kept: kept)
+        AppLockEnrolmentCheck.run(controller: controller, store: store)
     }
 }

@@ -44,7 +44,10 @@ struct LAContextAuthenticator: AuthenticationPerforming {
 
 /// Detects what the device offers, for the label function and for enabling
 /// "Face ID only"/"Touch ID only". Requirement: "The app lock is on by
-/// default" — `Biometry`'s four values.
+/// default" — `Biometry`'s four values. With `.none` the app lock is off
+/// (`AppLockLaunch.isEnabled`), so only the "no passcode" error gives
+/// `.none`. Any other failure gives `.passcodeOnly` and keeps the app lock
+/// on.
 enum BiometryDetector {
     static func current(context: LAContext = LAContext()) -> Biometry {
         var biometricError: NSError?
@@ -56,8 +59,12 @@ enum BiometryDetector {
             }
         }
         var passcodeError: NSError?
-        let hasPasscode = LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &passcodeError)
-        return hasPasscode ? .passcodeOnly : .none
+        if LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &passcodeError) {
+            return .passcodeOnly
+        }
+        let noPasscode = passcodeError?.domain == LAErrorDomain
+            && passcodeError?.code == LAError.Code.passcodeNotSet.rawValue
+        return noPasscode ? .none : .passcodeOnly
     }
 }
 

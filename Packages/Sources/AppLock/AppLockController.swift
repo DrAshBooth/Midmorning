@@ -15,11 +15,20 @@ public final class AppLockController: ObservableObject {
 
     private let authenticator: AuthenticationPerforming
     private let deleteAllSeam: DeleteAllPerforming
+    /// Where the three values the Privacy group changes are kept (mm-8jr).
+    /// `nil` in a test that does not check persistence.
+    private let settings: AppLockSettingsStoring?
 
-    public init(state: AppLifecycleState, authenticator: AuthenticationPerforming, deleteAllSeam: DeleteAllPerforming) {
+    public init(
+        state: AppLifecycleState,
+        authenticator: AuthenticationPerforming,
+        deleteAllSeam: DeleteAllPerforming,
+        settings: AppLockSettingsStoring? = nil
+    ) {
         self.state = state
         self.authenticator = authenticator
         self.deleteAllSeam = deleteAllSeam
+        self.settings = settings
     }
 
     /// Every scene-phase, protected-data and pending-route change goes
@@ -35,6 +44,31 @@ public final class AppLockController: ObservableObject {
         let succeeded = await authenticator.authenticate(reason: BiometryLabels.unlockReason, policy: state.authenticationPolicy)
         if succeeded { handle(.authenticationSucceeded) }
         return succeeded
+    }
+
+    /// Onboarding spec, "Screen 4: permissions", scenarios "App lock
+    /// default" and "App lock off": "Start" applies the person's choice to
+    /// this controller, which the app built before onboarding. The person
+    /// made the choice a moment ago, so Today opens with no cover. Screen 4
+    /// writes the row to `Local.store` itself.
+    public func applyOnboardingChoice(appLockEnabled: Bool) {
+        state.appLockEnabled = appLockEnabled
+        state.isLocked = false
+        state.enrolmentChanged = false
+    }
+
+    /// Requirement "The app lock is on by default": "When the device has no
+    /// passcode, the switch MUST be off". Requirement "Fallback to the
+    /// device passcode": "The app MUST NOT ... lock the person out." The
+    /// App target calls this each time the scene becomes active, because
+    /// the person can remove the device passcode while the app runs. It
+    /// writes nothing, so the saved choice applies again at the next launch
+    /// on a device with a passcode.
+    public func noteDeviceBiometry(_ biometry: Biometry) {
+        guard biometry == .none, state.appLockEnabled else { return }
+        state.appLockEnabled = false
+        state.isLocked = false
+        state.enrolmentChanged = false
     }
 
     /// "Delete everything" on the cover authenticates only; the caller
@@ -88,6 +122,7 @@ public final class AppLockController: ObservableObject {
         if succeeded {
             state.appLockEnabled = false
             state.isLocked = false
+            settings?.setAppLockSetting("false", forKey: AppLockSettingsKeys.enabled)
         }
         return succeeded
     }
@@ -95,12 +130,14 @@ public final class AppLockController: ObservableObject {
     public func turnOnAppLock() {
         state.appLockEnabled = true
         state.isLocked = true
+        settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.enabled)
     }
 
     /// The "Face ID only"/"Touch ID only" warning's "Turn on": no
     /// authentication, only the warning the person just read.
     public func confirmTurnOnFaceOrTouchOnly() {
         state.faceOrTouchOnlyEnabled = true
+        settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.faceOrTouchOnly)
     }
 
     /// Requirement: "Face ID only or Touch ID only" — "The app MUST make
@@ -108,12 +145,18 @@ public final class AppLockController: ObservableObject {
     @discardableResult
     public func tapTurnOffFaceOrTouchOnly() async -> Bool {
         let succeeded = await authenticator.authenticate(reason: BiometryLabels.unlockReason, policy: state.authenticationPolicy)
-        if succeeded { state.faceOrTouchOnlyEnabled = false }
+        if succeeded {
+            state.faceOrTouchOnlyEnabled = false
+            settings?.setAppLockSetting("false", forKey: AppLockSettingsKeys.faceOrTouchOnly)
+        }
         return succeeded
     }
 
+    /// Requirement "Lock after": "The choice is a device value in
+    /// `Local.store`."
     public func setLockAfterSeconds(_ seconds: TimeInterval) {
         state.lockAfterSeconds = seconds
+        settings?.setAppLockSetting(String(Int(seconds)), forKey: AppLockSettingsKeys.lockAfterSeconds)
     }
 
     /// Compares the enrolment state the "Face ID only or Touch ID only"

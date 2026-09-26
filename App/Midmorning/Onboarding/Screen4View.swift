@@ -13,6 +13,8 @@ struct Screen4View: View {
     var onStart: () -> Void
 
     @State private var isShowingWidgetSheet = false
+    /// Read once, when the screen appears (`BiometryDetector`).
+    @State private var biometry: Biometry?
 
     var body: some View {
         NavigationStack {
@@ -32,11 +34,18 @@ struct Screen4View: View {
                     Button(Screen4Content.allowNotifications) { requestNotifications() }
                 }
 
+                // onboarding spec, "Screen 4: permissions": the switch, with
+                // the label `app-lock` defines, and the lock sentence under
+                // it, both for the device's own `Biometry`. With no device
+                // passcode the switch is off and disabled, with the
+                // passcode message under it (app-lock spec, "The app lock
+                // is on by default").
                 Section {
-                    Toggle(appLockLabel, isOn: $answers.appLockOn)
-                    if answers.appLockOn {
-                        Text(lockSentence).font(.footnote).foregroundStyle(.secondary)
-                    }
+                    Toggle(lockStrings.lockLabel, isOn: lockStrings.isLockEnabled ? $answers.appLockOn : .constant(false))
+                        .disabled(!lockStrings.isLockEnabled)
+                    Text(lockStrings.isLockEnabled ? lockStrings.onboardingSentence : BiometryLabels.noPasscodeMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section {
@@ -54,6 +63,9 @@ struct Screen4View: View {
                     .background(.bar)
             }
             .getSupport()
+            .onAppear {
+                if biometry == nil { biometry = BiometryDetector.current() }
+            }
             .sheet(isPresented: $isShowingWidgetSheet) {
                 NavigationStack {
                     Text(Screen4Content.widgetInstructions)
@@ -64,18 +76,11 @@ struct Screen4View: View {
         }
     }
 
-    private var appLockLabel: String {
-        BiometryLabels.strings(for: currentBiometry).lockLabel
+    /// The label, the enabled state and the sentence for the device's own
+    /// `Biometry`, from `app-lock`'s one label function (mm-t14.31).
+    private var lockStrings: BiometryStrings {
+        BiometryLabels.strings(for: biometry ?? .passcodeOnly)
     }
-
-    private var lockSentence: String {
-        BiometryLabels.strings(for: currentBiometry).onboardingSentence
-    }
-
-    /// The device's real biometry needs `LocalAuthentication`, a device
-    /// check per `app-lock`'s own design; `.faceID` is this build's default
-    /// so the sentence has real text to show.
-    private var currentBiometry: Biometry { .faceID }
 
     private func requestNotifications() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
