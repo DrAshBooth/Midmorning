@@ -34,6 +34,10 @@ final class OnboardingAnswers: ObservableObject {
     @Published var pregnancyAnswer: PregnancyAnswer?
     @Published var selfHarmFirst: SelfHarmFirstAnswer?
     @Published var selfHarmSecond: SelfHarmSecondAnswer?
+    /// The four values the store keeps from the screening, held here until
+    /// "Start" writes them (onboarding spec, "Finish": "The app MUST NOT
+    /// keep answers from an unfinished onboarding.").
+    @Published var keptScreening: ScreeningKeptValues?
 
     // Screen 3
     @Published var startDayChoice: StartDayChoice.Choice = .today
@@ -72,11 +76,6 @@ final class OnboardingAnswers: ObservableObject {
     var heightCm: Double? { height.value }
 
     var weightKg: Double? { weight.value }
-
-    var bmi: Double? {
-        guard let heightCm, let weightKg else { return nil }
-        return BMI.value(heightCm: heightCm, weightKg: weightKg)
-    }
 
     /// The answers as `ScreeningForm` reads them. The restart re-screen
     /// passes `asksAge: false`, because it never asks the age again.
@@ -118,6 +117,7 @@ final class OnboardingAnswers: ObservableObject {
         pregnancyAnswer = nil
         selfHarmFirst = nil
         selfHarmSecond = nil
+        keptScreening = nil
         startDayChoice = .today
         weighInWeekday = nil
         wontBeWeighing = false
