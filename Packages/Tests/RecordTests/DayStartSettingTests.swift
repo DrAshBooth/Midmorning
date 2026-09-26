@@ -27,7 +27,7 @@ final class DayStartSettingTests: XCTestCase {
         try store.setDayStartHour(5, now: at(9, 12), calendar: utc, changedAt: at(9, 12))
 
         let now = at(10, 4, 30)
-        let dayStart = try store.dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: utc))
+        let dayStart = try store.dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: utc, startHour: RecordDay.startHour))
         XCTAssertEqual(dayStart, 5, "the app uses 05:00 as the day start")
         XCTAssertEqual(RecordDay.key(containing: now, calendar: utc, startHour: dayStart), "2026-10-09", "04:30 is still the record day of 9 October")
         let row = try store.add(time: now, what: "Toast", feltLikeABinge: false, createdAt: now, utcOffsetSeconds: 0, dayStartHour: dayStart)

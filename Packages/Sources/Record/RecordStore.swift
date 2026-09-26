@@ -1062,7 +1062,7 @@ public final class RecordStore {
             device.timeZone = .current
             return device
         }()
-        let hour = try dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar))
+        let hour = try dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar, startHour: RecordDay.startHour))
         return RecordDay.key(containing: now, calendar: calendar, startHour: hour)
     }
 

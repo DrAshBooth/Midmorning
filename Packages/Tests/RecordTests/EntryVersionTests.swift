@@ -161,7 +161,7 @@ final class EntryVersionTests: XCTestCase {
         XCTAssertEqual(row.dayKey, "2026-10-06")
 
         // In Tokyo the same moment is 07:30 on 7 October, a different record day.
-        XCTAssertEqual(RecordDay.key(containing: savedAt, calendar: tokyo), "2026-10-07")
+        XCTAssertEqual(RecordDay.key(containing: savedAt, calendar: tokyo, startHour: RecordDay.startHour), "2026-10-07")
         XCTAssertFalse(try store.entries(recordDayContaining: savedAt, calendar: tokyo).contains { $0.id == row.id }, "Tokyo's 7 October does not take the entry")
         XCTAssertEqual(try store.entries(dayKey: "2026-10-06").map(\.id), [row.id], "the entry stays on 6 October")
 

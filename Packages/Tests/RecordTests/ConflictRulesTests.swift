@@ -101,7 +101,7 @@ final class ConflictRulesTests: XCTestCase {
         try store.add(time: at(13, 45), what: "Soup", feltLikeABinge: false, createdAt: at(13, 50), utcOffsetSeconds: london.secondsFromGMT(for: at(13, 45)))
 
         let plan = try XCTUnwrap(store.dayPlan(dateKey: "2026-10-06"))
-        let recordDay = RecordDay.interval(containing: at(12, 0), calendar: calendar)
+        let recordDay = RecordDay.interval(containing: at(12, 0), calendar: calendar, startHour: RecordDay.startHour)
         let windows = PlanWindows.windows(for: PlanCodec.decode(plan.slotsJSON), recordDay: recordDay, dayStartHour: 4, beforeMinutes: plan.windowBeforeMinutes, afterMinutes: plan.windowAfterMinutes, calendar: calendar)
         let entries = try store.entries(dayKey: "2026-10-06")
         let matches = PlanMatching.match(windows: windows, entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) })
