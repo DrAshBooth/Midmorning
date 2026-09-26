@@ -1,4 +1,5 @@
 import SwiftUI
+import Record
 import Programme
 
 /// The GP suggestion page (safeguarding spec, "The GP suggestion page").
@@ -6,6 +7,7 @@ import Programme
 /// "I'm getting worse") open this from their own triggers; this change
 /// builds the page itself.
 struct GPSuggestionPageView: View {
+    let store: RecordStore
     let reasons: [GPSuggestionReason]
     var onDone: () -> Void
 
@@ -28,7 +30,7 @@ struct GPSuggestionPageView: View {
                         .font(.title2.bold())
                     GPParagraphView(variant: .standard)
 
-                    ExportStubButton()
+                    ExportControlButton(store: store)
 
                     Button(CommonLabels.done) { onDone() }
                         .buttonStyle(.borderedProminent)

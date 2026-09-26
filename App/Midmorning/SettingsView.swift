@@ -4,6 +4,7 @@ import Record
 import Content
 import AppLock
 import Programme
+import Export
 
 /// The settings screen: one screen, one tap from Today (settings spec, "One
 /// screen, one tap from Today"). Shows its groups in the spec's order:
@@ -58,6 +59,13 @@ struct SettingsView: View {
                     .onChange(of: weeklySummaryOn) { _, on in try? store.setWeeklySummaryOn(on) }
                 Toggle("settings.record.gapBands", isOn: $gapBandsOn)
                     .onChange(of: gapBandsOn) { _, on in try? store.setGapBandsOn(on) }
+                // settings spec, "The Record group": "'Export' as a
+                // control." export spec, "Choose a date range": reachable
+                // from the settings screen in one tap, and from Today in two
+                // (Today's own "Settings" control is the first).
+                NavigationLink(ExportContent.screenTitle) {
+                    ExportScreenView(store: store)
+                }
             }
 
             Section("settings.group.weighIn") {

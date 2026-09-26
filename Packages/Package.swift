@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "AppLock", targets: ["AppLock"]),
         .library(name: "Programme", targets: ["Programme"]),
         .library(name: "Content", targets: ["Content"]),
+        .library(name: "Export", targets: ["Export"]),
         .executable(name: "content-lock", targets: ["ContentLockTool"]),
         .executable(name: "content-signoff-list", targets: ["ContentSignOffListTool"]),
     ],
@@ -31,7 +32,7 @@ let package = Package(
         // pending-card output with `Record`'s `TodayCardSlot` — the seam
         // `programme-engine` (2.1) wires in the App target
         // (`v1-programme/design.md`, "Programme takes value facts").
-        .testTarget(name: "RecordTests", dependencies: ["Record", "Programme"]),
+        .testTarget(name: "RecordTests", dependencies: ["Record", "Programme", "Export", "AppLock"]),
         // The plan, templates, planned days, the match of planned meals to
         // entries and the gap computation (design.md, "One umbrella package,
         // five targets"). Pure value types and functions only: it takes
@@ -68,6 +69,15 @@ let package = Package(
             .copy("Resources/content-lock.json"),
         ]),
         .testTarget(name: "ContentTests", dependencies: ["Content"], path: "Tests/ContentTests"),
+        // `ExportDocument`, `Paginator` and `ExportFileName` (export spec,
+        // "The document and the paginator live in a package"): imports no
+        // UIKit, so it stays testable under `swift test` on macOS, where
+        // UIKit does not exist; the app target supplies the text measurer
+        // and does the Core Graphics drawing (4.2, `mm-t42.10`). Depends on
+        // `Record` only for its already-neutral read types (`RecordRow`,
+        // `DayStateKind`), never a `@Model` class.
+        .target(name: "Export", dependencies: ["Record", "Programme"]),
+        .testTarget(name: "ExportTests", dependencies: ["Export", "Record", "Programme"]),
         // scripts/content-lock runs this. It is not part of `swift test`.
         .executableTarget(name: "ContentLockTool", dependencies: ["Content"], path: "Tools/ContentLockTool"),
         // scripts/content-signoff-list runs this. It is not part of `swift test`.

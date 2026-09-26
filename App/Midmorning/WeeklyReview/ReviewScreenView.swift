@@ -91,10 +91,10 @@ struct ReviewScreenView: View {
         }
         .onAppear(perform: load)
         .fullScreenCover(isPresented: Binding(get: { notRightNowReasons != nil }, set: { if !$0 { notRightNowReasons = nil } })) {
-            NotRightNowPageView(reasons: notRightNowReasons ?? []) { notRightNowReasons = nil }
+            NotRightNowPageView(store: store, reasons: notRightNowReasons ?? []) { notRightNowReasons = nil }
         }
         .fullScreenCover(isPresented: Binding(get: { gpSuggestionReasons != nil }, set: { if !$0 { gpSuggestionReasons = nil } })) {
-            GPSuggestionPageView(reasons: gpSuggestionReasons ?? []) { gpSuggestionReasons = nil }
+            GPSuggestionPageView(store: store, reasons: gpSuggestionReasons ?? []) { gpSuggestionReasons = nil }
         }
     }
 

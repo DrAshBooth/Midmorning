@@ -260,6 +260,19 @@ public final class RecordStore {
         try entries(dayKey: dayKey).count
     }
 
+    /// The earliest record day key with a non-deleted entry, or `nil` when
+    /// none exists (export spec, "Choose a date range": "When the earliest
+    /// record day with an entry is later, 'From' MUST default to that
+    /// day."). A coarse presence check, like `dateKeysWithContent(before:)`:
+    /// any surviving `ItemVersion` for the day counts, with no per-entry
+    /// winner picked first.
+    public func earliestEntryDayKey() throws -> String? {
+        var descriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { !$0.deleted }, sortBy: [SortDescriptor(\.dayKey)])
+        descriptor.includePendingChanges = false
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first?.dayKey
+    }
+
     /// Every date key before `dateKey` that has a non-deleted entry or an
     /// active day state, for "Earlier record days". A coarse presence check:
     /// any surviving `ItemVersion` for the day counts, without picking a
