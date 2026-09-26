@@ -189,11 +189,23 @@ public final class AppLockController: ObservableObject {
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.enabled)
     }
 
-    /// The "Face ID only"/"Touch ID only" warning's "Turn on": no
-    /// authentication, only the warning the person just read.
-    public func confirmTurnOnFaceOrTouchOnly() {
+    /// The "Face ID only"/"Touch ID only" warning's "Turn on": no new
+    /// authentication request, only the warning the person just read. The
+    /// person is past the lock already: the Privacy group shows only under
+    /// an unlocked app, and the control is disabled while the app lock is
+    /// off.
+    ///
+    /// Ruling r13-06 (mm-t15.20): each turn-on saves the current enrolment
+    /// state hash, so an enrolment change made while the setting was off
+    /// does not lock the person out later. This is not a reset: the kept
+    /// hash then compares as before. With no `currentEnrolmentHash` (the
+    /// device gave none), the kept hash stays as it is.
+    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: String? = nil) {
         state.faceOrTouchOnlyEnabled = true
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.faceOrTouchOnly)
+        if let currentEnrolmentHash {
+            settings?.setAppLockSetting(currentEnrolmentHash, forKey: AppLockSettingsKeys.enrolmentStateHash)
+        }
     }
 
     /// Requirement: "Face ID only or Touch ID only" — "The app MUST make

@@ -118,6 +118,62 @@ final class AppLockControllerTests: XCTestCase {
         XCTAssertFalse(controller.state.faceOrTouchOnlyEnabled)
     }
 
+    private func makeController(settings: InMemoryAppLockSettings) -> AppLockController {
+        let controller = AppLockController(
+            state: .launch(appLockEnabled: true),
+            authenticator: FakeAuthenticator(result: true),
+            deleteAllSeam: RecordingDeleteAllSeam(),
+            settings: settings
+        )
+        controller.handle(.authenticationSucceeded)
+        return controller
+    }
+
+    /// Ruling r13-06 (mm-t15.20): the person turns "Face ID only" on,
+    /// turns it off, adds a face in the iOS Settings app and turns it on
+    /// again. The second turn-on saves the new hash, so the next lock
+    /// still shows "Unlock".
+    func testTurningOnAgainAfterAnEnrolmentChangeSavesTheNewHash() async {
+        let settings = InMemoryAppLockSettings()
+        let controller = makeController(settings: settings)
+
+        controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: "H1")
+        XCTAssertEqual(settings.values[AppLockSettingsKeys.enrolmentStateHash], "H1")
+        await controller.tapTurnOffFaceOrTouchOnly()
+        // The person adds a face in the iOS Settings app: the hash is H2.
+        controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: "H2")
+        XCTAssertEqual(settings.values[AppLockSettingsKeys.enrolmentStateHash], "H2")
+
+        controller.tapLockControl()
+        controller.noteEnrolmentState(current: "H2", kept: settings.values[AppLockSettingsKeys.enrolmentStateHash])
+
+        XCTAssertEqual(controller.state.coverMode, .locked, "the cover shows \"Unlock\"")
+    }
+
+    /// The kept hash compares as before: an enrolment change while the
+    /// setting is on still takes "Unlock" off the cover.
+    func testAnEnrolmentChangeWhileTheSettingIsOnStillTakesUnlockOff() {
+        let settings = InMemoryAppLockSettings()
+        let controller = makeController(settings: settings)
+        controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: "H1")
+
+        controller.tapLockControl()
+        controller.noteEnrolmentState(current: "H2", kept: settings.values[AppLockSettingsKeys.enrolmentStateHash])
+
+        XCTAssertEqual(controller.state.coverMode, .lockedAfterEnrolmentChange)
+    }
+
+    /// A turn-on with no hash from the device keeps the hash already kept.
+    func testATurnOnWithNoHashKeepsTheKeptHash() {
+        let settings = InMemoryAppLockSettings([AppLockSettingsKeys.enrolmentStateHash: "H1"])
+        let controller = makeController(settings: settings)
+
+        controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: nil)
+
+        XCTAssertTrue(controller.state.faceOrTouchOnlyEnabled)
+        XCTAssertEqual(settings.values[AppLockSettingsKeys.enrolmentStateHash], "H1")
+    }
+
     // MARK: Requirement: The cover
 
     /// Scenario: Unlock control.
