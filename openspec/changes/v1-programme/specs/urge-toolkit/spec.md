@@ -340,7 +340,7 @@ On read the store MUST hold at most one open urge per record day. When two open 
 
 ### Requirement: What the toolkit never shows
 
-The app MUST show a count of urges or outcomes only inside the weekly review's urge part. That part reads "Urges: %1$lld. Passed: %2$lld." and `weekly-review` owns that text.
+The app MUST show a count of urges or outcomes only inside the weekly review's urge part. That part reads, for example, "Urges: 3. Passed: 2.", and `weekly-review` owns that text.
 
 The "Urge" button, the urge screen and the setup MUST NOT show how many urges the person has had. The app MUST NOT show a list of past urges. The urge screen MUST NOT show an entry, a weight value or a planned meal. The app MUST NOT show praise, a word of blame or advice after any outcome. The tone rules in `product-rules` apply to every string in the toolkit.
 

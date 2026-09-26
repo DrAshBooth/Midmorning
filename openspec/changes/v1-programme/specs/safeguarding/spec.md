@@ -84,13 +84,13 @@ When no weigh-in is 28 or more days old, the app MUST NOT apply Rule C. When Rul
 
 DETERIORATION_WEEKS = 3 is a named constant in `ProgrammeConstants`.
 
-When the rule fires, the app MUST show the GP suggestion page with the reason "Your starred entries have gone up for %lld weeks in a row.", filled from DETERIORATION_WEEKS. It reads "Your starred entries have gone up for three weeks in a row." When fewer than four reviews exist, the app MUST NOT apply the rule. The app MUST show the page from the rule at most once per weekly review.
+When the rule fires, the app MUST show the GP suggestion page with the reason "Your starred entries have gone up each week lately." The reason MUST NOT hold a number. Ash ruled this on 26 September 2026 (r13-09). When fewer than four reviews exist, the app MUST NOT apply the rule. The app MUST show the page from the rule at most once per weekly review.
 
 Every weekly review MUST offer the button "I'm getting worse". When the person taps it, the app MUST show the GP suggestion page at once. The page shows the reason "You said things are getting worse." The app MUST show the page at each tap, also after the rule showed it in that review.
 
 #### Scenario: Three rising weeks
 - **WHEN** the frozen counts for weeks 2 to 5 are 3, 4, 5 and 6 and the week 5 review opens
-- **THEN** the app shows the GP suggestion page with "Your starred entries have gone up for three weeks in a row."
+- **THEN** the app shows the GP suggestion page with "Your starred entries have gone up each week lately."
 
 #### Scenario: Two rising weeks
 - **WHEN** the frozen counts for weeks 2 to 5 are 4, 4, 5 and 6 and the week 5 review opens
@@ -335,7 +335,7 @@ The page MUST show the heading "It might help to see your GP". Under it the page
 
 - Falling weight: "Your weight has come down since you started." with "Your plan stays on. It's worth a word with your GP."
 - Quick change: "Your weight has changed quickly over the last four weeks." with "Your plan stays on. It's worth a word with your GP."
-- Deterioration: "Your starred entries have gone up for %lld weeks in a row.", filled from DETERIORATION_WEEKS, with "That's worth talking through with your GP. Your plan stays on."
+- Deterioration: "Your starred entries have gone up each week lately." with "That's worth talking through with your GP. Your plan stays on." This reason holds no number. Ash ruled this on 26 September 2026 (r13-09).
 - Getting worse: "You said things are getting worse." with "That's worth talking through with your GP. Your plan stays on."
 
 A reason's line MUST NOT give a cause for the weight change. The page suggests the GP and says nothing about why.
@@ -357,6 +357,10 @@ The app MUST show the page from the deterioration rule at most once per weekly r
 #### Scenario: At the review
 - **WHEN** the page opens from the deterioration rule at the week 5 review and the person taps "Done"
 - **THEN** the review continues
+
+#### Scenario: The deterioration reason
+- **WHEN** the page opens from the deterioration rule
+- **THEN** the reason reads "Your starred entries have gone up each week lately." and the page shows no number
 
 ### Requirement: The not-right-now page
 
