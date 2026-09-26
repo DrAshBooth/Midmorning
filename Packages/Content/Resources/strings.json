@@ -126,6 +126,149 @@
     "text": "When are the hardest times of day?"
   },
   {
+    "id": "review.list.title",
+    "text": "Reviews"
+  },
+  {
+    "id": "review.list.empty",
+    "text": "No finished reviews yet"
+  },
+  {
+    "id": "review.row",
+    "text": "Week %1$lld, %2$@.",
+    "plural": {
+      "zero": "Week %1$lld, %2$@.",
+      "one": "Week %1$lld, %2$@.",
+      "other": "Week %1$lld, %2$@."
+    }
+  },
+  {
+    "id": "review.row.starred",
+    "text": "Starred entries: %lld.",
+    "plural": {
+      "zero": "Starred entries: %lld.",
+      "one": "Starred entries: %lld.",
+      "other": "Starred entries: %lld."
+    }
+  },
+  {
+    "id": "review.row.nocount",
+    "text": "Week %1$lld, %2$@",
+    "plural": {
+      "zero": "Week %1$lld, %2$@",
+      "one": "Week %1$lld, %2$@",
+      "other": "Week %1$lld, %2$@"
+    }
+  },
+  {
+    "id": "review.onething",
+    "text": "What's the one thing to change next week?"
+  },
+  {
+    "id": "review.gettingworse",
+    "text": "I'm getting worse"
+  },
+  {
+    "id": "review.gettingworse.hint",
+    "text": "Opens a page about seeing your GP."
+  },
+  {
+    "id": "review.selfharm.answered",
+    "text": "You answered this."
+  },
+  {
+    "id": "review.summaryswitch",
+    "text": "Weekly summary"
+  },
+  {
+    "id": "review.summary.days",
+    "text": "Days with an entry: %lld.",
+    "plural": {
+      "zero": "Days with an entry: %lld.",
+      "one": "Days with an entry: %lld.",
+      "other": "Days with an entry: %lld."
+    }
+  },
+  {
+    "id": "review.summary.starred",
+    "text": "Starred entries: %lld this week.",
+    "plural": {
+      "zero": "Starred entries: %lld this week.",
+      "one": "Starred entries: %lld this week.",
+      "other": "Starred entries: %lld this week."
+    }
+  },
+  {
+    "id": "review.summary.starred.twoweeks",
+    "text": "Starred entries: %1$@, %2$@."
+  },
+  {
+    "id": "review.summary.starred.thisweek",
+    "text": "%lld this week",
+    "plural": {
+      "zero": "%lld this week",
+      "one": "%lld this week",
+      "other": "%lld this week"
+    }
+  },
+  {
+    "id": "review.summary.starred.lastweek",
+    "text": "%lld last week",
+    "plural": {
+      "zero": "%lld last week",
+      "one": "%lld last week",
+      "other": "%lld last week"
+    }
+  },
+  {
+    "id": "review.summary.plan",
+    "text": "Planned meals with an entry beside them: %lld.",
+    "plural": {
+      "zero": "Planned meals with an entry beside them: %lld.",
+      "one": "Planned meals with an entry beside them: %lld.",
+      "other": "Planned meals with an entry beside them: %lld."
+    }
+  },
+  {
+    "id": "review.summary.paused",
+    "text": "Paused days: %lld.",
+    "plural": {
+      "zero": "Paused days: %lld.",
+      "one": "Paused days: %lld.",
+      "other": "Paused days: %lld."
+    }
+  },
+  {
+    "id": "review.summary.gap",
+    "text": "Longest gap between entries: %1$@, on %2$@, from %3$@ to %4$@."
+  },
+  {
+    "id": "review.summary.urges",
+    "text": "Urges: %lld.",
+    "plural": {
+      "zero": "Urges: %lld.",
+      "one": "Urges: %lld.",
+      "other": "Urges: %lld."
+    }
+  },
+  {
+    "id": "review.summary.passed",
+    "text": "Passed: %lld.",
+    "plural": {
+      "zero": "Passed: %lld.",
+      "one": "Passed: %lld.",
+      "other": "Passed: %lld."
+    }
+  },
+  {
+    "id": "review.summary.weighin",
+    "text": "Weigh-in: done on %@."
+  },
+  {
+    "id": "review.summary.words",
+    "text": "Your words this week: %@."
+  },
+  {
     "id": "gp.default",
     "text": "I'd like to talk about my eating. I've been having times when I eat a lot and feel out of control. I've been following a self-help programme on my phone and I have a record I can show you. Can we talk about what support there is?"
   },
@@ -336,6 +479,82 @@
   {
     "id": "screening.answer.treatmentyes",
     "text": "Yes, and they are happy for me to use this"
+  },
+  {
+    "id": "onboarding.screen1.title",
+    "text": "What this is and isn't"
+  },
+  {
+    "id": "onboarding.screen1.line2",
+    "text": "It is not a diet, and it is not for weight loss."
+  },
+  {
+    "id": "onboarding.screen1.line5",
+    "text": "If you have had anorexia or another restrictive eating problem in the past, talk to your GP before you start. The weekly weigh-in may not be right for you."
+  },
+  {
+    "id": "onboarding.screen1.line6",
+    "text": "No person and no AI reads what you write. The app counts your starred entries, times and places to build your weekly review, on this device only."
+  },
+  {
+    "id": "onboarding.screen1.line7",
+    "text": "If you need a person, Get support is on every screen."
+  },
+  {
+    "id": "onboarding.continue",
+    "text": "Continue"
+  },
+  {
+    "id": "onboarding.screen2.title",
+    "text": "A few questions first"
+  },
+  {
+    "id": "onboarding.screen2.intro",
+    "text": "We ask for your height and weight to check this programme is safe for you. The app never shows them again and never sets a goal from them."
+  },
+  {
+    "id": "onboarding.screen4.title",
+    "text": "Permissions"
+  },
+  {
+    "id": "onboarding.screen4.recordheading",
+    "text": "Your record"
+  },
+  {
+    "id": "onboarding.screen4.recordsentence",
+    "text": "Your record, plan and weigh-ins are private and sensitive."
+  },
+  {
+    "id": "onboarding.screen4.thisdevice",
+    "text": "This device only"
+  },
+  {
+    "id": "onboarding.screen4.icloud",
+    "text": "iCloud sync comes in a later version."
+  },
+  {
+    "id": "onboarding.screen4.notifications",
+    "text": "Midmorning sends reminders for your plan and your reviews. You choose which ones and when in Settings. Each reminder shows the app name and a time, nothing more."
+  },
+  {
+    "id": "onboarding.screen4.allownotifications",
+    "text": "Allow notifications"
+  },
+  {
+    "id": "onboarding.screen4.widget",
+    "text": "Add the Lock Screen widget to record in one tap."
+  },
+  {
+    "id": "onboarding.screen4.showmehow",
+    "text": "Show me how"
+  },
+  {
+    "id": "onboarding.screen4.widgetinstructions",
+    "text": "Touch and hold your Lock Screen, tap Customise, then Lock Screen, then add Midmorning."
+  },
+  {
+    "id": "onboarding.screen4.start",
+    "text": "Start"
   },
   {
     "id": "notrightnow.selfharm",

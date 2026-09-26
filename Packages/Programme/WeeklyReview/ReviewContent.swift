@@ -3,6 +3,10 @@ import Foundation
 /// The review's own fixed strings, quoted from the weekly-review spec.
 /// `CommonLabels.done` is the "Done" control; this change adds no second
 /// copy of it.
+///
+/// This is signed-off text. The content bundle holds a copy of each string
+/// with a "reflection.", "week1." or "review." id, and a content test proves
+/// that each string here equals its bundle copy (ruling r13-02).
 public enum ReviewContent {
     public static let reviewsListTitle = "Reviews"
     public static let noRowsAccessibilityHint = "No finished reviews yet"
@@ -37,12 +41,16 @@ public enum ReviewContent {
     public static let weeklySummarySwitchLabel = "Weekly summary"
 
     /// "Week %1$lld, %2$@. Starred entries: %3$lld." — a "Reviews" list row
-    /// with the summary on.
+    /// with the summary on. The row shows two counts, so it is two
+    /// sentences with one count each, joined by one space (ruling r13-12):
+    /// "Week %1$lld, %2$@." ("review.row") and "Starred entries: %lld."
+    /// ("review.row.starred").
     public static func rowText(week: Int, dateRange: String, starredCount: Int) -> String {
-        "Week \(week), \(dateRange). Starred entries: \(starredCount)."
+        "Week \(week), \(dateRange)." + " " + "Starred entries: \(starredCount)."
     }
 
-    /// "Week %1$lld, %2$@" — a row with "Weekly summary" off.
+    /// "Week %1$lld, %2$@" ("review.row.nocount") — a row with "Weekly
+    /// summary" off.
     public static func rowTextWithoutCount(week: Int, dateRange: String) -> String {
         "Week \(week), \(dateRange)"
     }

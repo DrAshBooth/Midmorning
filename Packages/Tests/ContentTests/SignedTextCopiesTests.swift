@@ -92,6 +92,149 @@ final class SignedTextCopiesTests: XCTestCase {
         }
     }
 
+    // MARK: - Weekly review: the controls, the list rows and the summary
+
+    func testTheReviewControlsEqualTheirBundleCopies() {
+        assertCopy(ReviewContent.reviewsListTitle, "review.list.title")
+        assertCopy(ReviewContent.noRowsAccessibilityHint, "review.list.empty")
+        assertCopy(ReviewContent.oneThingToChangeQuestion, "review.onething")
+        assertCopy(ReviewContent.gettingWorseButton, "review.gettingworse")
+        assertCopy(ReviewContent.gettingWorseHint, "review.gettingworse.hint")
+        assertCopy(ReviewContent.selfHarmAnsweredLine, "review.selfharm.answered")
+        assertCopy(ReviewContent.weeklySummarySwitchLabel, "review.summaryswitch")
+    }
+
+    /// Ruling r13-12: a row with the starred count shows two counts, so it
+    /// is "review.row" and "review.row.starred", joined by one space.
+    func testTheReviewsListRowsEqualTheirBundleCopies() {
+        for week in [1, 2, 12] {
+            for starred in [0, 1, 4] {
+                XCTAssertEqual(
+                    ReviewContent.rowText(week: week, dateRange: "12–18 October", starredCount: starred),
+                    ShippedText.format("review.row", count: week, "12–18 October") + " " + ShippedRule.count("review.row.starred", starred),
+                    "review.row"
+                )
+            }
+            XCTAssertEqual(
+                ReviewContent.rowTextWithoutCount(week: week, dateRange: "28 September–4 October"),
+                ShippedText.format("review.row.nocount", count: week, "28 September–4 October"),
+                "review.row.nocount"
+            )
+        }
+        XCTAssertEqual(ReviewContent.rowText(week: 3, dateRange: "12–18 October", starredCount: 4), "Week 3, 12–18 October. Starred entries: 4.")
+    }
+
+    /// Each summary sentence equals its bundle copy, filled with the same
+    /// values. Ruling r13-12: the starred part with a last-week count fills
+    /// "review.summary.starred.twoweeks" with two one-count strings, and the
+    /// urge part joins two one-count sentences with one space.
+    func testTheSummarySentencesEqualTheirBundleCopies() {
+        for count in [0, 1, 2, 26] {
+            XCTAssertEqual(ReviewSummary.daysText(count), ShippedRule.count("review.summary.days", count), "review.summary.days")
+            XCTAssertEqual(ReviewSummary.starredText(thisWeek: count, lastWeek: nil), ShippedRule.count("review.summary.starred", count), "review.summary.starred")
+            XCTAssertEqual(ReviewSummary.planText(count), ShippedRule.count("review.summary.plan", count), "review.summary.plan")
+            XCTAssertEqual(ReviewSummary.pausedText(count), ShippedRule.count("review.summary.paused", count), "review.summary.paused")
+            for other in [0, 1, 6] {
+                XCTAssertEqual(
+                    ReviewSummary.starredText(thisWeek: count, lastWeek: other),
+                    ShippedText.format(
+                        "review.summary.starred.twoweeks",
+                        ShippedRule.count("review.summary.starred.thisweek", count),
+                        ShippedRule.count("review.summary.starred.lastweek", other)
+                    ),
+                    "review.summary.starred.twoweeks"
+                )
+                XCTAssertEqual(
+                    ReviewSummary.urgeText(urges: count, passed: other),
+                    ShippedRule.count("review.summary.urges", count) + " " + ShippedRule.count("review.summary.passed", other),
+                    "review.summary.urges"
+                )
+            }
+        }
+        XCTAssertEqual(
+            ReviewSummary.gapText(duration: "6 hours 20 minutes", weekday: "Tuesday", from: "12:40", to: "19:00"),
+            ShippedText.format("review.summary.gap", "6 hours 20 minutes", "Tuesday", "12:40", "19:00"),
+            "review.summary.gap"
+        )
+        XCTAssertEqual(ReviewSummary.weighInText(weekday: "Wednesday"), ShippedText.format("review.summary.weighin", "Wednesday"), "review.summary.weighin")
+        XCTAssertEqual(ReviewSummary.wordsText("tired, ok, flat"), ShippedText.format("review.summary.words", "tired, ok, flat"), "review.summary.words")
+        // The person reads the text that the weekly-review spec gives.
+        XCTAssertEqual(ReviewSummary.starredText(thisWeek: 4, lastWeek: 6), "Starred entries: 4 this week, 6 last week.")
+        XCTAssertEqual(ReviewSummary.urgeText(urges: 3, passed: 2), "Urges: 3. Passed: 2.")
+    }
+
+    // MARK: - Onboarding: screens 1, 2 and 4
+
+    /// Lines 1 and 3 of screen 1 hold "CBT" and "therapy", words on the
+    /// forbidden list. They have no bundle copy until decision mm-t11.47
+    /// (mm-t11.48). Line 4 is the support sheet's compensation line.
+    func testTheOnboardingTextEqualsItsBundleCopies() {
+        assertCopy(Screen1Content.title, "onboarding.screen1.title")
+        XCTAssertEqual(Screen1Content.lines.count, 7)
+        assertCopy(Screen1Content.lines[1], "onboarding.screen1.line2")
+        assertCopy(Screen1Content.lines[3], "support.gp.compensation")
+        assertCopy(Screen1Content.lines[4], "onboarding.screen1.line5")
+        assertCopy(Screen1Content.lines[5], "onboarding.screen1.line6")
+        assertCopy(Screen1Content.lines[6], "onboarding.screen1.line7")
+        assertCopy(Screen1Content.continueLabel, "onboarding.continue")
+        assertCopy(Screen2Content.title, "onboarding.screen2.title")
+        assertCopy(Screen2Content.heightWeightIntro, "onboarding.screen2.intro")
+        assertCopy(Screen2Content.continueLabel, "onboarding.continue")
+        assertCopy(Screen4Content.title, "onboarding.screen4.title")
+        assertCopy(Screen4Content.yourRecordHeading, "onboarding.screen4.recordheading")
+        assertCopy(Screen4Content.yourRecordSentence, "onboarding.screen4.recordsentence")
+        assertCopy(Screen4Content.thisDeviceOnly, "onboarding.screen4.thisdevice")
+        assertCopy(Screen4Content.iCloudLaterVersion, "onboarding.screen4.icloud")
+        assertCopy(Screen4Content.notificationsExplanation, "onboarding.screen4.notifications")
+        assertCopy(Screen4Content.allowNotifications, "onboarding.screen4.allownotifications")
+        assertCopy(Screen4Content.widgetExplanation, "onboarding.screen4.widget")
+        assertCopy(Screen4Content.showMeHow, "onboarding.screen4.showmehow")
+        assertCopy(Screen4Content.widgetInstructions, "onboarding.screen4.widgetinstructions")
+        assertCopy(Screen4Content.startLabel, "onboarding.screen4.start")
+    }
+
+    // MARK: - Every signed-off Swift constant has a bundle copy
+
+    /// Scenario "A signed-off Swift constant with no bundle copy": each
+    /// `static let` string constant in the signed-off Programme sources has
+    /// a bundle string with the same text, or the test names the constant.
+    /// The scan reads one-line constants only. The tests above cover the
+    /// arrays, the templates and the switch cases.
+    func testEverySignedOffSwiftConstantHasABundleCopy() throws {
+        // A part that a test above joins into one bundle string, or a string
+        // that waits for decision mm-t11.47.
+        let exceptions: Set<String> = [
+            "SupportSheet.samaritansWelshLabel", "SupportSheet.samaritansWelshNumber", // "support.samaritans.welsh"
+            "GPParagraph.selfHarmAddition", // "gp.selfharm"
+            "OnboardingContent.treatmentQuestion", // "therapist": decision mm-t11.47
+        ]
+        let bundleTexts = Set(Shipped.bundle.strings.flatMap(\.readableTexts))
+        let programme = RepositoryRoot.path.appendingPathComponent("Packages/Programme")
+        let safeguarding = programme.appendingPathComponent("Safeguarding")
+        let sources = try [
+            programme.appendingPathComponent("Onboarding/OnboardingContent.swift"),
+            programme.appendingPathComponent("Onboarding/CommonLabels.swift"),
+            programme.appendingPathComponent("WeeklyReview/ReviewContent.swift"),
+            programme.appendingPathComponent("Engine/StageRuleText.swift"),
+        ] + FileManager.default.contentsOfDirectory(at: safeguarding, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "swift" }
+        let pattern = try NSRegularExpression(pattern: #"static let (\w+)(?:\s*:\s*String)?\s*=\s*"((?:[^"\\]|\\.)*)""#)
+        var scanned = 0
+        for source in sources {
+            let text = try String(contentsOf: source, encoding: .utf8)
+            let file = source.deletingPathExtension().lastPathComponent
+            for match in pattern.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                let name = String(text[Range(match.range(at: 1), in: text)!])
+                let literal = String(text[Range(match.range(at: 2), in: text)!])
+                    .replacingOccurrences(of: #"\""#, with: "\"")
+                guard !literal.contains("\\("), !exceptions.contains("\(file).\(name)") else { continue }
+                scanned += 1
+                XCTAssertTrue(bundleTexts.contains(literal), "\(file).\(name) has no bundle copy")
+            }
+        }
+        XCTAssertGreaterThan(scanned, 40)
+    }
+
     // MARK: - Safeguarding: the GP paragraph
 
     func testTheGPParagraphEqualsItsBundleCopies() {
@@ -200,5 +343,21 @@ final class SignedTextCopiesTests: XCTestCase {
         assertCopy(CommonLabels.ratherNotSay, "screening.answer.rathernotsay")
         assertCopy(CommonLabels.doesNotApplyToMe, "screening.answer.doesnotapply")
         assertCopy(CommonLabels.treatmentYesWithAgreement, "screening.answer.treatmentyes")
+    }
+}
+
+/// Fills a bundle string's placeholders, the same way the app fills them:
+/// a count picks the plural form, and a `%@` takes text.
+enum ShippedText {
+    /// The string `id`, with its plural form for `count` and the values in
+    /// placeholder order.
+    static func format(_ id: String, count: Int, _ texts: String...) -> String {
+        let entry = ShippedRule.entry(id)
+        return String(format: entry.form(for: count), arguments: [count as CVarArg] + texts.map { $0 as CVarArg })
+    }
+
+    /// The string `id`, with no count, filled with `texts`.
+    static func format(_ id: String, _ texts: String...) -> String {
+        String(format: ShippedRule.entry(id).text, arguments: texts.map { $0 as CVarArg })
     }
 }

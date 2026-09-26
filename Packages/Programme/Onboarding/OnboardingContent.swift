@@ -6,6 +6,13 @@ import Constants
 /// `swift test` run prove wording, order and the "Not weight loss, three
 /// times" and "What is a treatment claim" constraints, because the App
 /// target itself has no test target `./verify` runs.
+///
+/// This is signed-off text. The content bundle holds a copy of each string
+/// with an "onboarding." or "screening." id, and a content test proves that
+/// each string here equals its bundle copy (ruling r13-02). Three strings
+/// have no bundle copy yet, because they hold a word from the forbidden
+/// list: lines 1 and 3 of screen 1 ("CBT", "therapy") and the treatment
+/// question ("therapist"). Decision mm-t11.47 sets their home (mm-t11.48).
 public enum Screen1Content {
     public static let title = "What this is and isn't"
     public static let lines: [String] = [
@@ -28,7 +35,6 @@ public enum Screen2Content {
     public static let heightWeightIntro = "We ask for your height and weight to check this programme is safe for you. The app never shows them again and never sets a goal from them."
     public static let treatmentQuestion = "Are you getting help from a clinic or a therapist for your eating at the moment?"
     public static let pregnancyQuestion = "We ask everyone the same questions. Pregnancy changes what eating needs to look like, so: are you pregnant at the moment?"
-    public static let unansweredMessage = "Please answer this one."
     public static let continueLabel = "Continue"
 }
 

@@ -122,10 +122,24 @@ final class SignOffTests: XCTestCase {
         }
     }
 
-    func testShippedBundleIsDraftUnderVerify() {
+    func testShippedBundleIsDraftUnderVerify() throws {
         // `./verify` runs `swift test` with no MIDMORNING_RELEASE set, so
         // the shipped bundle, which has no matching sign-off file yet,
-        // carries the Draft flag.
+        // carries the Draft flag. The release lane checks the sign-off
+        // instead (the next test).
+        try XCTSkipIf(ReleaseLane.isRelease(ProcessInfo.processInfo.environment), "the release lane")
         XCTAssertTrue(Shipped.bundle.isDraft)
+    }
+
+    /// Scenario "Release without sign-off": `scripts/archive` runs the
+    /// content test with MIDMORNING_RELEASE=1. This test then fails when the
+    /// shipped bundle carries the Draft flag, so the script refuses the
+    /// build. It checks the bundle that the app reads and the source bundle.
+    func testTheReleaseLaneRefusesADraftBundle() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard ReleaseLane.isRelease(environment) else { return }
+        let shipped = try BundleLoader.loadShipped(environment: environment)
+        XCTAssertFalse(shipped.isDraft, "the app's bundle carries the Draft flag")
+        XCTAssertFalse(Shipped.bundle.isDraft, "no sign-off file matches the source bundle")
     }
 }

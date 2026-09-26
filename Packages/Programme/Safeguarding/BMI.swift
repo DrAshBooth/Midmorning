@@ -71,8 +71,7 @@ public enum ScreeningLimits {
     public static func heightMessage(unit: HeightUnit = .cm, constants: ProgrammeConstants = .default) -> CatalogueText {
         switch unit {
         case .cm:
-            // "between 100 and 250 cm": the unit follows the upper limit only.
-            return .key("screening.limit.height", .key("screening.limit.number %lld", .count(constants.minHeightCm)), centimetres(constants.maxHeightCm))
+            return .key("screening.limit.height", centimetres(constants.minHeightCm), centimetres(constants.maxHeightCm))
         case .ftIn:
             let inches = heightLimitsInInches(constants: constants)
             return .key("screening.limit.height", feetAndInches(inches.lowerBound), feetAndInches(inches.upperBound))

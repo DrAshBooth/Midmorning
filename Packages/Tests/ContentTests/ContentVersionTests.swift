@@ -43,6 +43,20 @@ final class ContentVersionTests: XCTestCase {
         XCTAssertEqual(changed.bundleHash, Shipped.bundle.bundleHash)
     }
 
+    /// Ruling r13-01 puts reminder text under the hash. A change to the
+    /// permission line on Today, with no version rise, fails the lock check.
+    func testAReminderLineChangeWithNoVersionRiseFailsTheLockCheck() throws {
+        let lock = try XCTUnwrap(ContentLock.read(from: RepositoryRoot.contentResourcesDirectory))
+        let catalogue = try catalogueCopy(
+            changing: "today.reminders.denied",
+            from: "Notifications are off in iOS Settings.",
+            to: "Notifications are turned off in iOS Settings."
+        )
+        let changed = try ContentBundle.load(from: RepositoryRoot.contentResourcesDirectory, catalogue: catalogue, environment: [:])
+        XCTAssertEqual(changed.contentVersion, lock.contentVersion)
+        XCTAssertTrue(ContentLock.disagrees(lock, with: changed))
+    }
+
     /// A change to a plural form of a signed key also changes the hash.
     func testAPluralFormChangeOfASignedKeyChangesTheHash() throws {
         let key = "reminders.action.snooze %lld"
@@ -72,6 +86,13 @@ final class ContentVersionTests: XCTestCase {
         }
         XCTAssertNotNil(Shipped.bundle.signedCatalogue["entry.delete.confirmTitle"])
         XCTAssertNotNil(Shipped.bundle.signedCatalogue["reminders.title.midday"])
+        // The reminders capability also owns the text of the Reminders group
+        // in settings and the permission line on Today.
+        XCTAssertNotNil(Shipped.bundle.signedCatalogue["settings.reminders.denied.line"])
+        XCTAssertNotNil(Shipped.bundle.signedCatalogue["settings.reminders.quietHoursNotSent"])
+        XCTAssertNotNil(Shipped.bundle.signedCatalogue["today.reminders.denied"])
+        XCTAssertNotNil(Shipped.bundle.signedCatalogue["today.reminders.notDetermined"])
+        XCTAssertNotNil(Shipped.bundle.signedCatalogue["today.gapBand.accessibilityLabel %lld"])
         XCTAssertNotNil(Shipped.bundle.signedCatalogue["safeguarding.exportControl"])
         XCTAssertNil(Shipped.bundle.signedCatalogue["common.cancel"])
     }

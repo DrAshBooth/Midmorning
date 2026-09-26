@@ -9,11 +9,14 @@
       "plan.missedPrompt.",
       "today.didntRecord",
       "today.fastingToday",
+      "today.gapBand.",
       "today.pauseForToday",
       "today.stateLine."
     ],
     "reminders": [
-      "reminders."
+      "reminders.",
+      "settings.reminders.",
+      "today.reminders."
     ],
     "safeguarding": [
       "safeguarding.",

@@ -64,7 +64,7 @@ public enum ScreeningField: Sendable, Hashable, CaseIterable {
 public enum ScreeningFieldProblem: Sendable, Equatable {
     /// "Please answer this one."
     case unanswered
-    /// "Enter a height between 100 and 250 cm.", or in feet and inches.
+    /// "Enter a height between 100 cm and 250 cm.", or in feet and inches.
     case heightOutOfRange
     /// "Enter a weight of 30 kg or more.", or in stone and pounds.
     case weightOutOfRange

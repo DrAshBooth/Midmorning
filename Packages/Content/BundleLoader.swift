@@ -141,8 +141,10 @@ public enum BundleLoader {
     /// it cannot compute the part of the hash that covers the signed
     /// catalogue keys. The sign-off check here reads `content-lock.json`
     /// instead: the content test proves that the lock holds the full hash
-    /// at this content version, and the release lane proves that a sign-off
-    /// file matches that hash.
+    /// at this content version. In the release lane (`scripts/archive`,
+    /// MIDMORNING_RELEASE=1), a content test fails when this bundle or the
+    /// source bundle carries the Draft flag, so the script refuses the
+    /// build.
     public static func loadShipped(environment: [String: String] = ProcessInfo.processInfo.environment) throws -> ContentBundle {
         guard let manifestURL = Bundle.module.url(forResource: "manifest", withExtension: "json") else {
             throw BundleLoaderError.fileNotFound("manifest.json")

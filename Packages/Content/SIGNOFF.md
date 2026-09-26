@@ -63,10 +63,29 @@ notrightnowpage.heading
 notrightnowpage.recordstays
 notrightnowpage.reminderspaused
 notrightnowpage.remindersstayon
+onboarding.continue
 onboarding.example.what
 onboarding.record.sentence1
 onboarding.record.sentence2
 onboarding.record.sentence3
+onboarding.screen1.line2
+onboarding.screen1.line5
+onboarding.screen1.line6
+onboarding.screen1.line7
+onboarding.screen1.title
+onboarding.screen2.intro
+onboarding.screen2.title
+onboarding.screen4.allownotifications
+onboarding.screen4.icloud
+onboarding.screen4.notifications
+onboarding.screen4.recordheading
+onboarding.screen4.recordsentence
+onboarding.screen4.showmehow
+onboarding.screen4.start
+onboarding.screen4.thisdevice
+onboarding.screen4.title
+onboarding.screen4.widget
+onboarding.screen4.widgetinstructions
 opening.stage2
 opening.stage3
 opening.stage4
@@ -88,6 +107,28 @@ reminders.title.morningPlan
 reminders.title.weeklyReview
 reminders.title.weighInDay
 reminders.title.worksheetReview
+review.gettingworse
+review.gettingworse.hint
+review.list.empty
+review.list.title
+review.onething
+review.row
+review.row.nocount
+review.row.starred
+review.selfharm.answered
+review.summary.days
+review.summary.gap
+review.summary.passed
+review.summary.paused
+review.summary.plan
+review.summary.starred
+review.summary.starred.lastweek
+review.summary.starred.thisweek
+review.summary.starred.twoweeks
+review.summary.urges
+review.summary.weighin
+review.summary.words
+review.summaryswitch
 rule.stage2
 rule.stage2.count
 rule.stage3
@@ -112,7 +153,6 @@ screening.limit.height
 screening.limit.in %lld
 screening.limit.kg %lld
 screening.limit.lb %lld
-screening.limit.number %lld
 screening.limit.st %lld
 screening.limit.stLb
 screening.limit.weight
@@ -125,6 +165,35 @@ screening.question.weight
 screening.weight.kilograms
 screening.weight.pounds
 screening.weight.stone
+settings.reminders.denied.iosSettingsControl
+settings.reminders.denied.line
+settings.reminders.eachDeviceCaption
+settings.reminders.explicitWording
+settings.reminders.middayCaption
+settings.reminders.notDetermined.allowControl
+settings.reminders.notDetermined.line
+settings.reminders.pausedLine
+settings.reminders.quietHours
+settings.reminders.quietHours.end
+settings.reminders.quietHours.start
+settings.reminders.quietHoursNotSent
+settings.reminders.remindAgain.15
+settings.reminders.remindAgain.30
+settings.reminders.remindAgainLabel
+settings.reminders.switch.closeTheDay
+settings.reminders.switch.midday
+settings.reminders.switch.plannedMeals
+settings.reminders.switch.setTodaysPlan
+settings.reminders.switch.weeklyReview
+settings.reminders.switch.weighInDay
+settings.reminders.time.closeTheDay
+settings.reminders.time.setTodaysPlan
+settings.reminders.time.weeklyReview
+settings.reminders.time.weighIn
+settings.reminders.title
+settings.reminders.turnOn
+settings.reminders.whenHeader
+settings.reminders.whichHeader
 stage1.cycle
 stage1.entry
 stage1.star
@@ -165,9 +234,12 @@ support.selfharm
 support.title
 today.didntRecord
 today.fastingToday
+today.gapBand.accessibilityLabel %lld
 today.getSupport
 today.pauseForToday
 today.pauseForToday.on
+today.reminders.denied
+today.reminders.notDetermined
 today.stateLine.didntRecord
 today.stateLine.fasting
 today.stateLine.paused

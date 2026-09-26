@@ -1231,35 +1231,6 @@
         }
       }
     },
-    "screening.limit.number %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "variations": {
-            "plural": {
-              "zero": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld"
-                }
-              },
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "screening.limit.cm %lld": {
       "extractionState": "manual",
       "localizations": {
