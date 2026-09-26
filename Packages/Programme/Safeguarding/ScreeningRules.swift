@@ -20,11 +20,14 @@ public enum ScreeningRules {
     public static func ageExcludes(_ age: Int) -> Bool { age < minimumAge }
     public static func pregnancyExcludes(_ answer: PregnancyAnswer) -> Bool { answer == .yes }
     public static func treatmentExcludes(_ answer: TreatmentAnswer) -> Bool { answer == .yes }
-    public static func bmiExcludes(_ bmi: Double) -> Bool { bmi < minimumBMI }
+    /// Below 18.5 excludes. A BMI of exactly 18.5 does not, also when
+    /// `Double` gives it a few units in the last place low
+    /// (`RuleBoundary`).
+    public static func bmiExcludes(_ bmi: Double) -> Bool { RuleBoundary.isBelow(bmi, minimumBMI) }
 
     /// The caution flag: set when the BMI is 18.5 or more and below 19.0.
     public static func cautionFlag(for bmi: Double) -> Bool {
-        bmi >= minimumBMI && bmi < cautionUpperBoundBMI
+        RuleBoundary.isAtOrAbove(bmi, minimumBMI) && RuleBoundary.isBelow(bmi, cautionUpperBoundBMI)
     }
 
     /// Every reason that applies at onboarding, in the exclusion page's

@@ -639,6 +639,72 @@
         }
       }
     },
+    "screening.height.centimetres": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Height in centimetres"
+          }
+        }
+      }
+    },
+    "screening.height.feet": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Height in feet"
+          }
+        }
+      }
+    },
+    "screening.height.inches": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Height in inches"
+          }
+        }
+      }
+    },
+    "screening.weight.kilograms": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight in kilograms"
+          }
+        }
+      }
+    },
+    "screening.weight.pounds": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight in pounds"
+          }
+        }
+      }
+    },
+    "screening.weight.stone": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight in stone"
+          }
+        }
+      }
+    },
     "settings.about.appVersion": {
       "extractionState": "manual",
       "localizations": {
@@ -690,17 +756,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Draft"
-          }
-        }
-      }
-    },
-    "settings.getSupport": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Get support"
           }
         }
       }

@@ -34,6 +34,10 @@ final class OnboardingAnswers: ObservableObject {
     @Published var pregnancyAnswer: PregnancyAnswer?
     @Published var selfHarmFirst: SelfHarmFirstAnswer?
     @Published var selfHarmSecond: SelfHarmSecondAnswer?
+    /// The four values the store keeps from the screening, held here until
+    /// "Start" writes them (onboarding spec, "Finish": "The app MUST NOT
+    /// keep answers from an unfinished onboarding.").
+    @Published var keptScreening: ScreeningKeptValues?
 
     // Screen 3
     @Published var startDayChoice: StartDayChoice.Choice = .today
@@ -47,44 +51,49 @@ final class OnboardingAnswers: ObservableObject {
     @Published var appLockOn = true
     @Published var notificationsRequested = false
 
-    var age: Int? { Int(ageText) }
+    var age: Int? { Int(ageText.trimmingCharacters(in: .whitespaces)) }
 
-    var heightCm: Double? {
+    /// The typed height, parsed. Inches accept 0 to 11.
+    var height: TypedMeasure {
         switch heightUnit {
         case .centimetres:
-            return Double(heightCmText)
+            return TypedMeasureParser.heightCm(centimetres: heightCmText)
         case .feetInches:
-            guard let feet = Int(heightFeetText), let inches = Int(heightInchesText) else { return nil }
-            return BMI.heightCm(feet: feet, inches: inches)
+            return TypedMeasureParser.heightCm(feet: heightFeetText, inches: heightInchesText)
         }
     }
 
-    var weightKg: Double? {
+    /// The typed weight, parsed. Pounds accept 0 to 13.
+    var weight: TypedMeasure {
         switch weightUnit {
         case .kilograms:
-            return Double(weightKgText)
+            return TypedMeasureParser.weightKg(kilograms: weightKgText)
         case .stonePounds:
-            guard let stone = Int(weightStoneText), let pounds = Int(weightPoundsText) else { return nil }
-            return BMI.weightKg(stone: stone, pounds: pounds)
+            return TypedMeasureParser.weightKg(stone: weightStoneText, pounds: weightPoundsText)
         }
     }
 
-    var bmi: Double? {
-        guard let heightCm, let weightKg else { return nil }
-        return BMI.value(heightCm: heightCm, weightKg: weightKg)
+    var heightCm: Double? { height.value }
+
+    var weightKg: Double? { weight.value }
+
+    /// The answers as `ScreeningForm` reads them. The restart re-screen
+    /// passes `asksAge: false`, because it never asks the age again.
+    func formInput(asksAge: Bool) -> ScreeningFormInput {
+        ScreeningFormInput(
+            ageText: asksAge ? ageText : nil,
+            height: height,
+            weight: weight,
+            treatmentAnswered: treatmentAnswer != nil,
+            pregnancyAnswered: pregnancyAnswer != nil,
+            selfHarmFirst: selfHarmFirst,
+            selfHarmSecondAnswered: selfHarmSecond != nil
+        )
     }
 
     var selfHarmOutcome: SelfHarmOutcome {
         guard let selfHarmFirst else { return .noFollowUp }
         return SelfHarmItem.outcome(first: selfHarmFirst, second: selfHarmSecond)
-    }
-
-    /// Screen 2's six questions plus the conditional second self-harm
-    /// question are all answered.
-    var screen2Complete: Bool {
-        age != nil && heightCm != nil && weightKg != nil
-            && treatmentAnswer != nil && pregnancyAnswer != nil && selfHarmFirst != nil
-            && (selfHarmFirst != .yes || selfHarmSecond != nil)
     }
 
     var weighInDayChoice: RecordStore.WeighInDayChoice? {
@@ -108,6 +117,7 @@ final class OnboardingAnswers: ObservableObject {
         pregnancyAnswer = nil
         selfHarmFirst = nil
         selfHarmSecond = nil
+        keptScreening = nil
         startDayChoice = .today
         weighInWeekday = nil
         wontBeWeighing = false

@@ -17,6 +17,7 @@ struct GPSuggestionPageView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(GPSuggestionPage.heading)
                         .font(.largeTitle.bold())
+                        .accessibilityAddTraits(.isHeader)
 
                     ForEach(Array(reasons.enumerated()), id: \.offset) { _, reason in
                         Text(GPSuggestionPage.line(for: reason))
@@ -28,13 +29,12 @@ struct GPSuggestionPageView: View {
 
                     Text(CommonLabels.talkToYourGP)
                         .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
                     GPParagraphView(variant: .standard)
 
                     ExportControlButton(store: store)
 
-                    Button(CommonLabels.done) { onDone() }
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity)
+                    FullWidthConfirmButton(CommonLabels.done, action: onDone)
                 }
                 .padding()
             }

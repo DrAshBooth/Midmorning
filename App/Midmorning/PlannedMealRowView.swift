@@ -76,6 +76,8 @@ struct PlannedMealRowView: View {
                     .frame(minHeight: 44)
             }
         }
+        // Two controls in one List row: each needs its own tap target.
+        .buttonStyle(.borderless)
     }
 
     private func clockTimeText(_ date: Date) -> String {

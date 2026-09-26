@@ -40,7 +40,6 @@ struct OnboardingRootView: View {
         .sheet(isPresented: $isShowingCautionSheet) {
             CautionSheetView(onContinue: {
                 isShowingCautionSheet = false
-                writeScreeningResult(cautionFlag: true)
                 step = .screen3
             })
         }
@@ -53,38 +52,44 @@ struct OnboardingRootView: View {
         }
     }
 
+    /// Screen 2 has a valid answer to every shown question. The screening
+    /// decides what follows. The four kept values stay in `answers` until
+    /// "Start"; an exclusion or an unfinished onboarding writes nothing
+    /// (onboarding spec, "Finish"; safeguarding spec, "The app keeps nothing
+    /// from an exclusion").
     private func handleScreen2Continue() {
         guard
             let age = answers.age,
+            let heightCm = answers.heightCm,
+            let weightKg = answers.weightKg,
             let pregnancy = answers.pregnancyAnswer,
-            let treatment = answers.treatmentAnswer,
-            let bmi = answers.bmi
+            let treatment = answers.treatmentAnswer
         else { return }
 
-        let reasons = ScreeningRules.onboardingReasons(
-            age: age, pregnancy: pregnancy, treatment: treatment, bmi: bmi, selfHarm: answers.selfHarmOutcome
+        answers.keptScreening = nil
+        let outcome = OnboardingScreening.evaluate(
+            age: age, heightCm: heightCm, weightKg: weightKg,
+            pregnancy: pregnancy, treatment: treatment, selfHarm: answers.selfHarmOutcome, now: .now
         )
-        guard reasons.isEmpty else {
+        switch outcome {
+        case .excluded(let reasons):
             exclusion = ExclusionWrapper(reasons: reasons)
-            return
-        }
-        if ScreeningRules.cautionFlag(for: bmi) {
+        case .cautionSheet(let kept):
+            answers.keptScreening = kept
             isShowingCautionSheet = true
-            return
+        case .continues(let kept):
+            answers.keptScreening = kept
+            step = .screen3
         }
-        writeScreeningResult(cautionFlag: false)
-        step = .screen3
     }
 
-    /// Writes the one-time BMI's four kept values (onboarding spec, "What
-    /// onboarding keeps and what it never keeps"). The typed age and weight
-    /// themselves are never written.
-    private func writeScreeningResult(cautionFlag: Bool) {
-        guard let heightCm = answers.heightCm, let bmi = answers.bmi else { return }
-        try? store.setProfile(heightCm: heightCm, onboardingBMI: bmi, cautionFlag: cautionFlag, askedAt: .now)
-    }
-
+    /// "Start": writes the four kept screening values (onboarding spec,
+    /// "What onboarding keeps and what it never keeps") and the commitment.
+    /// The typed age and weight themselves are never written.
     private func finish() {
+        if let kept = answers.keptScreening {
+            try? store.setProfile(heightCm: kept.heightCm, onboardingBMI: kept.onboardingBMI, cautionFlag: kept.cautionFlag, askedAt: kept.askedAt)
+        }
         if let dayKey = try? computeStartDayKey() {
             try? store.setStartDayKey(dayKey)
         }

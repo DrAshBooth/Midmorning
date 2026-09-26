@@ -17,6 +17,7 @@ struct NotRightNowPageView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(NotRightNowPage.heading)
                         .font(.largeTitle.bold())
+                        .accessibilityAddTraits(.isHeader)
 
                     ForEach(NotRightNowPage.ordered(reasons), id: \.self) { reason in
                         if let paragraph = NotRightNowPage.paragraph(for: reason) {
@@ -26,15 +27,14 @@ struct NotRightNowPageView: View {
 
                     Text(CommonLabels.talkToYourGP)
                         .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
                     GPParagraphView(variant: GPParagraph.variant(for: reasons))
 
                     ExportControlButton(store: store)
                     Text(NotRightNowPage.recordStaysLine)
                     Text(NotRightNowPage.remindersLine(for: reasons))
 
-                    Button(CommonLabels.done) { onDone() }
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity)
+                    FullWidthConfirmButton(CommonLabels.done, action: onDone)
                 }
                 .padding()
             }

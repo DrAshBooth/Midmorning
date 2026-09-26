@@ -15,11 +15,10 @@ struct CautionSheetView: View {
 
                     Text(CommonLabels.talkToYourGP)
                         .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
                     GPParagraphView(variant: .standard)
 
-                    Button(CommonLabels.continueLabel) { onContinue() }
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity)
+                    FullWidthConfirmButton(CommonLabels.continueLabel, action: onContinue)
                 }
                 .padding()
             }

@@ -14,9 +14,7 @@ struct Screen1View: View {
                     ForEach(Array(Screen1Content.lines.enumerated()), id: \.offset) { _, line in
                         Text(line)
                     }
-                    Button(Screen1Content.continueLabel) { onContinue() }
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity)
+                    FullWidthConfirmButton(Screen1Content.continueLabel, action: onContinue)
                 }
                 .padding()
             }

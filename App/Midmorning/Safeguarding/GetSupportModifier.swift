@@ -3,9 +3,11 @@ import Programme
 
 /// "Get support" in the navigation bar's trailing position, wired to open
 /// the support sheet (safeguarding spec, "Get support on every screen").
-/// Every full screen this change adds applies this modifier; the cover and
-/// a sheet that closes in one tap to a screen already showing the control
-/// are the spec's own exemptions and apply this to neither.
+/// Every full screen applies this modifier, Today too; the cover and a
+/// sheet that closes in one tap to a screen already showing the control are
+/// the spec's own exemptions and apply this to neither. The text is the one
+/// catalogue key for the control, `today.getSupport`; the three AppLock
+/// screens with no navigation bar use the same key on their own button.
 struct GetSupportModifier: ViewModifier {
     var fromSelfHarmReason: Bool = false
     @State private var showingSupportSheet = false

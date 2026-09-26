@@ -191,8 +191,17 @@ struct WeighInScreenView: View {
             guard let value = Double(weightKgText) else { return }
             raw = value
         case .stLb:
-            guard let stone = Int(weightStoneText), let pounds = Int(weightPoundsText) else { return }
-            raw = WeighInWeight.kg(stone: stone, pounds: pounds)
+            // Pounds accept a whole number from 0 to 13 (weigh-in spec, "The
+            // number and its unit").
+            switch TypedMeasureParser.weightKg(stone: weightStoneText, pounds: weightPoundsText) {
+            case .missing:
+                return
+            case .partOutOfRange:
+                belowRangeMessage = WeighInWeight.belowRangeMessage
+                return
+            case .value(let kg):
+                raw = kg
+            }
         }
         switch WeighInWeight.validate(kg: raw) {
         case .belowRange:

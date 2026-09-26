@@ -37,7 +37,7 @@ struct DeletedScreen: View {
                 // Safeguarding: "Get support on every screen" — this is a
                 // full screen, so it carries the same control every other
                 // full screen this change adds does.
-                Button("settings.getSupport") { isShowingSupportSheet = true }
+                Button("today.getSupport") { isShowingSupportSheet = true }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
             }

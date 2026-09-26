@@ -83,9 +83,7 @@ struct ReviewScreenView: View {
         .navigationTitle("weeklyReview.title")
         .getSupport()
         .safeAreaInset(edge: .bottom) {
-            Button(CommonLabels.done, action: tapDone)
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
+            FullWidthConfirmButton(CommonLabels.done, action: tapDone)
                 .padding()
                 .background(.bar)
         }
@@ -123,20 +121,19 @@ struct ReviewScreenView: View {
                 }
 
                 if selfHarmFirst == .yes, selfHarmSecond == .no {
-                    // The support sheet's items, inline, Samaritans first
-                    // (safeguarding spec, "Re-screening at every weekly
-                    // review and check-in").
                     Text(SelfHarmItem.supportLine)
-                    VStack(alignment: .leading) {
-                        Text(CommonLabels.samaritansName).font(.headline)
-                        Text(SupportSheet.samaritansNumber)
-                        Text(SupportSheet.samaritansLine).font(.footnote).foregroundStyle(.secondary)
-                    }
                 }
             }
         }
         .onChange(of: selfHarmSecond) { _, newValue in
             if newValue == .yes { showNotRightNow() }
+        }
+
+        if !selfHarmAlreadyAnswered, selfHarmFirst == .yes, selfHarmSecond == .no {
+            // The support sheet's items, inline, Samaritans first
+            // (safeguarding spec, "The self-harm item" and "Re-screening at
+            // every weekly review and check-in").
+            SelfHarmInlineSupport()
         }
     }
 

@@ -4,124 +4,57 @@ import Programme
 
 /// The restart re-screen (safeguarding spec, "Re-screening at a restart"):
 /// height, weight, pregnancy, treatment and the self-harm item, with no age
-/// question. Reuses `OnboardingAnswers` for its typed fields and unit
-/// conversion; `RestartRescreen.evaluate` decides the outcome.
+/// question. It shares onboarding screen 2's questions, messages, focus
+/// moves and range checks (`ScreeningQuestionSections`, `ScreeningForm`).
+/// `RestartRescreen.evaluate` decides the outcome. With the caution flag set
+/// and no rule that excludes, the caution sheet shows before the start-day
+/// choice ("The BMI rules, with the caution sheet, apply to the new height
+/// and weight.").
 struct RescreenView: View {
     let store: RecordStore
     var onExcluded: ([ExclusionReason]) -> Void
     var onNoExclusion: () -> Void
 
     @StateObject private var answers = OnboardingAnswers()
-    @State private var invalidMessage: String?
+    @State private var issue: ScreeningFormIssue?
+    @State private var isShowingCautionSheet = false
+    @AccessibilityFocusState private var focusedField: ScreeningField?
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Text(Screen2Content.heightWeightIntro).font(.footnote).foregroundStyle(.secondary)
-                }
-
-                Section {
-                    Picker("Unit", selection: $answers.heightUnit) {
-                        ForEach(HeightUnitChoice.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    if answers.heightUnit == .centimetres {
-                        TextField("cm", text: $answers.heightCmText).keyboardType(.numberPad)
-                    } else {
-                        HStack {
-                            TextField("ft", text: $answers.heightFeetText).keyboardType(.numberPad)
-                            TextField("in", text: $answers.heightInchesText).keyboardType(.numberPad)
-                        }
-                    }
-                } header: { Text(Screen2Content.heightQuestion) }
-
-                Section {
-                    Picker("Unit", selection: $answers.weightUnit) {
-                        ForEach(WeightUnitChoice.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    if answers.weightUnit == .kilograms {
-                        TextField("kg", text: $answers.weightKgText).keyboardType(.numberPad)
-                    } else {
-                        HStack {
-                            TextField("st", text: $answers.weightStoneText).keyboardType(.numberPad)
-                            TextField("lb", text: $answers.weightPoundsText).keyboardType(.numberPad)
-                        }
-                    }
-                } header: { Text(Screen2Content.weightQuestion) }
-
-                Section {
-                    Picker(Screen2Content.treatmentQuestion, selection: $answers.treatmentAnswer) {
-                        Text(CommonLabels.no).tag(TreatmentAnswer?.some(.no))
-                        Text(CommonLabels.treatmentYesWithAgreement).tag(TreatmentAnswer?.some(.yesWithAgreement))
-                        Text(CommonLabels.yes).tag(TreatmentAnswer?.some(.yes))
-                    }
-                    .pickerStyle(.inline)
-                } header: { Text(Screen2Content.treatmentQuestion) }
-
-                Section {
-                    Picker(Screen2Content.pregnancyQuestion, selection: $answers.pregnancyAnswer) {
-                        Text(CommonLabels.no).tag(PregnancyAnswer?.some(.no))
-                        Text(CommonLabels.yes).tag(PregnancyAnswer?.some(.yes))
-                        Text(CommonLabels.doesNotApplyToMe).tag(PregnancyAnswer?.some(.doesNotApply))
-                    }
-                    .pickerStyle(.inline)
-                } header: { Text(Screen2Content.pregnancyQuestion) }
-
-                Section {
-                    Picker(ScreeningQuestionCatalog.questions[5], selection: $answers.selfHarmFirst) {
-                        Text(CommonLabels.no).tag(SelfHarmFirstAnswer?.some(.no))
-                        Text(CommonLabels.yes).tag(SelfHarmFirstAnswer?.some(.yes))
-                        Text(CommonLabels.ratherNotSay).tag(SelfHarmFirstAnswer?.some(.ratherNotSay))
-                    }
-                    .pickerStyle(.inline)
-                    if answers.selfHarmFirst == .yes {
-                        Picker(ScreeningQuestionCatalog.selfHarmSecondQuestion, selection: $answers.selfHarmSecond) {
-                            Text(CommonLabels.no).tag(SelfHarmSecondAnswer?.some(.no))
-                            Text(CommonLabels.yes).tag(SelfHarmSecondAnswer?.some(.yes))
-                        }
-                        .pickerStyle(.inline)
-                    }
-                    if answers.selfHarmFirst == .yes, answers.selfHarmSecond == .no {
-                        Text(SelfHarmItem.supportLine)
-                        VStack(alignment: .leading) {
-                            Text(CommonLabels.samaritansName).font(.headline)
-                            Text(SupportSheet.samaritansNumber)
-                            Text(SupportSheet.samaritansLine).font(.footnote).foregroundStyle(.secondary)
-                        }
-                    }
-                } header: { Text(ScreeningQuestionCatalog.questions[5]) }
-
-                if let invalidMessage {
-                    Text(invalidMessage).foregroundStyle(.red)
-                }
+                ScreeningQuestionSections(answers: answers, asksAge: false, issue: issue, focusedField: $focusedField)
             }
             .navigationTitle("programme.rescreen.title")
             .safeAreaInset(edge: .bottom) {
-                Button(CommonLabels.continueLabel) { attemptContinue() }
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
+                FullWidthConfirmButton(CommonLabels.continueLabel, action: attemptContinue)
                     .padding()
                     .background(.bar)
             }
             .getSupport()
+            .sheet(isPresented: $isShowingCautionSheet) {
+                CautionSheetView(onContinue: {
+                    isShowingCautionSheet = false
+                    onNoExclusion()
+                })
+            }
         }
     }
 
     private func attemptContinue() {
-        invalidMessage = nil
-        guard let heightCm = answers.heightCm, let weightKg = answers.weightKg,
-              answers.treatmentAnswer != nil, answers.pregnancyAnswer != nil, answers.selfHarmFirst != nil,
-              answers.selfHarmFirst != .yes || answers.selfHarmSecond != nil
-        else {
-            invalidMessage = Screen2Content.unansweredMessage
+        issue = ScreeningForm.firstIssue(answers.formInput(asksAge: false))
+        if let issue {
+            focusedField = issue.field
             return
         }
+        guard let heightCm = answers.heightCm, let weightKg = answers.weightKg,
+              let pregnancy = answers.pregnancyAnswer, let treatment = answers.treatmentAnswer,
+              let selfHarmFirst = answers.selfHarmFirst
+        else { return }
         let rescreenAnswers = RescreenAnswers(
             heightCm: heightCm, weightKg: weightKg,
-            pregnancy: answers.pregnancyAnswer ?? .no, treatment: answers.treatmentAnswer ?? .no,
-            selfHarmFirst: answers.selfHarmFirst ?? .no, selfHarmSecond: answers.selfHarmSecond
+            pregnancy: pregnancy, treatment: treatment,
+            selfHarmFirst: selfHarmFirst, selfHarmSecond: answers.selfHarmSecond
         )
         let result = RestartRescreen.evaluate(rescreenAnswers, now: Date())
         if result.excluded {
@@ -131,7 +64,11 @@ struct RescreenView: View {
             onExcluded(result.reasons)
         } else {
             try? store.setProfile(heightCm: result.newHeightCm, onboardingBMI: result.newOnboardingBMI, cautionFlag: result.newCautionFlag, askedAt: result.newAskedAt, changedAt: result.newAskedAt)
-            onNoExclusion()
+            if result.newCautionFlag {
+                isShowingCautionSheet = true
+            } else {
+                onNoExclusion()
+            }
         }
     }
 }

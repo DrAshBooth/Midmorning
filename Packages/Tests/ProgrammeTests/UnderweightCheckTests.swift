@@ -76,4 +76,37 @@ final class UnderweightCheckTests: XCTestCase {
         XCTAssertEqual(Set(rules), [.b, .c])
         XCTAssertEqual(UnderweightCheck.gpSuggestionReasons(rules), [.fallingWeight, .quickChange])
     }
+
+    // MARK: mm-t22.23, exact falls on the boundary ("Rule C applies when the
+    // current value is 5% or more below that earlier value.")
+
+    /// Exact 5% falls that `Double` puts a few units in the last place off.
+    func testRuleCOnAnExactFivePercentFall() {
+        for (earlier, current) in [(149.60, 142.12), (46.0, 43.7), (70.0, 66.5)] {
+            let input = UnderweightCheckInput(heightCm: 150, onboardingBMI: 24.2, cautionFlag: false, currentAverageKg: current, averageAtLeast28DaysEarlierKg: earlier)
+            XCTAssertTrue(UnderweightCheck.rulesThatApply(input).contains(.c), "\(earlier) kg to \(current) kg is a 5% fall")
+        }
+        let justAbove = UnderweightCheckInput(heightCm: 150, onboardingBMI: 24.2, cautionFlag: false, currentAverageKg: 142.13, averageAtLeast28DaysEarlierKg: 149.60)
+        XCTAssertFalse(UnderweightCheck.rulesThatApply(justAbove).contains(.c), "a fall of less than 5% does not apply")
+    }
+
+    /// An exact 3% fall with the caution flag set.
+    func testRuleCOnAnExactThreePercentFallWithTheCautionFlag() {
+        let input = UnderweightCheckInput(heightCm: 150, onboardingBMI: 18.9, cautionFlag: true, currentAverageKg: 39.77, averageAtLeast28DaysEarlierKg: 41.0)
+        XCTAssertTrue(UnderweightCheck.rulesThatApply(input).contains(.c))
+    }
+
+    /// Rule B on an exact fall of 1.0: 150 cm and 42.84 kg is an implied
+    /// BMI of exactly 19.04, and the onboarding BMI is 20.04.
+    func testRuleBOnAnExactFallOfOne() {
+        let input = UnderweightCheckInput(heightCm: 150, onboardingBMI: 20.04, cautionFlag: false, currentAverageKg: 42.84, averageAtLeast28DaysEarlierKg: nil)
+        XCTAssertEqual(UnderweightCheck.rulesThatApply(input), [.b])
+    }
+
+    /// Rule A does not apply on an implied BMI of exactly 18.5: 160 cm and
+    /// 47.36 kg.
+    func testRuleAOnAnImpliedBMIOfExactly18Point5() {
+        let input = UnderweightCheckInput(heightCm: 160, onboardingBMI: 19.2, cautionFlag: true, currentAverageKg: 47.36, averageAtLeast28DaysEarlierKg: nil)
+        XCTAssertFalse(UnderweightCheck.rulesThatApply(input).contains(.a))
+    }
 }

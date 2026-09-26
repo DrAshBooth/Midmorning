@@ -6,63 +6,85 @@ import Programme
 
 /// The four Beat numbers and "Beat webchat" (safeguarding spec, "The
 /// exclusion page": "The page MUST show the four Beat numbers... and 'Beat
-/// webchat'."). `SupportSheetView` embeds the same numbers inside its own
-/// full list.
+/// webchat'."). The exclusion page shows this in a ScrollView, not a List.
+/// `SupportSheetSections` shows the same rows inside its own list.
 struct BeatContactsView: View {
-    @State private var pendingCallNumber: String?
-    @State private var isShowingWebchat = false
     @State private var copiedNumber: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(SupportSheet.beatNumbers, id: \.number) { entry in
-                NumberRow(label: entry.label, number: entry.number, pendingCallNumber: $pendingCallNumber, copiedNumber: $copiedNumber)
+                NumberRow(label: entry.label, number: entry.number, copiedNumber: $copiedNumber)
             }
-            Button(CommonLabels.beatWebchat) { isShowingWebchat = true }
-        }
-        .confirmationDialog(
-            SupportSheet.callRecentsWarning,
-            isPresented: Binding(get: { pendingCallNumber != nil }, set: { if !$0 { pendingCallNumber = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button(CommonLabels.call) {
-                if let number = pendingCallNumber { NumberRow.startCall(number) }
-                pendingCallNumber = nil
-            }
-            Button(CommonLabels.cancel, role: .cancel) { pendingCallNumber = nil }
-        }
-        .sheet(isPresented: $isShowingWebchat) {
-            SafariView(urlString: SupportSheet.beatWebchatURLString)
+            BeatWebchatButton()
         }
     }
 }
 
 /// One number with "Call" and "Copy number" (safeguarding spec, "The
-/// support sheet"). "Call" first shows the Recents warning; "Copy number"
-/// places the number on the pasteboard, local-only, with a 60-second
-/// expiry, and shows "Copied. It clears in a minute." for two seconds.
+/// support sheet"). "Call" first shows the Recents warning. "Copy number"
+/// puts the number on the pasteboard, local-only, with a 60-second expiry,
+/// under the rules of the GP paragraph's "Copy": the control reads "Copied"
+/// for two seconds, and "Copied. It clears in a minute." stays under the
+/// number until the screen closes or another number is copied.
+///
+/// Each control has the borderless style, so in a List or Form row a tap
+/// runs only the control under the finger, never every button in the row.
+/// At an accessibility text size the number sits above the controls, and
+/// the controls stack, so no text breaks or truncates.
 struct NumberRow: View {
     let label: String
     let number: String
-    @Binding var pendingCallNumber: String?
+    /// The number that the last "Copy number" put on the pasteboard. The
+    /// owner of the list holds it, so one confirmation line shows at a time.
     @Binding var copiedNumber: String?
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var isConfirmingCall = false
+    @State private var showsCopiedLabel = false
+    @State private var copyCount = 0
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(label)
-                    Text(number).font(.headline)
+        VStack(alignment: .leading, spacing: 8) {
+            if dynamicTypeSize.isAccessibilitySize {
+                labelAndNumber
+                VStack(alignment: .leading, spacing: 8) { controls }
+            } else {
+                HStack {
+                    labelAndNumber
+                    Spacer()
+                    controls
                 }
-                Spacer()
-                Button(CommonLabels.call) { pendingCallNumber = number }
-                Button(copiedNumber == number ? CommonLabels.copied : CommonLabels.copyNumber) { copy() }
             }
             if copiedNumber == number {
                 Text(SupportSheet.copiedConfirmationLine).font(.footnote).foregroundStyle(.secondary)
             }
         }
+        .confirmationDialog(SupportSheet.callRecentsWarning, isPresented: $isConfirmingCall, titleVisibility: .visible) {
+            Button(CommonLabels.call) { NumberRow.startCall(number) }
+            Button(CommonLabels.cancel, role: .cancel) {}
+        }
+        .task(id: copyCount) {
+            guard copyCount > 0 else { return }
+            try? await Task.sleep(for: .seconds(GPParagraphCopy.copiedLabelDurationSeconds))
+            if !Task.isCancelled { showsCopiedLabel = false }
+        }
+    }
+
+    private var labelAndNumber: some View {
+        VStack(alignment: .leading) {
+            Text(label)
+            Text(number).font(.headline)
+        }
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var controls: some View {
+        Button(CommonLabels.call) { isConfirmingCall = true }
+            .buttonStyle(.borderless)
+        Button(showsCopiedLabel ? CommonLabels.copied : CommonLabels.copyNumber) { copy() }
+            .buttonStyle(.borderless)
     }
 
     private func copy() {
@@ -74,6 +96,8 @@ struct NumberRow: View {
             ]
         )
         copiedNumber = number
+        showsCopiedLabel = true
+        copyCount += 1
         UIAccessibility.post(notification: .announcement, argument: CommonLabels.copied)
     }
 
@@ -83,6 +107,20 @@ struct NumberRow: View {
         let digits = number.filter(\.isNumber)
         guard let url = URL(string: "tel://\(digits)") else { return }
         UIApplication.shared.open(url)
+    }
+}
+
+/// "Beat webchat": opens Beat's help page in an `SFSafariViewController`
+/// over the current screen (safeguarding spec, "The support sheet").
+struct BeatWebchatButton: View {
+    @State private var isShowingWebchat = false
+
+    var body: some View {
+        Button(CommonLabels.beatWebchat) { isShowingWebchat = true }
+            .buttonStyle(.borderless)
+            .sheet(isPresented: $isShowingWebchat) {
+                SafariView(urlString: SupportSheet.beatWebchatURLString)
+            }
     }
 }
 

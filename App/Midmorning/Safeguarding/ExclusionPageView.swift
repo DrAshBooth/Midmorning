@@ -14,6 +14,7 @@ struct ExclusionPageView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(ExclusionPage.heading)
                         .font(.largeTitle.bold())
+                        .accessibilityAddTraits(.isHeader)
                     Text(ExclusionPage.intro)
 
                     ForEach(ExclusionPage.ordered(reasons), id: \.self) { reason in
@@ -22,14 +23,13 @@ struct ExclusionPageView: View {
 
                     Text(ExclusionPage.whatToDoInstead)
                         .font(.title2.bold())
+                        .accessibilityAddTraits(.isHeader)
                     GPParagraphView(variant: GPParagraph.variant(for: reasons))
                     BeatContactsView()
 
                     Text(ExclusionPage.closing)
 
-                    Button(CommonLabels.done) { onDone() }
-                        .buttonStyle(.borderedProminent)
-                        .frame(maxWidth: .infinity)
+                    FullWidthConfirmButton(CommonLabels.done, action: onDone)
                 }
                 .padding()
             }

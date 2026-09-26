@@ -23,6 +23,19 @@ final class TreatmentClaimTests: XCTestCase {
         XCTAssertFalse(TreatmentClaim.passes("for bingers"))
     }
 
+    /// mm-t14.35: every use of a word counts, not only the first.
+    func testANegatedUseThenAClaimFails() {
+        XCTAssertFalse(TreatmentClaim.passes("It is not therapy. Midmorning is therapy in your pocket."))
+        XCTAssertFalse(TreatmentClaim.passes("This isn\u{2019}t treatment, but it treats the cause."))
+    }
+
+    /// mm-t14.35: a word matches only as a whole word.
+    func testAWholeWordOnly() {
+        XCTAssertTrue(TreatmentClaim.passes("Some people go on retreats."))
+        XCTAssertTrue(TreatmentClaim.passes("It doesn't monitor you, and it isn\u{2019}t therapy."))
+        XCTAssertFalse(TreatmentClaim.passes("The app monitors you."))
+    }
+
     func testEveryOnboardingStringPasses() {
         for string in OnboardingStrings.all {
             XCTAssertTrue(TreatmentClaim.passes(string), "\"\(string)\" should pass the treatment-claim check")
