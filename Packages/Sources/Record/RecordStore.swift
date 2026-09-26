@@ -1109,6 +1109,23 @@ public final class RecordStore {
         return RecordDay.key(containing: now, calendar: calendar, schedule: try dayStartSchedule())
     }
 
+    /// The row that a review write of (`kind`, `dueDateKey`) at `now` goes
+    /// into, or `nil` when that write inserts a new row
+    /// (`ReviewReconciler.writeTarget`). Before the freeze, this is the
+    /// unfrozen row with the answers that the person saved so far. A read
+    /// (`review`) never shows that row, so the freeze reads it here and
+    /// keeps those answers in the frozen row (`ReviewFreeze.frozenValues`).
+    public func reviewWriteTarget(kind: ReviewKind, dueDateKey: String, now: Date, calendar: Calendar? = nil) throws -> ReviewRow? {
+        let rows = try reviewWriteRows(kind: kind, dueDateKey: dueDateKey)
+        let currentDayKey = try reviewReadDayKey(now: now, calendar: calendar)
+        return ReviewReconciler.writeTarget(in: rows, now: now, currentDayKey: currentDayKey).map(reviewRow)
+    }
+
+    private func reviewWriteRows(kind: ReviewKind, dueDateKey: String) throws -> [Review] {
+        let kindValue = kind.rawValue
+        return try context.fetch(FetchDescriptor<Review>(predicate: #Predicate { $0.kind == kindValue && $0.dueDateKey == dueDateKey }))
+    }
+
     /// Writes the review of (`kind`, `dueDateKey`) after a reconciled fetch
     /// (weekly-review spec, "The week's counts are frozen in the Review
     /// row": "When one key has more than one row, the app MUST read the row
@@ -1122,25 +1139,42 @@ public final class RecordStore {
     /// caller passes the complete, already-merged `answersJSON`; this store
     /// never reads or writes its shape. `calendar` gives the device zone
     /// for the future-dated test, and `nil` means the device's own zone.
+    ///
+    /// An edit of the target changes its content only when `changedAt` is
+    /// not earlier than the target's own `changedAt`, the same
+    /// later-changedAt rule as every other row (`wins`). So an edit after
+    /// the device clock goes back, or after a device with a clock ahead
+    /// edits the row, does not replace newer answers. A write that freezes
+    /// an unfrozen target always applies, because the freeze must happen;
+    /// the caller merges that row's own answers into it
+    /// (`reviewWriteTarget`), and its `changedAt` never goes back. A
+    /// `selfHarmAnswered` of `true` always stays `true` (weekly-review spec,
+    /// "The self-harm item at the review": "When step 1 has an answer, the
+    /// store MUST keep `selfHarmAnswered: true` for the review.").
     @discardableResult
     public func upsertReview(
         kind: ReviewKind, dueDateKey: String, frozenAt: Date?, answersJSON: String,
         selfHarmAnswered: Bool, pinnedNote: String, changedAt: Date, calendar: Calendar? = nil
     ) throws -> ReviewRow {
-        let kindValue = kind.rawValue
-        let rows = try context.fetch(FetchDescriptor<Review>(predicate: #Predicate { $0.kind == kindValue && $0.dueDateKey == dueDateKey }))
+        let rows = try reviewWriteRows(kind: kind, dueDateKey: dueDateKey)
         let currentDayKey = try reviewReadDayKey(now: changedAt, calendar: calendar)
         let model: Review
         if let target = ReviewReconciler.writeTarget(in: rows, now: changedAt, currentDayKey: currentDayKey) {
             model = target
-            if model.frozenAt == nil { model.frozenAt = frozenAt }
-            model.answersJSON = answersJSON
-            model.selfHarmAnswered = selfHarmAnswered
-            model.pinnedNote = pinnedNote
-            model.changedAt = changedAt
+            if selfHarmAnswered { model.selfHarmAnswered = true }
+            if model.frozenAt == nil, let frozenAt {
+                model.frozenAt = frozenAt
+                model.answersJSON = answersJSON
+                model.pinnedNote = pinnedNote
+                model.changedAt = max(model.changedAt, changedAt)
+            } else if Self.wins(changedAt, over: model.changedAt) {
+                model.answersJSON = answersJSON
+                model.pinnedNote = pinnedNote
+                model.changedAt = changedAt
+            }
         } else {
             model = Review(
-                kind: kindValue, dueDateKey: dueDateKey, frozenAt: frozenAt,
+                kind: kind.rawValue, dueDateKey: dueDateKey, frozenAt: frozenAt,
                 answersJSON: answersJSON, selfHarmAnswered: selfHarmAnswered, pinnedNote: pinnedNote, changedAt: changedAt
             )
             context.insert(model)

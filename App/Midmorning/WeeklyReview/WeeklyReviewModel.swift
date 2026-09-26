@@ -181,10 +181,12 @@ enum WeeklyReviewModel {
         let syncOn = (try? store.syncOn()) ?? false
         guard ReviewFreeze.readyToFreeze(dueDayKey: dueDayKey, dayStart: (try? store.dayStartHour(effectiveOn: dueDayKey)) ?? RecordDay.startHour, calendar: calendar, now: now, syncOn: syncOn, lastSyncMoment: nil) else { return }
         let facts = weekFacts(store: store, week: week, startDay: startDay, calendar: calendar, now: now)
-        var payload = ReviewAnswersPayload()
-        payload.frozenCounts = FrozenReviewCounts.from(facts)
-        payload.runStartDay = startDay
-        try? store.upsertReview(kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: now, answersJSON: payload.encoded(), selfHarmAnswered: false, pinnedNote: "", changedAt: now)
+        let pending = try? store.reviewWriteTarget(kind: .weeklyReview, dueDateKey: dueDayKey, now: now, calendar: calendar)
+        let frozen = ReviewFreeze.frozenValues(pending: pending.map(rowValues), counts: FrozenReviewCounts.from(facts), runStartDay: startDay)
+        try? store.upsertReview(
+            kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: now, answersJSON: frozen.answersJSON,
+            selfHarmAnswered: frozen.selfHarmAnswered, pinnedNote: frozen.pinnedNote, changedAt: now
+        )
     }
 
     /// Saves `week`'s review: merges the person's own answers into the row

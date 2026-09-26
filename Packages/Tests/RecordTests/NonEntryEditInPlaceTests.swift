@@ -3,6 +3,7 @@ import SwiftData
 import XCTest
 @testable import Record
 import RecordTestSupport
+import Programme
 
 /// data-and-privacy spec, "Rows reference each other by key": "An edit of a
 /// row other than an entry MUST write into the winning row." Ash ruled on 26
@@ -254,14 +255,77 @@ final class NonEntryEditInPlaceTests: XCTestCase {
     }
 
     /// An answer before the freeze and the freeze itself share one row.
+    /// The freeze makes the calls of `WeeklyReviewModel.freezeIfNeeded`:
+    /// it reads the unfrozen row and keeps its answers, its pinned note and
+    /// its `selfHarmAnswered: true`.
     func testAFreezeWritesIntoTheUnfrozenRow() throws {
         let store = try makeTemporaryStore()
+        var answers = ReviewAnswersPayload()
+        answers.reflectionAnswers = ["Tired", "Work", "Walks"]
         let unfrozen = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: nil, answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(0), calendar: utc)
-        try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: nil, answersJSON: "{\"a\":1}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(10), calendar: utc)
-        let frozen = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: moment(20), answersJSON: "{\"counts\":1}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(20), calendar: utc)
+        try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: nil, answersJSON: answers.encoded(), selfHarmAnswered: true, pinnedNote: "Lunch", changedAt: moment(10), calendar: utc)
+        XCTAssertNil(try store.review(kind: .weeklyReview, dueDateKey: "2026-10-05", now: moment(15), calendar: utc), "a read never shows an unfrozen row")
+
+        let pending = try XCTUnwrap(store.reviewWriteTarget(kind: .weeklyReview, dueDateKey: "2026-10-05", now: moment(20), calendar: utc))
+        let counts = FrozenReviewCounts(daysWithEntry: 5, starred: 2, plan: nil, paused: 0, urges: 0, urgesPassed: 0)
+        let values = ReviewFreeze.frozenValues(
+            pending: ReviewRowValues(answersJSON: pending.answersJSON, selfHarmAnswered: pending.selfHarmAnswered, pinnedNote: pending.pinnedNote),
+            counts: counts, runStartDay: "2026-09-28"
+        )
+        let frozen = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: moment(20), answersJSON: values.answersJSON, selfHarmAnswered: values.selfHarmAnswered, pinnedNote: values.pinnedNote, changedAt: moment(20), calendar: utc)
+
         XCTAssertEqual(try rows(Review.self, in: store).count, 1)
         XCTAssertEqual(frozen.id, unfrozen.id)
         XCTAssertEqual(frozen.frozenAt, moment(20))
+        let payload = ReviewAnswersPayload.decode(frozen.answersJSON)
+        XCTAssertEqual(payload.frozenCounts, counts)
+        XCTAssertEqual(payload.reflectionAnswers, ["Tired", "Work", "Walks"], "the answers from before the freeze stay")
+        XCTAssertTrue(frozen.selfHarmAnswered)
+        XCTAssertEqual(frozen.pinnedNote, "Lunch")
+    }
+
+    /// "When step 1 has an answer, the store MUST keep `selfHarmAnswered:
+    /// true` for the review." A later write with `false` does not clear it.
+    func testAReviewWriteNeverClearsSelfHarmAnswered() throws {
+        let store = try makeTemporaryStore()
+        try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: nil, answersJSON: "{}", selfHarmAnswered: true, pinnedNote: "", changedAt: moment(0), calendar: utc)
+        let frozen = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: moment(20), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(20), calendar: utc)
+        XCTAssertTrue(frozen.selfHarmAnswered)
+        let edited = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: moment(20), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(40), calendar: utc)
+        XCTAssertTrue(edited.selfHarmAnswered)
+    }
+
+    /// The later-changedAt rule: an edit with an earlier `changedAt` than
+    /// the frozen row's, after the device clock goes back or after a
+    /// device with a clock ahead edits the row, changes nothing. A
+    /// `selfHarmAnswered: true` in that edit still stays.
+    func testAnEarlierReviewEditChangesNothing() throws {
+        let store = try makeTemporaryStore()
+        let frozen = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: moment(0), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(0), calendar: utc)
+        try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: frozen.frozenAt, answersJSON: "{\"newer\":1}", selfHarmAnswered: false, pinnedNote: "Newer", changedAt: moment(600), calendar: utc)
+
+        let written = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: frozen.frozenAt, answersJSON: "{\"older\":1}", selfHarmAnswered: true, pinnedNote: "Older", changedAt: moment(300), calendar: utc)
+
+        let reviews = try rows(Review.self, in: store)
+        XCTAssertEqual(reviews.count, 1)
+        XCTAssertEqual(reviews.first?.answersJSON, "{\"newer\":1}")
+        XCTAssertEqual(reviews.first?.pinnedNote, "Newer")
+        XCTAssertEqual(reviews.first?.changedAt, moment(600), "changedAt does not go back")
+        XCTAssertEqual(reviews.first?.selfHarmAnswered, true)
+        XCTAssertEqual(written.answersJSON, "{\"newer\":1}", "the write returns the row as the store holds it")
+    }
+
+    /// A freeze with an earlier `changedAt` than the unfrozen row still
+    /// freezes the row, because the freeze must happen, and its `changedAt`
+    /// does not go back.
+    func testAnEarlierFreezeStillFreezesTheRow() throws {
+        let store = try makeTemporaryStore()
+        try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: nil, answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(600), calendar: utc)
+        let frozen = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: moment(300), answersJSON: "{\"counts\":1}", selfHarmAnswered: false, pinnedNote: "", changedAt: moment(300), calendar: utc)
+        XCTAssertEqual(frozen.frozenAt, moment(300))
+        XCTAssertEqual(frozen.answersJSON, "{\"counts\":1}")
+        XCTAssertEqual(frozen.changedAt, moment(600))
+        XCTAssertEqual(try store.review(kind: .weeklyReview, dueDateKey: "2026-10-05", now: moment(900), calendar: utc)?.id, frozen.id)
     }
 
     /// Scenario: Future-dated review. A row frozen later than the write's

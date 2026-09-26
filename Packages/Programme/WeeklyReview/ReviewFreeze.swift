@@ -60,4 +60,22 @@ public enum ReviewFreeze {
         guard let lastSyncMoment else { return false }
         return lastSyncMoment > due
     }
+
+    /// The row that the freeze writes. `pending` is the unfrozen row with
+    /// the answers that the person saved before the freeze, or `nil`
+    /// (`RecordStore.reviewWriteTarget`). The store writes the freeze into
+    /// that row, so the frozen row keeps its answers, its pinned note and
+    /// its `selfHarmAnswered`, and adds the counts and the run's start day.
+    /// A read never shows an unfrozen row, so the review screen shows
+    /// those answers again after the freeze.
+    public static func frozenValues(pending: ReviewRowValues?, counts: FrozenReviewCounts, runStartDay: String) -> ReviewRowValues {
+        var payload = pending.map { ReviewAnswersPayload.decode($0.answersJSON) } ?? ReviewAnswersPayload()
+        payload.frozenCounts = counts
+        payload.runStartDay = runStartDay
+        return ReviewRowValues(
+            answersJSON: payload.encoded(),
+            selfHarmAnswered: pending?.selfHarmAnswered ?? false,
+            pinnedNote: pending?.pinnedNote ?? ""
+        )
+    }
 }
