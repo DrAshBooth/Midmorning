@@ -143,6 +143,51 @@ final class ReviewSaveTests: XCTestCase {
         XCTAssertNil(payload.deteriorationPageShown)
     }
 
+    // MARK: mm-t32.25, r13-17: answers so far in every week
+
+    /// "I'm getting worse" or the self-harm route in the review of week 1:
+    /// the row keeps the week-1 answers before "Done", and the review stays
+    /// unfinished.
+    func testAnswersSoFarInWeek1KeepsTheWeek1Answers() {
+        let result = ReviewSave.values(
+            existing: frozenRow(), mode: .answersSoFar, week: 1, runStartDay: startDay,
+            reflectionAnswers: ["", "", ""], oneThingToChange: "", weekOneAnswers: ["Eat breakfast", "", "Evenings"],
+            selfHarmStepOneAnswered: false
+        )
+        let payload = ReviewAnswersPayload.decode(result.answersJSON)
+        XCTAssertEqual(payload.weekOneAnswers, ["Eat breakfast", "", "Evenings"])
+        XCTAssertFalse(payload.finished)
+        XCTAssertEqual(result.pinnedNote, "")
+    }
+
+    /// A later save in week 1 replaces the week-1 answers with the ones the
+    /// screen shows now.
+    func testALaterSaveInWeek1ReplacesTheWeek1Answers() {
+        let first = ReviewSave.values(
+            existing: frozenRow(), mode: .answersSoFar, week: 1, runStartDay: startDay,
+            reflectionAnswers: ["", "", ""], oneThingToChange: "", weekOneAnswers: ["Eat breakfast", "", ""],
+            selfHarmStepOneAnswered: false
+        )
+        let done = ReviewSave.values(
+            existing: first, mode: .done, week: 1, runStartDay: startDay,
+            reflectionAnswers: ["", "", ""], oneThingToChange: "", weekOneAnswers: ["Eat breakfast", "Evenings", ""],
+            selfHarmStepOneAnswered: false
+        )
+        let payload = ReviewAnswersPayload.decode(done.answersJSON)
+        XCTAssertEqual(payload.weekOneAnswers, ["Eat breakfast", "Evenings", ""])
+        XCTAssertTrue(payload.finished)
+    }
+
+    /// Only the review of week 1 keeps week-1 answers.
+    func testAnswersSoFarInWeek2KeepsNoWeek1Answers() {
+        let result = ReviewSave.values(
+            existing: frozenRow(), mode: .answersSoFar, week: 2, runStartDay: startDay,
+            reflectionAnswers: ["", "", ""], oneThingToChange: "", weekOneAnswers: ["Eat breakfast", "", ""],
+            selfHarmStepOneAnswered: false
+        )
+        XCTAssertNil(ReviewAnswersPayload.decode(result.answersJSON).weekOneAnswers)
+    }
+
     // MARK: mm-t32.22, the run start day
 
     /// Each save writes the run start day into the row once.
