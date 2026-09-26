@@ -2,8 +2,9 @@ import Foundation
 
 /// The gap band between two consecutive entries of a record day (record
 /// spec, "The gap band"). A pure function over the day's entry times and its
-/// own state, because `programme-engine` (2.1) is not built yet; a wiring
-/// bead there (mm-t21.23) supplies the live stage-2-open fact.
+/// own state. The App target passes the live stage-2-open fact from
+/// `programme-engine` (2.1) and MAX_AWAKE_GAP_HOURS from
+/// `ProgrammeConstants`.
 public enum GapBand {
     /// The indexes in `sortedTimes` after which a band shows: a band sits
     /// between `sortedTimes[i]` and `sortedTimes[i + 1]` when that gap is

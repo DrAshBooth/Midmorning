@@ -1,6 +1,7 @@
 import Foundation
 import Record
 import Plan
+import Constants
 
 /// One planned meal row's already-resolved display facts for Today
 /// (regular-eating-plan spec, "Today shows the plan beside the record"; "A
@@ -55,8 +56,8 @@ enum PlanToday {
         let slots = PlanCodec.decode(slotsJSON)
         guard !slots.isEmpty else { return PlanDaySection(rows: [], matchedEntryIds: [], trailingNextLine: nil) }
 
-        let windowBefore = plan?.windowBeforeMinutes ?? 60
-        let windowAfter = plan?.windowAfterMinutes ?? 90
+        let windowBefore = plan?.windowBeforeMinutes ?? ProgrammeConstants.default.plannedMealWindowBeforeMinutes
+        let windowAfter = plan?.windowAfterMinutes ?? ProgrammeConstants.default.plannedMealWindowAfterMinutes
         let windows = PlanWindows.windows(for: slots, recordDay: recordDay, dayStartHour: dayStartHour, beforeMinutes: windowBefore, afterMinutes: windowAfter, calendar: calendar)
         let ordered = PlanOrdering.sorted(slots, dayStartHour: dayStartHour)
         let entryFacts = entries.map { PlanEntryFact(id: $0.id, time: $0.time) }

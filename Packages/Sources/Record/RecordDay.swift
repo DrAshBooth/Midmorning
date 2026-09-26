@@ -1,11 +1,15 @@
 import Foundation
+import Constants
 
 /// A record day starts at 04:00 by default and ends at 03:59 the next calendar day.
 /// An entry's record day is fixed at save from the entry's own UTC offset, so it
 /// never moves when the person travels. The current record day comes from the
 /// device zone.
 public enum RecordDay {
-    public static let startHour = 4
+    /// DEFAULT_DAY_START_HOUR, read from `ProgrammeConstants` (programme
+    /// spec, "The constants live in one value": "The code MUST NOT repeat a
+    /// constant's value as a literal elsewhere.").
+    public static let startHour = ProgrammeConstants.default.defaultDayStartHour
 
     /// The key ("2026-09-24") of the record day that holds `time` at `utcOffsetSeconds`,
     /// with the day starting at `startHour`. Fixed at save; never recomputed.

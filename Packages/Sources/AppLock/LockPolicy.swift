@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The pure rule for "When the app asks": `LockPolicy.shouldAsk` takes the
 /// continuous-clock moment the app entered the background, the current
@@ -48,14 +49,13 @@ public final class StubContinuousClock: ContinuousClockReading, @unchecked Senda
 }
 
 /// The four "Lock after" choices and their labels (app-lock spec, "Lock
-/// after"). `ProgrammeConstants.lockGraceSecondsChoices` holds the same four
-/// values so the settings screen and this function never disagree.
+/// after"). The values come from `ProgrammeConstants.lockGraceSecondsChoices`,
+/// so the settings screen and this function never disagree.
 public enum LockGrace {
-    /// The four choices, in the Privacy group's own order. Mirrors
-    /// `ProgrammeConstants.lockGraceSecondsChoices` (`Constants` package);
-    /// this copy lets the App target's fixture-only Privacy section build
-    /// its picker with no dependency beyond `AppLock`.
-    public static let choices: [Int] = [0, 30, 120, 300]
+    /// The four choices, in the Privacy group's own order: LOCK_GRACE_SECONDS
+    /// from `ProgrammeConstants` (programme spec, "The constants live in one
+    /// value").
+    public static let choices: [Int] = ProgrammeConstants.default.lockGraceSecondsChoices
 
     public static func label(forSeconds seconds: Int) -> String {
         switch seconds {

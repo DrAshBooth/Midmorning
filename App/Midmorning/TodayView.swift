@@ -3,6 +3,7 @@ import Record
 import Plan
 import Programme
 import AppLock
+import Constants
 
 /// The record day's entries as a time-ordered column, like the paper
 /// record (record spec, "The Today stack"). The order here is the only
@@ -551,6 +552,6 @@ struct GapBandRow: View {
             .frame(height: 4)
             .listRowSeparator(.hidden)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: 4))
+            .accessibilityLabel(GapBand.accessibilityLabel(maxAwakeGapHours: ProgrammeConstants.default.maxAwakeGapHours))
     }
 }
