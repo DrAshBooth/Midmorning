@@ -3,6 +3,7 @@
 - [x] 1.1 Add the line "Could not delete. Try again." after a failed deletion to "Delete-all" (r14-01, mm-t41.26). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 - [x] 1.2 Set safe mode at the third launch and choose it from the marker before the store opens in "Launch safety" (r13-13, mm-t41.25; r13-05, mm-t42.23). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 - [x] 1.3 Make "Share App Analytics with Apple" open the app's own page in "The app holds no analytics of its own" (r12-01). Prove it with `openspec validate rulings-specs-a --type change --strict`.
+- [x] 1.4 Open both stores read-only in safe mode and keep its launch failure in the marker in "Launch safety" (r13-05, mm-t42.23). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 
 ## 2. app-lock
 
@@ -15,6 +16,7 @@
 
 - [x] 3.1 Keep the UTC offset for the entry's own time in "The app keeps the entry's UTC offset and creation moment" (r13-16, mm-t12b.22). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 - [x] 3.2 Keep plan text out of the six-words rule and delete the stale strings sentence in "Today's appearance" (r13-07, mm-t12b.21). Prove it with `openspec validate rulings-specs-a --type change --strict`.
+- [x] 3.3 Compute the edit screen's bounds and the edited offset in the entry's edit zone in "Edit an entry" (r13-16, mm-t12b.22). Prove it with `openspec validate rulings-specs-a --type change --strict`.
 
 ## 4. export
 

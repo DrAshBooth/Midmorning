@@ -50,9 +50,11 @@ Offline, the app MUST complete the deletion on the device. The app MUST keep one
 
 ### Requirement: Launch safety
 
-The app MUST write a launch marker file at start. The app MUST clear the marker after Today appears. The marker MUST live outside the store directory. When the app ends before it clears the marker on two launches in a row, the app MUST enter safe mode at the third launch. Ash set this threshold on 26 September 2026. The app MUST choose safe mode from the launch marker before it opens the store.
+The app MUST write a launch marker file at start. The marker MUST hold the count of launches in a row that ended before the app cleared the marker. The app MUST clear the marker after Today appears. The marker MUST live outside the store directory. When the app ends before it clears the marker on two launches in a row, the app MUST enter safe mode at the third launch. Ash set this threshold on 26 September 2026. The app MUST choose safe mode from the count in the launch marker before it opens the store.
 
-In safe mode the app MUST skip the Erasure read, the import, the Reconciler and the scheduler. In safe mode the app MUST open the store read-only. In safe mode the app MUST NOT let a schema migration write to the store. Ash ruled the read-only open on 26 September 2026. In safe mode the app MUST show Today with Export and Get support. The app MUST add one to the launch failure count in `Local.store` each time it finds an uncleared marker.
+In safe mode the app MUST skip the Erasure read, the import, the Reconciler and the scheduler. In safe mode the app MUST open `Record.store` and `Local.store` read-only. In safe mode the app MUST NOT write to either store. In safe mode the app MUST NOT let a schema migration write to the store. Ash ruled on 26 September 2026 that safe mode reads the record for Export and writes nothing. In safe mode the app MUST show Today with Export and Get support.
+
+The app MUST add one to the launch failure count in `Local.store` each time it finds an uncleared marker. In safe mode the app MUST keep that failure in the launch marker instead. When Today appears in safe mode, the app MUST clear the count of launches in the marker and keep that failure. The next launch that opens the store for writing MUST add each kept failure to the count in `Local.store`.
 
 When the container throws for any reason other than unavailable protected data, the app MUST show one page. The page MUST read "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything". "Try again" MUST open the container again. "Delete everything" MUST open the Delete-all confirmation. The app MUST NOT delete the store without the person's confirmation.
 
@@ -66,7 +68,7 @@ When the container throws for any reason other than unavailable protected data, 
 
 #### Scenario: Safe mode reads only
 - **WHEN** the app enters safe mode and the person makes an export
-- **THEN** the PDF holds the record, and `Record.store` holds no new or changed row
+- **THEN** the PDF holds the record, and `Record.store` and `Local.store` hold no new or changed row
 
 #### Scenario: Safe mode with a pending migration
 - **WHEN** the store needs a schema migration and the app enters safe mode
@@ -77,8 +79,12 @@ When the container throws for any reason other than unavailable protected data, 
 - **THEN** the app clears the marker, and the next launch runs the Erasure read, the import, the Reconciler and the scheduler
 
 #### Scenario: Launch failures counted
-- **WHEN** the app finds an uncleared marker at launch
+- **WHEN** the app finds an uncleared marker at a launch that does not enter safe mode
 - **THEN** the launch failure count in `Local.store` rises by one and the Diagnostics page shows the new count
+
+#### Scenario: Launch failure in safe mode
+- **WHEN** the app enters safe mode, Today appears, and the person opens the app again
+- **THEN** the safe mode launch writes nothing to `Local.store`, the launch marker keeps its failure, and the next launch adds that failure to the launch failure count in `Local.store`
 
 #### Scenario: Store fails to open
 - **WHEN** the container throws an error that is not about protected data

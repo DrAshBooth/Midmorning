@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Ash's rulings of 26 September 2026 change two record requirements: the UTC offset at the entry's own time, and the six-words rule beside the plan's text.
+Ash's rulings of 26 September 2026 change three record requirements: the UTC offset at the entry's own time, the time zone of the edit screen, and the six-words rule beside the plan's text.
 
 ## MODIFIED Requirements
 
 ### Requirement: The app keeps the entry's UTC offset and creation moment
 
-The app MUST keep, with each entry, the UTC offset for the entry's own time. The app MUST compute that offset from the device's current time zone rules at the entry time, with `TimeZone.current.secondsFromGMT(for:)`. The app MUST NOT use the offset at the save moment. When an edit changes the entry's time, the app MUST compute the offset again for the new time. The store writes the record day key from the entry's time and this offset, as "The record day" requirement states. Ash ruled this on 26 September 2026. The app MUST NOT keep a time zone name. The app MUST keep the moment the person saved the entry, separate from the entry time. The app MUST NOT show the creation moment or any "logged later" label to the person. Today MUST show the entry's clock time at the entry's UTC offset.
+The app MUST keep, with each entry, the UTC offset for the entry's own time. On the new-entry screen, the app MUST compute that offset from the device's current time zone rules at the entry time, with `TimeZone.current.secondsFromGMT(for:)`. The app MUST NOT use the offset at the save moment. On the edit screen, the app MUST compute the offset at the edited time in the edit zone. The "Edit an entry" requirement defines the edit zone. The store writes the record day key from the entry's time and this offset, as "The record day" requirement states. Ash ruled this on 26 September 2026. The app MUST NOT keep a time zone name. The app MUST keep the moment the person saved the entry, separate from the entry time. The app MUST NOT show the creation moment or any "logged later" label to the person. Today MUST show the entry's clock time at the entry's UTC offset.
 
 #### Scenario: Entry with an earlier time
 - **WHEN** the person saves an entry with a time two hours before now
@@ -25,6 +25,42 @@ The app MUST keep, with each entry, the UTC offset for the entry's own time. The
 #### Scenario: Earlier time across a clock change
 - **WHEN** the clocks in London go back at 02:00 on Sunday 25 October, and at 10:00 that day the person saves an entry with the time 04:30 on Saturday 24 October
 - **THEN** the app keeps the offset UTC+1 with the entry, the store writes the key of Saturday 24 October, and the entry shows at 04:30 under Saturday 24 October
+
+### Requirement: Edit an entry
+
+A tap on a row on Today or on an earlier day MUST open the entry for editing. The edit screen is the new-entry screen filled with the entry's values. The person MUST be able to change the time, the What, the Where, the star and the Context.
+
+The time control MUST offer only times inside the entry's own record day. The time control MUST show one segment, which names that record day. The time control MUST show and offer times in the entry's edit zone. When the device's current time zone gives the entry's kept UTC offset at the entry's time, the edit zone is the device's current time zone. Otherwise the edit zone is a fixed zone at the entry's kept UTC offset. The app MUST compute that record day's bounds in the edit zone, from the day start row. That row is the one in force for that record day key, as `data-and-privacy` states. In the device's current time zone, a record day on a clock-change date is 23 or 25 hours long, as "The record day" requirement states. The time control MUST NOT offer a time after the current moment.
+
+On save the app MUST keep the UTC offset of the edit zone at the edited time. In a fixed zone, that offset is the entry's kept offset. On save the app MUST keep the entry's record day as it was. The edited time and its offset then still give that record day's key. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day. The edit zone follows Ash's ruling of 26 September 2026 on the offset at the entry's own time. After travel, it also follows the ruling of 25 September 2026.
+
+#### Scenario: Change the What
+- **WHEN** the person taps the 13:05 entry "Toast and tea", changes What to "Toast, tea and a biscuit" and saves
+- **THEN** Today shows the 13:05 entry with What "Toast, tea and a biscuit" and no other change
+
+#### Scenario: Change the time inside the entry's record day
+- **WHEN** "Day starts at" is 04:00, the current time is 09:00 on Friday 25 September, and the person opens the Friday 08:30 entry
+- **THEN** the time control offers times from 04:00 to 09:00 on Friday only, and after the person sets 06:45 and saves, Today shows the entry under Friday 25 September at 06:45
+
+#### Scenario: One segment on the edit screen
+- **WHEN** the current time is 02:00 on Friday 25 September and the person opens the Wednesday 23 September 21:00 entry
+- **THEN** the time control shows one segment, "Wednesday 23 September", and the hour-and-minute wheel
+
+#### Scenario: Creation moment stays
+- **WHEN** the person edits an entry with the creation moment 13:08 and saves at 18:00
+- **THEN** the app keeps 13:08 as the creation moment
+
+#### Scenario: Cancel an edit
+- **WHEN** the person turns the star on in the edit screen and taps "Cancel"
+- **THEN** the entry keeps the star off
+
+#### Scenario: Edit after travel
+- **WHEN** the person saves an entry at 05:00 on Saturday 26 September in London at UTC+1, then on Sunday 27 September opens it in New York at UTC-4 and sets the time 05:30
+- **THEN** the time control shows 05:00 when it opens, the app keeps UTC+1 with the entry, and the entry shows at 05:30 under Saturday 26 September
+
+#### Scenario: Edit across a clock change
+- **WHEN** the clocks in London go back at 02:00 on Sunday 25 October, and at 09:00 that day the person in London opens the Saturday 24 October 23:00 entry and sets the time 03:30 on Sunday
+- **THEN** the time control offers times from 04:00 on Saturday to 03:59 on Sunday, 25 hours, the app keeps UTC+0 with the entry, and the entry shows at 03:30 under Saturday 24 October
 
 ### Requirement: Today's appearance
 
