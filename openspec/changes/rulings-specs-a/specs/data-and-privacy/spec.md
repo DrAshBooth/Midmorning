@@ -54,7 +54,7 @@ The app MUST write a launch marker file at start. The marker MUST hold the count
 
 In safe mode the app MUST skip the Erasure read, the import, the Reconciler and the scheduler. In safe mode the app MUST open `Record.store` and `Local.store` read-only. In safe mode the app MUST NOT write to either store. This rule does not stop Delete-all or "Delete from this device". Both delete the store directory, and offline Delete-all then keeps its instruction in a new `Local.store`. In safe mode the app MUST NOT let a schema migration write to the store. Ash ruled on 26 September 2026 that safe mode reads the record for Export and writes nothing. When the read-only open succeeds, the app MUST show Today with Export and Get support.
 
-The app MUST add one to the launch failure count in `Local.store` each time it finds an uncleared marker. In safe mode the app MUST keep that failure in the launch marker instead. When Today appears in safe mode, the app MUST clear the count of launches in the marker and keep that failure. The next launch that opens the store for writing MUST add each kept failure to the count in `Local.store`.
+The app MUST add one to the launch failure count in `Local.store` each time it finds an uncleared marker. In safe mode the app MUST keep that failure in the launch marker instead. When Today appears in safe mode, the app MUST clear the count of launches in the marker and keep that failure. The next launch that opens the store for writing MUST add each kept failure to the count in `Local.store`. In safe mode the app MUST also keep each MetricKit crash count in the launch marker, not in `Local.store`. The next launch that opens the store for writing MUST add each kept crash to the crash count in `Local.store`.
 
 When the container throws for any reason other than unavailable protected data, the app MUST show one page. The page MUST read "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything". "Try again" MUST open the container again. "Delete everything" MUST open the Delete-all confirmation. The app MUST NOT delete the store without the person's confirmation.
 
@@ -91,6 +91,10 @@ A store that needs a schema migration cannot open read-only. So in safe mode tha
 #### Scenario: Launch failure in safe mode
 - **WHEN** the app enters safe mode, Today appears, and the person opens the app again
 - **THEN** the safe mode launch writes nothing to `Local.store`, the launch marker keeps its failure, and the next launch adds that failure to the launch failure count in `Local.store`
+
+#### Scenario: Crash count in safe mode
+- **WHEN** MetricKit delivers a crash diagnostic at a launch in safe mode
+- **THEN** the launch marker keeps the crash, `Local.store` does not change, and the next launch that opens the store for writing adds one to the crash count in `Local.store`
 
 #### Scenario: Store fails to open
 - **WHEN** the container throws an error that is not about protected data
