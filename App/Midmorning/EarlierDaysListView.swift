@@ -23,15 +23,7 @@ struct EarlierDaysListView: View {
         }
         .recordListStyle()
         .navigationTitle("today.earlierDays")
-        .toolbar {
-            // safeguarding spec, "Get support on every screen": a pushed
-            // screen (not a one-tap sheet) needs its own trailing control.
-            // Placeholder until `onboarding-and-safeguarding` (1.4) wires
-            // the real support sheet.
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {} label: { Text("today.getSupport") }
-            }
-        }
+        .getSupport()
         .onAppear(perform: load)
     }
 
@@ -80,16 +72,16 @@ struct EarlierDayDetailView: View {
         .navigationTitle(Text(DayHeading.dateOnly(forDayKey: dayKey)))
         .toolbar {
             // "Today" and "Get support" (safeguarding spec, "Get support on
-            // every screen") share the trailing position; "Get support" sits
-            // last, as the true trailing control. Placeholder until
-            // `onboarding-and-safeguarding` (1.4) wires the real sheet.
+            // every screen") share the trailing position; "Get support"
+            // sits last, as the true trailing control, from `.getSupport()`
+            // below.
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("today.earlierDays.today") {
                     navigationPath.removeLast(navigationPath.count)
                 }
-                Button {} label: { Text("today.getSupport") }
             }
         }
+        .getSupport()
         .safeAreaInset(edge: .bottom) {
             HStack {
                 Button {

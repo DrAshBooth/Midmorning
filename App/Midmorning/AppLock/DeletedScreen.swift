@@ -45,7 +45,7 @@ struct DeletedScreen: View {
             .padding()
         }
         .sheet(isPresented: $isShowingSupportSheet) {
-            GetSupportPlaceholderSheet()
+            SupportSheetView()
         }
     }
 }

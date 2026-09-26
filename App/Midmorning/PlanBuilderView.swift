@@ -48,7 +48,6 @@ struct PlanBuilderView: View {
     @State private var renameMessage: String?
     @State private var softRuleLines: [String] = []
     @State private var isShowingSoftRuleCheck = false
-    @State private var isShowingGetSupport = false
 
     private var orderedMeals: [PlannedMeal] { PlanOrdering.sorted(meals, dayStartHour: dayStartHour) }
     private var placedSlotIndexes: Set<Int> { Set(meals.map(\.slotIndex)) }
@@ -93,11 +92,8 @@ struct PlanBuilderView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("entry.cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("today.getSupport") { isShowingGetSupport = true }
-                }
             }
-            .sheet(isPresented: $isShowingGetSupport) { GetSupportPlaceholderSheet() }
+            .getSupport()
             .sheet(item: renamingSlotBinding) { renaming in
                 renameSheet(for: renaming.index)
             }

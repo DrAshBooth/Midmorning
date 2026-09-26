@@ -22,7 +22,6 @@ struct RemindersSettingsView: View {
     @State private var quietHoursStart = ClockTime.date(hour: 22, minute: 0)
     @State private var quietHoursEnd = ClockTime.date(hour: 7, minute: 0)
     @State private var pausedAt: Date?
-    @State private var isShowingSupportSheet = false
     /// `mm-t24.21` wires the real `UNUserNotificationCenter` permission read
     /// in; a fresh install reads as not determined.
     @State private var notificationPermission: NotificationPermission = .notDetermined
@@ -96,16 +95,7 @@ struct RemindersSettingsView: View {
             }
         }
         .navigationTitle("settings.reminders.title")
-        .toolbar {
-            // Decision 94: the trailing position of the navigation bar
-            // (safeguarding spec, "Get support on every screen").
-            ToolbarItem(placement: .confirmationAction) {
-                Button("settings.getSupport") { isShowingSupportSheet = true }
-            }
-        }
-        .sheet(isPresented: $isShowingSupportSheet) {
-            GetSupportPlaceholderSheet()
-        }
+        .getSupport()
         .onAppear(perform: load)
     }
 

@@ -34,7 +34,6 @@ struct SettingsView: View {
     @State private var weighInWeekday: Int?
     @State private var weighInUnit: WeightUnit = .kg
     @State private var isShowingDeleteConfirmation = false
-    @State private var isShowingSupportSheet = false
     @State private var contentInfo: ContentBundle?
     @State private var contactEmail = ""
     @State private var biometry: Biometry = .none
@@ -125,12 +124,7 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("settings.title")
-        .toolbar {
-            // Decision 94: the trailing position of the navigation bar.
-            ToolbarItem(placement: .confirmationAction) {
-                Button("settings.getSupport") { isShowingSupportSheet = true }
-            }
-        }
+        .getSupport()
         .confirmationDialog(
             "applock.deleteEverything.confirm.title",
             isPresented: $isShowingDeleteConfirmation,
@@ -144,9 +138,6 @@ struct SettingsView: View {
             Button("entry.cancel", role: .cancel) {}
         } message: {
             Text("applock.deleteEverything.confirm.message")
-        }
-        .sheet(isPresented: $isShowingSupportSheet) {
-            GetSupportPlaceholderSheet()
         }
         .onAppear(perform: load)
     }
@@ -202,28 +193,5 @@ struct SettingsView: View {
 
     private static var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
-    }
-}
-
-/// A minimal stand-in for the support sheet (safeguarding spec, "The support
-/// sheet"). `onboarding-and-safeguarding` (1.4, mm-t14.24) builds the real
-/// sheet with the Beat, Samaritans, Lifeline and NHS 111 numbers, the call
-/// and copy controls and the webchat link; every full screen this change
-/// adds calls this placeholder until it lands.
-struct GetSupportPlaceholderSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Text("settings.getSupport")
-            }
-            .navigationTitle("settings.getSupport")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("entry.cancel") { dismiss() }
-                }
-            }
-        }
     }
 }

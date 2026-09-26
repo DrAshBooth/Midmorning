@@ -10,8 +10,6 @@ import SwiftUI
 struct PrivacyNoticeView: View {
     let contactEmail: String
 
-    @State private var isShowingSupportSheet = false
-
     var body: some View {
         Form {
             Section("settings.privacyNotice.controller.heading") {
@@ -39,15 +37,6 @@ struct PrivacyNoticeView: View {
             }
         }
         .navigationTitle("settings.privacyNotice.title")
-        .toolbar {
-            // Decision 94: the trailing position of the navigation bar
-            // (safeguarding spec, "Get support on every screen").
-            ToolbarItem(placement: .confirmationAction) {
-                Button("settings.getSupport") { isShowingSupportSheet = true }
-            }
-        }
-        .sheet(isPresented: $isShowingSupportSheet) {
-            GetSupportPlaceholderSheet()
-        }
+        .getSupport()
     }
 }

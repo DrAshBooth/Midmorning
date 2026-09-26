@@ -37,7 +37,7 @@ struct StoreOpenFailureView: View {
             .padding()
         }
         .sheet(isPresented: $isShowingSupportSheet) {
-            GetSupportPlaceholderSheet()
+            SupportSheetView()
         }
         .confirmationDialog(
             "applock.deleteEverything.confirm.title",

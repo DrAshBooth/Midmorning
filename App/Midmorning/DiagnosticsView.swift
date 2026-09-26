@@ -9,7 +9,6 @@ import Record
 /// .diagnosticsCounts(contentVersion:)`; this view only renders the value.
 struct DiagnosticsView: View {
     let counts: DiagnosticsCounts
-    @State private var isShowingSupportSheet = false
 
     var body: some View {
         Form {
@@ -31,17 +30,7 @@ struct DiagnosticsView: View {
                 .accessibilityElement(children: .combine)
         }
         .navigationTitle("diagnostics.title")
-        .toolbar {
-            // Safeguarding: "Get support on every screen" (decision 94: the
-            // trailing position of the navigation bar, matching every other
-            // full screen this change adds).
-            ToolbarItem(placement: .confirmationAction) {
-                Button("settings.getSupport") { isShowingSupportSheet = true }
-            }
-        }
-        .sheet(isPresented: $isShowingSupportSheet) {
-            GetSupportPlaceholderSheet()
-        }
+        .getSupport()
     }
 
     private var reconcileOutcomeText: String {
