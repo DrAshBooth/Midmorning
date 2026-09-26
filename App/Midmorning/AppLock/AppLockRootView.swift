@@ -67,12 +67,18 @@ struct AppLockRootView: View {
             .onReceive(NotificationCenter.default.publisher(for: .reminderAddActionTapped)) { _ in
                 controller.handle(.pendingRouteRequested(.newEntry))
             }
-            .onAppear { checkEnrolmentStateIfNeeded() }
+            .onAppear {
+                checkEnrolmentStateIfNeeded()
+                // design.md, "The scheduler is a pure function over a
+                // rolling horizon": recomputed on activation.
+                ReminderCoordinator.recomputeAndApply(store: store)
+            }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .active:
                     controller.handle(.didBecomeActive(now: MachContinuousClock().continuousSeconds()))
                     checkEnrolmentStateIfNeeded()
+                    ReminderCoordinator.recomputeAndApply(store: store)
                 case .inactive:
                     controller.handle(.didBecomeInactive)
                 case .background:

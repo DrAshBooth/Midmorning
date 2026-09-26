@@ -81,14 +81,17 @@ landed, so this change uses the real support sheet, not a placeholder).
   reads (`MorningPlanFacts.stage2Open`) is a fixture fact, the same pattern
   `GapBand`'s and `PlanBuilderAccess`'s own `stage2Open` already use;
   `mm-t21.23` wires the live stage in.
-- The real notification-permission read (`UNUserNotificationCenter`'s own
-  `getNotificationSettings`), the real scheduler's fact-gathering from
-  `Plan`/`RecordStore` into `Scheduler.requests`, and the real "Day starts
-  at"/onboarding/not-right-now/lock-control wiring are `mm-t24.21`'s own
-  scope; this change's Today line and Reminders-group permission section
-  read a fixture `notificationPermission` fact until `mm-t24.21` lands (the
-  Reminders-group section's own `UNUserNotificationCenter` calls are real;
-  only the fixture default on first render is a placeholder).
+- `mm-t24.21`'s wiring is built: `ReminderCoordinator` (App target) gathers
+  real `RecordStore`/`Plan` facts and calls `Scheduler.requests`, called from
+  every Reminders-group change and from activation; the Today lock control
+  now dispatches the real `AppLockController`. `TodayView`'s own permission
+  *line* still reads a fixture `notificationPermission` fact (`stage2Open`'s
+  own pattern), because nothing yet reads the real permission on Today
+  itself; the Reminders-group section's `UNUserNotificationCenter` calls are
+  real. The App target has no `swift test` target, so `ReminderCoordinator`
+  and the lock-control fix are proved by the epic's device checks, the same
+  way `LocalAuthenticationAdapter` and every other App-target adapter
+  already are.
 - `Programme` cannot import `Plan` or `Record` (design.md, "One umbrella
   package, five targets"), so `Scheduler` takes every day's facts
   (materialised or template-resolved plan, the match against entries, stage
@@ -103,9 +106,12 @@ landed, so this change uses the real support sheet, not a placeholder).
 
 Every device-only check is listed on the epic's device-check bead
 (mm-t24.22): the real system permission dialog and its effect on the
-schedule; "Skipped" and "Add" while the device is locked (the authentication
-and foreground options); a snooze delivered and rescheduled on a real
-device; Notification Centre grouping and removal timing; the largest
-accessibility text size on the Reminders group and the close-the-day
-screen; VoiceOver's reading order and custom actions; and the shame walk,
-which also covers a reminder on the Lock Screen at work.
+schedule; a real `ReminderCoordinator.recomputeAndApply` after "Turn
+reminders on", a switch, a time or quiet hours changes; the Today lock
+control's real cover, now that it dispatches the real `AppLockController`;
+"Skipped" and "Add" while the device is locked (the authentication and
+foreground options); a snooze delivered and rescheduled on a real device;
+Notification Centre grouping and removal timing; the largest accessibility
+text size on the Reminders group and the close-the-day screen; VoiceOver's
+reading order and custom actions; and the shame walk, which also covers a
+reminder on the Lock Screen at work.

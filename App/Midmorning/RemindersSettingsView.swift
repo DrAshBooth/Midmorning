@@ -63,9 +63,9 @@ struct RemindersSettingsView: View {
 
             Section {
                 DatePicker("settings.reminders.time.setTodaysPlan", selection: $setTodaysPlanTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: setTodaysPlanTime) { store.trySetReminderTime($1, .setTodaysPlan) }
+                    .onChange(of: setTodaysPlanTime) { store.trySetReminderTime($1, .setTodaysPlan); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.time.closeTheDay", selection: $closeTheDayTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: closeTheDayTime) { store.trySetReminderTime($1, .closeTheDay) }
+                    .onChange(of: closeTheDayTime) { store.trySetReminderTime($1, .closeTheDay); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.time.weighIn", selection: $weighInTime, displayedComponents: .hourAndMinute)
                     .onChange(of: weighInTime) { store.trySetReminderTime($1, .weighIn) }
                 DatePicker("settings.reminders.time.weeklyReview", selection: $weeklyReviewTime, displayedComponents: .hourAndMinute)
@@ -78,7 +78,7 @@ struct RemindersSettingsView: View {
 
             Section {
                 Toggle("settings.reminders.explicitWording", isOn: $explicitWordingOn)
-                    .onChange(of: explicitWordingOn) { _, on in try? store.setExplicitWordingOn(on) }
+                    .onChange(of: explicitWordingOn) { _, on in try? store.setExplicitWordingOn(on); ReminderCoordinator.recomputeAndApply(store: store) }
                 Picker("settings.reminders.remindAgainLabel", selection: $remindAgainMinutes) {
                     Text("settings.reminders.remindAgain.15").tag(15)
                     Text("settings.reminders.remindAgain.30").tag(30)
@@ -88,11 +88,11 @@ struct RemindersSettingsView: View {
 
             Section {
                 Toggle("settings.reminders.quietHours", isOn: $quietHoursOn)
-                    .onChange(of: quietHoursOn) { _, on in try? store.setQuietHoursOn(on) }
+                    .onChange(of: quietHoursOn) { _, on in try? store.setQuietHoursOn(on); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.quietHours.start", selection: $quietHoursStart, displayedComponents: .hourAndMinute)
-                    .onChange(of: quietHoursStart) { store.trySetQuietHoursStart($1) }
+                    .onChange(of: quietHoursStart) { store.trySetQuietHoursStart($1); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.quietHours.end", selection: $quietHoursEnd, displayedComponents: .hourAndMinute)
-                    .onChange(of: quietHoursEnd) { store.trySetQuietHoursEnd($1) }
+                    .onChange(of: quietHoursEnd) { store.trySetQuietHoursEnd($1); ReminderCoordinator.recomputeAndApply(store: store) }
             }
         }
         .navigationTitle("settings.reminders.title")
@@ -115,6 +115,10 @@ struct RemindersSettingsView: View {
             set: { on in
                 switches[kind] = on
                 try? store.setReminderSwitch(on, kind)
+                // reminders spec, "Reminder types and their switches": "When
+                // a switch is off, the scheduler MUST cancel every pending
+                // reminder of that type."
+                ReminderCoordinator.recomputeAndApply(store: store)
             }
         )
     }
@@ -139,6 +143,10 @@ struct RemindersSettingsView: View {
     private func turnRemindersOn() {
         try? store.turnRemindersOn()
         pausedAt = nil
+        // reminders spec, "Reminder types and their switches": "the app
+        // MUST clear `remindersPausedAt`" and settings spec, "The Reminders
+        // group": "the scheduler computes the schedule again."
+        ReminderCoordinator.recomputeAndApply(store: store)
     }
 
     /// "Allow notifications" (reminders spec, "Reminder types and their

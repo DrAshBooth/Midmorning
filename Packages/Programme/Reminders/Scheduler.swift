@@ -66,11 +66,18 @@ public struct SchedulerSettings: Sendable, Equatable {
     public var quietHoursOn: Bool
     public var quietHoursStart: String
     public var quietHoursEnd: String
+    /// When `false`, `Scheduler.requests` schedules nothing at all
+    /// (reminders spec, "Reminder types and their switches": "When the
+    /// person has not granted notification permission, the scheduler MUST
+    /// schedule nothing."). Defaults to `true` so a caller that has no
+    /// permission concern (most tests) never has to set it.
+    public var notificationPermissionGranted: Bool
 
     public init(
         switches: [ReminderKind: Bool], remindersPausedAt: Date?, explicitWordingOn: Bool,
         morningPlanTime: String, closeTheDayTime: String,
-        quietHoursOn: Bool, quietHoursStart: String, quietHoursEnd: String
+        quietHoursOn: Bool, quietHoursStart: String, quietHoursEnd: String,
+        notificationPermissionGranted: Bool = true
     ) {
         self.switches = switches
         self.remindersPausedAt = remindersPausedAt
@@ -80,6 +87,7 @@ public struct SchedulerSettings: Sendable, Equatable {
         self.quietHoursOn = quietHoursOn
         self.quietHoursStart = quietHoursStart
         self.quietHoursEnd = quietHoursEnd
+        self.notificationPermissionGranted = notificationPermissionGranted
     }
 }
 
@@ -174,6 +182,8 @@ public enum Scheduler {
         calendar: Calendar = Calendar(identifier: .gregorian),
         constants: ProgrammeConstants = .default
     ) -> [ReminderRequest] {
+        guard settings.notificationPermissionGranted else { return [] }
+
         var dayStarts: [String: Date] = [:]
         var slotLabelsByDay: [String: [Int: String]] = [:]
         var allCandidates: [ReminderCandidate] = []

@@ -2,6 +2,7 @@ import SwiftUI
 import Record
 import Plan
 import Programme
+import AppLock
 
 /// The record day's entries as a time-ordered column, like the paper
 /// record (record spec, "The Today stack"). The order here is the only
@@ -19,6 +20,11 @@ import Programme
 struct TodayView: View {
     let store: RecordStore
 
+    // The app's one real `AppLockController` (mm-t13.9's own pattern):
+    // shared through the environment, so the lock control here and the
+    // cover `AppLockRootView` overlays agree on the lock state (app-lock
+    // spec, "The lock control on Today").
+    @EnvironmentObject private var appLockController: AppLockController
     @Environment(\.scenePhase) private var scenePhase
     @State private var day = RecordDay.interval(containing: Date(), calendar: .current)
     @State private var currentSection: DaySection?
@@ -72,10 +78,12 @@ struct TodayView: View {
             .navigationTitle("today.title")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    // Placeholder: `app-lock` (1.5) wires the real cover and
-                    // lock state. The control's presence and position are
-                    // this change's own scope (decision 91).
-                    Button {} label: {
+                    // app-lock spec, "The lock control on Today": locks at
+                    // once, with no grace period, whether or not the app
+                    // lock is on (`AppLifecycleEvent.lockControlTapped`).
+                    Button {
+                        appLockController.handle(.lockControlTapped)
+                    } label: {
                         Image(systemName: "lock")
                     }
                     .accessibilityLabel("today.lock.accessibilityLabel")
