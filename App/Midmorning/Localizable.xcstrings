@@ -1773,6 +1773,12 @@
         "en-GB": {
           "variations": {
             "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Remind me in %lld minutes"
+                }
+              },
               "one": {
                 "stringUnit": {
                   "state": "translated",
@@ -2885,6 +2891,12 @@
         "en-GB": {
           "variations": {
             "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Gap of more than %lld hours"
+                }
+              },
               "one": {
                 "stringUnit": {
                   "state": "translated",
@@ -2908,6 +2920,12 @@
         "en-GB": {
           "variations": {
             "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld entries"
+                }
+              },
               "one": {
                 "stringUnit": {
                   "state": "translated",

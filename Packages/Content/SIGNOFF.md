@@ -23,7 +23,10 @@ reflection.1
 reflection.2
 reflection.3
 rule.stage2
+rule.stage2.count
 rule.stage3
+rule.stage3.days
+rule.stage3.weeks
 rule.stage4
 rule.stage5
 rule.stage6

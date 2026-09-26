@@ -5,11 +5,43 @@
   },
   {
     "id": "rule.stage2",
-    "text": "Opens after %1$lld recorded days. You have %2$lld."
+    "text": "Opens after %lld recorded days.",
+    "plural": {
+      "zero": "Opens after %lld recorded days.",
+      "one": "Opens after %lld recorded day.",
+      "other": "Opens after %lld recorded days."
+    }
+  },
+  {
+    "id": "rule.stage2.count",
+    "text": "You have %lld.",
+    "plural": {
+      "zero": "You have %lld.",
+      "one": "You have %lld.",
+      "other": "You have %lld."
+    }
   },
   {
     "id": "rule.stage3",
-    "text": "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts"
+    "text": "Opens after %1$@, or %2$@ after your plan starts"
+  },
+  {
+    "id": "rule.stage3.days",
+    "text": "%lld days on your plan",
+    "plural": {
+      "zero": "%lld days on your plan",
+      "one": "%lld day on your plan",
+      "other": "%lld days on your plan"
+    }
+  },
+  {
+    "id": "rule.stage3.weeks",
+    "text": "%lld weeks",
+    "plural": {
+      "zero": "%lld weeks",
+      "one": "%lld week",
+      "other": "%lld weeks"
+    }
   },
   {
     "id": "rule.stage4",
