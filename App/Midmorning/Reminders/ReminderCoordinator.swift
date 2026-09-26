@@ -207,7 +207,7 @@ enum ReminderCoordinator {
         let startDay = WeeklyReviewModel.load(store: store, now: now, calendar: calendar).startDay
         let time = (try? store.reminderTime(.weeklyReview)) ?? RecordStore.ReminderTime.weeklyReview.defaultTime
         return WeeklyReviewReminderRule.candidates(startDay: startDay, dayKeys: dayKeys, time: time, calendar: calendar) { week in
-            WeeklyReviewModel.isFinished(store: store, week: week, startDay: startDay, calendar: calendar)
+            WeeklyReviewModel.isFinished(store: store, week: week, startDay: startDay, calendar: calendar, now: now)
         }
     }
 

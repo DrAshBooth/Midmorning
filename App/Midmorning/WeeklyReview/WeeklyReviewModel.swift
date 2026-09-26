@@ -36,18 +36,18 @@ enum WeeklyReviewModel {
         let latestDueWeek: Int?
     }
 
-    static func load(store: RecordStore, now: Date = Date(), calendar: Calendar = .current) -> Snapshot {
+    static func load(store: RecordStore, now: Date, calendar: Calendar = .current) -> Snapshot {
         let currentRecordDay = RecordDay.key(containing: now, calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         let startDay = (try? store.startDayKey()) ?? currentRecordDay
         freezeAllDueWeeks(store: store, startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar, now: now)
         let dueWeek = ReviewDue.todayLineWeek(
             startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar,
-            isFinished: { week in isFinished(store: store, week: week, startDay: startDay, calendar: calendar) }
+            isFinished: { week in isFinished(store: store, week: week, startDay: startDay, calendar: calendar, now: now) }
         )
         let dueDayKey = dueWeek.map { ReviewDue.dueDayKey(week: $0, startDay: startDay, calendar: calendar) }
         let latestDueWeek = ReviewDue.latestDueWeek(startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar)
         let reviewsControlShows = latestDueWeek != nil
-        let (note, noteReview) = currentPinnedNoteAndReview(store: store, startDay: startDay, calendar: calendar)
+        let (note, noteReview) = currentPinnedNoteAndReview(store: store, startDay: startDay, calendar: calendar, now: now)
         return Snapshot(
             dueWeek: dueWeek, dueDayKey: dueDayKey, startDay: startDay, calendar: calendar,
             pinnedNote: note, pinnedNoteReview: noteReview, reviewsControlShows: reviewsControlShows,
@@ -66,26 +66,18 @@ enum WeeklyReviewModel {
         }
     }
 
-    static func isFinished(store: RecordStore, week: Int, startDay: String, calendar: Calendar) -> Bool {
+    static func isFinished(store: RecordStore, week: Int, startDay: String, calendar: Calendar, now: Date) -> Bool {
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
-        guard let row = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey) else { return false }
+        guard let row = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: now, calendar: calendar) else { return false }
         return ReviewAnswersPayload.decode(row.answersJSON).finished
     }
 
-    /// The latest finished review's own pinned-note text (weekly-review
-    /// spec, "The one thing to change and the pinned note"): "The pinned
-    /// note MUST stay until the person taps 'Done' on the next review."
-    static func currentPinnedNote(store: RecordStore) -> String? {
-        guard let winners = try? store.reviewRowWinners(kind: .weeklyReview) else { return nil }
-        guard let latest = winners
-            .filter({ ReviewAnswersPayload.decode($0.answersJSON).finished })
-            .max(by: { $0.dueDateKey < $1.dueDateKey })
-        else { return nil }
-        return latest.pinnedNote.isEmpty ? nil : latest.pinnedNote
-    }
-
-    private static func currentPinnedNoteAndReview(store: RecordStore, startDay: String, calendar: Calendar) -> (String?, ReviewRunWeek?) {
-        guard let winners = try? store.reviewRowWinners(kind: .weeklyReview) else { return (nil, nil) }
+    /// The latest finished review's own pinned-note text and its review
+    /// (weekly-review spec, "The one thing to change and the pinned note"):
+    /// "The pinned note MUST stay until the person taps 'Done' on the next
+    /// review."
+    private static func currentPinnedNoteAndReview(store: RecordStore, startDay: String, calendar: Calendar, now: Date) -> (String?, ReviewRunWeek?) {
+        guard let winners = try? store.reviewRowWinners(kind: .weeklyReview, now: now, calendar: calendar) else { return (nil, nil) }
         guard let latest = winners
             .filter({ ReviewAnswersPayload.decode($0.answersJSON).finished })
             .max(by: { $0.dueDateKey < $1.dueDateKey })
@@ -113,7 +105,7 @@ enum WeeklyReviewModel {
     /// Gathers `week`'s facts from the real store: entries, day states, the
     /// plan's own match (reusing `PlanToday.load`, Today's own seam), urges
     /// and the weigh-in.
-    static func weekFacts(store: RecordStore, week: Int, startDay: String, calendar: Calendar) -> ReviewWeekFacts {
+    static func weekFacts(store: RecordStore, week: Int, startDay: String, calendar: Calendar, now: Date) -> ReviewWeekFacts {
         let weekDayKeys = ReviewDue.weekDayKeys(week: week, startDay: startDay, calendar: calendar)
 
         var entries: [ReviewEntryFact] = []
@@ -156,7 +148,7 @@ enum WeeklyReviewModel {
         var previousWeekFrozenStarred: Int? = nil
         if week > 1 {
             let previousDueDayKey = ReviewDue.dueDayKey(week: week - 1, startDay: startDay, calendar: calendar)
-            if let previousRow = try? store.review(kind: .weeklyReview, dueDateKey: previousDueDayKey) {
+            if let previousRow = try? store.review(kind: .weeklyReview, dueDateKey: previousDueDayKey, now: now, calendar: calendar) {
                 previousWeekFrozenStarred = ReviewAnswersPayload.decode(previousRow.answersJSON).frozenCounts?.starred
             }
         }
@@ -176,9 +168,9 @@ enum WeeklyReviewModel {
     }
 
     /// The review's opening summary, or `[]` when "Weekly summary" is off.
-    static func summary(store: RecordStore, week: Int, startDay: String, calendar: Calendar) -> [String] {
+    static func summary(store: RecordStore, week: Int, startDay: String, calendar: Calendar, now: Date) -> [String] {
         guard (try? store.weeklySummaryOn()) ?? true else { return [] }
-        return ReviewSummary.parts(weekFacts(store: store, week: week, startDay: startDay, calendar: calendar), calendar: calendar)
+        return ReviewSummary.parts(weekFacts(store: store, week: week, startDay: startDay, calendar: calendar, now: now), calendar: calendar)
     }
 
     /// Freezes `week`'s review when it is ready (weekly-review spec, "The
@@ -186,10 +178,10 @@ enum WeeklyReviewModel {
     /// load and whenever the review or the Reviews list opens.
     static func freezeIfNeeded(store: RecordStore, week: Int, startDay: String, calendar: Calendar, now: Date) {
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
-        guard (try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey)) == nil else { return }
+        guard (try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: now, calendar: calendar)) == nil else { return }
         let syncOn = (try? store.syncOn()) ?? false
         guard ReviewFreeze.readyToFreeze(dueDayKey: dueDayKey, dayStart: (try? store.dayStartHour(effectiveOn: dueDayKey)) ?? RecordDay.startHour, calendar: calendar, now: now, syncOn: syncOn, lastSyncMoment: nil) else { return }
-        let facts = weekFacts(store: store, week: week, startDay: startDay, calendar: calendar)
+        let facts = weekFacts(store: store, week: week, startDay: startDay, calendar: calendar, now: now)
         var payload = ReviewAnswersPayload()
         payload.frozenCounts = FrozenReviewCounts.from(facts)
         payload.runStartDay = startDay
@@ -210,7 +202,7 @@ enum WeeklyReviewModel {
         selfHarmFirst: SelfHarmFirstAnswer?, now: Date
     ) -> RecordStore.ReviewRow? {
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
-        let existing = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey)
+        let existing = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: now, calendar: calendar)
         let values = ReviewSave.values(
             existing: existing.map(rowValues), mode: mode, week: week, runStartDay: startDay,
             reflectionAnswers: reflectionAnswers, oneThingToChange: oneThingToChange, weekOneAnswers: weekOneAnswers,
@@ -234,13 +226,13 @@ enum WeeklyReviewModel {
         var counts: [Int] = []
         for checkedWeek in (week - needed + 1)...week {
             let dueDayKey = ReviewDue.dueDayKey(week: checkedWeek, startDay: startDay, calendar: calendar)
-            guard let row = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey),
+            guard let row = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: now, calendar: calendar),
                   let starred = ReviewAnswersPayload.decode(row.answersJSON).frozenCounts?.starred
             else { return false }
             counts.append(starred)
         }
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
-        guard let current = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey),
+        guard let current = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: now, calendar: calendar),
               ReviewDeteriorationGate.showsPage(lastFrozenStarredCounts: counts, reviewAnswersJSON: current.answersJSON)
         else { return false }
         let marked = ReviewSave.deteriorationPageShown(existing: rowValues(current))
@@ -265,10 +257,10 @@ enum WeeklyReviewModel {
         let text: String
     }
 
-    static func reviewsListRows(store: RecordStore, calendar: Calendar) -> [ReviewListRow] {
-        let startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: Date(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
+    static func reviewsListRows(store: RecordStore, calendar: Calendar, now: Date) -> [ReviewListRow] {
+        let startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: now, calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         let summaryOn = (try? store.weeklySummaryOn()) ?? true
-        let allWinners = (try? store.reviewRowWinners(kind: .weeklyReview)) ?? []
+        let allWinners = (try? store.reviewRowWinners(kind: .weeklyReview, now: now, calendar: calendar)) ?? []
         let runs = runWeeks(allWinners, currentStartDay: startDay, calendar: calendar)
         let winners = allWinners
             .filter { ReviewAnswersPayload.decode($0.answersJSON).finished }

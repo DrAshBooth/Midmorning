@@ -1072,7 +1072,7 @@ public final class RecordStore {
     /// A row dated later than `now` is ignored and kept
     /// (`ReviewReconciler.winners(in:now:currentDayKey:)`); `calendar`
     /// gives the device zone, and `nil` means the device's own zone.
-    public func review(kind: ReviewKind, dueDateKey: String, now: Date = .now, calendar: Calendar? = nil) throws -> ReviewRow? {
+    public func review(kind: ReviewKind, dueDateKey: String, now: Date, calendar: Calendar? = nil) throws -> ReviewRow? {
         let rows = try reviewModels(kind: kind, dueDateKey: dueDateKey)
         let winners = ReviewReconciler.winners(in: rows, now: now, currentDayKey: try reviewReadDayKey(now: now, calendar: calendar))
         guard let winner = winners["\(kind.rawValue)|\(dueDateKey)"] else { return nil }
@@ -1083,21 +1083,22 @@ public final class RecordStore {
     /// rows only (the "Reviews" list, the deterioration rule's last four
     /// frozen counts, and "Today's pinned note" all read from this). A row
     /// dated later than `now` is ignored and kept.
-    public func reviewRowWinners(kind: ReviewKind, now: Date = .now, calendar: Calendar? = nil) throws -> [ReviewRow] {
+    public func reviewRowWinners(kind: ReviewKind, now: Date, calendar: Calendar? = nil) throws -> [ReviewRow] {
         let rows = try reviewModels(kind: kind)
         return ReviewReconciler.winners(in: rows, now: now, currentDayKey: try reviewReadDayKey(now: now, calendar: calendar)).values.map(reviewRow)
     }
 
-    /// The key of the record day that holds `now`, with the day start in
-    /// effect on it, for the future-dated test of a review read.
+    /// The key of the record day that holds `now`, under the "Day starts
+    /// at" rows in force, for the future-dated test of a review read. Each
+    /// record day uses its own start hour, so one lookup gives the key
+    /// (never a key at 04:00 first and then its hour).
     private func reviewReadDayKey(now: Date, calendar: Calendar?) throws -> String {
         let calendar = calendar ?? {
             var device = Calendar(identifier: .gregorian)
             device.timeZone = .current
             return device
         }()
-        let hour = try dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar, startHour: RecordDay.startHour))
-        return RecordDay.key(containing: now, calendar: calendar, startHour: hour)
+        return RecordDay.key(containing: now, calendar: calendar, schedule: try dayStartSchedule())
     }
 
     /// Writes a fresh row for (`kind`, `dueDateKey`), append-only like every
