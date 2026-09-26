@@ -133,12 +133,15 @@ public final class AppLockController: ObservableObject {
     /// App target calls this each time the scene becomes active, because
     /// the person can remove the device passcode while the app runs. It
     /// writes nothing, so the saved choice applies again at the next launch
-    /// on a device with a passcode.
+    /// on a device with a passcode. A kept draft under the cover (ruling
+    /// r13-04) shows again, and VoiceOver can reach it: no "Unlock" is
+    /// necessary when the app lock is off.
     public func noteDeviceBiometry(_ biometry: Biometry) {
         guard biometry == .none, state.appLockEnabled else { return }
         state.appLockEnabled = false
         state.isLocked = false
         state.enrolmentChanged = false
+        state.pendingRouteAwaitsUnlock = false
         authenticationRequestDue = false
     }
 

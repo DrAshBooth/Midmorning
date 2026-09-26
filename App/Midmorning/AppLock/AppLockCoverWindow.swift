@@ -143,7 +143,9 @@ private struct AppLockCoverWindowRoot: View {
                 }
             }
             // The keyboard closes under the cover, so no key goes to the
-            // hidden text. The text stays as typed.
+            // hidden text. The text stays as typed. When "Add a place" had
+            // the keyboard, its place goes into the screen's memory only
+            // (`UnsavedPlaces`), not into the store.
             .onChange(of: controller.state.pendingRouteAwaitsUnlock) { _, awaitsUnlock in
                 if awaitsUnlock {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

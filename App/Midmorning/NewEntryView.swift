@@ -15,7 +15,9 @@ struct NewEntryView: View {
     /// app-lock spec, "A new entry before authentication" (ruling r13-04,
     /// mm-t15.19). Set only for the new-entry screen of a pending route.
     /// Save calls it first and saves only on `true`. On `false` nothing
-    /// saves and the typed text stays.
+    /// saves and the typed text stays. While it is set, a place added in
+    /// "Add a place" stays in memory until Save succeeds (`unsavedPlaces`),
+    /// so the store gets nothing before the authentication.
     var authenticateBeforeSave: (@MainActor () async -> Bool)?
 
     @Environment(\.dismiss) private var dismiss
@@ -31,6 +33,8 @@ struct NewEntryView: View {
     @State private var whatIsFocused = false
     @State private var contextIsFocused = false
     @State private var customPlaces: [String] = []
+    /// The places added on a pending route's screen, not saved yet.
+    @State private var unsavedPlaces = UnsavedPlaces()
     /// The previous and the current record day, under the day start in
     /// force when the screen opens (record spec, "The record day").
     @State private var segments: [RecordTimeControl.Segment] = []
@@ -120,7 +124,15 @@ struct NewEntryView: View {
                 onSaveFromKeyboard: save
             )
         case .whereField:
-            WhereChipsView(selection: $whereSelection, pendingPlace: $pendingPlace, customPlaces: customPlaces, onSaveFromKeyboard: save) { newPlace in
+            WhereChipsView(selection: $whereSelection, pendingPlace: $pendingPlace, customPlaces: unsavedPlaces.chips(savedPlaces: customPlaces), onSaveFromKeyboard: save) { newPlace in
+                // Return, or the end of editing in "Add a place". The cover
+                // closes the keyboard after a cancelled request at Save,
+                // which ends editing too: on a pending route's screen the
+                // place stays in memory (ruling r13-04, mm-t15.19).
+                if authenticateBeforeSave != nil {
+                    unsavedPlaces.add(newPlace, at: Date())
+                    return
+                }
                 try? store.touchCustomPlace(newPlace, at: Date())
                 customPlaces = (try? store.customPlaces()) ?? []
             }
@@ -167,6 +179,8 @@ struct NewEntryView: View {
         let now = Date()
         let place = WhereSelection.onSave(selection: whereSelection, pendingPlace: pendingPlace)
         do {
+            try? store.touchCustomPlaces(unsavedPlaces)
+            unsavedPlaces = UnsavedPlaces()
             if let kept = place.placeToKeep {
                 try? store.touchCustomPlace(kept, at: now)
             }

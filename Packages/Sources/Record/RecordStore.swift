@@ -430,6 +430,15 @@ public final class RecordStore {
         try persist()
     }
 
+    /// Keeps each place in `unsaved` as a custom place, with the moment the
+    /// person added it. The new-entry screen of a pending route calls this
+    /// only after Save succeeds (ruling r13-04, mm-t15.19).
+    public func touchCustomPlaces(_ unsaved: UnsavedPlaces) throws {
+        for place in unsaved.places {
+            try touchCustomPlace(place.text, at: place.addedAt)
+        }
+    }
+
     // MARK: Persistence
 
     private func persist() throws {

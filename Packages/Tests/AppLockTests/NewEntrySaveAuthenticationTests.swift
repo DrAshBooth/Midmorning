@@ -128,6 +128,26 @@ final class NewEntrySaveAuthenticationTests: XCTestCase {
         XCTAssertTrue(requests.isEmpty)
     }
 
+    /// The device loses its passcode while a kept draft waits for
+    /// "Unlock": the app lock goes off, the cover goes, and the draft shows
+    /// again. The screen is no longer hidden from VoiceOver, and Save then
+    /// saves with no request.
+    func testTheDeviceLosesItsPasscodeWhileAKeptDraftWaitsForUnlock() async {
+        let (controller, authenticator) = lockedControllerWithPendingRoute(authenticationResult: false)
+        _ = await controller.authenticateToSaveNewEntry()
+        XCTAssertTrue(controller.state.pendingRouteAwaitsUnlock)
+
+        controller.noteDeviceBiometry(.none)
+
+        XCTAssertFalse(controller.state.pendingRouteAwaitsUnlock, "VoiceOver can reach the draft again")
+        XCTAssertEqual(controller.state.coverMode, .none)
+        XCTAssertEqual(controller.state.pendingRoute, .newEntry, "the draft stays")
+        let canSave = await controller.authenticateToSaveNewEntry()
+        XCTAssertTrue(canSave)
+        let requests = await authenticator.requests
+        XCTAssertEqual(requests.count, 1, "only the request at the first Save")
+    }
+
     /// With the app lock off, Save saves at once.
     func testSaveWithTheAppLockOffMakesNoRequest() async {
         let (controller, authenticator) = lockedControllerWithPendingRoute(appLockEnabled: false, authenticationResult: false)
