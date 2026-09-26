@@ -21,12 +21,18 @@ public struct BiometryStrings: Sendable, Equatable {
     public let isLockEnabled: Bool
     public let onlyLabel: String?
     public let enrolmentWarning: String?
+    /// The sentence onboarding's "Screen 4: permissions" shows under the app
+    /// lock switch (onboarding spec: "The label function that `app-lock`
+    /// defines returns it... The onboarding capability's lock sentence MUST
+    /// take its Face ID or Touch ID word from the same function.").
+    public let onboardingSentence: String
 
-    public init(lockLabel: String, isLockEnabled: Bool, onlyLabel: String?, enrolmentWarning: String?) {
+    public init(lockLabel: String, isLockEnabled: Bool, onlyLabel: String?, enrolmentWarning: String?, onboardingSentence: String) {
         self.lockLabel = lockLabel
         self.isLockEnabled = isLockEnabled
         self.onlyLabel = onlyLabel
         self.enrolmentWarning = enrolmentWarning
+        self.onboardingSentence = onboardingSentence
     }
 }
 
@@ -54,28 +60,32 @@ public enum BiometryLabels {
                 lockLabel: "Lock with Face ID",
                 isLockEnabled: true,
                 onlyLabel: "Face ID only",
-                enrolmentWarning: "If Face ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on."
+                enrolmentWarning: "If Face ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on.",
+                onboardingSentence: "Midmorning asks for Face ID or your passcode when it opens."
             )
         case .touchID:
             return BiometryStrings(
                 lockLabel: "Lock with Touch ID",
                 isLockEnabled: true,
                 onlyLabel: "Touch ID only",
-                enrolmentWarning: "If Touch ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on."
+                enrolmentWarning: "If Touch ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on.",
+                onboardingSentence: "Midmorning asks for Touch ID or your passcode when it opens."
             )
         case .passcodeOnly:
             return BiometryStrings(
                 lockLabel: "Lock with passcode",
                 isLockEnabled: true,
                 onlyLabel: nil,
-                enrolmentWarning: nil
+                enrolmentWarning: nil,
+                onboardingSentence: "Midmorning asks for your passcode when it opens."
             )
         case .none:
             return BiometryStrings(
                 lockLabel: noPasscodeMessage,
                 isLockEnabled: false,
                 onlyLabel: nil,
-                enrolmentWarning: nil
+                enrolmentWarning: nil,
+                onboardingSentence: ""
             )
         }
     }

@@ -43,6 +43,15 @@ final class BiometryLabelsTests: XCTestCase {
         )
     }
 
+    /// Onboarding spec, "Screen 4: permissions": "Under the switch the
+    /// section MUST show the lock sentence for the device's `Biometry`
+    /// value. The label function that `app-lock` defines returns it."
+    func testOnboardingLockSentencePerBiometry() {
+        XCTAssertEqual(BiometryLabels.strings(for: .faceID).onboardingSentence, "Midmorning asks for Face ID or your passcode when it opens.")
+        XCTAssertEqual(BiometryLabels.strings(for: .touchID).onboardingSentence, "Midmorning asks for Touch ID or your passcode when it opens.")
+        XCTAssertEqual(BiometryLabels.strings(for: .passcodeOnly).onboardingSentence, "Midmorning asks for your passcode when it opens.")
+    }
+
     /// Scenario: Same label at onboarding — onboarding and the settings
     /// screen both call the one function, so they can never disagree.
     func testOnboardingAndSettingsCallTheSameFunction() {

@@ -10,6 +10,7 @@
 		4D1D000000000000000000A1 /* Record in Frameworks */ = {isa = PBXBuildFile; productRef = 4D1D000000000000000000A0 /* Record */; };
 		4D1D000000000000000000B1 /* Content in Frameworks */ = {isa = PBXBuildFile; productRef = 4D1D000000000000000000B0 /* Content */; };
 		4D1D000000000000000000B3 /* AppLock in Frameworks */ = {isa = PBXBuildFile; productRef = 4D1D000000000000000000B2 /* AppLock */; };
+		4D1D000000000000000000C1 /* Programme in Frameworks */ = {isa = PBXBuildFile; productRef = 4D1D000000000000000000C0 /* Programme */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 				4D1D000000000000000000A1 /* Record in Frameworks */,
 				4D1D000000000000000000B1 /* Content in Frameworks */,
 				4D1D000000000000000000B3 /* AppLock in Frameworks */,
+				4D1D000000000000000000C1 /* Programme in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +79,7 @@
 				4D1D000000000000000000A0 /* Record */,
 				4D1D000000000000000000B0 /* Content */,
 				4D1D000000000000000000B2 /* AppLock */,
+				4D1D000000000000000000C0 /* Programme */,
 			);
 			productName = Midmorning;
 			productReference = 4D1D0000000000000000002B /* Midmorning.app */;
@@ -289,6 +292,10 @@
 		4D1D000000000000000000B2 /* AppLock */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AppLock;
+		};
+		4D1D000000000000000000C0 /* Programme */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Programme;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
