@@ -3,6 +3,7 @@ import SwiftData
 import XCTest
 import Export
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec: "Every synced row carries its own change moment",
 /// "Entries are append-only versions", "Date-keyed rows keep the key
@@ -151,7 +152,7 @@ final class EntryVersionTests: XCTestCase {
     /// entry stays on 6 October, on the day view and in the export.
     @MainActor
     func testEntryAcrossAZoneChangeKeepsItsSavedDayKey() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         var london = Calendar(identifier: .gregorian)
         london.timeZone = TimeZone(identifier: "Europe/London")!
         var tokyo = Calendar(identifier: .gregorian)
@@ -176,19 +177,12 @@ final class EntryVersionTests: XCTestCase {
     /// device B reads it by its key without computing a new one.
     @MainActor
     func testRowReceivedBySyncKeepsTheSendersKey() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let received = ModelContext(store.container)
         received.insert(Day(dateKey: "2026-10-06", slotsJSON: "[]", changedAt: date(2026, 10, 5)))
         try received.save()
         XCTAssertEqual(try store.dayPlan(dateKey: "2026-10-06")?.dateKey, "2026-10-06", "device B keeps the key 6 October")
         XCTAssertNil(try store.dayPlan(dateKey: "2026-10-05"), "and shows it on no other day")
-    }
-
-    @MainActor
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
     }
 
     // MARK: Helpers

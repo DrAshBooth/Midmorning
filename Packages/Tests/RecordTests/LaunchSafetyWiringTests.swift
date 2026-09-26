@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// mm-t42.20, the wiring bead: two `mm-t41.3` scenarios built there only
 /// over fixture facts now run end to end over real components.
@@ -9,12 +10,6 @@ import XCTest
 /// `Record.LaunchMarkerFile` these tests call (mm-t41.17).
 @MainActor
 final class LaunchSafetyWiringTests: XCTestCase {
-    private func makeDirectory() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory
-    }
-
     /// One launch: the real `LaunchMarkerFile.begin` the App target's
     /// `LaunchSession` calls. The caller decides whether to "clear" (delete
     /// the file) to simulate Today appearing.
@@ -29,7 +24,7 @@ final class LaunchSafetyWiringTests: XCTestCase {
     /// from a marker that already existed when the launch began, the same
     /// precondition `LaunchSafetyTests`' fixture streak of 0 stands in for).
     func testThirdConsecutiveLaunchWithARealUnclearedMarkerFileEntersSafeMode() throws {
-        let directory = try makeDirectory()
+        let directory = try makeTemporaryDirectory()
         let markerURL = directory.appendingPathComponent("launch-marker.txt")
         _ = beginLaunch(markerURL: markerURL) // an earlier launch already left the marker.
 
@@ -50,7 +45,7 @@ final class LaunchSafetyWiringTests: XCTestCase {
     /// Today appearing clears the marker, so the next launch starts a fresh
     /// streak (data-and-privacy spec, "Launch safety": "Marker cleared").
     func testSafeModesOwnTodayClearsTheMarkerForTheNextLaunch() throws {
-        let directory = try makeDirectory()
+        let directory = try makeTemporaryDirectory()
         let markerURL = directory.appendingPathComponent("launch-marker.txt")
         for _ in 1...4 { _ = beginLaunch(markerURL: markerURL) }
 
@@ -68,7 +63,7 @@ final class LaunchSafetyWiringTests: XCTestCase {
     /// directory contents, so `ModelContainer` throws for real (mm-t41.3
     /// built this over a fixture boolean only).
     func testARealContainerFailureReportsFailedNotWaiting() throws {
-        let directory = try makeDirectory()
+        let directory = try makeTemporaryDirectory()
         // `RecordStore.init(directory:)` appends "Record.store" under this
         // path; putting a plain file at the parent forces every attempt to
         // create that path to fail.

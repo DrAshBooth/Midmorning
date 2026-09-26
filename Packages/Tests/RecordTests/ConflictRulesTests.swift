@@ -3,6 +3,7 @@ import SwiftData
 import XCTest
 import Plan
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "Conflict rules for the plan, weigh-ins and lists".
 final class ConflictRulesTests: XCTestCase {
@@ -45,7 +46,7 @@ final class ConflictRulesTests: XCTestCase {
     /// key runs.
     @MainActor
     func testDayRowAfterAnImportKeepsTheImportedRowAndWritesNoChangedAt() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let importedChangedAt = at(3, 0)
         let importedSlots = "[{\"slotIndex\":2,\"time\":\"13:30\"}]"
         let importContext = ModelContext(store.container)
@@ -76,7 +77,7 @@ final class ConflictRulesTests: XCTestCase {
     /// the frozen `Answer` record type has no count field.
     @MainActor
     func testSnoozeCountStaysOnTheDevice() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setSnoozeCount(1, dateKey: "2026-10-06", slotIndex: 2)
         try store.setSnoozeCount(2, dateKey: "2026-10-06", slotIndex: 2)
 
@@ -92,7 +93,7 @@ final class ConflictRulesTests: XCTestCase {
     /// the real window match and the real `PlannedMealDisplay` decision.
     @MainActor
     func testEntryBeatsSkipped() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let london = TimeZone(identifier: "Europe/London")!
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = london
@@ -110,13 +111,6 @@ final class ConflictRulesTests: XCTestCase {
 
         XCTAssertTrue(isSkipped, "the store keeps the skip")
         XCTAssertEqual(PlannedMealDisplay.content(matchedEntry: matched.map { MatchedEntryText(time: $0.clockTime, what: $0.what) }, isSkipped: isSkipped), .matched(MatchedEntryText(time: "13:45", what: "Soup")), "Today shows the entry beside lunch and no \"Skipped\"")
-    }
-
-    @MainActor
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
     }
 
     private func at(_ hour: Int, _ minute: Int) -> Date {

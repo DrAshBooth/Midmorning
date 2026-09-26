@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Programme
 
 /// weekly-review spec, "Finish and reopen a review", "The week's counts are
@@ -9,12 +10,6 @@ import XCTest
 /// mm-t32.10, mm-t32.11), over the real `RecordStore`.
 @MainActor
 final class ReviewStoreTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var utc: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
@@ -36,7 +31,7 @@ final class ReviewStoreTests: XCTestCase {
     /// this path; the review builds and saves purely against the local
     /// SwiftData store.
     func testNoNetworkReviewSavesLocally() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         var payload = ReviewAnswersPayload()
         payload.reflectionAnswers = ["Evenings were hard", "", ""]
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: nil, answersJSON: payload.encoded(), selfHarmAnswered: true, pinnedNote: "", changedAt: at(2026, 10, 5, 18))
@@ -50,7 +45,7 @@ final class ReviewStoreTests: XCTestCase {
 
     /// Scenario: Keyed by the due day.
     func testKeyedByTheDueDay() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-09-08", frozenAt: at(2026, 9, 8), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 9, 8))
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-27", frozenAt: at(2026, 10, 27), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 27))
         let winners = try store.reviewRowWinners(kind: .weeklyReview, now: readMoment, calendar: utc)
@@ -79,7 +74,7 @@ final class ReviewStoreTests: XCTestCase {
     /// (`ReviewFreezeTests`) combined with a real store read: while
     /// `readyToFreeze` says no, the app writes no frozen row at all.
     func testSyncBehindTheDueMomentWritesNoFrozenRowYet() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let dueDayKey = "2026-10-19"
         let now = at(2026, 10, 19, 9)
         let ready = ReviewFreeze.readyToFreeze(dueDayKey: dueDayKey, dayStart: 4, calendar: utc, now: now, syncOn: true, lastSyncMoment: at(2026, 10, 18, 22))
@@ -92,7 +87,7 @@ final class ReviewStoreTests: XCTestCase {
     /// An edit after freeze writes into the same row (mm-t32.4, "Edit before
     /// the next review").
     func testAnEditWritesIntoTheFrozenRow() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let dueDayKey = "2026-10-05"
         let frozen = try store.upsertReview(kind: .weeklyReview, dueDateKey: dueDayKey, frozenAt: at(2026, 10, 5, 4), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 5, 4))
         var payload = ReviewAnswersPayload(finished: true)
@@ -107,7 +102,7 @@ final class ReviewStoreTests: XCTestCase {
 
     /// Scenario: Done without an answer / Done with no answer.
     func testDoneWithoutAnAnswer() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-19", frozenAt: at(2026, 10, 19, 4), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 19, 9))
         let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19", now: readMoment, calendar: utc)
         XCTAssertEqual(row?.selfHarmAnswered, false)
@@ -116,7 +111,7 @@ final class ReviewStoreTests: XCTestCase {
     /// Scenario: The store after a review / Answer No. With any answer the
     /// store keeps `selfHarmAnswered: true` and never the answer itself.
     func testTheStoreAfterAReviewKeepsNoAnswer() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-19", frozenAt: at(2026, 10, 19, 4), answersJSON: "{}", selfHarmAnswered: true, pinnedNote: "", changedAt: at(2026, 10, 19, 9))
         let row = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-19", now: readMoment, calendar: utc)
         XCTAssertEqual(row?.selfHarmAnswered, true)
@@ -127,7 +122,7 @@ final class ReviewStoreTests: XCTestCase {
     /// row, so an item left unanswered in one review never carries an
     /// answered flag into the next.
     func testAskedAgainInTheNextReview() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: at(2026, 10, 5, 4), answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "", changedAt: at(2026, 10, 5, 9))
         // Week 4's review is a different row; it starts unanswered.
         let nextWeek = try store.review(kind: .weeklyReview, dueDateKey: "2026-10-12", now: readMoment, calendar: utc)
@@ -146,7 +141,7 @@ final class ReviewStoreTests: XCTestCase {
 
     /// Scenario: A pinned note appears.
     func testAPinnedNoteAppears() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         var payload = ReviewAnswersPayload(finished: true)
         payload.oneThingToChange = "Eat lunch at work"
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: at(2026, 10, 5, 4), answersJSON: payload.encoded(), selfHarmAnswered: true, pinnedNote: "Eat lunch at work", changedAt: at(2026, 10, 5, 9))
@@ -155,7 +150,7 @@ final class ReviewStoreTests: XCTestCase {
 
     /// Scenario: The next review replaces it.
     func testTheNextReviewReplacesIt() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: at(2026, 10, 5, 4), answersJSON: ReviewAnswersPayload(finished: true).encoded(), selfHarmAnswered: true, pinnedNote: "Eat lunch at work", changedAt: at(2026, 10, 5, 9))
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-12", frozenAt: at(2026, 10, 12, 4), answersJSON: ReviewAnswersPayload(finished: true).encoded(), selfHarmAnswered: true, pinnedNote: "Plan the evening snack", changedAt: at(2026, 10, 12, 9))
         XCTAssertEqual(try currentPinnedNote(store), "Plan the evening snack")
@@ -163,7 +158,7 @@ final class ReviewStoreTests: XCTestCase {
 
     /// Scenario: The next review leaves it empty.
     func testTheNextReviewLeavesItEmpty() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: at(2026, 10, 5, 4), answersJSON: ReviewAnswersPayload(finished: true).encoded(), selfHarmAnswered: true, pinnedNote: "Eat lunch at work", changedAt: at(2026, 10, 5, 9))
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-12", frozenAt: at(2026, 10, 12, 4), answersJSON: ReviewAnswersPayload(finished: true).encoded(), selfHarmAnswered: true, pinnedNote: "", changedAt: at(2026, 10, 12, 9))
         XCTAssertNil(try currentPinnedNote(store))
@@ -172,7 +167,7 @@ final class ReviewStoreTests: XCTestCase {
     /// Scenario: Edit from Today. A direct edit to the pinned note writes
     /// into the same finished row, the way editing the review would.
     func testEditFromToday() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: at(2026, 10, 5, 4), answersJSON: ReviewAnswersPayload(finished: true).encoded(), selfHarmAnswered: true, pinnedNote: "Eat lunch at work", changedAt: at(2026, 10, 5, 9))
         try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-05", frozenAt: row.frozenAt, answersJSON: row.answersJSON, selfHarmAnswered: row.selfHarmAnswered, pinnedNote: "Eat lunch by 13:00", changedAt: at(2026, 10, 5, 10))
         XCTAssertEqual(try currentPinnedNote(store), "Eat lunch by 13:00")
@@ -183,7 +178,7 @@ final class ReviewStoreTests: XCTestCase {
     /// Scenario: Switch off, safeguarding still counts. Freezing writes the
     /// counts whatever "Weekly summary" reads.
     func testSwitchOffSafeguardingStillCounts() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setWeeklySummaryOn(false)
         let counts = FrozenReviewCounts(daysWithEntry: 6, starred: 6, plan: nil, paused: 0, urges: 0, urgesPassed: 0)
         var payload = ReviewAnswersPayload()
@@ -194,7 +189,7 @@ final class ReviewStoreTests: XCTestCase {
     }
 
     func testWeeklySummaryDefaultsOnAndSyncs() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertTrue(try store.weeklySummaryOn())
         try store.setWeeklySummaryOn(false)
         XCTAssertFalse(try store.weeklySummaryOn())

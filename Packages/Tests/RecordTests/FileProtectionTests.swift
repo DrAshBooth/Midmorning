@@ -1,14 +1,14 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "File protection".
 final class FileProtectionTests: XCTestCase {
     // MARK: Scenario: Store files
 
     func testApplyToDatabaseFilesSetsCompleteOnEveryFileInTheDirectory() throws {
-        let directory = try tempDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
         let files = ["Record.store", "Record.store-wal", "Record.store-shm", "Local.store"]
         for name in files {
             try "x".write(to: directory.appendingPathComponent(name), atomically: true, encoding: .utf8)
@@ -29,8 +29,7 @@ final class FileProtectionTests: XCTestCase {
     /// data-and-privacy spec, "The app excludes the whole store directory
     /// from backups".
     func testProtectStoreDirectorySetsCompleteProtectionAndBackupExclusion() throws {
-        let directory = try tempDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
 
         try FileProtection.protectStoreDirectory(directory)
 
@@ -53,11 +52,5 @@ final class FileProtectionTests: XCTestCase {
         let urls = AppGroupContent.fileURLs(inAppGroupDirectory: directory)
         XCTAssertEqual(Set(urls.map { $0.deletingPathExtension().lastPathComponent }), AppGroupContent.fileStems)
         XCTAssertEqual(Set(urls.map(\.lastPathComponent)), [AppGroupContent.actionQueueFileName, AppGroupContent.snapshotFileName])
-    }
-
-    private func tempDirectory() throws -> URL {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FileProtectionTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory
     }
 }

@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// weigh-in spec, "The store keeps the weigh-in on the device and away from
 /// HealthKit" (mm-t22.12). `NoRecordContentInErrorsTests.testASaveFailureCarriesNoData`
@@ -8,12 +9,6 @@ import XCTest
 /// `Failure.saveFailed` case; this file does not repeat it.
 @MainActor
 final class WeighInStoreTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var london: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
@@ -26,7 +21,7 @@ final class WeighInStoreTests: XCTestCase {
 
     /// Scenario: The record day key is written at save.
     func testTheRecordDayKeyIsWrittenAtSave() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.saveWeighIn(dateKey: "2026-09-28", weightKg: 68.6, unit: "kg", at: at(2026, 9, 28, 8))
         let row = try store.weighIn(dateKey: "2026-09-28")
         XCTAssertEqual(row?.dateKey, "2026-09-28")
@@ -35,7 +30,7 @@ final class WeighInStoreTests: XCTestCase {
 
     /// Scenario: A change writes into the same row.
     func testAChangeWritesIntoTheSameRow() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.saveWeighIn(dateKey: "2026-09-28", weightKg: 68.6, unit: "kg", at: at(2026, 9, 28, 8))
         try store.saveWeighIn(dateKey: "2026-09-28", weightKg: 66.8, unit: "kg", at: at(2026, 9, 28, 8, 5))
         let rows = try store.weighIns()
@@ -51,7 +46,7 @@ final class WeighInStoreTests: XCTestCase {
     /// save, and every reader uses the saved key (weigh-in spec: "A weigh-in
     /// MUST NOT change record day after save.").
     func testTheKeyStaysAfterADayStartChange() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.saveWeighIn(dateKey: "2026-09-28", weightKg: 68.6, unit: "kg", at: at(2026, 9, 28, 8))
         try store.setDayStartHour(9, now: at(2026, 9, 29, 6), calendar: london)
         let row = try store.weighIn(dateKey: "2026-09-28")
@@ -60,8 +55,7 @@ final class WeighInStoreTests: XCTestCase {
 
     /// Scenario: Delete-all.
     func testDeleteAllLeavesNoWeighIn() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let directory = try makeTemporaryDirectory()
         let store = try RecordStore(directory: directory)
         try store.saveWeighIn(dateKey: "2026-09-28", weightKg: 68.6, unit: "kg", at: at(2026, 9, 28, 8))
         try LocalEraser.eraseAndRecreate(directory: directory)

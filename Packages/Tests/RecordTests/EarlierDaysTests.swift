@@ -1,16 +1,11 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// record spec, "Earlier record days" (mm-t12.24).
 @MainActor
 final class EarlierDaysTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private func london(_ hour: Int, _ minute: Int, day: Int) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
@@ -19,7 +14,7 @@ final class EarlierDaysTests: XCTestCase {
 
     /// Scenario: Open an earlier day.
     func testOpenAnEarlierDay() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.add(time: london(9, 0, day: 21), what: "Cereal", feltLikeABinge: false, createdAt: london(9, 0, day: 21), utcOffsetSeconds: 3600)
         let rows = try store.entries(dayKey: "2026-09-21")
         XCTAssertEqual(rows.map(\.what), ["Cereal"])
@@ -29,7 +24,7 @@ final class EarlierDaysTests: XCTestCase {
     /// entries and Tuesday 22 September has none: the list still shows
     /// both, most recent first (mm-t12b.15).
     func testTheListShowsDatesOnly() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         for minute in 0..<15 {
             try store.add(time: london(9, minute, day: 21), what: "Entry \(minute)", feltLikeABinge: false, createdAt: london(9, minute, day: 21), utcOffsetSeconds: 3600)
         }
@@ -60,9 +55,86 @@ final class EarlierDaysTests: XCTestCase {
         XCTAssertEqual(RecordDay.previous(tuesday, calendar: calendar, schedule: .standard).start, monday.start, "back to Monday")
     }
 
+    /// mm-t12b.23: in a zone of UTC-9 or further west, noon GMT on a key's
+    /// date falls before 04:00 local time. An earlier day's interval comes
+    /// from the key's own date at the day start in the device zone, so the
+    /// day opens on its own record day, with its own heading and plan
+    /// windows, and the record days next to it are one day away.
+    func testAnEarlierDayOpensItsOwnRecordDayAtUTCMinus9AndMinus10() throws {
+        let zones = [
+            TimeZone(secondsFromGMT: -9 * 3600)!,
+            TimeZone(secondsFromGMT: -10 * 3600)!,
+            TimeZone(identifier: "Pacific/Honolulu")!,
+            TimeZone(identifier: "Pacific/Pago_Pago")!,
+        ]
+        for zone in zones {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = zone
+            let monday = try XCTUnwrap(RecordDay.interval(forKey: "2026-09-21", calendar: calendar, schedule: .standard))
+            let start = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: monday.start)
+            XCTAssertEqual(start, DateComponents(year: 2026, month: 9, day: 21, hour: 4, minute: 0), "\(zone.identifier): Monday starts at 04:00 on Monday")
+            XCTAssertEqual(RecordDay.key(containing: monday.start, calendar: calendar, schedule: .standard), "2026-09-21", zone.identifier)
+            XCTAssertEqual(DayKeyText.weekdayAndDate(monday.start, calendar: calendar), "Monday 21 September", zone.identifier)
+            let tuesday = RecordDay.next(monday, calendar: calendar, schedule: .standard)
+            XCTAssertEqual(RecordDay.key(containing: tuesday.start, calendar: calendar, schedule: .standard), "2026-09-22", zone.identifier)
+            let sunday = RecordDay.previous(monday, calendar: calendar, schedule: .standard)
+            XCTAssertEqual(RecordDay.key(containing: sunday.start, calendar: calendar, schedule: .standard), "2026-09-20", zone.identifier)
+        }
+    }
+
+    /// mm-t12b.24: the earlier-day screen moves only inside the "Earlier
+    /// days" list. From the day before the previous record day the next-day
+    /// control opens nothing, so the screen never shows the previous or the
+    /// current record day; from the earliest day the previous-day control
+    /// opens nothing. Inside the list each control moves one day, also
+    /// across a month end.
+    func testTheDayControlsStayInsideTheEarlierDaysList() {
+        let list = EarlierDays.list(dateKeysWithContent: ["2026-08-31"], previousRecordDayKey: "2026-09-03")
+        XCTAssertEqual(list, ["2026-09-02", "2026-09-01", "2026-08-31"])
+        XCTAssertNil(EarlierDays.step(from: "2026-09-02", by: 1, in: list), "not the previous record day, 3 September")
+        XCTAssertEqual(EarlierDays.step(from: "2026-09-01", by: 1, in: list), "2026-09-02")
+        XCTAssertEqual(EarlierDays.step(from: "2026-08-31", by: 1, in: list), "2026-09-01", "across the month end")
+        XCTAssertEqual(EarlierDays.step(from: "2026-09-01", by: -1, in: list), "2026-08-31")
+        XCTAssertNil(EarlierDays.step(from: "2026-08-31", by: -1, in: list), "no day before the earliest day with content")
+        XCTAssertNil(EarlierDays.step(from: "2026-09-02", by: 1, in: []), "an empty list moves nowhere")
+    }
+
+    /// Scenario: Move between days, over the real store. On Thursday 24
+    /// September the list runs from Monday 21 to Tuesday 22 September. The
+    /// next-day control moves from Monday to Tuesday and then turns off,
+    /// before Wednesday 23, the previous record day. The same holds at
+    /// 02:00 on Friday, which is still Thursday's record day.
+    func testMoveBetweenDaysStopsBeforeThePreviousRecordDay() throws {
+        let store = try makeTemporaryStore()
+        try store.add(time: london(9, 0, day: 21), what: "Cereal", feltLikeABinge: false, createdAt: london(9, 0, day: 21), utcOffsetSeconds: 3600)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/London")!
+        for now in [london(10, 0, day: 24), london(2, 0, day: 25)] {
+            let list = try store.earlierDayKeys(now: now, calendar: calendar)
+            XCTAssertEqual(list, ["2026-09-22", "2026-09-21"])
+            XCTAssertEqual(EarlierDays.step(from: "2026-09-21", by: 1, in: list), "2026-09-22")
+            XCTAssertNil(EarlierDays.step(from: "2026-09-22", by: 1, in: list))
+        }
+    }
+
+    /// The list comes from the record day that holds `now` in the device
+    /// zone, also in Honolulu (UTC-10).
+    func testTheListInHonolulu() throws {
+        let store = try makeTemporaryStore()
+        var honolulu = Calendar(identifier: .gregorian)
+        honolulu.timeZone = TimeZone(identifier: "Pacific/Honolulu")!
+        func at(_ day: Int, _ hour: Int) -> Date {
+            honolulu.date(from: DateComponents(year: 2026, month: 9, day: day, hour: hour))!
+        }
+        try store.add(time: at(21, 9), what: "Cereal", feltLikeABinge: false, createdAt: at(21, 9), utcOffsetSeconds: -10 * 3600)
+        XCTAssertEqual(try store.earlierDayKeys(now: at(24, 10), calendar: honolulu), ["2026-09-22", "2026-09-21"])
+        XCTAssertEqual(try store.earlierDayKeys(now: at(25, 3), calendar: honolulu), ["2026-09-22", "2026-09-21"], "03:00 on Friday is still Thursday's record day")
+        XCTAssertEqual(try store.earlierDayKeys(now: at(25, 5), calendar: honolulu), ["2026-09-23", "2026-09-22", "2026-09-21"])
+    }
+
     /// Scenario: No earlier day yet.
     func testNoEarlierDayYet() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.add(time: london(20, 0, day: 23), what: "First entry", feltLikeABinge: false, createdAt: london(20, 0, day: 23), utcOffsetSeconds: 3600)
         let content = try store.dateKeysWithContent(before: "2026-09-24")
         XCTAssertFalse(EarlierDays.isAvailable(dateKeysWithContent: content, previousRecordDayKey: "2026-09-23"))
@@ -70,7 +142,7 @@ final class EarlierDaysTests: XCTestCase {
 
     /// Scenario: An earlier day with a state only.
     func testAnEarlierDayWithAStateOnly() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayState(.didntRecord, on: true, dateKey: "2026-09-21", changedAt: london(9, 0, day: 21))
         let content = try store.dateKeysWithContent(before: "2026-09-23")
         XCTAssertTrue(EarlierDays.isAvailable(dateKeysWithContent: content, previousRecordDayKey: "2026-09-22"))

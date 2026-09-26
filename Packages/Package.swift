@@ -32,7 +32,11 @@ let package = Package(
         // pending-card output with `Record`'s `TodayCardSlot` — the seam
         // `programme-engine` (2.1) wires in the App target
         // (`v1-programme/design.md`, "Programme takes value facts").
-        .testTarget(name: "RecordTests", dependencies: ["Record", "Programme", "Export", "AppLock"]),
+        .testTarget(name: "RecordTests", dependencies: ["Record", "Programme", "Export", "AppLock", "RecordTestSupport"]),
+        // The shared test helper for a temporary `RecordStore` whose
+        // directory the test's teardown removes (mm-t12.38). Only test
+        // targets depend on it; no product names it.
+        .target(name: "RecordTestSupport", dependencies: ["Record"], path: "Tests/RecordTestSupport"),
         // The plan, templates, planned days, the match of planned meals to
         // entries and the gap computation (design.md, "One umbrella package,
         // five targets"). Pure value types and functions only: it takes
@@ -77,7 +81,7 @@ let package = Package(
         // `Record` only for its already-neutral read types (`RecordRow`,
         // `DayStateKind`), never a `@Model` class.
         .target(name: "Export", dependencies: ["Record", "Programme"]),
-        .testTarget(name: "ExportTests", dependencies: ["Export", "Record", "Programme"]),
+        .testTarget(name: "ExportTests", dependencies: ["Export", "Record", "Programme", "RecordTestSupport"]),
         // scripts/content-lock runs this. It is not part of `swift test`.
         .executableTarget(name: "ContentLockTool", dependencies: ["Content"], path: "Tools/ContentLockTool"),
         // scripts/content-signoff-list runs this. It is not part of `swift test`.

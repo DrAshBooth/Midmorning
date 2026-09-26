@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Plan
 
 /// record spec, "The gap band", scenario "Gap over four hours", when both
@@ -22,8 +23,7 @@ final class PlanTodayGapBandTests: XCTestCase {
     }
 
     func testTwoMatchedEntriesFiveAndAHalfHoursApartHaveABandAfterTheFirstPlannedRow() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let directory = try makeTemporaryDirectory()
         let store = try RecordStore(directory: directory)
         try store.setTemplateSlotsJSON(PlanCodec.encode([PlannedMeal(slotIndex: 0, time: "08:00"), PlannedMeal(slotIndex: 2, time: "13:00")]), kind: .weekday, changedAt: at(6))
         let offset = london.timeZone.secondsFromGMT(for: at(8))

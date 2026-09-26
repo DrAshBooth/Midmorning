@@ -1,18 +1,13 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// record spec, "Where chips" (mm-t12.16), "The Context field" (mm-t12.17),
 /// "The new-entry screen's controls" (mm-t12b.4) and "Today shows Where and
 /// Context" (mm-t12.18).
 @MainActor
 final class WhereContextTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private func london(_ hour: Int, _ minute: Int, day: Int = 25) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
@@ -23,7 +18,7 @@ final class WhereContextTests: XCTestCase {
 
     /// Scenario: Save with a fixed chip.
     func testSaveWithAFixedChip() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: WhereChip.home.rawValue)
         XCTAssertEqual(row.what, "Toast and tea")
         XCTAssertEqual(row.whereText, "Home")
@@ -31,14 +26,14 @@ final class WhereContextTests: XCTestCase {
 
     /// Scenario: Save with no Where.
     func testSaveWithNoWhere() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600)
         XCTAssertEqual(row.whereText, "")
     }
 
     /// Scenario: Add a custom place.
     func testAddACustomPlace() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.touchCustomPlace("Mum's", at: london(13, 5))
         try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Mum's")
         let custom = try store.customPlaces()
@@ -71,7 +66,7 @@ final class WhereContextTests: XCTestCase {
     /// returns names the person explicitly kept as places, never a bare
     /// What or Context.
     func testCustomPlacesNeverIncludeWhatOrContext() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Mum's", context: "Row with my sister")
         try store.touchCustomPlace("Mum's", at: london(13, 5))
         XCTAssertEqual(try store.customPlaces(), ["Mum's"], "only the kept place, never the What or the Context")
@@ -79,7 +74,7 @@ final class WhereContextTests: XCTestCase {
 
     /// A fixed chip's name is never kept as a custom place.
     func testAFixedChipIsNeverKeptAsACustomPlace() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.touchCustomPlace("Home", at: london(13, 5))
         XCTAssertEqual(try store.customPlaces(), [])
     }
@@ -94,7 +89,7 @@ final class WhereContextTests: XCTestCase {
 
     /// Scenario: Starred entry with an empty Context.
     func testStarredEntryWithAnEmptyContext() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "Toast", feltLikeABinge: true, createdAt: london(13, 5), utcOffsetSeconds: 3600, context: "")
         XCTAssertEqual(row.context, "")
         XCTAssertTrue(row.feltLikeABinge)
@@ -102,7 +97,7 @@ final class WhereContextTests: XCTestCase {
 
     /// Scenario: Context with white space.
     func testContextWithWhiteSpaceIsTrimmed() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "Toast", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, context: "  Row with my sister ")
         XCTAssertEqual(row.context, "Row with my sister")
     }
@@ -147,14 +142,14 @@ final class WhereContextTests: XCTestCase {
 
     /// Scenario: Entry with Where and Context.
     func testEntryWithWhereAndContext() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Home", context: "Row with my sister")
         XCTAssertEqual(row.accessibilityLabel, "13:05, Toast and tea, Home, Row with my sister")
     }
 
     /// Scenario: Entry with an empty What and a Where.
     func testEntryWithAnEmptyWhatAndAWhere() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Out")
         XCTAssertEqual(row.accessibilityLabel, "13:05, Out")
     }
@@ -163,14 +158,14 @@ final class WhereContextTests: XCTestCase {
 
     /// Scenario: Label of a full row.
     func testLabelOfAFullRow() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "Toast and tea", feltLikeABinge: true, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Home", context: "Row with my sister")
         XCTAssertEqual(row.accessibilityLabel, "13:05, Toast and tea, Home, Row with my sister, felt like a binge")
     }
 
     /// Scenario: Label of a row with Where only.
     func testLabelOfARowWithWhereOnly() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let row = try store.add(time: london(13, 5), what: "", feltLikeABinge: false, createdAt: london(13, 5), utcOffsetSeconds: 3600, whereText: "Out")
         XCTAssertEqual(row.accessibilityLabel, "13:05, Out")
     }

@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Programme
 
 /// mm-t32.16, the wiring bead: the scenarios that need the weekly review, or
@@ -13,12 +14,6 @@ import XCTest
 /// device-check bead instead.
 @MainActor
 final class WeeklyReviewWiringTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var utc: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
@@ -63,7 +58,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// fact rather than the fixture `stage2Open: true` `MorningPlanReminderTests`
     /// already used.
     func testNoTemplateYetWithTheLiveStage() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         // Five distinct recorded days opens stage 2 (programme spec).
         for offset in 0..<5 {
             let moment = at(2026, 9, 20 + offset, 9)
@@ -80,7 +75,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// the plan needs setting"): no morning plan reminder before stage 2,
     /// with the live stage fact reading false from a fresh store.
     func testStage1NoMorningPlanReminder() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertFalse(stage2Open(store, now: at(2026, 9, 26, 7, 30)), "a fresh store has not opened stage 2")
         let day = schedulerDay(dayKey: dayKey(2026, 9, 26), stage2Open: false, hasEntryAfter17: false, hasEntryBeforeMidday: false)
         let requests = Scheduler.requests(days: [day], settings: settings(), calendar: utc, constants: .default)
@@ -90,7 +85,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// Scenario: An evening entry in stage 1 (reminders spec, "Close the
     /// day"): a real entry after 17:00, with the live (closed) stage fact.
     func testAnEveningEntryInStage1() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let evening = at(2026, 9, 26, 18, 30)
         try store.add(time: evening, what: "", feltLikeABinge: false, createdAt: evening, utcOffsetSeconds: 0)
         let now = at(2026, 9, 26, 21, 45)
@@ -105,7 +100,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// Scenario: No entry by midday in stage 1 (reminders spec, "The midday
     /// reminder").
     func testNoEntryByMiddayInStage1() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         XCTAssertFalse(stage2Open(store, now: at(2026, 9, 26, 12, 0)))
         let entries = try store.entries(dayKey: dayKey(2026, 9, 26))
         let hasEntryBeforeMidday = entries.contains { utc.component(.hour, from: $0.time) < 12 }
@@ -118,7 +113,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// "The not-right-now page"): unlike the weight reason, a self-harm
     /// exclusion at the review never pauses reminders.
     func testRemindersKeptByTheSelfHarmReason() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let outcome = SelfHarmItem.outcome(first: .yes, second: .yes)
         XCTAssertEqual(outcome, .excludes)
         // The review's own flow never calls `pauseReminders` for a
@@ -140,7 +135,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// page"), reached from real frozen Review rows and the real
     /// deterioration rule.
     func testAtTheReviewGPSuggestionPage() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let counts = [3, 4, 5, 6]
         for (index, starred) in counts.enumerated() {
             var payload = ReviewAnswersPayload()
@@ -160,7 +155,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
     /// weigh-in part out of the real store's weigh-in rows, so the summary
     /// omits it.
     func testReviewWithoutAWeighInPart() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setWeighInDayChoice(.wontBeWeighing)
         XCTAssertTrue(try store.weighIns().isEmpty)
         let facts = ReviewWeekFacts(weekDayKeys: [dayKey(2026, 9, 21)], weighInDoneDayKey: nil)

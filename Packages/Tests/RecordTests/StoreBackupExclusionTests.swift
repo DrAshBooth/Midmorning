@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "The app excludes the whole store directory from
 /// backups" and "File protection" (mm-t41.16). `AppLockRootView` opens the
@@ -11,12 +12,7 @@ final class StoreBackupExclusionTests: XCTestCase {
     private var root: URL!
 
     override func setUpWithError() throws {
-        root = FileManager.default.temporaryDirectory.appendingPathComponent("StoreBackupExclusionTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-    }
-
-    override func tearDownWithError() throws {
-        try? FileManager.default.removeItem(at: root)
+        root = try makeTemporaryDirectory()
     }
 
     /// An ordinary install: no store directory exists before the first

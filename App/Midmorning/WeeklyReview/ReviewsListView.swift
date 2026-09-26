@@ -44,6 +44,6 @@ struct ReviewsListView: View {
     }
 
     private func load() {
-        rows = WeeklyReviewModel.reviewsListRows(store: store, calendar: calendar)
+        rows = WeeklyReviewModel.reviewsListRows(store: store, calendar: calendar, now: Date())
     }
 }

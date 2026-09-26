@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "The Reconciler never deletes a row".
 final class ReconcilerNeverDeletesTests: XCTestCase {
@@ -34,10 +35,7 @@ final class ReconcilerNeverDeletesTests: XCTestCase {
     /// Reviews list, the pinned note and the freeze step call.
     @MainActor
     func testFutureDatedReviewThroughTheStoreIsIgnoredTodayKeptAndReadTomorrow() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let store = try RecordStore(directory: directory)
+        let store = try makeTemporaryStore()
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = .gmt
         let frozenTomorrow = date(2026, 10, 7, hour: 9)
@@ -50,6 +48,26 @@ final class ReconcilerNeverDeletesTests: XCTestCase {
         let tomorrow = date(2026, 10, 7, hour: 10)
         XCTAssertEqual(try store.review(kind: .weeklyReview, dueDateKey: "2026-10-07", now: tomorrow, calendar: utc)?.pinnedNote, "Eat lunch at work", "kept, and read tomorrow")
         XCTAssertEqual(try store.reviewRowWinners(kind: .weeklyReview, now: tomorrow, calendar: utc).map(\.dueDateKey), ["2026-10-07"])
+    }
+
+    /// The store read finds the record day that holds `now` from the "Day
+    /// starts at" rows in force (mm-t32.27). With 02:00 from Wednesday 7
+    /// October, 03:00 on 7 October is in Wednesday's record day, so a
+    /// review due that day is not future-dated. Before the fix the read
+    /// found the key at 04:00 first, gave Tuesday, and ignored the row.
+    @MainActor
+    func testAReviewDueOnTheFirstDayOfAnEarlierDayStartIsReadThatDay() throws {
+        let store = try makeTemporaryStore()
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = .gmt
+        try store.setDayStartHour(2, now: date(2026, 10, 6, hour: 12), calendar: utc)
+        XCTAssertEqual(try store.dayStartHour(effectiveOn: "2026-10-07"), 2)
+        let frozenAt = date(2026, 10, 7, hour: 2)
+        try store.upsertReview(kind: .weeklyReview, dueDateKey: "2026-10-07", frozenAt: frozenAt, answersJSON: "{}", selfHarmAnswered: false, pinnedNote: "Eat lunch at work", changedAt: frozenAt)
+
+        let threeInTheMorning = date(2026, 10, 7, hour: 3)
+        XCTAssertEqual(try store.review(kind: .weeklyReview, dueDateKey: "2026-10-07", now: threeInTheMorning, calendar: utc)?.pinnedNote, "Eat lunch at work")
+        XCTAssertEqual(try store.reviewRowWinners(kind: .weeklyReview, now: threeInTheMorning, calendar: utc).map(\.dueDateKey), ["2026-10-07"])
     }
 
     /// A stage opening dated tomorrow is ignored today, kept, and read

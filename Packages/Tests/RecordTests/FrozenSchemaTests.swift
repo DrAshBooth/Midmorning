@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// data-and-privacy spec, "CKRecord types and model names are neutral", and
 /// "The schema is frozen and grows by addition only".
@@ -119,10 +120,7 @@ final class FrozenSchemaTests: XCTestCase {
     /// adds one fixture per further version, through the same harness.
     @MainActor
     func testEveryEarlierSchemaVersionOpens() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("FrozenSchemaTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
 
         // Write a V1 fixture directly against RecordSchemaV1.
         do {

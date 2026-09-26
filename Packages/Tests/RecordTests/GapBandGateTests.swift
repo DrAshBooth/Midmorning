@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// record spec, "The gap band": the "Gap bands" switch (mm-t13.11) and the
 /// record day stage 2 opened (mm-t12b.18). Each test runs the composition
@@ -9,12 +10,6 @@ import XCTest
 /// `stage2Open`, and reads the day's entry times from the store.
 @MainActor
 final class GapBandGateTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private func london(_ hour: Int, _ minute: Int, day: Int) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
@@ -41,7 +36,7 @@ final class GapBandGateTests: XCTestCase {
 
     /// Scenario: Gap over four hours, with the switch at its default (on).
     func testTheSwitchIsOnByDefaultAndABandShows() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let dayKey = try addGapDay(store, day: 24)
         XCTAssertTrue(try store.gapBandsOn())
         XCTAssertEqual(try bands(store, dayKey: dayKey, stage2OpenedDayKey: "2026-09-20"), [0])
@@ -50,7 +45,7 @@ final class GapBandGateTests: XCTestCase {
     /// With "Gap bands" off in Settings, entries at 08:00 and 13:30 show no
     /// band, although stage 2 is open.
     func testTheSwitchOffShowsNoBand() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let dayKey = try addGapDay(store, day: 24)
         try store.setGapBandsOn(false)
         XCTAssertEqual(try bands(store, dayKey: dayKey, stage2OpenedDayKey: "2026-09-20"), [])
@@ -62,7 +57,7 @@ final class GapBandGateTests: XCTestCase {
     /// A band shows on every day from the record day stage 2 opened: the
     /// previous day and an earlier day as well as the current day.
     func testBandsShowOnEveryDayFromTheStage2Day() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let stage2Day = try addGapDay(store, day: 20)
         let earlier = try addGapDay(store, day: 22)
         let previous = try addGapDay(store, day: 25)
@@ -75,7 +70,7 @@ final class GapBandGateTests: XCTestCase {
     /// Scenario: Before stage 2, and "The app MUST NOT show a band on a day
     /// before that record day".
     func testNoBandBeforeTheStage2DayOrWhileStage2IsClosed() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let before = try addGapDay(store, day: 19)
         XCTAssertEqual(try bands(store, dayKey: before, stage2OpenedDayKey: "2026-09-20"), [])
         XCTAssertEqual(try bands(store, dayKey: before, stage2OpenedDayKey: nil), [])

@@ -183,11 +183,14 @@ struct ReviewScreenView: View {
     }
 
     private func load() {
-        startDay = runStartDay ?? (try? store.startDayKey()) ?? RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
-        summary = WeeklyReviewModel.summary(store: store, week: week, startDay: startDay, calendar: calendar)
+        // One moment for every read, so the summary, the saved answers and
+        // the deterioration rule read the same review rows (mm-t32.27).
+        let moment = now()
+        startDay = runStartDay ?? (try? store.startDayKey()) ?? RecordDay.key(containing: moment, calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
+        summary = WeeklyReviewModel.summary(store: store, week: week, startDay: startDay, calendar: calendar, now: moment)
 
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)
-        if let existing = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey) {
+        if let existing = try? store.review(kind: .weeklyReview, dueDateKey: dueDayKey, now: moment, calendar: calendar) {
             let payload = ReviewAnswersPayload.decode(existing.answersJSON)
             reflectionAnswers = payload.reflectionAnswers
             oneThingToChange = payload.oneThingToChange
@@ -201,7 +204,7 @@ struct ReviewScreenView: View {
         // reopen from Today, the "Reviews" list or the reminder does not
         // show it again. "I'm getting worse" still shows the page at each
         // tap.
-        if WeeklyReviewModel.opensWithDeteriorationPage(store: store, week: week, startDay: startDay, calendar: calendar, now: now()) {
+        if WeeklyReviewModel.opensWithDeteriorationPage(store: store, week: week, startDay: startDay, calendar: calendar, now: moment) {
             gpSuggestionReasons = [.deterioration]
         }
     }

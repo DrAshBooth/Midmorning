@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Plan
 
 /// regular-eating-plan spec, "Weekday and weekend templates", through the
@@ -11,12 +12,6 @@ import XCTest
 /// read that Today, the plan builder and the scheduler use (mm-t23.23).
 @MainActor
 final class PlanMaterialisationWiringTests: XCTestCase {
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return try RecordStore(directory: directory)
-    }
-
     private var london: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
@@ -32,7 +27,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
 
     /// Scenario: Three days without opening the app.
     func testThreeDaysWithoutOpeningTheApp() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(lunchAt13, kind: .weekday, changedAt: at(2026, 9, 20, 9))
 
         // Activation at 20:00 on Monday 21 September.
@@ -55,7 +50,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
 
     /// Scenario: A template change during the day.
     func testATemplateChangeDuringTheDay() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(lunchAt13, kind: .weekday, changedAt: at(2026, 9, 28, 9))
         // Activation at 08:00 on Tuesday 29 September.
         try store.materialiseElapsedRecordDays(now: at(2026, 9, 29, 8), calendar: london)
@@ -74,7 +69,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
     /// leaves Tuesday's plan as it was, because `changeTemplate` copies
     /// first.
     func testATemplateChangeWithNoActivationSinceTheDayStart() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(lunchAt13, kind: .weekday, changedAt: at(2026, 9, 28, 9))
         try store.materialiseElapsedRecordDays(now: at(2026, 9, 28, 20), calendar: london)
 
@@ -88,7 +83,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
     /// "Copy to weekend plan" on a Saturday is also a template change. It
     /// leaves Saturday's plan as it was.
     func testCopyToTheWeekendOnASaturdayKeepsSaturdaysPlan() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(lunchAt13, kind: .weekend, changedAt: at(2026, 9, 20, 9))
         try store.changeTemplate(lunchAt14, kind: .weekend, now: at(2026, 9, 26, 10), calendar: london)
 
@@ -102,7 +97,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
     /// current record day is Saturday 26 September, and its copy comes from
     /// the weekend template.
     func testAWeekendRecordDayGetsTheWeekendTemplate() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(lunchAt13, kind: .weekday, changedAt: at(2026, 9, 20, 9))
         try store.setTemplateSlotsJSON(lunchAt14, kind: .weekend, changedAt: at(2026, 9, 20, 9))
 
@@ -113,7 +108,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
     /// Materialisation never replaces a `Day` row, writes no set event, and
     /// a second activation on the same day writes nothing.
     func testMaterialisationKeepsASetDayAndRunsOncePerDay() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(lunchAt13, kind: .weekday, changedAt: at(2026, 9, 20, 9))
         try store.setDayPlan(dateKey: "2026-09-29", slotsJSON: lunchAt14, windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: at(2026, 9, 28, 22), setBy: "device", changedAt: at(2026, 9, 28, 22))
         try store.materialiseElapsedRecordDays(now: at(2026, 9, 28, 8), calendar: london)
@@ -127,7 +122,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
     /// A day that an earlier walk missed gets its copy on the next
     /// activation.
     func testAMissedDayBetweenTwoCopiesGetsItsCopy() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setTemplateSlotsJSON(lunchAt13, kind: .weekday, changedAt: at(2026, 9, 20, 9))
         try store.materialiseElapsedRecordDays(now: at(2026, 9, 21, 8), calendar: london)
         try store.setDayPlan(dateKey: "2026-09-23", slotsJSON: lunchAt14, windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: at(2026, 9, 23, 8), setBy: "device", changedAt: at(2026, 9, 23, 8))
@@ -138,7 +133,7 @@ final class PlanMaterialisationWiringTests: XCTestCase {
     /// The walk uses the "Day starts at" hour in force. With a day start of
     /// 07:00, 05:00 on Tuesday is still in Monday's record day.
     func testTheWalkUsesTheDayStartInForce() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayStartHour(7, now: at(2026, 9, 20, 12), calendar: london)
         try store.materialiseElapsedRecordDays(now: at(2026, 9, 28, 12), calendar: london)
 

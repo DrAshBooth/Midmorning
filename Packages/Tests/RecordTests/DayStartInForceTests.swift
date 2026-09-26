@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// record spec, "The record day": "The key comes from the entry's time, its
 /// UTC offset and the day start in force", and a record day "ends one
@@ -23,19 +24,11 @@ final class DayStartInForceTests: XCTestCase {
         london.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
     }
 
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("DayStartInForceTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        return try RecordStore(directory: directory)
-    }
-
     /// A store where "Day starts at" is 04:00 up to Thursday 24 September
     /// and `hour` from Friday 25 September: the person changed it on
     /// Thursday afternoon.
     private func storeWithDayStart(_ hour: Int) throws -> RecordStore {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         try store.setDayStartHour(hour, now: at(24, 13), calendar: london, changedAt: at(24, 13))
         return store
     }

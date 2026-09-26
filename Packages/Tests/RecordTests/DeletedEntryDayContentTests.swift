@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 /// record spec, "Earlier record days": "The control MUST appear only when a
 /// record day before the previous record day has an entry or a state"; the
@@ -15,20 +16,12 @@ final class DeletedEntryDayContentTests: XCTestCase {
         return london.date(from: DateComponents(year: 2026, month: 9, day: day, hour: hour))!
     }
 
-    private func makeStore() throws -> RecordStore {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("DeletedEntryDayContentTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
-        return try RecordStore(directory: directory)
-    }
-
     private func add(_ store: RecordStore, day: Int) throws -> RecordRow {
         try store.add(time: at(day, 13), what: "Toast", feltLikeABinge: false, createdAt: at(day, 13), utcOffsetSeconds: 3600)
     }
 
     func testDeletedOnlyEntryLeavesNoDayContent() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let monday = try add(store, day: 21)
         XCTAssertEqual(try store.dateKeysWithContent(before: "2026-09-24"), ["2026-09-21"])
 
@@ -39,7 +32,7 @@ final class DeletedEntryDayContentTests: XCTestCase {
     }
 
     func testEarliestEntryDaySkipsADeletedEntry() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let monday = try add(store, day: 21)
         _ = try add(store, day: 22)
         XCTAssertEqual(try store.earliestEntryDayKey(), "2026-09-21")
@@ -50,14 +43,14 @@ final class DeletedEntryDayContentTests: XCTestCase {
     }
 
     func testEarliestEntryDayIsNilWhenEveryEntryIsDeleted() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let monday = try add(store, day: 21)
         try store.delete(entryId: monday.id, deletedAt: at(24, 9))
         XCTAssertNil(try store.earliestEntryDayKey())
     }
 
     func testDayWithADeletedAndALiveEntryStillHasContent() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let first = try add(store, day: 21)
         _ = try add(store, day: 21)
         try store.delete(entryId: first.id, deletedAt: at(24, 9))
@@ -66,7 +59,7 @@ final class DeletedEntryDayContentTests: XCTestCase {
     }
 
     func testDeletedOnlyEntryDayIsNotAPlannedDay() throws {
-        let store = try makeStore()
+        let store = try makeTemporaryStore()
         let monday = try add(store, day: 21)
         XCTAssertEqual(try store.plannedDayKeys(), ["2026-09-21"])
         try store.delete(entryId: monday.id, deletedAt: at(24, 9))

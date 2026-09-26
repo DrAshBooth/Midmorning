@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 @testable import Plan
 import AppLock
 
@@ -13,16 +14,11 @@ import AppLock
 /// onboarding and app-lock.
 @MainActor
 final class DeleteAllWiringTests: XCTestCase {
-    private func makeStore() throws -> (store: RecordStore, directory: URL) {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return (try RecordStore(directory: directory), directory)
-    }
-
     /// regular-eating-plan spec, "The plan's data stays on the device",
     /// Scenario: Delete-all.
     func testDeleteAllLeavesNoTemplateNoDayPlanAndDefaultSlotLabels() throws {
-        let (store, directory) = try makeStore()
+        let directory = try makeTemporaryDirectory()
+        let store = try RecordStore(directory: directory)
         try store.setTemplateSlotsJSON(PlanCodec.encode([PlannedMeal(slotIndex: 1, time: "08:00")]), kind: .weekday, changedAt: .now)
         try store.setDayPlan(dateKey: "2026-10-06", slotsJSON: PlanCodec.encode([PlannedMeal(slotIndex: 2, time: "13:00")]), windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: .now, setBy: "device", changedAt: .now)
         try store.setSlotLabel("Elevenses", index: 1, changedAt: .now)
@@ -38,7 +34,8 @@ final class DeleteAllWiringTests: XCTestCase {
     /// programme spec, "The app keeps the stage state", Scenario:
     /// Delete-all.
     func testDeleteAllLeavesNoStageOpenedRowAndNoCardAnswer() throws {
-        let (store, directory) = try makeStore()
+        let directory = try makeTemporaryDirectory()
+        let store = try RecordStore(directory: directory)
         try store.recordStageOpened(3, at: Date(timeIntervalSince1970: 1_760_000_000))
         try store.setCardAnswer("Open", id: "opening.2", changedAt: .now)
 
@@ -53,7 +50,8 @@ final class DeleteAllWiringTests: XCTestCase {
     /// Delete-all — the next launch starts onboarding again, because a
     /// fresh store's `onboardingCompleted()` is false.
     func testAfterDeleteAllTheStoreStartsOnboardingAgain() throws {
-        let (store, directory) = try makeStore()
+        let directory = try makeTemporaryDirectory()
+        let store = try RecordStore(directory: directory)
         try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: .now)
         try store.setOnboardingCompleted(true)
         XCTAssertTrue(try store.onboardingCompleted())
@@ -72,7 +70,8 @@ final class DeleteAllWiringTests: XCTestCase {
     /// fake seam; this proves the same tap, plugged into the real deletion
     /// engine, actually erases the directory).
     func testDeleteEverythingAfterAnEnrolmentChangeReallyErasesTheDirectory() async throws {
-        let (store, directory) = try makeStore()
+        let directory = try makeTemporaryDirectory()
+        let store = try RecordStore(directory: directory)
         try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: .now)
 
         let seam = LocalDeletionBackedSeam(deletion: LocalDeletion(directory: directory, appGroupDirectory: nil, launchMarkerURL: directory.appendingPathComponent("marker")))

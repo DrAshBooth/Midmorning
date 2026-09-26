@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 import Constants
 @testable import Record
+import RecordTestSupport
 
 /// programme spec, "The constants live in one value": "Every capability
 /// that uses the record day MUST read the day start from the setting, not
@@ -14,9 +15,7 @@ final class DayStartSettingTests: XCTestCase {
     /// store's `dayStartHour(effectiveOn:)`, then `RecordDay.key`), and a
     /// save at that moment keys to the same day.
     func testTheAppUsesTheSettingAndTheConstantStaysFour() throws {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
         let store = try RecordStore(directory: directory)
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = .gmt

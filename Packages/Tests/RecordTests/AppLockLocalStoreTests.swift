@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 import AppLock
 
 /// mm-8jr: the Privacy group's three app-lock values survive a relaunch.
@@ -28,13 +29,7 @@ final class AppLockLocalStoreTests: XCTestCase {
     private var directory: URL!
 
     override func setUpWithError() throws {
-        directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("AppLockLocalStoreTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    }
-
-    override func tearDownWithError() throws {
-        try? FileManager.default.removeItem(at: directory)
+        directory = try makeTemporaryDirectory()
     }
 
     private func makeController(store: RecordStore, biometry: Biometry = .faceID) -> AppLockController {

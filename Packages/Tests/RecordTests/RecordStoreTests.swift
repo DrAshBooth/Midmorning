@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Record
+import RecordTestSupport
 
 @MainActor
 final class RecordStoreTests: XCTestCase {
@@ -15,10 +16,7 @@ final class RecordStoreTests: XCTestCase {
             london.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute))!
         }
 
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("RecordStoreTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
 
         // First container: save entries out of time order, with fixed creation moments.
         var store: RecordStore? = try RecordStore(directory: directory)
@@ -82,10 +80,7 @@ final class RecordStoreTests: XCTestCase {
     /// mm-t12.4, "Two files": Record.store and Local.store, each with their
     /// own -wal and -shm, and nothing else in the directory.
     func testTwoStoreConfigurationsInOneDirectory() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("RecordStoreTests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
+        let directory = try makeTemporaryDirectory()
 
         // Keep the container open: the -wal and -shm sidecar files exist
         // only while a connection is live.
