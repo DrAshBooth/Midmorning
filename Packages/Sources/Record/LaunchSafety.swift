@@ -18,14 +18,19 @@ public struct LaunchOutcome: Sendable, Equatable {
 }
 
 public enum LaunchSafety {
-    /// On the third consecutive launch with an uncleared marker, the app
-    /// enters safe mode.
-    public static let safeModeThreshold = 3
+    /// The number of failed launches in a row before safe mode starts
+    /// (data-and-privacy spec, "Launch safety", scenario "Third launch with
+    /// an uncleared marker"; ruling r13-13, mm-t41.25). A failed launch
+    /// ends before Today appears. After two failed launches in a row, the
+    /// third open enters safe mode.
+    public static let safeModeThreshold = 2
 
     /// The pure decision at app start, before Today appears. `markerWasUncleared`
     /// is whether the marker file from the previous launch still exists,
     /// never cleared. `previousConsecutiveUnclearedCount` is the streak the
-    /// marker file's own content held.
+    /// marker file's own content held. A launch that finds no marker writes
+    /// 0, and each launch that finds an uncleared marker adds one. So the
+    /// new streak is the number of failed launches in a row before this one.
     public static func startLaunch(markerWasUncleared: Bool, previousConsecutiveUnclearedCount: Int) -> LaunchOutcome {
         guard markerWasUncleared else {
             return LaunchOutcome(enterSafeMode: false, newConsecutiveUnclearedCount: 0)

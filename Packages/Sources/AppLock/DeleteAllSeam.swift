@@ -1,4 +1,32 @@
 import Foundation
+import Constants
+
+/// The result of one "Delete everything" (data-and-privacy spec,
+/// "Delete-all"; ruling r14-01, mm-t41.26). After `.failed` the app stays
+/// on the screen where the person tapped "Delete everything" (the cover,
+/// the settings screen or the store-failure page). That screen shows
+/// `failureMessage` as one line under its controls, in the same form as
+/// the record's "Could not save. Try again.", and no other text about the
+/// failure.
+public enum DeleteAllOutcome: Sendable, Equatable {
+    case deleted
+    case failed
+
+    /// "Could not delete. Try again."
+    public static let failureMessage: CatalogueText = .key("applock.deleteEverything.failed")
+
+    /// The outcome of a deletion that throws when it fails, as
+    /// `Record.DeleteAllSeam.deleteEverything()` does for the settings
+    /// screen and the store-failure page.
+    public static func of(_ deletion: () throws -> Void) -> DeleteAllOutcome {
+        do {
+            try deletion()
+            return .deleted
+        } catch {
+            return .failed
+        }
+    }
+}
 
 /// The two deletions the cover routes to, both owned by `data-and-privacy`.
 /// The App target's `RealDeleteAllSeam` conforms to it over

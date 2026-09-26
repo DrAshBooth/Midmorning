@@ -25,6 +25,12 @@ public final class AppLockController: ObservableObject {
     /// not set it: after that tap, only "Unlock" asks.
     public private(set) var authenticationRequestDue: Bool
 
+    /// The last "Delete everything" from the cover (ruling r14-01,
+    /// mm-t41.26). The cover shows "Could not delete. Try again." under its
+    /// controls while this is `.failed`. A new deletion or a successful
+    /// authentication removes the line.
+    @Published public private(set) var deleteEverythingOutcome: DeleteAllOutcome?
+
     public init(
         state: AppLifecycleState,
         authenticator: AuthenticationPerforming,
@@ -55,6 +61,7 @@ public final class AppLockController: ObservableObject {
             }
         case .authenticationSucceeded:
             authenticationRequestDue = false
+            deleteEverythingOutcome = nil
         default:
             break
         }
@@ -84,6 +91,30 @@ public final class AppLockController: ObservableObject {
         return succeeded
     }
 
+    /// Requirement "A new entry before authentication": "On Save the app
+    /// MUST make the system authentication request. When authentication
+    /// succeeds, the app MUST save the entry." (ruling r13-04, mm-t15.19).
+    /// The new-entry screen of a pending route (the reminder "Add") calls
+    /// this before it saves, and saves only on `true`:
+    /// - With the app lock off, or with the app not locked, `true` at once
+    ///   and no request.
+    /// - After an enrolment change, `false` and no request: the cover
+    ///   offers no "Unlock", so no authentication can unlock the app.
+    /// - Else the result of the system authentication request. A success
+    ///   unlocks the app.
+    /// On `false` the app stays locked and the cover shows over the
+    /// screen, which keeps the typed text. After "Unlock" succeeds, the
+    /// screen shows again with that text.
+    public func authenticateToSaveNewEntry() async -> Bool {
+        guard state.appLockEnabled, state.isLocked else { return true }
+        var succeeded = false
+        if !state.enrolmentChanged {
+            succeeded = await tapUnlock()
+        }
+        if !succeeded { handle(.pendingRouteSaveNotAuthenticated) }
+        return succeeded
+    }
+
     /// Onboarding spec, "Screen 4: permissions", scenarios "App lock
     /// default" and "App lock off": "Start" applies the person's choice to
     /// this controller, which the app built before onboarding. The person
@@ -102,12 +133,15 @@ public final class AppLockController: ObservableObject {
     /// App target calls this each time the scene becomes active, because
     /// the person can remove the device passcode while the app runs. It
     /// writes nothing, so the saved choice applies again at the next launch
-    /// on a device with a passcode.
+    /// on a device with a passcode. A kept draft under the cover (ruling
+    /// r13-04) shows again, and VoiceOver can reach it: no "Unlock" is
+    /// necessary when the app lock is off.
     public func noteDeviceBiometry(_ biometry: Biometry) {
         guard biometry == .none, state.appLockEnabled else { return }
         state.appLockEnabled = false
         state.isLocked = false
         state.enrolmentChanged = false
+        state.pendingRouteAwaitsUnlock = false
         authenticationRequestDue = false
     }
 
@@ -133,10 +167,13 @@ public final class AppLockController: ObservableObject {
     /// screen follows the deletion).
     @discardableResult
     public func confirmDeleteEverything() async -> Bool {
+        deleteEverythingOutcome = nil
         do {
             try await deleteAllSeam.deleteEverything()
+            deleteEverythingOutcome = .deleted
             return true
         } catch {
+            deleteEverythingOutcome = .failed
             return false
         }
     }
@@ -189,11 +226,23 @@ public final class AppLockController: ObservableObject {
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.enabled)
     }
 
-    /// The "Face ID only"/"Touch ID only" warning's "Turn on": no
-    /// authentication, only the warning the person just read.
-    public func confirmTurnOnFaceOrTouchOnly() {
+    /// The "Face ID only"/"Touch ID only" warning's "Turn on": no new
+    /// authentication request, only the warning the person just read. The
+    /// person is past the lock already: the Privacy group shows only under
+    /// an unlocked app, and the control is disabled while the app lock is
+    /// off.
+    ///
+    /// Ruling r13-06 (mm-t15.20): each turn-on saves the current enrolment
+    /// state hash, so an enrolment change made while the setting was off
+    /// does not lock the person out later. This is not a reset: the kept
+    /// hash then compares as before. With no `currentEnrolmentHash` (the
+    /// device gave none), the kept hash stays as it is.
+    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: String? = nil) {
         state.faceOrTouchOnlyEnabled = true
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.faceOrTouchOnly)
+        if let currentEnrolmentHash {
+            settings?.setAppLockSetting(currentEnrolmentHash, forKey: AppLockSettingsKeys.enrolmentStateHash)
+        }
     }
 
     /// Requirement: "Face ID only or Touch ID only" — "The app MUST make

@@ -27,9 +27,11 @@ extension RecordStore {
     /// Prepares the store directory, then opens `Record.store` and
     /// `Local.store` in it. The App target opens the store only through
     /// this call, so every open on the device sets backup exclusion first.
-    public static func openInPreparedDirectory(applicationSupportDirectory: URL, fileManager: FileManager = .default) throws -> RecordStore {
+    /// `readOnly` is true only in safe mode, which the launch marker
+    /// chooses before this call (ruling r13-05, mm-t42.23).
+    public static func openInPreparedDirectory(applicationSupportDirectory: URL, readOnly: Bool = false, fileManager: FileManager = .default) throws -> RecordStore {
         let directory = try StoreLayout.prepareStoreDirectory(applicationSupportDirectory: applicationSupportDirectory, fileManager: fileManager)
-        return try RecordStore(directory: directory)
+        return try RecordStore(directory: directory, readOnly: readOnly)
     }
 }
 

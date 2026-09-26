@@ -12,8 +12,8 @@ struct AppLockRootView: View {
     private enum Phase {
         case waitingForProtectedData
         case running(RecordStore, AppLockController)
-        /// data-and-privacy spec, "Launch safety": the third consecutive
-        /// launch with an uncleared marker. Skips onboarding gating and the
+        /// data-and-privacy spec, "Launch safety": the third open after two
+        /// failed launches in a row (r13-13). Skips onboarding gating and the
         /// reminder scheduler; shows only Export and Get support
         /// (`mm-t42.13`, proved end to end by `mm-t42.20`), under the app
         /// lock cover (`SafeModeRootView`, mm-t42.21).
@@ -45,14 +45,14 @@ struct AppLockRootView: View {
                 OnboardingGatedRootView(
                     store: store,
                     controller: controller,
-                    onEverythingDeleted: { phase = .deleted(.everything) },
-                    onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
+                    onEverythingDeleted: { showDeleted(.everything) },
+                    onDeleteFromThisDevice: { showDeleted(.thisDeviceOnly) }
                 )
             case .safeMode(let store):
                 SafeModeRootView(
                     store: store,
-                    onEverythingDeleted: { phase = .deleted(.everything) },
-                    onDeleteFromThisDevice: { phase = .deleted(.thisDeviceOnly) }
+                    onEverythingDeleted: { showDeleted(.everything) },
+                    onDeleteFromThisDevice: { showDeleted(.thisDeviceOnly) }
                 )
             case .deleted(let kind):
                 DeletedScreen(kind: kind)
@@ -60,7 +60,7 @@ struct AppLockRootView: View {
                 StoreOpenFailureView(
                     seam: Self.makeSeam(),
                     onTryAgain: { attemptOpen() },
-                    onDeleted: { phase = .deleted(.everything) }
+                    onDeleted: { showDeleted(.everything) }
                 )
             }
         }
@@ -68,6 +68,13 @@ struct AppLockRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.protectedDataDidBecomeAvailableNotification)) { _ in
             attemptOpen()
         }
+    }
+
+    /// The deletion removed the launch marker file, so the launch session
+    /// writes no marker again in this process.
+    private func showDeleted(_ kind: DeletedScreen.Kind) {
+        LaunchMarker.endAfterDeletion()
+        phase = .deleted(kind)
     }
 
     /// Checks protected data first, before ever constructing a
@@ -110,16 +117,31 @@ struct AppLockRootView: View {
     /// (`LaunchMarker.clearAfterTodayAppears`). "The app MUST NOT call
     /// `fatalError` when the container fails to open" — every throw here
     /// reaches `attemptOpen`'s `catch` instead.
+    ///
+    /// "In safe mode the app MUST open the store read-only" (ruling r13-05,
+    /// mm-t42.23): the marker chooses safe mode before the open, so a
+    /// pending migration cannot write, and safe mode writes nothing. The
+    /// launch failure then stays in the marker for the next ordinary launch
+    /// (`LaunchSession.countLaunchFailureIfNeeded`). So does each MetricKit
+    /// crash that safe mode receives: MetricKit delivers each payload once,
+    /// and those crashes are the ones that started safe mode.
     private static func openStoreAndController(metricKitSubscriber: MetricKitSubscriber) throws -> (store: RecordStore, controller: AppLockController, enterSafeMode: Bool) {
         let applicationSupportDirectory = try StoreLocation.applicationSupportDirectory()
         let launch = LaunchMarker.session(applicationSupportDirectory: applicationSupportDirectory)
         let launchMarker = launch.begin()
-        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory)
+        let enterSafeMode = launchMarker.launchOutcome.enterSafeMode
+        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory, readOnly: enterSafeMode)
         launch.countLaunchFailureIfNeeded(in: store)
-        metricKitSubscriber.connect { [weak store] crashes in
-            for _ in 0..<crashes { _ = try? store?.incrementCrashCount() }
+        if store.isReadOnly {
+            metricKitSubscriber.connect { crashes in
+                launch.keepCrashesForTheNextLaunch(crashes)
+            }
+        } else {
+            metricKitSubscriber.connect { [weak store] crashes in
+                for _ in 0..<crashes { _ = try? store?.incrementCrashCount() }
+            }
         }
-        return (store, makeController(store: store), launchMarker.launchOutcome.enterSafeMode)
+        return (store, makeController(store: store), enterSafeMode)
     }
 
     private static func makeController(store: RecordStore) -> AppLockController {

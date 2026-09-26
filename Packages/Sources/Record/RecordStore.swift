@@ -109,22 +109,33 @@ public final class RecordStore {
 
     public let container: ModelContainer
     private let context: ModelContext
+    /// True for safe mode's open (data-and-privacy spec, "Launch safety":
+    /// "In safe mode the app MUST open the store read-only"; ruling r13-05,
+    /// mm-t42.23). Both configurations then carry `allowsSave: false`, so
+    /// no save and no migration can write to either file. A store that
+    /// needs a migration cannot open read-only: SwiftData migrates in
+    /// place, so the open throws and the files do not change. Bead
+    /// mm-t42.28 (label human) asks Ash how safe mode reads that store.
+    public let isReadOnly: Bool
 
     /// Opens the store from the two files in `directory`: `Record.store` and
     /// `Local.store`. Sync is off: both configurations carry
     /// `cloudKitDatabase: .none` (sync turns on in 4.1b, on CKSyncEngine, not
-    /// SwiftData's own mirroring).
-    public init(directory: URL) throws {
+    /// SwiftData's own mirroring). `readOnly` is for safe mode only.
+    public init(directory: URL, readOnly: Bool = false) throws {
+        isReadOnly = readOnly
         let recordConfiguration = ModelConfiguration(
             "Record",
             schema: Schema(RecordSchema.models),
             url: directory.appendingPathComponent("Record.store"),
+            allowsSave: !readOnly,
             cloudKitDatabase: .none
         )
         let localConfiguration = ModelConfiguration(
             "Local",
             schema: Schema(RecordSchema.localModels),
             url: directory.appendingPathComponent("Local.store"),
+            allowsSave: !readOnly,
             cloudKitDatabase: .none
         )
         container = try ModelContainer(
@@ -417,6 +428,15 @@ public final class RecordStore {
             context.insert(ListItem(kind: "customPlace", text: trimmed, changedAt: moment))
         }
         try persist()
+    }
+
+    /// Keeps each place in `unsaved` as a custom place, with the moment the
+    /// person added it. The new-entry screen of a pending route calls this
+    /// only after Save succeeds (ruling r13-04, mm-t15.19).
+    public func touchCustomPlaces(_ unsaved: UnsavedPlaces) throws {
+        for place in unsaved.places {
+            try touchCustomPlace(place.text, at: place.addedAt)
+        }
     }
 
     // MARK: Persistence

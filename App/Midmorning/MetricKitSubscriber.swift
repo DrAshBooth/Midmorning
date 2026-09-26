@@ -11,7 +11,10 @@ import Record
 /// nothing. MetricKit delivers each payload once and can deliver it before
 /// the store opens, so `Record.CrashCountRelay` keeps that count until
 /// `AppLockRootView` connects the store. A delivery to a process that ends
-/// before the store opens is not counted. `CrashCountRelayTests` proves the
+/// before the store opens is not counted. Safe mode's store takes no write
+/// (ruling r13-05), so there the launch marker keeps the count
+/// (`LaunchSession.keepCrashesForTheNextLaunch`) until the next launch that
+/// opens the store for writing. `CrashCountRelayTests` proves the
 /// count; MetricKit delivers no diagnostic in the simulator, so the real
 /// delivery is a device check (`mm-t41.15`).
 ///
