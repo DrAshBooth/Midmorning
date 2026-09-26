@@ -27,6 +27,26 @@ private let cardPlaceholderPattern = try! NSRegularExpression(pattern: #"\{[^{}]
 /// body could hold an image reference in.
 private let imageReferencePattern = try! NSRegularExpression(pattern: #"!\[[^\]]*\]\([^)]*\)|<img\b"#, options: .caseInsensitive)
 
+extension Card {
+    /// Every text the card screen shows: the title, the body and the one
+    /// thing to do. A rule about what "a card" holds reads all three.
+    var readableTexts: [String] { [title, body, oneThing] }
+}
+
+extension StringEntry {
+    /// The entry's text and, when it has them, its plural forms. A rule
+    /// about what a string holds reads every form the app can show.
+    var readableTexts: [String] {
+        guard let plural else { return [text] }
+        return [text, plural.zero, plural.one, plural.other]
+    }
+}
+
+private func holdsPlaceholder(_ text: String) -> Bool {
+    let range = NSRange(text.startIndex..<text.endIndex, in: text)
+    return cardPlaceholderPattern.firstMatch(in: text, range: range) != nil
+}
+
 /// The machine-checkable rules from the content spec, run over a real
 /// `ContentBundle` or a fixture built for one scenario. Each function
 /// matches one requirement; `ContentBundleTests` calls the whole set
@@ -87,20 +107,21 @@ public enum ContentChecks {
         }
     }
 
-    /// "Plain UK English": UK spelling.
+    /// "Plain UK English": UK spelling, in the title, the body and the one
+    /// thing to do.
     public static func ukSpelling(_ cards: [Card]) -> [ContentIssue] {
         cards.compactMap { card in
-            USSpellings.firstMatch(in: card.body).map {
+            card.readableTexts.lazy.compactMap { USSpellings.firstMatch(in: $0) }.first.map {
                 ContentIssue(id: card.id, message: "holds the US spelling \"\($0)\"")
             }
         }
     }
 
     /// "Plain UK English": the card addresses the person as "you", never
-    /// "user", "patient" or "client".
+    /// "user", "patient" or "client", in any of its texts.
     public static func addressesPerson(_ cards: [Card]) -> [ContentIssue] {
         cards.compactMap { card in
-            WordMatcher.firstMatch(in: card.body, entries: disallowedAddresses).map {
+            card.readableTexts.lazy.compactMap { WordMatcher.firstMatch(in: $0, entries: disallowedAddresses) }.first.map {
                 ContentIssue(id: card.id, message: "addresses the person as \"\($0)\"")
             }
         }
@@ -113,11 +134,12 @@ public enum ContentChecks {
             .map { ContentIssue(id: $0.id, message: "holds an empty oneThing") }
     }
 
-    /// "The forbidden list", applied to every card body and, with the id's
-    /// own list, to every string entry's text.
+    /// "The forbidden list", applied to every card's title, body and one
+    /// thing to do and, with the id's own list, to every string entry's
+    /// text and plural forms.
     public static func forbiddenWordsInCards(_ cards: [Card]) -> [ContentIssue] {
         cards.compactMap { card in
-            ForbiddenList.firstMatch(in: card.body, id: card.id).map {
+            card.readableTexts.lazy.compactMap { ForbiddenList.firstMatch(in: $0, id: card.id) }.first.map {
                 ContentIssue(id: card.id, message: "holds the forbidden word \"\($0)\"")
             }
         }
@@ -125,27 +147,24 @@ public enum ContentChecks {
 
     public static func forbiddenWordsInStrings(_ entries: [StringEntry]) -> [ContentIssue] {
         entries.compactMap { entry in
-            ForbiddenList.firstMatch(in: entry.text, id: entry.id).map {
+            entry.readableTexts.lazy.compactMap { ForbiddenList.firstMatch(in: $0, id: entry.id) }.first.map {
                 ContentIssue(id: entry.id, message: "holds the forbidden word \"\($0)\"")
             }
         }
     }
 
-    /// "The app bundles the cards": a card body MUST hold no runtime
-    /// placeholder.
+    /// "The app bundles the cards": a card MUST hold no runtime
+    /// placeholder, in its title, its body or its one thing to do.
     public static func noRuntimePlaceholder(_ cards: [Card]) -> [ContentIssue] {
-        cards.filter { card in
-            let range = NSRange(card.body.startIndex..<card.body.endIndex, in: card.body)
-            return cardPlaceholderPattern.firstMatch(in: card.body, range: range) != nil
-        }.map { ContentIssue(id: $0.id, message: "body holds a runtime placeholder") }
+        cards.filter { $0.readableTexts.contains(where: holdsPlaceholder) }
+            .map { ContentIssue(id: $0.id, message: "holds a runtime placeholder") }
     }
 
     /// A reviewed string, like a card, MUST hold no runtime placeholder
     /// when its family forbids one (for example the reflection and week-1
-    /// questions, which take no fill at all).
+    /// questions, which take no fill at all). Checks the plural forms too.
     public static func noRuntimePlaceholder(in entry: StringEntry) -> [ContentIssue] {
-        let range = NSRange(entry.text.startIndex..<entry.text.endIndex, in: entry.text)
-        guard cardPlaceholderPattern.firstMatch(in: entry.text, range: range) != nil else { return [] }
+        guard entry.readableTexts.contains(where: holdsPlaceholder) else { return [] }
         return [ContentIssue(id: entry.id, message: "text holds a runtime placeholder")]
     }
 
@@ -164,6 +183,23 @@ public enum ContentChecks {
         return issues
     }
 
+    /// "Every bundled string family has ids" (cards: "the ids in the card
+    /// catalogue"): no two cards share an id, and no card has an empty id.
+    /// The content-lock hash keys cards by id, so a second card with the
+    /// same id would also hide the first from the hash.
+    public static func cardIdUniqueness(_ cards: [Card]) -> [ContentIssue] {
+        var seen = Set<String>()
+        var issues: [ContentIssue] = []
+        for card in cards {
+            if card.id.isEmpty {
+                issues.append(ContentIssue(message: "a card has no id"))
+            } else if !seen.insert(card.id).inserted {
+                issues.append(ContentIssue(id: card.id, message: "two cards share this id"))
+            }
+        }
+        return issues
+    }
+
     /// "The card catalogue": every id in `shippedIds` MUST be present in
     /// the bundle (retired cards still count).
     public static func shippedIdsPresent(_ bundle: ContentBundle, shippedIds: [String]) -> [ContentIssue] {
@@ -176,13 +212,15 @@ public enum ContentChecks {
     public static func bingeUsageViolations(_ cards: [Card]) -> [ContentIssue] {
         let allowed = ["binge eating", "binge eat", "a binge"]
         return cards.compactMap { card -> ContentIssue? in
-            let tokens = WordMatcher.tokens(of: card.body)
-            for (index, token) in tokens.enumerated() where token == "binge" {
-                let precededByA = index > 0 && tokens[index - 1] == "a"
-                let followedByEating = index + 1 < tokens.count && tokens[index + 1] == "eating"
-                let followedByEat = index + 1 < tokens.count && tokens[index + 1] == "eat"
-                if !(precededByA || followedByEating || followedByEat) {
-                    return ContentIssue(id: card.id, message: "uses \"binge\" outside \(allowed)")
+            for text in card.readableTexts {
+                let tokens = WordMatcher.tokens(of: text)
+                for (index, token) in tokens.enumerated() where token == "binge" {
+                    let precededByA = index > 0 && tokens[index - 1] == "a"
+                    let followedByEating = index + 1 < tokens.count && tokens[index + 1] == "eating"
+                    let followedByEat = index + 1 < tokens.count && tokens[index + 1] == "eat"
+                    if !(precededByA || followedByEating || followedByEat) {
+                        return ContentIssue(id: card.id, message: "uses \"binge\" outside \(allowed)")
+                    }
                 }
             }
             return nil
