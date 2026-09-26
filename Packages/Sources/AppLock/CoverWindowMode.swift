@@ -7,9 +7,9 @@ import Foundation
 public enum CoverWindowMode: Sendable, Equatable {
     /// No cover and no pending route: the app's own window shows.
     case hidden
-    /// The "Midmorning"-only cover of the inactive app. The window shows,
-    /// but it does not take the keyboard, so Notification Centre does not
-    /// close the keyboard of a sheet.
+    /// The cover of an app that is inactive but not locked. The window
+    /// shows, but it does not take the keyboard, so Notification Centre
+    /// does not close the keyboard of a sheet.
     case shown
     /// The locked cover, or the new-entry screen of a pending route. The
     /// window shows and takes the keyboard and VoiceOver.
@@ -28,7 +28,9 @@ extension AppLifecycleState {
         switch coverMode {
         case .none: return .hidden
         case .privacyOnly: return .shown
-        case .locked, .lockedAfterEnrolmentChange: return .shownWithFocus
+        // The full cover of an app that is only inactive, not locked, does
+        // not take the keyboard: it goes when the app is active again.
+        case .locked, .lockedAfterEnrolmentChange: return isLocked ? .shownWithFocus : .shown
         }
     }
 }

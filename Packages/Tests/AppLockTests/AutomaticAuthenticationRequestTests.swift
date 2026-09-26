@@ -76,6 +76,18 @@ final class AutomaticAuthenticationRequestTests: XCTestCase {
         XCTAssertEqual(controller.state.coverMode, .none)
     }
 
+    /// The full cover of an inactive app that is not locked (scenario "App
+    /// switcher") makes no request.
+    func testTheInactiveCoverOfAnUnlockedAppDoesNotAsk() async {
+        let (controller, authenticator) = makeController(state: .launch(appLockEnabled: true, lockAfterSeconds: 30))
+        await controller.requestAuthenticationIfDue()
+        controller.handle(.didBecomeInactive)
+        XCTAssertEqual(controller.state.coverMode, .locked)
+        await controller.requestAuthenticationIfDue()
+        let count = await authenticator.requests.count
+        XCTAssertEqual(count, 1, "the launch request only")
+    }
+
     /// Scenario "Return within the grace period": no request.
     func testAReturnWithinTheGracePeriodDoesNotAsk() async {
         let (controller, authenticator) = makeController(state: .launch(appLockEnabled: true, lockAfterSeconds: 30))

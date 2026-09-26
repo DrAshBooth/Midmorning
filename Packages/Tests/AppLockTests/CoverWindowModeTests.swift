@@ -31,6 +31,25 @@ final class CoverWindowModeTests: XCTestCase {
         XCTAssertEqual(state.coverWindowMode, .shown)
     }
 
+    /// Scenario "App switcher": with the app lock on, the snapshot shows
+    /// "Midmorning", "Unlock" and "Delete everything", also inside the
+    /// grace period. The app is not locked, so the window does not take the
+    /// keyboard, and a return within the grace period shows the screen the
+    /// person left.
+    func testTheAppSwitcherShowsTheFullCoverWithTheAppLockOn() {
+        var state = AppLifecycleState.launch(appLockEnabled: true, lockAfterSeconds: 30)
+        state = AppLifecycle.reduce(state, event: .authenticationSucceeded)
+        state = AppLifecycle.reduce(state, event: .didBecomeInactive)
+        XCTAssertEqual(state.coverMode, .locked)
+        XCTAssertEqual(state.coverWindowMode, .shown)
+
+        state = AppLifecycle.reduce(state, event: .didEnterBackground(now: 1_000))
+        XCTAssertEqual(state.coverMode, .locked)
+        state = AppLifecycle.reduce(state, event: .didBecomeActive(now: 1_020))
+        XCTAssertEqual(state.coverMode, .none)
+        XCTAssertEqual(state.coverWindowMode, .hidden)
+    }
+
     func testTheUnlockedActiveAppHidesTheWindow() {
         var state = AppLifecycleState.launch(appLockEnabled: true)
         state = AppLifecycle.reduce(state, event: .authenticationSucceeded)

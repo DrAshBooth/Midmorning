@@ -71,7 +71,7 @@ public final class AppLockController: ObservableObject {
     public func requestAuthenticationIfDue() async -> Bool {
         guard authenticationRequestDue else { return false }
         authenticationRequestDue = false
-        guard state.coverMode == .locked else { return false }
+        guard state.isLocked, state.coverMode == .locked else { return false }
         return await tapUnlock()
     }
 
