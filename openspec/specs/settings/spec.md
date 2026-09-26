@@ -73,6 +73,10 @@ The page MUST hold no record content.
 - **WHEN** the person turns on "Face ID only" and taps "Turn on"
 - **THEN** the cover never offers the device passcode
 
+#### Scenario: Diagnostics
+- **WHEN** the person opens "Diagnostics"
+- **THEN** the page shows eight counts and no entry, weight or plan
+
 ### Requirement: Accessibility of the settings screen
 
 Every control on the settings screen MUST have a VoiceOver label equal to its visible label. Every switch MUST read its state. Text MUST scale with Dynamic Type.
