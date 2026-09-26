@@ -40,19 +40,23 @@ public enum UnderweightCheck {
     private static let ruleCCautionThreshold = 0.03
 
     /// Every rule that applies, in declaration order (A, then B, then C).
+    /// Each comparison treats a value on its boundary as on it, also when
+    /// `Double` puts it a few units in the last place off (`RuleBoundary`):
+    /// a fall from 149.60 kg to 142.12 kg is exactly 5%, so Rule C applies.
     public static func rulesThatApply(_ input: UnderweightCheckInput) -> [UnderweightRule] {
         let impliedBMI = BMI.value(heightCm: input.heightCm, weightKg: input.currentAverageKg)
         var rules: [UnderweightRule] = []
 
-        if impliedBMI < ruleAThresholdBMI {
+        if RuleBoundary.isBelow(impliedBMI, ruleAThresholdBMI) {
             rules.append(.a)
         }
-        if impliedBMI < ruleBThresholdBMI, (input.onboardingBMI - impliedBMI) >= ruleBMinimumFallBMI {
+        if RuleBoundary.isBelow(impliedBMI, ruleBThresholdBMI),
+           RuleBoundary.isAtOrAbove(input.onboardingBMI - impliedBMI, ruleBMinimumFallBMI) {
             rules.append(.b)
         }
         if let earlier = input.averageAtLeast28DaysEarlierKg {
             let threshold = input.cautionFlag ? ruleCCautionThreshold : ruleCThreshold
-            if input.currentAverageKg <= earlier * (1 - threshold) {
+            if RuleBoundary.isAtOrBelow(input.currentAverageKg, earlier * (1 - threshold)) {
                 rules.append(.c)
             }
         }

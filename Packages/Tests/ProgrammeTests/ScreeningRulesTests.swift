@@ -83,4 +83,15 @@ final class ScreeningRulesTests: XCTestCase {
         let reasons = ScreeningRules.onboardingReasons(age: 16, pregnancy: .yes, treatment: .yes, bmi: 15, selfHarm: .excludes)
         XCTAssertEqual(reasons, [.selfHarm, .age, .weight, .pregnancy, .treatment])
     }
+
+    /// Scenario "Exactly 18.5" when `Double` puts the BMI a few units in the
+    /// last place low: 160 cm and 47.36 kg, and 180 cm and 59.94 kg.
+    func testExactly18_5FromHeightAndWeightIsCautionNotExcluded() {
+        for (heightCm, weightKg) in [(160.0, 47.36), (180.0, 59.94)] {
+            let bmi = BMI.value(heightCm: heightCm, weightKg: weightKg)
+            XCTAssertFalse(ScreeningRules.bmiExcludes(bmi), "\(heightCm) cm, \(weightKg) kg")
+            XCTAssertTrue(ScreeningRules.cautionFlag(for: bmi), "\(heightCm) cm, \(weightKg) kg")
+        }
+        XCTAssertFalse(ScreeningRules.cautionFlag(for: 19.0), "19.0 or more sets no caution flag")
+    }
 }
