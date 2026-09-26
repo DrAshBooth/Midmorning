@@ -6,54 +6,6 @@ A reminder is a notification the app schedules. Reminders hold the structure of 
 
 ## ADDED Requirements
 
-### Requirement: The weigh-in day reminder
-
-The Reminders group MUST show a "Weigh-in reminder time" control that defaults to 07:30. The scheduler MUST schedule the weigh-in day reminder on the weigh-in day at that time. The scheduler MUST NOT schedule it on any other day. When a weigh-in exists for the weigh-in day before that time, the scheduler MUST cancel the reminder. A tap MUST open the weigh-in screen. The `weigh-in` capability owns that screen.
-
-When the onboarding choice is "I won't be weighing", the scheduler MUST NOT schedule a weigh-in day reminder. The `onboarding` capability owns that choice, and the choice syncs. When the person later picks a weigh-in day, the scheduler MUST schedule the reminder from that day on.
-
-#### Scenario: The weigh-in day
-- **WHEN** the weigh-in day is Monday and the time reaches 07:30 on Monday
-- **THEN** the reminder fires, reads "Midmorning, 07:30", and a tap opens the weigh-in screen
-
-#### Scenario: I won't be weighing
-- **WHEN** the person chose "I won't be weighing" at onboarding
-- **THEN** no weigh-in day reminder fires on any day, and the "Weigh-in day reminder" switch stays on
-
-#### Scenario: A weigh-in day chosen later
-- **WHEN** the person chose "I won't be weighing" and picks Monday on the weigh-in screen on Thursday 1 October
-- **THEN** the weigh-in day reminder fires at 07:30 on Monday 5 October
-
-#### Scenario: A weigh-in before the reminder
-- **WHEN** the person saves a weigh-in at 07:15 on Monday
-- **THEN** no weigh-in day reminder fires at 07:30
-
-#### Scenario: Another day
-- **WHEN** the weigh-in day is Monday and the day is Tuesday
-- **THEN** no weigh-in day reminder fires
-
-### Requirement: The weekly review reminder
-
-The Reminders group MUST show a "Weekly review time" control that defaults to 18:00. The scheduler MUST schedule the weekly review reminder at that time on the day the weekly review becomes due. The `weekly-review` capability defines that day. When the person completes the review before that time, the scheduler MUST cancel the reminder. The scheduler MUST schedule at most one weekly review reminder per review.
-
-A tap MUST open the weekly review. After the finish, the `weekly-review` capability makes no weekly review due, so the scheduler MUST schedule none.
-
-#### Scenario: The seventh day
-- **WHEN** the weekly review becomes due on Sunday 4 October and the time reaches 18:00
-- **THEN** the reminder fires, reads "Midmorning, 18:00", and a tap opens the weekly review
-
-#### Scenario: The review done early
-- **WHEN** the person completes the weekly review at 17:00 on Sunday 4 October
-- **THEN** no weekly review reminder fires at 18:00
-
-#### Scenario: Mid-week
-- **WHEN** the day is Wednesday 30 September and no weekly review is due
-- **THEN** no weekly review reminder fires
-
-#### Scenario: After the finish
-- **WHEN** the person finished the programme on Sunday 20 December
-- **THEN** no weekly review reminder fires on Sunday 27 December
-
 ### Requirement: Worksheet review and check-in reminders
 
 The `problem-solving` capability asks the scheduler for a worksheet review reminder one week after the person saves a worksheet. That capability sets its day and time. The `staying-on-track` capability asks for a check-in reminder at CHECK_IN_WEEKS = 4, 8 and 12 weeks after the finish, at the weekly review time. The scheduler MUST schedule both types under their own switches, "Worksheet review" and "Check-in". The scheduler MUST hold each as a far single reminder outside the rolling horizon.
@@ -687,3 +639,51 @@ The scheduler MUST compute the schedule again when a synced setting arrives by p
 #### Scenario: A time-zone change
 - **WHEN** the device moves from London to Lisbon at 15:00 and today's plan has Evening meal at 19:00
 - **THEN** the scheduler computes the schedule again, and the Evening meal reminder fires at 19:00 Lisbon time
+### Requirement: The weigh-in day reminder
+
+The Reminders group MUST show a "Weigh-in reminder time" control that defaults to 07:30. The scheduler MUST schedule the weigh-in day reminder on the weigh-in day at that time. The scheduler MUST NOT schedule it on any other day. When a weigh-in exists for the weigh-in day before that time, the scheduler MUST cancel the reminder. A tap MUST open the weigh-in screen. The `weigh-in` capability owns that screen.
+
+When the onboarding choice is "I won't be weighing", the scheduler MUST NOT schedule a weigh-in day reminder. The `onboarding` capability owns that choice, and the choice syncs. When the person later picks a weigh-in day, the scheduler MUST schedule the reminder from that day on.
+
+#### Scenario: The weigh-in day
+- **WHEN** the weigh-in day is Monday and the time reaches 07:30 on Monday
+- **THEN** the reminder fires, reads "Midmorning, 07:30", and a tap opens the weigh-in screen
+
+#### Scenario: I won't be weighing
+- **WHEN** the person chose "I won't be weighing" at onboarding
+- **THEN** no weigh-in day reminder fires on any day, and the "Weigh-in day reminder" switch stays on
+
+#### Scenario: A weigh-in day chosen later
+- **WHEN** the person chose "I won't be weighing" and picks Monday on the weigh-in screen on Thursday 1 October
+- **THEN** the weigh-in day reminder fires at 07:30 on Monday 5 October
+
+#### Scenario: A weigh-in before the reminder
+- **WHEN** the person saves a weigh-in at 07:15 on Monday
+- **THEN** no weigh-in day reminder fires at 07:30
+
+#### Scenario: Another day
+- **WHEN** the weigh-in day is Monday and the day is Tuesday
+- **THEN** no weigh-in day reminder fires
+
+### Requirement: The weekly review reminder
+
+The Reminders group MUST show a "Weekly review time" control that defaults to 18:00. The scheduler MUST schedule the weekly review reminder at that time on the day the weekly review becomes due. The `weekly-review` capability defines that day. When the person completes the review before that time, the scheduler MUST cancel the reminder. The scheduler MUST schedule at most one weekly review reminder per review.
+
+A tap MUST open the weekly review. After the finish, the `weekly-review` capability makes no weekly review due, so the scheduler MUST schedule none.
+
+#### Scenario: The seventh day
+- **WHEN** the weekly review becomes due on Sunday 4 October and the time reaches 18:00
+- **THEN** the reminder fires, reads "Midmorning, 18:00", and a tap opens the weekly review
+
+#### Scenario: The review done early
+- **WHEN** the person completes the weekly review at 17:00 on Sunday 4 October
+- **THEN** no weekly review reminder fires at 18:00
+
+#### Scenario: Mid-week
+- **WHEN** the day is Wednesday 30 September and no weekly review is due
+- **THEN** no weekly review reminder fires
+
+#### Scenario: After the finish
+- **WHEN** the person finished the programme on Sunday 20 December
+- **THEN** no weekly review reminder fires on Sunday 27 December
+

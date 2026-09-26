@@ -1,116 +1,9 @@
-# weekly-review
+# weekly-review Specification
 
 ## Purpose
-
 The weekly review is the app's plain account of the week, built from the record, followed by the person's own reflection. Every seven days from the start day the app builds one review. In week WEEK_OF_TAKING_STOCK, counted from the record day stage 2 opened, the review grows into taking stock. The review states what happened and what changed, and never a score.
 
-## ADDED Requirements
-
-### Requirement: Taking stock
-
-The `programme` capability opens stage 5 in week WEEK_OF_TAKING_STOCK = 6, counted from the record day stage 2 opened. The first review that becomes due on or after the day stage 5 opens MUST grow into taking stock. Taking stock MUST add three parts after the summary and before the reflection questions. The parts are progress against the week-1 answers, the questionnaire, and the module recommendation.
-
-Before the week-1 questions, the app MUST show "Starred entries: %1$lld in week 1, %2$lld in week %3$lld." with the two counts and the review's week number. For each week-1 question, the app MUST show the question and the week-1 answer under it. The app MUST then show an empty field with the heading "And now?".
-
-When no week-1 answers exist, the app MUST ask the three questions with empty fields. The app MUST show no text about the missing answers. Taking stock is one session. The next review can become due before the person completes the taking stock session. The "Reviews" list MUST then keep the taking-stock row. While stage 5 is open, that row MUST open taking stock until the person completes the session. While stage 5 is open and the person has not completed the session, each review that becomes due MUST grow into taking stock again. Each repeat MUST open the same session, with the answers saved so far. Each taking-stock row in the "Reviews" list MUST open that one session until the person completes it. The questionnaire requirement states that only "Done" with a chosen module completes the session.
-
-The `programme` capability owns the restart. A restart does not delete the stage 5 opening row. The engine ignores a stage 5 opening earlier than the restart moment. Stage 5 then opens again by the programme's rule from the new start. When stage 5 opens again, the first review due on or after that day MUST grow into taking stock again.
-
-#### Scenario: Taking stock opens
-- **WHEN** the start day is Monday 28 September, stage 2 opened on Tuesday 6 October, and the person opens the review that became due on Monday 16 November
-- **THEN** the review of week 7 shows the summary, then "Starred entries: 9 in week 1, 4 in week 7.", then the week-1 questions with the week-1 answers, then the questionnaire
-
-#### Scenario: A week-1 answer shown again
-- **WHEN** the week-1 answer to "What is hardest at the moment?" was "Evenings after work"
-- **THEN** taking stock shows "What is hardest at the moment?", then "Evenings after work", then "And now?" with an empty field
-
-#### Scenario: No week-1 answers
-- **WHEN** the person never finished the review of week 1 and opens taking stock
-- **THEN** taking stock shows the three questions with empty fields and no text about week 1 answers
-
-#### Scenario: Saved answers on a repeat
-- **WHEN** the person answers three questionnaire questions in the review of week 7, taps the review's "Done" with no module chosen, opens the review of week 8 and taps its "Done" with no module chosen
-- **THEN** the review of week 8 opens with the three saved answers, and after its "Done" both taking-stock rows in the "Reviews" list open that one session
-
-#### Scenario: Taking stock session not complete
-- **WHEN** the person does not complete the taking stock session in the review of week 7 and the review of week 8 becomes due
-- **THEN** the "Reviews" list shows a row that opens taking stock, and the review of week 8 grows into taking stock again
-
-#### Scenario: After a restart
-- **WHEN** the person completed the taking stock session in the first run, restarted the programme, and `programme` opens stage 5 again on Monday 8 February
-- **THEN** the first review that becomes due on or after Monday 8 February grows into taking stock again
-
-### Requirement: The taking stock questionnaire and the module recommendation
-
-The questionnaire MUST ask five questions, each with the answers "Not at all", "Some days" and "Most days". The questions are: "Do you have rules about what you can eat, or how much?", "Are there foods you avoid?", "Do you check your body in mirrors or by touch, or weigh yourself more than once a week?", "Do you avoid mirrors, photos or some clothes?" and "Do you have days when a bad feeling about your body takes over?" Each question MUST be optional. The app MUST treat an unanswered question as "Not at all" for the recommendation.
-
-The app MUST recommend Food rules when question 1 or 2 has "Some days" or "Most days". Food rules is the person-facing name of the dieting module. Body image is the person-facing name of the body image module. Each module capability keeps its directory name. The app MUST recommend Body image when question 3, 4 or 5 has "Some days" or "Most days".
-
-The recommendation MUST read one of: "From your answers, Food rules is the one to open first.", "From your answers, Body image is the one to open first.", "From your answers, both modules apply. Start with either." or "From your answers, neither module stands out. Both are open if you want them." A recommendation string MUST NOT contain "feeling fat". Under the recommendation, the app MUST show two controls, "Open Food rules" and "Open Body image", whatever the recommendation.
-
-When the person taps either control, the app MUST save the questionnaire answers and the chosen module. At that tap, the app MUST NOT open the module or complete the taking stock session. After the tap, the app MUST show the tapped control as chosen and the other control as not chosen. When the person later taps the other control, the app MUST replace the chosen module with that control's module. The review MUST continue with the reflection questions, the one thing to change, the self-harm item and "I'm getting worse".
-
-"Done" MUST close the review with or without a chosen module, as for any review. When the person first taps the review's "Done" with a chosen module, the app MUST complete the taking stock session. After the review closes, the app MUST open the chosen module. The app MUST NOT open it after a self-harm "Yes" then "Yes" in that review. The app MUST NOT open it when the system or the person closed the app before that "Done". After that first "Done", the app MUST NOT open a module at a later "Done" on that review.
-
-When the person taps the review's "Done" with no chosen module, the app MUST close the review. The app MUST NOT complete the taking stock session at that tap. The "Reviews" list then keeps the taking-stock row. The next review grows into taking stock again, as "Taking stock" states.
-
-The person can answer the self-harm item "Yes" then "Yes" in a review with a chosen module. At the first "Done" with that chosen module, the app MUST then complete the taking stock session. The app MUST NOT open a module at that "Done". The app MUST hold the "Yes" then "Yes" in memory only, until the review closes.
-
-When the system or the person closes the app before "Done", the review can reopen. At that review's "Done" with a chosen module, the app MUST complete the session. The app MUST NOT open a module.
-
-After either "Done", the store MUST keep the chosen module. Stage 6 opens when the session completes, or stays open after a restart, as `programme` defines. The chosen module then stays in the "Tools" group of its stage screen, one tap from the Programme screen.
-
-The app MUST NOT show a sum of the answers. The store MUST keep the five answers, the recommendation and the chosen module. The `dieting-module` and `body-image-module` capabilities own the module screens.
-
-#### Scenario: Food rules only
-- **WHEN** the person answers question 1 "Most days" and the other four "Not at all"
-- **THEN** the review shows "From your answers, Food rules is the one to open first.", then "Open Food rules" and "Open Body image"
-
-#### Scenario: Body checking and a bad feeling about the body
-- **WHEN** the person answers question 3 "Some days", question 5 "Most days" and the others "Not at all"
-- **THEN** the review shows "From your answers, Body image is the one to open first."
-
-#### Scenario: Both
-- **WHEN** the person answers question 2 "Some days" and question 4 "Some days"
-- **THEN** the review shows "From your answers, both modules apply. Start with either."
-
-#### Scenario: Neither
-- **WHEN** the person leaves all five questions unanswered
-- **THEN** the review shows "From your answers, neither module stands out. Both are open if you want them.", then "Open Food rules" and "Open Body image"
-
-#### Scenario: Open the other module
-- **WHEN** the recommendation names Food rules, the person taps "Open Body image" and later taps the review's "Done"
-- **THEN** the app saves the answers and the chosen module at the tap, completes the taking stock session at the review's "Done", then opens the body image module
-
-#### Scenario: The self-harm item before the module opens
-- **WHEN** the person taps "Open Food rules" in taking stock, answers step 1 of the self-harm item "No" and taps the review's "Done"
-- **THEN** the review stays open after the tap on "Open Food rules" and asks step 1, and the app opens the dieting module only after the review's "Done"
-
-#### Scenario: The chosen control
-- **WHEN** the person taps "Open Food rules"
-- **THEN** the review shows "Open Food rules" as chosen, not by colour alone, and "Open Body image" as not chosen
-
-#### Scenario: Tap both controls
-- **WHEN** the person taps "Open Food rules", then "Open Body image", then the review's "Done"
-- **THEN** the store keeps Body image as the chosen module, and the app opens the body image module only
-
-#### Scenario: Reopen after the module opened
-- **WHEN** the person completed the taking stock session with Food rules chosen on Monday, reopens the review on Wednesday and taps the review's "Done"
-- **THEN** the review closes and the app opens no module
-
-#### Scenario: Self-harm Yes then Yes after a module choice
-- **WHEN** the person taps "Open Food rules" in taking stock, answers the self-harm item "Yes" then "Yes", taps "Done" on the not-right-now page, then taps the review's "Done"
-- **THEN** the store keeps Food rules as the chosen module, the app completes the taking stock session and opens no module, and "Food rules" is in the "Tools" group of the stage 6 screen
-
-#### Scenario: Reopen after the app closed
-- **WHEN** the person taps "Open Food rules" in taking stock, the system closes the app before "Done", and the person reopens the review and taps the review's "Done"
-- **THEN** the taking stock session is complete, the app opens no module, and "Food rules" is in the "Tools" group of the stage 6 screen
-
-#### Scenario: Done with no module chosen
-- **WHEN** the person answers the questionnaire in the review of week 7, taps neither module control, taps the review's "Done", and the review of week 8 becomes due
-- **THEN** the review closes, the taking stock session stays not complete, the "Reviews" list keeps the taking-stock row, and the review of week 8 grows into taking stock again
-
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: When a weekly review is due
 
@@ -131,10 +24,6 @@ The `reminders` capability owns the weekly review reminder. Once the next review
 #### Scenario: A review left unfinished
 - **WHEN** the person does not finish the review of week 1 and the review of week 2 becomes due
 - **THEN** Today shows "Weekly review" for week 2 and no text about week 1
-
-#### Scenario: After the finish
-- **WHEN** the person finished the programme on Wednesday 2 December and Monday 7 December begins
-- **THEN** no review becomes due and Today shows no "Weekly review" line
 
 #### Scenario: No network
 - **WHEN** the device has no network connection
@@ -253,14 +142,6 @@ At a check-in, the summary MUST cover the 7 record days before the check-in. At 
 #### Scenario: Zero starred entries
 - **WHEN** week 4 has no starred entries and week 3 had 2
 - **THEN** the review shows "Starred entries: 0 this week, 2 last week." and no other word about it
-
-#### Scenario: A check-in
-- **WHEN** the person opens a check-in with 4 starred entries in the 7 record days before it
-- **THEN** the summary shows "Starred entries: 4 this week." and no last-week count
-
-#### Scenario: A check-in with no entries
-- **WHEN** the person opens a check-in and the 7 record days before it hold no entry
-- **THEN** the summary shows "Starred entries: 0." and no plan, gap, urge or weigh-in part, as `staying-on-track` defines
 
 ### Requirement: The week's counts are frozen in the Review row
 
@@ -515,10 +396,6 @@ The pinned note on Today MUST be one accessibility element whose label is its te
 #### Scenario: VoiceOver on "I'm getting worse"
 - **WHEN** VoiceOver focuses "I'm getting worse"
 - **THEN** it reads the label "I'm getting worse", the button trait, and the hint "Opens a page about seeing your GP."
-
-#### Scenario: VoiceOver on the chosen module
-- **WHEN** the person taps "Open Food rules" and VoiceOver focuses that control
-- **THEN** VoiceOver reads the label "Open Food rules", the button trait and the selected trait
 
 #### Scenario: Largest text size
 - **WHEN** the person sets the largest accessibility text size
