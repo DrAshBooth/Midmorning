@@ -226,6 +226,8 @@ private struct RunningRootView: View {
                 checkEnrolmentStateIfNeeded()
                 // design.md, "The scheduler is a pure function over a
                 // rolling horizon": recomputed on activation.
+                // Materialise every elapsed record day first (mm-t23.21).
+                _ = try? store.materialiseElapsedRecordDays(now: Date(), calendar: .current)
                 ReminderCoordinator.recomputeAndApply(store: store)
             }
             // A pending route always wins over the cover (app-lock spec, "A
@@ -269,6 +271,7 @@ private struct RunningRootView: View {
                 case .active:
                     controller.handle(.didBecomeActive(now: MachContinuousClock().continuousSeconds()))
                     checkEnrolmentStateIfNeeded()
+                    _ = try? store.materialiseElapsedRecordDays(now: Date(), calendar: .current)
                     ReminderCoordinator.recomputeAndApply(store: store)
                 case .inactive:
                     controller.handle(.didBecomeInactive)

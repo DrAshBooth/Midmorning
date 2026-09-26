@@ -40,28 +40,16 @@ enum PlanToday {
     /// already loaded by the caller (`RecordStore.entries(dayKey:)`).
     @MainActor
     static func load(dateKey: String, recordDay: DateInterval, store: RecordStore, entries: [RecordRow], now: Date, calendar: Calendar) -> PlanDaySection {
-        guard let dayStartHour = try? store.dayStartHour(effectiveOn: dateKey) else {
+        // The one resolve that the plan builder and the scheduler also use
+        // (mm-t23.23): the day's own row, or its template.
+        guard let plan = try? store.resolvedPlan(dateKey: dateKey), !plan.meals.isEmpty else {
             return PlanDaySection(rows: [], matchedEntryIds: [], trailingNextLine: nil)
         }
-        let plan = try? store.dayPlan(dateKey: dateKey)
-        let slotsJSON: String
-        if let plan {
-            slotsJSON = plan.slotsJSON
-        } else {
-            let weekday = calendar.component(.weekday, from: recordDay.start)
-            let kind = RecordStore.TemplateKind(rawValue: Materialisation.templateKind(forRecordDayStartingOnWeekday: weekday)) ?? .weekday
-            slotsJSON = (try? store.templateSlotsJSON(kind)) ?? "[]"
-        }
-        let slots = PlanCodec.decode(slotsJSON)
-        guard !slots.isEmpty else { return PlanDaySection(rows: [], matchedEntryIds: [], trailingNextLine: nil) }
-
-        let windowBefore = plan?.windowBeforeMinutes ?? 60
-        let windowAfter = plan?.windowAfterMinutes ?? 90
-        let windows = PlanWindows.windows(for: slots, recordDay: recordDay, dayStartHour: dayStartHour, beforeMinutes: windowBefore, afterMinutes: windowAfter, calendar: calendar)
-        let ordered = PlanOrdering.sorted(slots, dayStartHour: dayStartHour)
-        let entryFacts = entries.map { PlanEntryFact(id: $0.id, time: $0.time) }
-        let matches = PlanMatching.match(windows: windows, entries: entryFacts)
-        let matchedIds = Set(matches.values)
+        let dayMatch = plan.match(entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) }, recordDay: recordDay, calendar: calendar)
+        let windows = dayMatch.windows
+        let ordered = dayMatch.orderedMeals
+        let matches = dayMatch.matches
+        let matchedIds = dayMatch.matchedEntryIds
         let answers = (try? store.plannedMealAnswers(dateKey: dateKey)) ?? [:]
         let quietOn = (try? store.quietHoursOn()) ?? true
         let quietStart = (try? store.quietHoursStart()) ?? "22:00"
@@ -141,19 +129,8 @@ enum PlanToday {
             let lastSkippedNoMatch = answers[last.slotIndex] == "Skipped" && matches[last.slotIndex] == nil
             let starredAfter = entries.contains { $0.feltLikeABinge && $0.time >= lastWindow.time && $0.time < recordDay.end }
             if NextPlannedMeal.isTriggered(previousSlotSkippedWithNoMatch: lastSkippedNoMatch, hasStarredEntryBetweenPreviousAndThis: starredAfter) {
-                let nextDay = RecordDay.next(recordDay, calendar: calendar)
-                let nextDateKey = RecordDay.key(containing: nextDay.start, calendar: calendar)
-                let nextPlan = try? store.dayPlan(dateKey: nextDateKey)
-                let nextSlotsJSON: String
-                if let nextPlan {
-                    nextSlotsJSON = nextPlan.slotsJSON
-                } else {
-                    let weekday = calendar.component(.weekday, from: nextDay.start)
-                    let kind = RecordStore.TemplateKind(rawValue: Materialisation.templateKind(forRecordDayStartingOnWeekday: weekday)) ?? .weekday
-                    nextSlotsJSON = (try? store.templateSlotsJSON(kind)) ?? "[]"
-                }
-                let nextDayStartHour = (try? store.dayStartHour(effectiveOn: nextDateKey)) ?? dayStartHour
-                if let first = PlanOrdering.sorted(PlanCodec.decode(nextSlotsJSON), dayStartHour: nextDayStartHour).first {
+                let nextPlan = Materialisation.nextDateKey(after: dateKey).flatMap { try? store.resolvedPlan(dateKey: $0) }
+                if let first = nextPlan?.orderedMeals.first {
                     trailingNextLine = NextPlannedMeal.line(for: PlanMealFact(label: label(for: first.slotIndex), time: first.time, kind: Slot.at(index: first.slotIndex)?.kind ?? .meal))
                 }
             }

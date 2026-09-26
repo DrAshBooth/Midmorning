@@ -138,30 +138,21 @@ enum ReminderCoordinator {
         store: RecordStore, dayKey: String, dayInterval: DateInterval, isCurrentDay: Bool,
         dayStartHour: Int, calendar: Calendar, constants: ProgrammeConstants
     ) -> [PlannedMealFact] {
-        let plan = try? store.dayPlan(dateKey: dayKey)
-        let slotsJSON: String
-        let beforeMinutes: Int
-        let afterMinutes: Int
-        if let plan {
-            slotsJSON = plan.slotsJSON
-            beforeMinutes = plan.windowBeforeMinutes
-            afterMinutes = plan.windowAfterMinutes
-        } else {
-            let weekday = calendar.component(.weekday, from: dayInterval.start)
-            let kind = Materialisation.templateKind(forRecordDayStartingOnWeekday: weekday)
-            slotsJSON = (try? store.templateSlotsJSON(kind == "weekend" ? .weekend : .weekday)) ?? "[]"
-            beforeMinutes = constants.plannedMealWindowBeforeMinutes
-            afterMinutes = constants.plannedMealWindowAfterMinutes
-        }
-        let meals = PlanCodec.decode(slotsJSON)
+        // The one resolve that Today and the plan builder also use (mm-t23.23).
+        guard let plan = try? store.resolvedPlan(dateKey: dayKey, constants: constants) else { return [] }
+        let meals = plan.meals
         guard isCurrentDay, !meals.isEmpty else {
             return meals.map { PlannedMealFact(slotIndex: $0.slotIndex, time: $0.time, matchedBeforeReminderTime: false) }
         }
 
         let entries = (try? store.entries(dayKey: dayKey)) ?? []
-        let windows = PlanWindows.windows(for: meals, recordDay: dayInterval, dayStartHour: dayStartHour, beforeMinutes: beforeMinutes, afterMinutes: afterMinutes, calendar: calendar)
-        let facts = entries.map { PlanEntryFact(id: $0.id, time: $0.time) }
-        let matches = PlanMatching.match(windows: windows, entries: facts)
+        let dayMatch = PlanDayMatch(
+            meals: meals, recordDay: dayInterval, dayStartHour: dayStartHour,
+            beforeMinutes: plan.windowBeforeMinutes, afterMinutes: plan.windowAfterMinutes,
+            entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) }, calendar: calendar
+        )
+        let windows = dayMatch.windows
+        let matches = dayMatch.matches
         return meals.map { meal in
             let matchedEntryId = matches[meal.slotIndex]
             let matchedBefore = matchedEntryId.flatMap { id in entries.first { $0.id == id } }
