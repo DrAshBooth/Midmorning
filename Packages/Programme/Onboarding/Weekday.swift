@@ -6,6 +6,11 @@ import Foundation
 public enum Weekday: Int, Sendable, Equatable, CaseIterable {
     case sunday = 1, monday, tuesday, wednesday, thursday, friday, saturday
 
+    /// Every weekday in the order a weekday list shows them, Monday to
+    /// Sunday (weigh-in spec, "The weigh-in day": VoiceOver reads "Monday"
+    /// to "Sunday"). `allCases` keeps `Calendar`'s own Sunday-first order.
+    public static let mondayFirst: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
+
     public var name: String {
         switch self {
         case .sunday: return "Sunday"

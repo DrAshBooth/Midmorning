@@ -70,7 +70,7 @@ struct SettingsView: View {
 
             Section("settings.group.weighIn") {
                 Picker(Screen3Content.weighInDayHeading, selection: weighInDaySelection) {
-                    ForEach(Weekday.allCases, id: \.self) { weekday in
+                    ForEach(Weekday.mondayFirst, id: \.self) { weekday in
                         Text(weekday.name).tag(Optional(weekday.rawValue))
                     }
                     Text(Screen3Content.wontBeWeighingChoice).tag(Optional<Int>.none)

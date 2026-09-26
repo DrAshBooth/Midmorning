@@ -88,7 +88,7 @@ struct WeighInScreenView: View {
 
     private var chooseDaySection: some View {
         Section(header: Text(WeighInContent.chooseADayHeading).accessibilityAddTraits(.isHeader)) {
-            ForEach(Weekday.allCases, id: \.self) { weekday in
+            ForEach(Weekday.mondayFirst, id: \.self) { weekday in
                 Button(weekday.name) { chooseWeighInDay(weekday.rawValue) }
             }
             Text(verbatim: Screen3Content.weighInExplanation)
@@ -121,7 +121,7 @@ struct WeighInScreenView: View {
 
     private var weighInDayPicker: some View {
         Picker(Screen3Content.weighInDayHeading, selection: weighInDaySelection) {
-            ForEach(Weekday.allCases, id: \.self) { weekday in
+            ForEach(Weekday.mondayFirst, id: \.self) { weekday in
                 Text(weekday.name).tag(Optional(weekday.rawValue))
             }
             Text(Screen3Content.wontBeWeighingChoice).tag(Optional<Int>.none)
