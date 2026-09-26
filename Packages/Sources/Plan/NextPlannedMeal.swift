@@ -22,14 +22,4 @@ public enum NextPlannedMeal {
     public static func line(for meal: PlanMealFact) -> String {
         "\(meal.label) at \(meal.time) still happens."
     }
-
-    /// Whether the previous planned meal's own outcome should surface the
-    /// next-planned-meal line on this one (regular-eating-plan spec, "The
-    /// next-planned-meal line"): the previous slot was answered "Skipped"
-    /// with no matched entry, or a starred entry falls at or after the
-    /// previous slot's own time and before this one's — whether or not that
-    /// entry matched the previous slot.
-    public static func isTriggered(previousSlotSkippedWithNoMatch: Bool, hasStarredEntryBetweenPreviousAndThis: Bool) -> Bool {
-        previousSlotSkippedWithNoMatch || hasStarredEntryBetweenPreviousAndThis
-    }
 }
