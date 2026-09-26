@@ -563,6 +563,118 @@ public final class RecordStore {
     public func turnRemindersOn(changedAt: Date = .now) throws {
         try setSettingValue("", key: Self.remindersPausedAtKey, changedAt: changedAt)
     }
+
+    // MARK: - Profile: the one-time BMI (onboarding spec, "What onboarding
+    // keeps and what it never keeps"; safeguarding spec, "Re-screening at a
+    // restart")
+
+    /// The one `Profile` row: height, the onboarding BMI, the caution flag
+    /// and `askedAt`, or `nil` before onboarding writes it.
+    public func profile() throws -> Profile? {
+        let fixedId = Profile.fixedId
+        var descriptor = FetchDescriptor<Profile>(predicate: #Predicate { $0.id == fixedId })
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).first
+    }
+
+    /// Upserts the one `Profile` row. Onboarding calls this once, at
+    /// "Start"; a later re-screen calls it again with a later `changedAt`,
+    /// the field `data-and-privacy` keeps on sync.
+    public func setProfile(heightCm: Double, onboardingBMI: Double, cautionFlag: Bool, askedAt: Date, changedAt: Date = .now) throws {
+        if let existing = try profile() {
+            existing.heightCm = heightCm
+            existing.onboardingBMI = onboardingBMI
+            existing.cautionFlag = cautionFlag
+            existing.askedAt = askedAt
+            existing.changedAt = changedAt
+        } else {
+            context.insert(Profile(heightCm: heightCm, onboardingBMI: onboardingBMI, cautionFlag: cautionFlag, askedAt: askedAt, changedAt: changedAt))
+        }
+        try persist()
+    }
+
+    // MARK: - Onboarding: the start day, the weigh-in day and Local.store's
+    // device state (onboarding spec, "Screen 3: the start day", "Screen 3:
+    // weigh-in day and quiet hours", "Screen 4: your record", "Finish")
+
+    private static let startDaySettingKey = "onboarding.startDay"
+
+    /// The chosen start day, as a record-day key, or `nil` before "Start".
+    public func startDayKey() throws -> String? {
+        try settingValue(key: Self.startDaySettingKey)
+    }
+
+    /// Keeps the chosen start day as a calendar date, in one `Settings` row.
+    /// When two devices hold a start day, `SettingsReconciler` keeps the
+    /// later `changedAt`, so a restart's write replaces the earlier one.
+    public func setStartDayKey(_ dayKey: String, changedAt: Date = .now) throws {
+        try setSettingValue(dayKey, key: Self.startDaySettingKey, changedAt: changedAt)
+    }
+
+    /// "Weigh-in day" or "I won't be weighing" (onboarding spec, "Screen 3:
+    /// weigh-in day and quiet hours"). The weekday matches `Calendar`'s own
+    /// `weekday` component: 1 is Sunday, 7 is Saturday.
+    public enum WeighInDayChoice: Sendable, Equatable {
+        case weekday(Int)
+        case wontBeWeighing
+    }
+
+    private static let weighInDaySettingKey = "onboarding.weighInDay"
+
+    public func weighInDayChoice() throws -> WeighInDayChoice? {
+        guard let value = try settingValue(key: Self.weighInDaySettingKey) else { return nil }
+        if value == "none" { return .wontBeWeighing }
+        return Int(value).map(WeighInDayChoice.weekday)
+    }
+
+    public func setWeighInDayChoice(_ choice: WeighInDayChoice, changedAt: Date = .now) throws {
+        let value: String
+        switch choice {
+        case .weekday(let weekday): value = String(weekday)
+        case .wontBeWeighing: value = "none"
+        }
+        try setSettingValue(value, key: Self.weighInDaySettingKey, changedAt: changedAt)
+    }
+
+    // Local.store: device-only onboarding state (data-and-privacy spec,
+    // "Two store configurations in one directory").
+
+    private static let installMomentKey = "onboarding.installMoment"
+
+    /// The moment onboarding's first screen wrote at first launch, or `nil`
+    /// before that (onboarding spec, "Four screens, once, in order": "writes
+    /// the install moment to Local.store").
+    public func installMoment() throws -> Date? {
+        try localSettingValue(key: Self.installMomentKey).flatMap { ISO8601DateFormatter().date(from: $0) }
+    }
+
+    public func setInstallMoment(_ moment: Date) throws {
+        try setLocalSettingValue(ISO8601DateFormatter().string(from: moment), key: Self.installMomentKey)
+    }
+
+    private static let onboardingCompletedKey = "onboarding.completed"
+
+    /// The completion flag: `false` until "Start" sets it (onboarding spec, "Finish").
+    public func onboardingCompleted() throws -> Bool {
+        try (localSettingValue(key: Self.onboardingCompletedKey) ?? "false") == "true"
+    }
+
+    public func setOnboardingCompleted(_ completed: Bool) throws {
+        try setLocalSettingValue(completed ? "true" : "false", key: Self.onboardingCompletedKey)
+    }
+
+    private static let syncOnKey = "onboarding.syncOn"
+
+    /// The sync choice as device state (onboarding spec, "Screen 4: your
+    /// record"). `false` — off — in the first cut, always, because "Your
+    /// record" shows one control, "This device only".
+    public func syncOn() throws -> Bool {
+        try (localSettingValue(key: Self.syncOnKey) ?? "false") == "true"
+    }
+
+    public func setSyncOn(_ on: Bool) throws {
+        try setLocalSettingValue(on ? "true" : "false", key: Self.syncOnKey)
+    }
 }
 
 /// The store directory inside the app's own `Application Support` directory

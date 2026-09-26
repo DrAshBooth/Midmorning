@@ -19,12 +19,36 @@ struct MidmorningApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppLockRootView(store: store)
+            AppRootView(store: store)
                 // The one place the tint is set: every control below inherits
                 // the accent colour unless it overrides it, as the star
                 // control does with the system grey (product-rules spec,
                 // "Appearance").
                 .tint(Color.accentColor)
+        }
+    }
+}
+
+/// Onboarding, once, before anything else (onboarding spec, "Four screens,
+/// once, in order": "The app MUST show onboarding the first time the app
+/// opens after install... MUST NOT show onboarding again after the person
+/// completes it."). The app lock's own cover only ever sits over Today, so
+/// gating here, above `AppLockRootView`, keeps the cover from showing before
+/// the person has chosen it on screen 4.
+struct AppRootView: View {
+    let store: RecordStore
+    @State private var isOnboardingCompleted: Bool
+
+    init(store: RecordStore) {
+        self.store = store
+        _isOnboardingCompleted = State(initialValue: (try? store.onboardingCompleted()) ?? false)
+    }
+
+    var body: some View {
+        if isOnboardingCompleted {
+            AppLockRootView(store: store)
+        } else {
+            OnboardingRootView(store: store) { isOnboardingCompleted = true }
         }
     }
 }

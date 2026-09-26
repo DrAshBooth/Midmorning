@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "Record", targets: ["Record"]),
         .library(name: "Constants", targets: ["Constants"]),
         .library(name: "AppLock", targets: ["AppLock"]),
+        .library(name: "Programme", targets: ["Programme"]),
         .library(name: "Content", targets: ["Content"]),
         .executable(name: "content-lock", targets: ["ContentLockTool"]),
         .executable(name: "content-signoff-list", targets: ["ContentSignOffListTool"]),
@@ -25,6 +26,14 @@ let package = Package(
         // LocalAuthentication and lifecycle code call (app-lock spec).
         .target(name: "AppLock", dependencies: ["Constants"]),
         .testTarget(name: "AppLockTests", dependencies: ["AppLock"]),
+        // The safeguarding rules and (from later changes) the stage engine,
+        // week counting, the weekly review builder, pattern sentences, the
+        // scheduler and the analytics summary builder (design.md, "One
+        // umbrella package, five targets"). `Programme` takes value facts
+        // and imports `Constants` only, never `Record` or `Plan`, so every
+        // rule here is a pure function a test drives with fixed inputs.
+        .target(name: "Programme", dependencies: ["Constants"], path: "Programme"),
+        .testTarget(name: "ProgrammeTests", dependencies: ["Programme"], path: "Tests/ProgrammeTests"),
         // The content spec fixes this package's path, `Packages/Content`,
         // because the content-lock file and the sign-off files live at a
         // literal, spec-named path that tooling reads directly. Each

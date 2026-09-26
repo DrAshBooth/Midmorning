@@ -27,6 +27,7 @@ struct TodayView: View {
     @State private var scrollTarget: UUID?
     @State private var navigationPath = NavigationPath()
     @AccessibilityFocusState private var addEntryFocused: Bool
+    @State private var isShowingSupportSheet = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -65,11 +66,12 @@ struct TodayView: View {
                     .accessibilityLabel("today.lock.accessibilityLabel")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    // Placeholder: `onboarding-and-safeguarding` (1.4) wires
-                    // the real Get support sheet.
-                    Button {} label: {
+                    Button {
+                        isShowingSupportSheet = true
+                    } label: {
                         Text("today.getSupport")
                     }
+                    .accessibilityLabel("today.getSupport")
                 }
                 ToolbarItemGroup(placement: .bottomBar) {
                     // `weekly-review` (3.2) supplies the live "is a review
@@ -102,6 +104,9 @@ struct TodayView: View {
                 } onDelete: {
                     reload()
                 }
+            }
+            .sheet(isPresented: $isShowingSupportSheet) {
+                SupportSheetView()
             }
             .navigationDestination(for: EarlierDaysRoute.self) { _ in
                 EarlierDaysListView(store: store)
