@@ -135,7 +135,7 @@ public final class RecordStore {
         // Every file `Record.store` and `Local.store` create (each one's
         // main file, `-wal` and `-shm`) carries `NSFileProtectionComplete`
         // (data-and-privacy spec, "File protection": "Store files"). The App
-        // target's `StoreLocation.directory()` already protects the
+        // target opens through `openInPreparedDirectory`, which protects the
         // directory itself; this protects the files `ModelContainer` just
         // created inside it.
         FileProtection.applyToDatabaseFiles(in: directory)
@@ -1319,7 +1319,7 @@ public final class RecordStore {
 /// The store directory inside the app's own `Application Support` directory
 /// — never inside the App Group container (data-and-privacy spec, "The
 /// store lives in the app's own container"). The App target's own
-/// `StoreLocation.url()` builds this same path against the real sandbox;
+/// `StoreLocation.applicationSupportDirectory()` gives the real root;
 /// this is the pure, non-isolated form a test can check with a fixed URL.
 public enum StoreLayout {
     public static func storeDirectory(applicationSupportDirectory: URL) -> URL {
@@ -1346,8 +1346,8 @@ public enum AppGroupContent {
     /// container). Delete-all and "Delete from this device" delete both by
     /// this same path, whether or not either file exists yet (data-and-
     /// privacy spec, "Delete-all", "Delete from this device", "File
-    /// protection": "Side files").
+    /// protection": "Side files"). `StoreFiles.swift` holds each name.
     public static func fileURLs(inAppGroupDirectory directory: URL) -> [URL] {
-        fileStems.sorted().map { directory.appendingPathComponent($0) }
+        [actionQueueURL(inAppGroupDirectory: directory), snapshotURL(inAppGroupDirectory: directory)]
     }
 }

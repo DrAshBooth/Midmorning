@@ -58,36 +58,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 /// Where the store file lives: the app's own container. Only the app process
 /// opens the store (decided 25 September 2026). The App Group holds only the
 /// widget snapshot and the action queue (data-and-privacy spec, "The app
-/// excludes the whole store directory from backups": both directories below
-/// are excluded from backup; the App Group's own exclusion is each side
-/// file's own job, added by `2.4`/`2.5`).
+/// excludes the whole store directory from backups"). The store directory
+/// gets its backup exclusion before every open
+/// (`RecordStore.openInPreparedDirectory`, in `Record`); each App Group side
+/// file gets its own after each write (`FileProtection.protectSideFile`).
 enum StoreLocation {
     static let appGroup = "group.uk.midmorning"
 
     /// The app's own `Application Support` directory, created if it does not
-    /// exist yet. `directory()` and `LaunchMarker` both build their own path
-    /// from this one root.
+    /// exist yet. The store directory and `LaunchMarker` both build their
+    /// own path from this one root (`Record.StoreLayout`).
     static func applicationSupportDirectory() throws -> URL {
         try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-    }
-
-    /// Creates the `Record` directory under Application Support with
-    /// NSFileProtectionComplete and backup exclusion, so `Record.store`,
-    /// `Local.store` and their -wal and -shm files all inherit both
-    /// (data-and-privacy spec, "The store lives in the app's own
-    /// container"; "Two store configurations in one directory"; "The app
-    /// excludes the whole store directory from backups"). Returns the
-    /// directory; `RecordStore` places both files inside it and protects
-    /// each one in turn (data-and-privacy spec, "File protection").
-    static func directory() throws -> URL {
-        let directory = StoreLayout.storeDirectory(applicationSupportDirectory: try applicationSupportDirectory())
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true,
-            attributes: [.protectionKey: FileProtectionType.complete]
-        )
-        try FileProtection.protectStoreDirectory(directory)
-        return directory
     }
 
     /// The App Group container, or `nil` when the device has none yet (no
@@ -101,8 +83,9 @@ enum StoreLocation {
     }
 
     /// The action queue file's own path inside the App Group container
-    /// (widgets-and-intents spec, "The action queue").
+    /// (widgets-and-intents spec, "The action queue"). Delete-all deletes
+    /// the file by the same `Record.AppGroupContent` name.
     static func actionQueueURL() -> URL? {
-        appGroupDirectory()?.appendingPathComponent("queue.json")
+        appGroupDirectory().map { AppGroupContent.actionQueueURL(inAppGroupDirectory: $0) }
     }
 }

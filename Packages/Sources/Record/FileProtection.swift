@@ -34,16 +34,33 @@ public enum FileProtection {
 
     /// Sets `NSFileProtectionComplete` and backup exclusion on `directory`
     /// itself (data-and-privacy spec, "File protection", "The app excludes
-    /// the whole store directory from backups"). Both `StoreLocation
-    /// .directory()` (the App target, at ordinary launch) and `LocalEraser
+    /// the whole store directory from backups"). Both `StoreLayout
+    /// .prepareStoreDirectory` (before every store open) and `LocalEraser
     /// .eraseAndRecreate` (Delete-all, "Delete from this device") call this
     /// on the same directory, so a fresh directory never loses either
     /// property, however it came to exist.
     public static func protectStoreDirectory(_ directory: URL, fileManager: FileManager = .default) throws {
         try fileManager.setAttributes([.protectionKey: protectionClass(for: .databaseFile)], ofItemAtPath: directory.path)
-        var mutableDirectory = directory
+        try excludeFromBackup(directory)
+    }
+
+    /// Sets `NSFileProtectionCompleteUntilFirstUserAuthentication` and
+    /// backup exclusion on one App Group side file, the action queue or the
+    /// widget snapshot (data-and-privacy spec, "File protection": "Side
+    /// files"; "The app excludes the whole store directory from backups":
+    /// "The app MUST exclude every file it writes in the App Group
+    /// container."). Call it after each write: an atomic write replaces
+    /// the file, and the new file does not keep the old exclusion.
+    public static func protectSideFile(_ file: URL, fileManager: FileManager = .default) throws {
+        try fileManager.setAttributes([.protectionKey: protectionClass(for: .sideFile)], ofItemAtPath: file.path)
+        try excludeFromBackup(file)
+    }
+
+    /// Sets `isExcludedFromBackup` on one file or directory.
+    public static func excludeFromBackup(_ url: URL) throws {
+        var mutableURL = url
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try mutableDirectory.setResourceValues(values)
+        try mutableURL.setResourceValues(values)
     }
 }

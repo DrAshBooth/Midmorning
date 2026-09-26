@@ -107,7 +107,7 @@ struct AppLockRootView: View {
     private static func openStoreAndController(metricKitSubscriber: MetricKitSubscriber) throws -> (store: RecordStore, controller: AppLockController, enterSafeMode: Bool) {
         let applicationSupportDirectory = try StoreLocation.applicationSupportDirectory()
         let launchMarker = LaunchMarker.beginLaunch(applicationSupportDirectory: applicationSupportDirectory)
-        let store = try RecordStore(directory: StoreLayout.storeDirectory(applicationSupportDirectory: applicationSupportDirectory))
+        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory)
         if launchMarker.markerWasUncleared {
             _ = try? store.incrementLaunchFailureCount()
         }

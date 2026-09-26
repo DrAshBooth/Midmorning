@@ -83,6 +83,25 @@ final class LocalDeletionTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path), "the launch marker is deleted")
     }
 
+    /// mm-t41.18: the action queue file the app writes, `queue.json`, by
+    /// the same `AppGroupContent` path `StoreLocation.actionQueueURL()` and
+    /// `ActionQueueFile` use. A name that differs between the writer and
+    /// Delete-all fails here.
+    func testPerformDeletesTheActionQueueFileByTheNameTheAppWrites() throws {
+        let (store, appGroup, marker, cleanup) = try makeDirectories()
+        defer { cleanup() }
+        let queueURL = AppGroupContent.actionQueueURL(inAppGroupDirectory: appGroup)
+        XCTAssertEqual(queueURL.lastPathComponent, "queue.json")
+        let action = QueuedAction(kind: .skipped, dayKey: "2026-10-06", slotIndex: 2, plannedTime: "13:00", snoozeCount: 0, moment: Date(timeIntervalSince1970: 1_760_000_000))
+        try ActionQueueCodec.appending(action, to: Data()).write(to: queueURL)
+        let deletion = LocalDeletion(directory: store, appGroupDirectory: appGroup, launchMarkerURL: marker)
+
+        try deletion.perform(sideEffects: FakeDeleteAllSideEffects())
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: queueURL.path), "queue.json is deleted")
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: appGroup.path).isEmpty, "the App Group container holds no file of ours")
+    }
+
     /// Neither side file nor the marker existing yet (a fresh install, or a
     /// device before `2.4`/`2.5` ever write them) is not an error.
     func testPerformSucceedsWhenNeitherSideFileNorTheMarkerExistYet() throws {
