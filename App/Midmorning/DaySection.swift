@@ -41,8 +41,8 @@ struct DaySection: Identifiable {
 
         var id: String {
             switch self {
-            case .entry(let row): return "entry-\(row.id)"
-            case .planned(let row): return "planned-\(row.slotIndex)"
+            case .entry(let row): return TodayRowId.entry(row.id)
+            case .planned(let row): return TodayRowId.planned(slotIndex: row.slotIndex)
             }
         }
 
@@ -61,16 +61,33 @@ struct DaySection: Identifiable {
         return (plainEntries + plannedRows).sorted { $0.time < $1.time }
     }
 
+    /// The id a row carries across the whole of Today, for the scroll after
+    /// a save (record spec, "Save is quiet").
+    func scrollId(of item: DisplayItem) -> String {
+        TodayRowId.scrollId(dateKey: id, rowId: item.id)
+    }
+
+    /// The scroll id of the row that shows `entryId`: the planned meal row
+    /// that the entry matches, or else the entry's own row.
+    func scrollId(forEntry entryId: UUID) -> String {
+        let matchedSlot = plan?.rows.first { $0.matchedEntry?.id == entryId }?.slotIndex
+        return TodayRowId.scrollId(forEntry: entryId, dateKey: id, matchedSlotIndex: matchedSlot)
+    }
+
     @MainActor
-    static func load(dayKey: String, interval: DateInterval, role: RecordDayRole, store: RecordStore, stage2Open: Bool) -> DaySection {
+    /// `stage2OpenedDayKey` is the record day stage 2 opened, or `nil`
+    /// while stage 2 is closed: bands show on that day and every later day
+    /// while the "Gap bands" switch is on (record spec, "The gap band").
+    static func load(dayKey: String, interval: DateInterval, role: RecordDayRole, store: RecordStore, stage2Open: Bool, stage2OpenedDayKey: String?) -> DaySection {
         let entries = (try? store.entries(dayKey: dayKey)) ?? []
         let states = (try? store.dayStates(dateKey: dayKey)) ?? []
         let kept = try? store.collapseChoice(dateKey: dayKey)
         let isExpanded = entries.isEmpty || CollapseDefault.isExpanded(role: role, kept: kept ?? nil)
         let hasExemptState = states.contains(.didntRecord) || states.contains(.paused) || states.contains(.fasting)
+        let gapBandsOn = (try? store.gapBandsOn()) ?? true
         let gapIndexes = GapBand.indexesBeforeBand(
             sortedTimes: entries.map(\.time),
-            stage2Open: stage2Open && role == .current,
+            stage2Open: GapBand.applies(toDayKey: dayKey, stage2OpenedDayKey: stage2OpenedDayKey, switchOn: gapBandsOn),
             dayHasExemptState: hasExemptState,
             isCollapsed: !isExpanded,
             maxAwakeGapHours: 4

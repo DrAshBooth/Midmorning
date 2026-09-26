@@ -54,7 +54,8 @@ struct TodayView: View {
     @State private var showingNewEntry = false
     @State private var newEntryInitialTime: Date?
     @State private var editingEntry: RecordRow?
-    @State private var scrollTarget: UUID?
+    @State private var scrollTarget: String?
+    @State private var pendingDelete: RecordRow?
     @State private var navigationPath = NavigationPath()
     @AccessibilityFocusState private var addEntryFocused: Bool
     @State private var programmeSnapshot: ProgrammeModel.Snapshot?
@@ -75,6 +76,10 @@ struct TodayView: View {
     /// recorded days"); `GapBand`, `PlanBuilderAccess` and `DaySection` all
     /// read this same value.
     private var stage2Open: Bool { programmeSnapshot?.state.isOpen(.regularEating) ?? false }
+
+    /// The record day stage 2 opened, or `nil` while it is closed: the gap
+    /// bands show from that day on (record spec, "The gap band").
+    private var stage2OpenedDayKey: String? { programmeSnapshot?.state.stageOpenedDayKey[.regularEating] }
 
     /// The pinned note Today shows, or `nil` while a starred entry or an "I
     /// binged" outcome holds it back for the rest of this record day
@@ -126,24 +131,59 @@ struct TodayView: View {
                             }
                             .listRowSeparator(.hidden)
                         }
-                        pinnedHeader
-                        if let currentSection {
-                            daySectionRows(currentSection)
+                    }
+                    // record spec, "The Today stack": the current day
+                    // heading and "Add an entry" form a pinned section
+                    // header, which stays on screen while the rows scroll.
+                    Section {
+                        if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce, anySwitchOn: anyReminderSwitchOn) != nil {
+                            Button(action: tapNotificationsLine) {
+                                if notificationPermission == .notDetermined {
+                                    Text("today.reminders.notDetermined")
+                                } else {
+                                    Text("today.reminders.denied")
+                                }
+                            }
+                            // Its own tap target: a tap on the line never
+                            // reaches another control in the same row.
+                            .buttonStyle(.borderless)
                         }
+                        if let currentSection {
+                            DaySectionRows(section: currentSection, actions: actions(for: currentSection))
+                            // "Pause for today" sits under the rows, also on
+                            // a collapsed day (record spec, "'Pause for
+                            // today'").
+                            // reminders spec, "Close the day": "Close the
+                            // day" sits beside "Pause for today" only after
+                            // the gate time.
+                            HStack {
+                                Button(currentSection.states.contains(.paused) ? "today.pauseForToday.on" : "today.pauseForToday") {
+                                    togglePause(currentSection)
+                                }
+                                if closeTheDayShows(currentSection) {
+                                    Spacer()
+                                    Button("closeTheDay.title") { isShowingCloseTheDay = true }
+                                }
+                            }
+                            .buttonStyle(.borderless)
+                            .listRowSeparator(.hidden)
+                        }
+                    } header: {
+                        pinnedHeader
                     }
                     if let previousSection, !previousSection.entries.isEmpty {
-                        Section(header: dayHeadingView(previousSection)) {
-                            if previousSection.isExpanded {
-                                daySectionRows(previousSection, showBands: false)
-                            } else {
-                                collapsedCountRow(previousSection)
-                            }
+                        Section {
+                            DaySectionRows(section: previousSection, actions: actions(for: previousSection))
+                        } header: {
+                            DaySectionHeading(section: previousSection, actions: actions(for: previousSection))
                         }
                     }
                 }
                 .recordListStyle()
                 .onChange(of: scrollTarget) { _, target in
-                    if let target { proxy.scrollTo(target) }
+                    guard let target else { return }
+                    proxy.scrollTo(target, anchor: .center)
+                    scrollTarget = nil
                 }
             }
             .navigationTitle("today.title")
@@ -186,8 +226,9 @@ struct TodayView: View {
             }
             .sheet(isPresented: $showingNewEntry) {
                 NewEntryView(store: store, day: day, initialTime: newEntryInitialTime) { saved in
+                    expandDayOfSavedEntry(saved)
                     reload()
-                    scrollTarget = saved.id
+                    scrollTarget = scrollId(forSaved: saved)
                     addEntryFocused = true
                 }
             }
@@ -201,6 +242,10 @@ struct TodayView: View {
                     reload()
                 }
             }
+            .deleteEntryConfirmation($pendingDelete) { entry in
+                try? store.delete(entryId: entry.id, deletedAt: Date())
+                reload()
+            }
             .sheet(isPresented: $isShowingCloseTheDay) {
                 if let currentSection {
                     CloseTheDayView(store: store, dateKey: currentSection.id) { reload() }
@@ -210,7 +255,7 @@ struct TodayView: View {
                 EarlierDaysListView(store: store)
             }
             .navigationDestination(for: String.self) { dayKey in
-                EarlierDayDetailView(store: store, initialDayKey: dayKey, navigationPath: $navigationPath)
+                EarlierDayDetailView(store: store, initialDayKey: dayKey, stage2OpenedDayKey: stage2OpenedDayKey, navigationPath: $navigationPath)
             }
             .navigationDestination(for: ProgrammeRoute.self) { _ in
                 ProgrammeScreenView(store: store)
@@ -230,7 +275,7 @@ struct TodayView: View {
             .navigationDestination(for: WeeklyReviewRoute.self) { route in
                 ReviewScreenView(store: store, week: route.week, onDone: { reload() })
             }
-            .accessibilityAction(.magicTap) { showingNewEntry = true }
+            .accessibilityAction(.magicTap) { openNewEntry() }
         }
         .privacySensitive()
         .redacted(reason: scenePhase == .active ? [] : .privacy)
@@ -252,25 +297,15 @@ struct TodayView: View {
 
     // MARK: Pinned header
 
+    /// The current day heading and "Add an entry", the header of the
+    /// current day's section (record spec, "The Today stack").
     private var pinnedHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let currentSection {
-                dayHeadingView(currentSection)
-            }
-            if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce, anySwitchOn: anyReminderSwitchOn) != nil {
-                Button(action: tapNotificationsLine) {
-                    if notificationPermission == .notDetermined {
-                        Text("today.reminders.notDetermined")
-                    } else {
-                        Text("today.reminders.denied")
-                    }
-                }
-                // Its own tap target: a tap on the line never reaches "Add an
-                // entry" in the same row.
-                .buttonStyle(.borderless)
+                DaySectionHeading(section: currentSection, actions: actions(for: currentSection))
             }
             Button {
-                showingNewEntry = true
+                openNewEntry()
             } label: {
                 Text("today.addEntry")
                     .frame(maxWidth: .infinity)
@@ -278,141 +313,32 @@ struct TodayView: View {
             .buttonStyle(.borderedProminent)
             .accessibilityFocused($addEntryFocused)
         }
-        .listRowInsets(EdgeInsets())
+        .textCase(nil)
         .padding(.vertical, 4)
     }
 
     // MARK: Day sections
 
-    @ViewBuilder
-    private func daySectionRows(_ section: DaySection, showBands: Bool = true) -> some View {
-        if let stateLine = section.stateLine {
-            Text(stateLine)
-                .font(.body)
-                .listRowSeparator(.hidden)
-        }
-        if section.isExpanded {
-            let items = section.displayItems
-            ForEach(items) { item in
-                switch item {
-                case .entry(let entry):
-                    EntryRow(entry: entry)
-                        .listRowSeparator(.hidden)
-                        .contentShape(Rectangle())
-                        .onTapGesture { editingEntry = entry }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                try? store.delete(entryId: entry.id, deletedAt: Date())
-                                reload()
-                            } label: {
-                                Text("entry.delete.action")
-                            }
-                        }
-                        .accessibilityAction(named: Text("entry.delete.action")) {
-                            try? store.delete(entryId: entry.id, deletedAt: Date())
-                            reload()
-                        }
-                case .planned(let row):
-                    PlannedMealRowView(row: row, dateKey: section.id, onAddIt: { time in
-                        newEntryInitialTime = time
-                        showingNewEntry = true
-                    }, onSkip: { slotIndex in
-                        try? store.setPlannedMealAnswer("Skipped", dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
-                        reload()
-                    })
-                    .listRowSeparator(.hidden)
-                    .contentShape(Rectangle())
-                    .onTapGesture { if let entry = row.matchedEntry { editingEntry = entry } }
-                }
-                if showBands, let entryIndex = entryIndex(of: item, in: section.entries), section.gapBandIndexesBefore.contains(entryIndex) {
-                    GapBandRow()
-                }
-            }
-            if let trailingLine = section.plan?.trailingNextLine {
-                Text(trailingLine)
-                    .font(.body)
-                    .listRowSeparator(.hidden)
-            }
-            if section.role == .current {
-                // reminders spec, "Close the day": "Close the day" sits
-                // beside "Pause for today" only after the gate time.
-                HStack {
-                    Button(section.states.contains(.paused) ? "today.pauseForToday.on" : "today.pauseForToday") {
-                        togglePause(section)
-                    }
-                    if closeTheDayShows(section) {
-                        Spacer()
-                        Button("closeTheDay.title") { isShowingCloseTheDay = true }
-                    }
-                }
-                .buttonStyle(.borderless)
-                .listRowSeparator(.hidden)
-            }
-        } else {
-            collapsedCountRow(section)
-        }
-    }
-
-    private func collapsedCountRow(_ section: DaySection) -> some View {
-        let count = section.entries.count
-        let text = count == 1 ? "1 entry" : "\(count) entries"
-        return Text(text)
-            .onTapGesture { setExpanded(section, expanded: true) }
-    }
-
-    private func dayHeadingView(_ section: DaySection) -> some View {
-        HStack {
-            Text(section.heading)
-                .font(section.role == .current ? .largeTitle.bold() : .headline)
-            Spacer()
-            Menu {
-                if !section.entries.isEmpty {
-                    Button(section.isExpanded ? "today.collapseDay" : "today.expandDay") {
-                        setExpanded(section, expanded: !section.isExpanded)
-                    }
-                }
-                Toggle("today.fastingToday", isOn: Binding(
-                    get: { section.states.contains(.fasting) },
-                    set: { toggleState(.fasting, section: section, on: $0) }
-                ))
-                Toggle("today.didntRecord", isOn: Binding(
-                    get: { section.states.contains(.didntRecord) },
-                    set: { toggleState(.didntRecord, section: section, on: $0) }
-                ))
-                if section.role == .current, earlierDaysAvailable {
-                    Button("today.earlierDays") {
-                        navigationPath.append(EarlierDaysRoute.list)
-                    }
-                }
-                if section.role == .current, PlanBuilderAccess.isOffered(stage2Open: stage2Open) {
-                    Divider()
-                    Button("plan.today") {
-                        planBuilderMode = .day(dateKey: section.id, titleKey: "plan.today", isCurrentDay: true)
-                    }
-                    Button("plan.tomorrow") {
-                        let tomorrow = RecordDay.next(section.interval, calendar: .current)
-                        planBuilderMode = .day(dateKey: RecordDay.key(containing: tomorrow.start, calendar: .current), titleKey: "plan.tomorrow", isCurrentDay: false)
-                    }
-                    Button("plan.weekday") {
-                        planBuilderMode = .template(kind: .weekday, titleKey: "plan.weekday")
-                    }
-                    Button("plan.weekend") {
-                        planBuilderMode = .template(kind: .weekend, titleKey: "plan.weekend")
-                    }
-                }
-            } label: {
-                Image(systemName: "chevron.down")
-            }
-            .accessibilityLabel("today.dayMenu.accessibilityLabel")
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-        .accessibilityAction(named: Text(section.isExpanded ? "today.collapseDay" : "today.expandDay")) {
-            setExpanded(section, expanded: !section.isExpanded)
-        }
-        .accessibilityAction(named: Text("today.didntRecord")) {
-            toggleState(.didntRecord, section: section, on: !section.states.contains(.didntRecord))
-        }
+    /// What a day section's heading and rows do on Today. Only the current
+    /// day offers "Earlier days", "Close the day" and the plan builder.
+    private func actions(for section: DaySection) -> DaySectionActions {
+        let isCurrent = section.role == .current
+        return DaySectionActions(
+            edit: { editingEntry = $0 },
+            askToDelete: { pendingDelete = $0 },
+            setExpanded: { setExpanded(section, expanded: $0) },
+            toggleState: { toggleState($0, section: section, on: $1) },
+            addPlannedMeal: { time in
+                newEntryInitialTime = time
+                showingNewEntry = true
+            },
+            skipPlannedMeal: { slotIndex in
+                try? store.setPlannedMealAnswer("Skipped", dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
+                reload()
+            },
+            openEarlierDays: isCurrent && earlierDaysAvailable ? { navigationPath.append(EarlierDaysRoute.list) } : nil,
+                        openPlanBuilder: isCurrent && PlanBuilderAccess.isOffered(stage2Open: stage2Open) ? { planBuilderMode = $0 } : nil
+        )
     }
 
     // MARK: The card slot (programme spec, "A stage opening shows one
@@ -492,9 +418,32 @@ struct TodayView: View {
         reload()
     }
 
-    private func entryIndex(of item: DaySection.DisplayItem, in entries: [RecordRow]) -> Int? {
-        guard let row = item.recordEntry else { return nil }
-        return entries.firstIndex { $0.id == row.id }
+    /// "Add an entry" and the two-finger double tap open the new-entry
+    /// screen at the current time, never at a planned meal's time that an
+    /// earlier "Add it" set.
+    private func openNewEntry() {
+        newEntryInitialTime = nil
+        showingNewEntry = true
+    }
+
+    /// A save into a collapsed day expands that day and keeps the choice
+    /// (record spec, "Collapse a day to a count"). A new entry goes into
+    /// the current or the previous record day.
+    private func expandDayOfSavedEntry(_ saved: RecordRow) {
+        let role: RecordDayRole = saved.dayKey == currentSection?.id ? .current : .previous
+        let kept = (try? store.collapseChoice(dateKey: saved.dayKey)) ?? nil
+        if let choice = CollapseDefault.choiceAfterSave(role: role, kept: kept) {
+            try? store.setCollapseChoice(choice, dateKey: saved.dayKey)
+        }
+    }
+
+    /// The scroll id of the row that shows the saved entry, after `reload`
+    /// (record spec, "Save is quiet").
+    private func scrollId(forSaved saved: RecordRow) -> String? {
+        [currentSection, previousSection]
+            .compactMap { $0 }
+            .first { $0.id == saved.dayKey }?
+            .scrollId(forEntry: saved.id)
     }
 
     private func reload() {
@@ -504,8 +453,8 @@ struct TodayView: View {
         let previous = RecordDay.previous(day, calendar: .current)
         let currentKey = RecordDay.key(containing: now, calendar: .current)
         let previousKey = RecordDay.key(containing: previous.start, calendar: .current)
-        currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open)
-        previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
+        currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open, stage2OpenedDayKey: stage2OpenedDayKey)
+        previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open, stage2OpenedDayKey: stage2OpenedDayKey)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
         hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
         anyReminderSwitchOn = RecordStore.ReminderSwitch.allCases.contains { (try? store.reminderSwitchOn($0)) ?? true }

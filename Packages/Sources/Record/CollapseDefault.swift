@@ -14,4 +14,14 @@ public enum CollapseDefault {
         if let kept { return kept == .expanded }
         return role != .previous
     }
+
+    /// The choice to keep after the person saves an entry into a day
+    /// (record spec, "Collapse a day to a count": "When the person saves an
+    /// entry into a collapsed day, the app MUST expand that day. The app
+    /// MUST then keep the expanded state as the last choice"). Returns
+    /// `.expanded` when the day shows collapsed, by default or by a kept
+    /// choice, and `nil` when the day already shows expanded.
+    public static func choiceAfterSave(role: RecordDayRole, kept: CollapseChoiceValue?) -> CollapseChoiceValue? {
+        isExpanded(role: role, kept: kept) ? nil : .expanded
+    }
 }

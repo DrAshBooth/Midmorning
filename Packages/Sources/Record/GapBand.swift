@@ -29,6 +29,19 @@ public enum GapBand {
         return result
     }
 
+    /// Whether bands can show at all on the record day keyed `dayKey`
+    /// (record spec, "The gap band": "From the record day stage 2 opened, a
+    /// day MUST show a band ... The app MUST NOT show a band on a day before
+    /// that record day. The settings screen MUST hold a 'Gap bands' switch").
+    /// The caller passes the result as `indexesBeforeBand`'s `stage2Open`.
+    /// `stage2OpenedDayKey` is `nil` while stage 2 is closed. Every day on
+    /// or after that key qualifies: the current day, the previous day and
+    /// an earlier day.
+    public static func applies(toDayKey dayKey: String, stage2OpenedDayKey: String?, switchOn: Bool) -> Bool {
+        guard switchOn, let stage2OpenedDayKey else { return false }
+        return dayKey >= stage2OpenedDayKey
+    }
+
     /// The band's VoiceOver label (record spec, "Accessibility of the
     /// additions"): "Gap of more than %lld hours", filled from
     /// `maxAwakeGapHours`.
