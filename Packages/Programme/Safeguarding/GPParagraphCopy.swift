@@ -4,7 +4,9 @@ import Foundation
 /// paragraph"): which text goes on the pasteboard, and the fixed timings.
 /// The pasteboard write itself (local-only, 60-second expiry, no Universal
 /// Clipboard, the VoiceOver announcement) is App-target, system-API code a
-/// device check proves; `swift test` cannot drive `UIPasteboard`.
+/// device check proves; `swift test` cannot drive `UIPasteboard`. The
+/// content bundle holds a copy of each string with a "gp." id (ruling
+/// r13-02).
 public enum GPParagraphCopy {
     public static let pasteboardExpirySeconds: TimeInterval = 60
     public static let copiedLabelDurationSeconds: TimeInterval = 2

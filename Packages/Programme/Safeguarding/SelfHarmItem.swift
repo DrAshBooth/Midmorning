@@ -34,5 +34,6 @@ public enum SelfHarmItem {
     }
 
     /// "That deserves a person. Samaritans are there any time, on 116 123."
+    /// The content bundle holds a copy as "support.selfharm" (ruling r13-02).
     public static let supportLine = "That deserves a person. Samaritans are there any time, on 116 123."
 }

@@ -44,7 +44,7 @@ struct SupportSheetSections: View {
     private func section(for item: SupportSheet.Item) -> some View {
         switch item {
         case .beatHelpline:
-            Section("Beat helpline") {
+            Section(SupportSheet.beatTitle) {
                 Text(SupportSheet.beatIntro)
                 ForEach(SupportSheet.beatNumbers, id: \.number) { entry in
                     NumberRow(label: entry.label, number: entry.number, copiedNumber: $copiedNumber)
@@ -59,22 +59,22 @@ struct SupportSheetSections: View {
             Section(CommonLabels.samaritansName) {
                 NumberRow(label: CommonLabels.samaritansName, number: SupportSheet.samaritansNumber, copiedNumber: $copiedNumber)
                 Text(SupportSheet.samaritansLine).font(.footnote).foregroundStyle(.secondary)
-                NumberRow(label: "Samaritans in Welsh", number: SupportSheet.samaritansWelshNumber, copiedNumber: $copiedNumber)
+                NumberRow(label: SupportSheet.samaritansWelshLabel, number: SupportSheet.samaritansWelshNumber, copiedNumber: $copiedNumber)
             }
         case .lifelineNI:
-            Section("Lifeline, Northern Ireland") {
-                NumberRow(label: "Lifeline, Northern Ireland", number: SupportSheet.lifelineNumber, copiedNumber: $copiedNumber)
+            Section(SupportSheet.lifelineTitle) {
+                NumberRow(label: SupportSheet.lifelineTitle, number: SupportSheet.lifelineNumber, copiedNumber: $copiedNumber)
                 Text(SupportSheet.lifelineLine).font(.footnote).foregroundStyle(.secondary)
             }
         case .nhs111:
-            Section("NHS 111") {
-                NumberRow(label: "NHS 111", number: SupportSheet.nhs111Number, copiedNumber: $copiedNumber)
+            Section(SupportSheet.nhs111Title) {
+                NumberRow(label: SupportSheet.nhs111Title, number: SupportSheet.nhs111Number, copiedNumber: $copiedNumber)
                 Text(SupportSheet.nhs111Line).font(.footnote).foregroundStyle(.secondary)
                 Text(SupportSheet.nhs111RegionLine).font(.footnote).foregroundStyle(.secondary)
             }
         case .emergency999:
-            Section("999") {
-                NumberRow(label: "999", number: SupportSheet.emergencyNumber, copiedNumber: $copiedNumber)
+            Section(SupportSheet.emergencyTitle) {
+                NumberRow(label: SupportSheet.emergencyTitle, number: SupportSheet.emergencyNumber, copiedNumber: $copiedNumber)
                 Text(SupportSheet.emergencyLine).font(.footnote).foregroundStyle(.secondary)
             }
         case .talkToYourGP:

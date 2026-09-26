@@ -4,6 +4,9 @@ import Foundation
 /// suggestion page"). `mm-t22` (the underweight check, Rules B and C) and
 /// `mm-t32` (the deterioration rule and "I'm getting worse") open this page
 /// from their own triggers; this change builds the page and its content only.
+/// This is signed-off text: the content bundle holds a copy with
+/// "gpsuggestion." ids, and a content test proves that each string here
+/// equals its bundle copy (ruling r13-02).
 public enum GPSuggestionReason: Sendable, Equatable {
     case fallingWeight, quickChange, deterioration, gettingWorse
 }

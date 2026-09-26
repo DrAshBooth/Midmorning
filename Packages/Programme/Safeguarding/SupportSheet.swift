@@ -5,6 +5,10 @@ import Foundation
 /// from a network. A reviewer checks each number, its hours and the webchat
 /// URL against the service's own website before every release and writes a
 /// dated line in the change README (the "Release check" scenario).
+///
+/// This is signed-off text. The content bundle holds a copy of each string
+/// with a "support." id, and a content test proves that each string here
+/// equals its bundle copy (ruling r13-02).
 public enum SupportSheet {
     public struct NumberEntry: Sendable, Equatable {
         public let label: String
@@ -20,6 +24,13 @@ public enum SupportSheet {
     }
 
     public static let title = "Get support"
+
+    /// The section titles and the number labels the sheet shows.
+    public static let beatTitle = "Beat helpline"
+    public static let samaritansWelshLabel = "Samaritans in Welsh"
+    public static let lifelineTitle = "Lifeline, Northern Ireland"
+    public static let nhs111Title = "NHS 111"
+    public static let emergencyTitle = "999"
 
     public static let beatIntro = "Beat is the UK charity for people who struggle with eating."
     public static let beatNumbers: [NumberEntry] = [

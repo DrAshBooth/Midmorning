@@ -5,7 +5,10 @@ import Foundation
 /// four reasons, in this fixed order: self-harm, weight, pregnancy,
 /// treatment. `mm-t22` (weigh-in), `mm-t32` (weekly-review) and `mm-t21`
 /// (programme-engine) open this page from their own triggers; this change
-/// builds the page and its content only.
+/// builds the page and its content only. This is signed-off text: the
+/// content bundle holds a copy with "notrightnow." ids for the two reasons
+/// and "notrightnowpage." ids for the heading and the lines, and a content
+/// test proves that each string here equals its bundle copy (ruling r13-02).
 public enum NotRightNowPage {
     public static let heading = "This may not be right for you now"
 
