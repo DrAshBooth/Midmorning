@@ -1441,6 +1441,116 @@
           }
         }
       }
+    },
+    "closeTheDay.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the day"
+          }
+        }
+      }
+    },
+    "closeTheDay.addEntry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an entry"
+          }
+        }
+      }
+    },
+    "closeTheDay.feelingWord": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One word for how today felt"
+          }
+        }
+      }
+    },
+    "closeTheDay.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "today.reminders.notDetermined": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow notifications to get reminders."
+          }
+        }
+      }
+    },
+    "today.reminders.denied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off in iOS Settings."
+          }
+        }
+      }
+    },
+    "settings.reminders.notDetermined.line": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders need notification permission."
+          }
+        }
+      }
+    },
+    "settings.reminders.notDetermined.allowControl": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow notifications"
+          }
+        }
+      }
+    },
+    "settings.reminders.denied.line": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off in iOS Settings. The plan still shows on Today, and the Home Screen widget can show your next planned time."
+          }
+        }
+      }
+    },
+    "settings.reminders.denied.iosSettingsControl": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open iOS Settings"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

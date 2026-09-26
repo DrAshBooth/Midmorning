@@ -2,6 +2,7 @@ import SwiftUI
 import Record
 import Plan
 import Programme
+import AppLock
 
 /// The record day's entries as a time-ordered column, like the paper
 /// record (record spec, "The Today stack"). The order here is the only
@@ -29,6 +30,11 @@ struct CardRoute: Hashable {
 struct TodayView: View {
     let store: RecordStore
 
+    // The app's one real `AppLockController` (mm-t13.9's own pattern):
+    // shared through the environment, so the lock control here and the
+    // cover `AppLockRootView` overlays agree on the lock state (app-lock
+    // spec, "The lock control on Today").
+    @EnvironmentObject private var appLockController: AppLockController
     @Environment(\.scenePhase) private var scenePhase
     @State private var day = RecordDay.interval(containing: Date(), calendar: .current)
     @State private var currentSection: DaySection?
@@ -45,6 +51,13 @@ struct TodayView: View {
     @State private var pendingCard: PendingCard?
     @State private var openCardId: String?
     @State private var planBuilderMode: PlanBuilderMode?
+    /// `mm-t24.21` wires the live notification-permission read (`onboarding`'s
+    /// own permission request result) into this fact; a fresh install reads
+    /// as not determined, the same fixture-fact pattern `stage2Open` uses
+    /// ahead of `programme-engine`.
+    @State private var notificationPermission: NotificationPermission = .notDetermined
+    @State private var hasTappedNotificationsDeniedLineOnce = false
+    @State private var isShowingCloseTheDay = false
 
     /// The live stage 2 state (programme spec, "Stage 2 opens after five
     /// recorded days"); `GapBand`, `PlanBuilderAccess` and `DaySection` all
@@ -91,10 +104,12 @@ struct TodayView: View {
             .navigationTitle("today.title")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    // Placeholder: `app-lock` (1.5) wires the real cover and
-                    // lock state. The control's presence and position are
-                    // this change's own scope (decision 91).
-                    Button {} label: {
+                    // app-lock spec, "The lock control on Today": locks at
+                    // once, with no grace period, whether or not the app
+                    // lock is on (`AppLifecycleEvent.lockControlTapped`).
+                    Button {
+                        appLockController.handle(.lockControlTapped)
+                    } label: {
                         Image(systemName: "lock")
                     }
                     .accessibilityLabel("today.lock.accessibilityLabel")
@@ -147,6 +162,11 @@ struct TodayView: View {
             .sheet(isPresented: $isShowingSupportSheet) {
                 SupportSheetView()
             }
+            .sheet(isPresented: $isShowingCloseTheDay) {
+                if let currentSection {
+                    CloseTheDayView(store: store, dateKey: currentSection.id) { reload() }
+                }
+            }
             .navigationDestination(for: EarlierDaysRoute.self) { _ in
                 EarlierDaysListView(store: store)
             }
@@ -183,6 +203,15 @@ struct TodayView: View {
         VStack(alignment: .leading, spacing: 8) {
             if let currentSection {
                 dayHeadingView(currentSection)
+            }
+            if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce) != nil {
+                Button(action: tapNotificationsLine) {
+                    if notificationPermission == .notDetermined {
+                        Text("today.reminders.notDetermined")
+                    } else {
+                        Text("today.reminders.denied")
+                    }
+                }
             }
             Button {
                 showingNewEntry = true
@@ -290,6 +319,10 @@ struct TodayView: View {
                         navigationPath.append(EarlierDaysRoute.list)
                     }
                 }
+                if section.role == .current {
+                    Divider()
+                    Button("closeTheDay.title") { isShowingCloseTheDay = true }
+                }
                 if section.role == .current, PlanBuilderAccess.isOffered(stage2Open: stage2Open) {
                     Divider()
                     Button("plan.today") {
@@ -351,6 +384,18 @@ struct TodayView: View {
 
     // MARK: Actions
 
+    /// A tap makes the system permission request (when not determined) or
+    /// opens the iOS Settings app (when denied), and hides the denied line
+    /// after one tap (reminders spec, "Reminder types and their switches").
+    /// `mm-t24.21` replaces the fixture request/open with the real
+    /// `UNUserNotificationCenter`/`UIApplication.openSettingsURLString` call.
+    private func tapNotificationsLine() {
+        if notificationPermission == .denied {
+            try? store.setHasTappedNotificationsDeniedLineOnce(true)
+            hasTappedNotificationsDeniedLineOnce = true
+        }
+    }
+
     private func togglePause(_ section: DaySection) {
         let on = !section.states.contains(.paused)
         try? store.setDayState(.paused, on: on, dateKey: section.id, changedAt: Date())
@@ -382,6 +427,7 @@ struct TodayView: View {
         currentSection = DaySection.load(dayKey: currentKey, interval: day, role: .current, store: store, stage2Open: stage2Open)
         previousSection = DaySection.load(dayKey: previousKey, interval: previous, role: .previous, store: store, stage2Open: stage2Open)
         earlierDaysAvailable = (try? EarlierDays.isAvailable(dateKeysWithContent: store.dateKeysWithContent(before: previousKey), previousRecordDayKey: previousKey)) ?? false
+        hasTappedNotificationsDeniedLineOnce = (try? store.hasTappedNotificationsDeniedLineOnce()) ?? false
 
         if let snapshot = programmeSnapshot {
             let starredToday = currentSection?.entries.contains { $0.feltLikeABinge } ?? false

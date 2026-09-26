@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import MetricKit
+import UserNotifications
 import Record
 
 @main
@@ -34,12 +35,17 @@ struct MidmorningApp: App {
 /// function `KeyboardBlockTests` proves with no UIKit import. Also registers
 /// the one MetricKit subscriber the app ever has (data-and-privacy spec, "No
 /// record content in the system log or crash reports": "The app MUST
-/// receive MetricKit crash diagnostics").
+/// receive MetricKit crash diagnostics"), and the notification categories
+/// and action handler (reminders spec, "Actions on a planned meal
+/// reminder"), before anything else runs.
 final class AppDelegate: NSObject, UIApplicationDelegate {
     let metricKitSubscriber = MetricKitSubscriber()
+    private let notificationActionHandling = NotificationActionHandling()
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         MXMetricManager.shared.add(metricKitSubscriber)
+        UNUserNotificationCenter.current().delegate = notificationActionHandling
+        NotificationCategories.registerAll()
         return true
     }
 
@@ -86,8 +92,17 @@ enum StoreLocation {
 
     /// The App Group container, or `nil` when the device has none yet (no
     /// matching provisioning). Delete-all and "Delete from this device"
-    /// treat a missing App Group as nothing to delete there, never an error.
+    /// treat a missing App Group as nothing to delete there, never an error;
+    /// only the widget snapshot and the action queue live here, never the
+    /// store (data-and-privacy spec, "The store lives in the app's own
+    /// container"; `AppGroupContent.fileStems`).
     static func appGroupDirectory() -> URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+    }
+
+    /// The action queue file's own path inside the App Group container
+    /// (widgets-and-intents spec, "The action queue").
+    static func actionQueueURL() -> URL? {
+        appGroupDirectory()?.appendingPathComponent("queue.json")
     }
 }

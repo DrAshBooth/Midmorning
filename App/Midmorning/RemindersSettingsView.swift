@@ -1,5 +1,8 @@
 import SwiftUI
+import UIKit
+import UserNotifications
 import Record
+import Programme
 
 /// The Reminders group's own screen, one tap from the settings screen
 /// (settings spec, "The Reminders group"). First cut: "Worksheet review",
@@ -20,6 +23,9 @@ struct RemindersSettingsView: View {
     @State private var quietHoursEnd = ClockTime.date(hour: 7, minute: 0)
     @State private var pausedAt: Date?
     @State private var isShowingSupportSheet = false
+    /// `mm-t24.21` wires the real `UNUserNotificationCenter` permission read
+    /// in; a fresh install reads as not determined.
+    @State private var notificationPermission: NotificationPermission = .notDetermined
 
     var body: some View {
         Form {
@@ -27,6 +33,18 @@ struct RemindersSettingsView: View {
                 Section {
                     Text("settings.reminders.pausedLine")
                     Button("settings.reminders.turnOn", action: turnRemindersOn)
+                }
+            }
+
+            if notificationPermission == .notDetermined {
+                Section {
+                    Text("settings.reminders.notDetermined.line")
+                    Button("settings.reminders.notDetermined.allowControl", action: requestNotificationPermission)
+                }
+            } else if notificationPermission == .denied {
+                Section {
+                    Text("settings.reminders.denied.line")
+                    Button("settings.reminders.denied.iosSettingsControl", action: openIOSSettings)
                 }
             }
 
@@ -45,9 +63,9 @@ struct RemindersSettingsView: View {
 
             Section {
                 DatePicker("settings.reminders.time.setTodaysPlan", selection: $setTodaysPlanTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: setTodaysPlanTime) { store.trySetReminderTime($1, .setTodaysPlan) }
+                    .onChange(of: setTodaysPlanTime) { store.trySetReminderTime($1, .setTodaysPlan); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.time.closeTheDay", selection: $closeTheDayTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: closeTheDayTime) { store.trySetReminderTime($1, .closeTheDay) }
+                    .onChange(of: closeTheDayTime) { store.trySetReminderTime($1, .closeTheDay); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.time.weighIn", selection: $weighInTime, displayedComponents: .hourAndMinute)
                     .onChange(of: weighInTime) { store.trySetReminderTime($1, .weighIn) }
                 DatePicker("settings.reminders.time.weeklyReview", selection: $weeklyReviewTime, displayedComponents: .hourAndMinute)
@@ -60,7 +78,7 @@ struct RemindersSettingsView: View {
 
             Section {
                 Toggle("settings.reminders.explicitWording", isOn: $explicitWordingOn)
-                    .onChange(of: explicitWordingOn) { _, on in try? store.setExplicitWordingOn(on) }
+                    .onChange(of: explicitWordingOn) { _, on in try? store.setExplicitWordingOn(on); ReminderCoordinator.recomputeAndApply(store: store) }
                 Picker("settings.reminders.remindAgainLabel", selection: $remindAgainMinutes) {
                     Text("settings.reminders.remindAgain.15").tag(15)
                     Text("settings.reminders.remindAgain.30").tag(30)
@@ -70,11 +88,11 @@ struct RemindersSettingsView: View {
 
             Section {
                 Toggle("settings.reminders.quietHours", isOn: $quietHoursOn)
-                    .onChange(of: quietHoursOn) { _, on in try? store.setQuietHoursOn(on) }
+                    .onChange(of: quietHoursOn) { _, on in try? store.setQuietHoursOn(on); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.quietHours.start", selection: $quietHoursStart, displayedComponents: .hourAndMinute)
-                    .onChange(of: quietHoursStart) { store.trySetQuietHoursStart($1) }
+                    .onChange(of: quietHoursStart) { store.trySetQuietHoursStart($1); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.quietHours.end", selection: $quietHoursEnd, displayedComponents: .hourAndMinute)
-                    .onChange(of: quietHoursEnd) { store.trySetQuietHoursEnd($1) }
+                    .onChange(of: quietHoursEnd) { store.trySetQuietHoursEnd($1); ReminderCoordinator.recomputeAndApply(store: store) }
             }
         }
         .navigationTitle("settings.reminders.title")
@@ -97,6 +115,10 @@ struct RemindersSettingsView: View {
             set: { on in
                 switches[kind] = on
                 try? store.setReminderSwitch(on, kind)
+                // reminders spec, "Reminder types and their switches": "When
+                // a switch is off, the scheduler MUST cancel every pending
+                // reminder of that type."
+                ReminderCoordinator.recomputeAndApply(store: store)
             }
         )
     }
@@ -115,11 +137,42 @@ struct RemindersSettingsView: View {
         if let time = try? store.quietHoursStart() { quietHoursStart = ClockTime.date(from: time) }
         if let time = try? store.quietHoursEnd() { quietHoursEnd = ClockTime.date(from: time) }
         pausedAt = try? store.remindersPausedAt()
+        loadNotificationPermission()
     }
 
     private func turnRemindersOn() {
         try? store.turnRemindersOn()
         pausedAt = nil
+        // reminders spec, "Reminder types and their switches": "the app
+        // MUST clear `remindersPausedAt`" and settings spec, "The Reminders
+        // group": "the scheduler computes the schedule again."
+        ReminderCoordinator.recomputeAndApply(store: store)
+    }
+
+    /// "Allow notifications" (reminders spec, "Reminder types and their
+    /// switches"). A device check proves the real system dialog and the
+    /// resulting schedule (the epic's device-check bead).
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
+            DispatchQueue.main.async { loadNotificationPermission() }
+        }
+    }
+
+    private func openIOSSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func loadNotificationPermission() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let permission: NotificationPermission
+            switch settings.authorizationStatus {
+            case .notDetermined: permission = .notDetermined
+            case .denied: permission = .denied
+            default: permission = .granted
+            }
+            DispatchQueue.main.async { notificationPermission = permission }
+        }
     }
 }
 

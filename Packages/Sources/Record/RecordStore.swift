@@ -77,12 +77,15 @@ public extension RecordRow {
     }
 }
 
-/// The three record-day states this change keeps, each a `DayState` row
+/// The record-day states this change keeps, each a `DayState` row
 /// model-foundation's model shape already covers (record spec, "'Didn't
-/// record'", "'Pause for today'", "'Fasting today'"). The feeling-word kind
-/// belongs to a later change.
+/// record'", "'Pause for today'", "'Fasting today'"; reminders spec, "Close
+/// the day": the one-word feeling row). `.feelingWord` holds free text, not
+/// "on"/"off", so `dayStates(dateKey:)`'s on/off read never matches it; a
+/// dedicated pair, `feelingWord(dateKey:)`/`setFeelingWord(_:dateKey:changedAt:)`,
+/// reads and writes it.
 public enum DayStateKind: String, CaseIterable, Sendable {
-    case didntRecord, paused, fasting
+    case didntRecord, paused, fasting, feelingWord
 }
 
 /// Whether a record day shows its rows or a count line (record spec,
@@ -312,6 +315,25 @@ public final class RecordStore {
     /// picks the winner on every read, on this device and across devices.
     public func setDayState(_ kind: DayStateKind, on: Bool, dateKey: String, changedAt: Date) throws {
         context.insert(DayState(dateKey: dateKey, kind: kind.rawValue, value: on ? "on" : "off", changedAt: changedAt))
+        try persist()
+    }
+
+    /// The winning "one word for how today felt" (reminders spec, "Close the
+    /// day"), or `nil` when the person has not saved one. An empty saved
+    /// text reads back as `""`, not `nil` — the store never hard-deletes a
+    /// row, so the row's own presence, not its text, decides.
+    public func feelingWord(dateKey: String) throws -> String? {
+        let kindRaw = DayStateKind.feelingWord.rawValue
+        var descriptor = FetchDescriptor<DayState>(predicate: #Predicate { $0.dateKey == dateKey && $0.kind == kindRaw })
+        descriptor.includePendingChanges = false
+        let winners = DayStateReconciler.winners(in: try context.fetch(descriptor))
+        return winners["\(dateKey)|\(kindRaw)"]?.value
+    }
+
+    /// Writes a new feeling-word row. A new row every time, like every
+    /// synced row; the Reconciler's later-`changedAt` rule picks the winner.
+    public func setFeelingWord(_ word: String, dateKey: String, changedAt: Date) throws {
+        context.insert(DayState(dateKey: dateKey, kind: DayStateKind.feelingWord.rawValue, value: word, changedAt: changedAt))
         try persist()
     }
 
@@ -1020,6 +1042,77 @@ public final class RecordStore {
     /// holds no Template row.").
     public func hasAnyTemplate() throws -> Bool {
         try !context.fetch(FetchDescriptor<Template>()).isEmpty
+    }
+
+    // MARK: - Reminders: device-only counters and the action queue applier
+    // (reminders spec, "Snooze a reminder", "The morning plan reminder while
+    // the plan needs setting", "The midday and close-the-day reminders stop
+    // after seven silent days"; widgets-and-intents spec, "The action
+    // queue"). Every value here is `Local.store`, device-only, per
+    // design.md's "Two store configurations in one directory" field list.
+
+    /// The snooze count for `dateKey`'s `slotIndex` (reminders spec: "The app
+    /// MUST apply it to `Local.store`, keyed by the record day key and the
+    /// slot index.").
+    public func snoozeCount(dateKey: String, slotIndex: Int) throws -> Int {
+        try localSettingValue(key: Self.snoozeKey(dateKey: dateKey, slotIndex: slotIndex)).flatMap(Int.init) ?? 0
+    }
+
+    public func setSnoozeCount(_ count: Int, dateKey: String, slotIndex: Int) throws {
+        try setLocalSettingValue(String(count), key: Self.snoozeKey(dateKey: dateKey, slotIndex: slotIndex))
+    }
+
+    private static func snoozeKey(dateKey: String, slotIndex: Int) -> String { "reminder.snooze.\(dateKey).\(slotIndex)" }
+
+    /// The count of consecutive unanswered morning plan reminders
+    /// (`MorningPlanUnansweredTracker`'s own count).
+    public func morningPlanUnansweredCount() throws -> Int {
+        try localSettingValue(key: "reminder.morningPlan.unansweredCount").flatMap(Int.init) ?? 0
+    }
+
+    public func setMorningPlanUnansweredCount(_ count: Int) throws {
+        try setLocalSettingValue(String(count), key: "reminder.morningPlan.unansweredCount")
+    }
+
+    /// The current midday/close-the-day silent-day streak
+    /// (`SilentDayTracker`'s own count).
+    public func silentDayStreak() throws -> Int {
+        try localSettingValue(key: "reminder.silentDays.streak").flatMap(Int.init) ?? 0
+    }
+
+    public func setSilentDayStreak(_ streak: Int) throws {
+        try setLocalSettingValue(String(streak), key: "reminder.silentDays.streak")
+    }
+
+    /// The device flag "the person tapped the denied Today line once" (
+    /// reminders spec, "Reminder types and their switches": "The app MUST
+    /// keep that tap as a device flag in `Local.store`.").
+    public func hasTappedNotificationsDeniedLineOnce() throws -> Bool {
+        try (localSettingValue(key: "reminder.deniedLineTapped") ?? "false") == "true"
+    }
+
+    public func setHasTappedNotificationsDeniedLineOnce(_ tapped: Bool) throws {
+        try setLocalSettingValue(tapped ? "true" : "false", key: "reminder.deniedLineTapped")
+    }
+
+    /// Applies every queued action to the store, in order, then answers with
+    /// the ones whose date key is at least `currentRecordDayKey` — the app
+    /// drops the rest (widgets-and-intents spec: "The app MUST drop an
+    /// action whose date key is earlier than the current record day.").
+    /// Call this, then clear the queue file, on activation and whenever
+    /// protected data becomes available.
+    @discardableResult
+    public func applyQueuedActions(_ actions: [QueuedAction], currentRecordDayKey: String, changedAt: Date) throws -> [QueuedAction] {
+        let kept = actions.filter { $0.dayKey >= currentRecordDayKey }
+        for action in kept {
+            switch action.kind {
+            case .skipped:
+                try setPlannedMealAnswer("Skipped", dateKey: action.dayKey, slotIndex: action.slotIndex, changedAt: changedAt)
+            case .snooze:
+                try setSnoozeCount(action.snoozeCount, dateKey: action.dayKey, slotIndex: action.slotIndex)
+            }
+        }
+        return kept
     }
 }
 

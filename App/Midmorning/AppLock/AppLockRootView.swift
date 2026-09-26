@@ -211,12 +211,32 @@ private struct RunningRootView: View {
             .onAppear {
                 deletionNotifier.onEverythingDeleted = onEverythingDeleted
                 checkEnrolmentStateIfNeeded()
+                // design.md, "The scheduler is a pure function over a
+                // rolling horizon": recomputed on activation.
+                ReminderCoordinator.recomputeAndApply(store: store)
+            }
+            // A pending route always wins over the cover (app-lock spec, "A
+            // new entry before authentication"): the notification action
+            // "Add" posts `.reminderAddActionTapped`, which requests the
+            // route; `AppLifecycleState.coverMode` already reads `.none`
+            // while a route is pending, so the cover steps aside on its own.
+            .fullScreenCover(isPresented: Binding(
+                get: { controller.state.pendingRoute == .newEntry },
+                set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
+            )) {
+                NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
+                    controller.handle(.pendingRouteResolved)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .reminderAddActionTapped)) { _ in
+                controller.handle(.pendingRouteRequested(.newEntry))
             }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
                 case .active:
                     controller.handle(.didBecomeActive(now: MachContinuousClock().continuousSeconds()))
                     checkEnrolmentStateIfNeeded()
+                    ReminderCoordinator.recomputeAndApply(store: store)
                 case .inactive:
                     controller.handle(.didBecomeInactive)
                 case .background:
