@@ -26,7 +26,12 @@ let package = Package(
         // imports `Record`, so there is no cycle.
         .target(name: "Record", dependencies: ["Constants", "Plan"], resources: [.copy("FrozenSchema.json")]),
         .testTarget(name: "ConstantsTests", dependencies: ["Constants"]),
-        .testTarget(name: "RecordTests", dependencies: ["Record"]),
+        // Also depends on `Programme` (test-only; `Record` itself never
+        // does) so a test can prove the composition of `Programme`'s
+        // pending-card output with `Record`'s `TodayCardSlot` — the seam
+        // `programme-engine` (2.1) wires in the App target
+        // (`v1-programme/design.md`, "Programme takes value facts").
+        .testTarget(name: "RecordTests", dependencies: ["Record", "Programme"]),
         // The plan, templates, planned days, the match of planned meals to
         // entries and the gap computation (design.md, "One umbrella package,
         // five targets"). Pure value types and functions only: it takes
