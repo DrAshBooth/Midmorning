@@ -493,7 +493,7 @@ public final class RecordStore {
     public func diagnosticsCounts(contentVersion: Int, sourceCounts: DiagnosticsSourceCounts = ZeroDiagnosticsSourceCounts()) throws -> DiagnosticsCounts {
         DiagnosticsCounts(
             launchFailures: try localIntSettingValue(key: Self.launchFailureCountKey),
-            lastSuccessfulSyncDay: try (localSettingValue(key: Self.lastSuccessfulSyncDayKey)) ?? DiagnosticsCounts.noSyncYet,
+            lastSuccessfulSyncDay: try (localSettingValue(key: Self.lastSuccessfulSyncDayKey)).map(CatalogueText.verbatim) ?? DiagnosticsCounts.noSyncYet,
             schemaVersion: "\(RecordSchemaV1.versionIdentifier)",
             contentVersion: contentVersion,
             pendingReminders: sourceCounts.pendingReminders,

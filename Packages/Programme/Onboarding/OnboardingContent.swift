@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// The fixed content the four onboarding screens show verbatim (onboarding
 /// spec). Keeping it here, not only in the App target's views, lets a
@@ -31,26 +32,6 @@ public enum Screen2Content {
     public static let continueLabel = "Continue"
 }
 
-public enum Screen3Content {
-    public static let title = "Your start"
-    public static let startDayQuestion = "When do you want to start?"
-
-    public static let threeSentences: [String] = [
-        "Each time you eat or drink, you add an entry: the time and a few words on what it was.",
-        "\"Toast and tea\" is a complete entry.",
-        "There is one star, \"felt like a binge\", and only you decide when it applies.",
-    ]
-    public static let exampleTime = "13:05"
-    public static let exampleWhat = "Toast and tea"
-    public static let exampleVoiceOverLabel = "\(exampleTime), \(exampleWhat)"
-
-    public static let weighInDayHeading = "Weigh-in day"
-    public static let wontBeWeighingChoice = "I won't be weighing"
-    public static let weighInExplanation = "Once a week, on this day, the app asks for your weight and shows the trend. There is no goal and no target."
-    public static let quietHoursHeading = "Quiet hours"
-    public static let unansweredMessage = "Please answer this one."
-}
-
 public enum Screen4Content {
     public static let title = "Permissions"
     public static let widgetInstructions = "Touch and hold your Lock Screen, tap Customise, then Lock Screen, then add Midmorning."
@@ -70,18 +51,19 @@ public enum Screen4Content {
 
 /// Every user-facing string the four onboarding screens show, for the
 /// "No goal", "Not weight loss, three times" and "No account" reviewer
-/// scenarios to scan as a single list.
+/// scenarios to scan as a single list. Screen 3's strings are catalogue keys
+/// (`Screen3Content`); a test fills the list from the app's catalogue.
 public enum OnboardingStrings {
-    public static let all: [String] =
-        Screen1Content.lines + [
+    public static let all: [CatalogueText] =
+        (Screen1Content.lines + [
             Screen2Content.ageQuestion, Screen2Content.heightQuestion, Screen2Content.weightQuestion,
             Screen2Content.heightWeightIntro, Screen2Content.treatmentQuestion, Screen2Content.pregnancyQuestion,
-        ] + Screen3Content.threeSentences + [
+        ]).map(CatalogueText.verbatim) + Screen3Content.threeSentences + [
             Screen3Content.weighInExplanation, Screen3Content.weighInDayHeading, Screen3Content.wontBeWeighingChoice,
         ] + [
             Screen4Content.yourRecordSentence, Screen4Content.iCloudLaterVersion,
             Screen4Content.notificationsExplanation, Screen4Content.widgetExplanation,
-        ]
+        ].map(CatalogueText.verbatim)
 
     /// "Not weight loss, three times": these three sentences, one on each
     /// of screens 1, 2 and 3, each saying the programme is not for weight loss.

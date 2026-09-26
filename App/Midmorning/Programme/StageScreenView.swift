@@ -30,9 +30,9 @@ struct StageScreenView: View {
                         }
                     }
                 }
-                if !model.toolNames.isEmpty {
+                if !model.tools.isEmpty {
                     Section("programme.tools") {
-                        ForEach(model.toolNames, id: \.self) { tool in
+                        ForEach(model.tools, id: \.self) { tool in
                             toolRow(tool)
                         }
                     }
@@ -50,20 +50,20 @@ struct StageScreenView: View {
     }
 
     @ViewBuilder
-    private func toolRow(_ tool: String) -> some View {
+    private func toolRow(_ tool: StageTool) -> some View {
         switch tool {
-        case "Plan":
-            Button(tool) { planBuilderMode = .template(kind: .weekday, titleKey: "plan.weekday") }
-        case "Weigh-in":
+        case .plan:
+            Button(tool.label.string) { planBuilderMode = .template(kind: .weekday, titleKey: "plan.weekday") }
+        case .weighIn:
             // weigh-in spec, "The app accepts a weight on the weigh-in day
             // only": "the route is 'Programme', then 'Getting started', then
             // 'Weigh-in'" (decision 93).
-            NavigationLink(tool, value: WeighInRoute())
+            NavigationLink(tool.label.string, value: WeighInRoute())
         default:
             // Every later tool's own change connects its row (programme
             // spec, "The stage screen": "When the branch does not hold it,
             // the agent gives the row no action.").
-            Text(tool)
+            Text(tool.label.string)
         }
     }
 

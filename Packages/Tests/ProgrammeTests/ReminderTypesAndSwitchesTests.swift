@@ -17,13 +17,13 @@ final class ReminderTypesAndSwitchesTests: XCTestCase {
     /// Scenario: Permission not determined.
     func testPermissionNotDetermined() {
         XCTAssertEqual(ReminderPermissionText.todayLine(permission: .notDetermined, hasTappedDeniedLineOnce: false), ReminderPermissionText.todayLineBeforePermission)
-        XCTAssertEqual(ReminderPermissionText.groupNotDeterminedLine, "Reminders need notification permission.")
-        XCTAssertEqual(ReminderPermissionText.groupAllowControl, "Allow notifications")
+        XCTAssertEqual(ReminderPermissionText.groupNotDeterminedLine.english, "Reminders need notification permission.")
+        XCTAssertEqual(ReminderPermissionText.groupAllowControl.english, "Allow notifications")
     }
 
     /// Scenario: The line before permission.
     func testTheLineBeforePermission() {
-        XCTAssertEqual(ReminderPermissionText.todayLine(permission: .notDetermined, hasTappedDeniedLineOnce: false), "Allow notifications to get reminders.")
+        XCTAssertEqual(ReminderPermissionText.todayLine(permission: .notDetermined, hasTappedDeniedLineOnce: false)?.english, "Allow notifications to get reminders.")
     }
 
     /// Scenario: Permission granted from the line.
@@ -33,12 +33,12 @@ final class ReminderTypesAndSwitchesTests: XCTestCase {
 
     /// Scenario: Permission denied.
     func testPermissionDenied() {
-        XCTAssertEqual(ReminderPermissionText.groupDeniedLine, "Notifications are off in iOS Settings. The plan still shows on Today, and the Home Screen widget can show your next planned time.")
+        XCTAssertEqual(ReminderPermissionText.groupDeniedLine.english, "Notifications are off in iOS Settings. The plan still shows on Today, and the Home Screen widget can show your next planned time.")
     }
 
     /// Scenario: The line on Today.
     func testTheLineOnToday() {
-        XCTAssertEqual(ReminderPermissionText.todayLine(permission: .denied, hasTappedDeniedLineOnce: false), "Notifications are off in iOS Settings.")
+        XCTAssertEqual(ReminderPermissionText.todayLine(permission: .denied, hasTappedDeniedLineOnce: false)?.english, "Notifications are off in iOS Settings.")
     }
 
     /// Scenario: The line after one tap.
@@ -57,6 +57,6 @@ final class ReminderTypesAndSwitchesTests: XCTestCase {
     /// never syncs; `RecordStore.setReminderSwitch` already keys it into
     /// `LocalSetting` (device-only). The fixed caption text:
     func testTwoDevices() {
-        XCTAssertEqual(ReminderPermissionText.eachDeviceSendsItsOwn, "Each device sends its own reminders.")
+        XCTAssertEqual(ReminderPermissionText.eachDeviceSendsItsOwn.english, "Each device sends its own reminders.")
     }
 }

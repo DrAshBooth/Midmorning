@@ -37,7 +37,7 @@ final class TreatmentClaimTests: XCTestCase {
     }
 
     func testEveryOnboardingStringPasses() {
-        for string in OnboardingStrings.all {
+        for string in OnboardingStrings.all.map(\.english) {
             XCTAssertTrue(TreatmentClaim.passes(string), "\"\(string)\" should pass the treatment-claim check")
         }
     }

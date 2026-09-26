@@ -14,7 +14,7 @@ struct DiagnosticsView: View {
         Form {
             LabeledContent("diagnostics.launchFailures", value: "\(counts.launchFailures)")
                 .accessibilityElement(children: .combine)
-            LabeledContent("diagnostics.lastSuccessfulSyncDay", value: counts.lastSuccessfulSyncDay)
+            LabeledContent("diagnostics.lastSuccessfulSyncDay", value: counts.lastSuccessfulSyncDay.string)
                 .accessibilityElement(children: .combine)
             LabeledContent("diagnostics.schemaVersion", value: counts.schemaVersion)
                 .accessibilityElement(children: .combine)
@@ -24,16 +24,12 @@ struct DiagnosticsView: View {
                 .accessibilityElement(children: .combine)
             LabeledContent("diagnostics.queueLength", value: "\(counts.queueLength)")
                 .accessibilityElement(children: .combine)
-            LabeledContent("diagnostics.lastReconcileOutcome", value: reconcileOutcomeText)
+            LabeledContent("diagnostics.lastReconcileOutcome", value: counts.lastReconcileOutcome.text.string)
                 .accessibilityElement(children: .combine)
             LabeledContent("diagnostics.crashCount", value: "\(counts.crashCount)")
                 .accessibilityElement(children: .combine)
         }
         .navigationTitle("diagnostics.title")
         .getSupport()
-    }
-
-    private var reconcileOutcomeText: String {
-        "\(counts.lastReconcileOutcome.winners) kept, \(counts.lastReconcileOutcome.losers) removed"
     }
 }

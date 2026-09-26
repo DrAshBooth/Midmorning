@@ -17,7 +17,7 @@ final class WeightUnitTests: XCTestCase {
     /// Scenario: Below the range.
     func testBelowTheRange() {
         XCTAssertEqual(WeighInWeight.validate(kg: 6.8), .belowRange)
-        XCTAssertEqual(WeighInWeight.belowRangeMessage, "That number is outside the range the app accepts. Check it and try again.")
+        XCTAssertEqual(WeighInWeight.belowRangeMessage.english, "That number is outside the range the app accepts. Check it and try again.")
     }
 
     /// Scenario: No upper bound.

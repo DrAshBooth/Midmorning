@@ -61,14 +61,15 @@ public enum NotificationPermission: Sendable, Equatable {
 
 /// The fixed sentences the Reminders group and Today show for each
 /// notification-permission state (reminders spec, "Reminder types and their
-/// switches").
+/// switches"). Each one is the catalogue key the Reminders group and Today
+/// show (content spec, "Strings live in catalogues").
 public enum ReminderPermissionText {
-    public static let groupNotDeterminedLine = "Reminders need notification permission."
-    public static let groupAllowControl = "Allow notifications"
-    public static let groupDeniedLine = "Notifications are off in iOS Settings. The plan still shows on Today, and the Home Screen widget can show your next planned time."
-    public static let todayLineBeforePermission = "Allow notifications to get reminders."
-    public static let todayLineDenied = "Notifications are off in iOS Settings."
-    public static let eachDeviceSendsItsOwn = "Each device sends its own reminders."
+    public static let groupNotDeterminedLine: CatalogueText = .key("settings.reminders.notDetermined.line")
+    public static let groupAllowControl: CatalogueText = .key("settings.reminders.notDetermined.allowControl")
+    public static let groupDeniedLine: CatalogueText = .key("settings.reminders.denied.line")
+    public static let todayLineBeforePermission: CatalogueText = .key("today.reminders.notDetermined")
+    public static let todayLineDenied: CatalogueText = .key("today.reminders.denied")
+    public static let eachDeviceSendsItsOwn: CatalogueText = .key("settings.reminders.eachDeviceCaption")
 
     /// Today's line, or `nil` to show none. `hasTappedDeniedLineOnce` is the
     /// device flag this capability keeps: after one tap on the denied line,
@@ -78,7 +79,7 @@ public enum ReminderPermissionText {
     /// `anySwitchOn` is false when the person turned every reminder switch
     /// off: the denied line then does not show ("When permission is denied
     /// and any switch is on, Today MUST show a line").
-    public static func todayLine(permission: NotificationPermission, hasTappedDeniedLineOnce: Bool, anySwitchOn: Bool = true) -> String? {
+    public static func todayLine(permission: NotificationPermission, hasTappedDeniedLineOnce: Bool, anySwitchOn: Bool = true) -> CatalogueText? {
         switch permission {
         case .notDetermined: return todayLineBeforePermission
         case .denied: return hasTappedDeniedLineOnce || !anySwitchOn ? nil : todayLineDenied

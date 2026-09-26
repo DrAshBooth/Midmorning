@@ -26,18 +26,19 @@ public enum ReminderKind: String, Sendable, CaseIterable, Equatable, Codable {
     ]
 
     /// The title with explicit wording on (reminders spec, "Discreet text by
-    /// default"). `.plannedMeal` needs `slotLabel`; every other kind ignores
-    /// it.
-    public func explicitTitle(slotLabel: String? = nil) -> String {
+    /// default"). `.plannedMeal` needs `slotLabel`, the slot's label as the
+    /// person sees it; every other kind ignores it and gives a catalogue key
+    /// (content spec, "Strings live in catalogues").
+    public func explicitTitle(slotLabel: String? = nil) -> CatalogueText {
         switch self {
-        case .plannedMeal: return slotLabel ?? ""
-        case .morningPlan: return "Set today's plan"
-        case .midday: return "Anything to record from this morning?"
-        case .closeTheDay: return "Close the day"
-        case .weighInDay: return "Weigh-in day"
-        case .weeklyReview: return "Weekly review"
-        case .worksheetReview: return "Worksheet review"
-        case .checkIn: return "Check-in"
+        case .plannedMeal: return .verbatim(slotLabel ?? "")
+        case .morningPlan: return .key("reminders.title.morningPlan")
+        case .midday: return .key("reminders.title.midday")
+        case .closeTheDay: return .key("reminders.title.closeTheDay")
+        case .weighInDay: return .key("reminders.title.weighInDay")
+        case .weeklyReview: return .key("reminders.title.weeklyReview")
+        case .worksheetReview: return .key("reminders.title.worksheetReview")
+        case .checkIn: return .key("reminders.title.checkIn")
         }
     }
 
@@ -85,8 +86,8 @@ public struct ReminderRequest: Sendable, Equatable {
     public let slotIndex: Int?
     public let time: Date
     /// Empty unless explicit wording is on (reminders spec, "Discreet text
-    /// by default").
-    public let title: String
+    /// by default"). The App target fills it from the string catalogue.
+    public let title: CatalogueText
     public let body: String
     public let userInfo: [String: String]
     public let interruptionLevel: InterruptionLevel
@@ -95,7 +96,7 @@ public struct ReminderRequest: Sendable, Equatable {
 
     public init(
         id: String, kind: ReminderKind, dayKey: String, slotIndex: Int?, time: Date,
-        title: String, body: String, userInfo: [String: String],
+        title: CatalogueText, body: String, userInfo: [String: String],
         interruptionLevel: InterruptionLevel = .active, category: String,
         threadIdentifier: String = ReminderRequest.threadIdentifier
     ) {
@@ -150,7 +151,10 @@ public enum PlannedMealReminderAction: Sendable, Equatable, CaseIterable {
 public enum DiscreetText {
     public static func body(time: String) -> String { time }
 
-    public static func title(kind: ReminderKind, explicitWordingOn: Bool, slotLabel: String? = nil) -> String {
-        explicitWordingOn ? kind.explicitTitle(slotLabel: slotLabel) : ""
+    /// The empty title that discreet text gives.
+    public static let emptyTitle: CatalogueText = .verbatim("")
+
+    public static func title(kind: ReminderKind, explicitWordingOn: Bool, slotLabel: String? = nil) -> CatalogueText {
+        explicitWordingOn ? kind.explicitTitle(slotLabel: slotLabel) : emptyTitle
     }
 }

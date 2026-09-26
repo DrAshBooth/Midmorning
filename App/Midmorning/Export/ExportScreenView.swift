@@ -26,10 +26,10 @@ struct ExportScreenView: View {
     var body: some View {
         Form {
             Section {
-                DatePicker(ExportContent.fromLabel, selection: fromDateBinding, in: ...toDateUpperBound, displayedComponents: .date)
-                    .accessibilityLabel(ExportContent.fromLabel)
-                DatePicker(ExportContent.toLabel, selection: toDateBinding, in: ...currentDateUpperBound, displayedComponents: .date)
-                    .accessibilityLabel(ExportContent.toLabel)
+                DatePicker(ExportContent.fromLabel.string, selection: fromDateBinding, in: ...toDateUpperBound, displayedComponents: .date)
+                    .accessibilityLabel(ExportContent.fromLabel.string)
+                DatePicker(ExportContent.toLabel.string, selection: toDateBinding, in: ...currentDateUpperBound, displayedComponents: .date)
+                    .accessibilityLabel(ExportContent.toLabel.string)
             }
             // `ExportDayKey.date` is midnight GMT of the key's date, so the
             // pickers show and set dates in GMT; in the device zone a key
@@ -42,15 +42,15 @@ struct ExportScreenView: View {
             }())
 
             Section {
-                Toggle(ExportContent.includeWeighInsLabel, isOn: $includeWeighIns)
-                Toggle(ExportContent.includeContextLabel, isOn: $includeContext)
+                Toggle(ExportContent.includeWeighInsLabel.string, isOn: $includeWeighIns)
+                Toggle(ExportContent.includeContextLabel.string, isOn: $includeContext)
             }
 
             Section {
-                Text(ExportContent.shareDisclosureLine)
+                Text(ExportContent.shareDisclosureLine.string)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                Button(ExportContent.makePDFLabel, action: makePDF)
+                Button(ExportContent.makePDFLabel.string, action: makePDF)
                     .disabled(!isLoaded)
                 if let errorMessage {
                     Text(errorMessage)
@@ -59,7 +59,7 @@ struct ExportScreenView: View {
                 }
             }
         }
-        .navigationTitle(ExportContent.screenTitle)
+        .navigationTitle(ExportContent.screenTitle.string)
         .getSupport()
         .onAppear(perform: loadDefaultsIfNeeded)
         .sheet(isPresented: $isShowingShareSheet, onDismiss: cleanUpTemporaryFile) {
@@ -124,7 +124,7 @@ struct ExportScreenView: View {
             // export spec, "Offline and out of logs": the error carries no
             // entry field and no weight value; `ExportComposer.Failure` and
             // every file-system error here name no record content.
-            errorMessage = ExportContent.buildErrorMessage
+            errorMessage = ExportContent.buildErrorMessage.string
         }
     }
 

@@ -1,22 +1,24 @@
 import Foundation
+import Constants
+import Record
 
-/// Every literal string the export screen and the PDF show, in one place
+/// Every fixed string the export screen and the PDF show, in one place
 /// (export spec, "Choose a date range", "The PDF is formatted like the
 /// paper record", "Days with no entries...", "Offline and out of logs").
-/// The app target passes each one as a variable, never a literal, to
-/// `Text`/`Button` (`literal-lint-scope`), so this file is the one home a
-/// reviewer checks for wording.
+/// Each one is a key in the app's string catalogue, never English (content
+/// spec, "Strings live in catalogues"): the App target fills it with
+/// `CatalogueText.string`, and a test fills it from the same catalogue.
 public enum ExportContent {
     // MARK: Screen
 
-    public static let screenTitle = "Export"
-    public static let fromLabel = "From"
-    public static let toLabel = "To"
-    public static let includeWeighInsLabel = "Include weigh-ins"
-    public static let includeContextLabel = "Include context"
-    public static let makePDFLabel = "Make PDF"
-    public static let shareDisclosureLine = "The PDF leaves the app when you share it. Mail, Files and Messages keep their own copy, and Delete everything does not reach those copies."
-    public static let buildErrorMessage = "The PDF could not be made. Try again."
+    public static let screenTitle: CatalogueText = .key("export.title")
+    public static let fromLabel: CatalogueText = .key("export.from")
+    public static let toLabel: CatalogueText = .key("export.to")
+    public static let includeWeighInsLabel: CatalogueText = .key("export.includeWeighIns")
+    public static let includeContextLabel: CatalogueText = .key("export.includeContext")
+    public static let makePDFLabel: CatalogueText = .key("export.makePDF")
+    public static let shareDisclosureLine: CatalogueText = .key("export.shareDisclosure")
+    public static let buildErrorMessage: CatalogueText = .key("export.buildError")
 
     /// export spec, "Choose a date range": defaults for the two switches.
     public static let includeWeighInsDefault = false
@@ -24,25 +26,31 @@ public enum ExportContent {
 
     // MARK: PDF text
 
-    public static let documentHeading = "Record"
-    public static let preambleLine = "Self-recorded on a phone. Times and words are the person's own."
-    public static let starLegendLine = "* felt like a binge"
-    public static let didntRecordLine = "Didn't record"
-    public static let pausedLine = "Paused"
-    public static let weighInsPageHeading = "Weigh-ins"
-    public static let timeColumnHeading = "Time"
-    public static let whatColumnHeading = "What"
-    public static let whereColumnHeading = "Where"
-    public static let contextColumnHeading = "Context"
+    public static let documentHeading: CatalogueText = .key("export.pdf.heading")
+    public static let preambleLine: CatalogueText = .key("export.pdf.preamble")
+    public static let starLegendLine: CatalogueText = .key("export.pdf.starLegend")
+    public static let didntRecordLine: CatalogueText = .key("export.pdf.didntRecord")
+    public static let pausedLine: CatalogueText = .key("export.pdf.paused")
+    public static let weighInsPageHeading: CatalogueText = .key("export.pdf.weighIns")
+    public static let timeColumnHeading: CatalogueText = .key("export.pdf.column.time")
+    public static let whatColumnHeading: CatalogueText = .key("export.pdf.column.what")
+    public static let whereColumnHeading: CatalogueText = .key("export.pdf.column.where")
+    public static let contextColumnHeading: CatalogueText = .key("export.pdf.column.context")
+    /// The star mark beside a starred entry's time: a symbol, not a word,
+    /// the same as the "*" at the start of `starLegendLine`.
     public static let starredMark = "*"
+
+    /// "Record 28 August – 24 September 2026": the PDF's metadata title
+    /// (export spec, "What the PDF never contains": "Metadata").
+    public static func pdfTitle(rangeText: String) -> CatalogueText {
+        .key("export.pdf.title", .verbatim(rangeText))
+    }
 
     /// export spec, "The PDF is formatted like the paper record": "A day
     /// runs from %1$@ to %2$@." filled with the day start and the minute
-    /// before it, both from the en_GB formatter.
-    public static func dayRunLine(dayStartHour: Int) -> String {
-        let startText = String(format: "%02d:00", dayStartHour)
-        let endHour = (dayStartHour + 23) % 24
-        let endText = String(format: "%02d:59", endHour)
-        return "A day runs from \(startText) to \(endText)."
+    /// before it. The onboarding screen shows the same line, so both read
+    /// `record`'s one `DayBoundaryLine`.
+    public static func dayRunLine(dayStartHour: Int) -> CatalogueText {
+        DayBoundaryLine.text(startHour: dayStartHour)
     }
 }

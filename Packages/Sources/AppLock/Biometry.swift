@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// What the device offers for the system authentication request
 /// (app-lock spec, "The app lock is on by default"). `.none` means the
@@ -15,19 +16,22 @@ public enum Biometry: Sendable, Equatable, CaseIterable {
 /// the switch is enabled, and, for a biometric device, the "only" setting's
 /// label and its turn-on warning. One function returns all of these so the
 /// onboarding screen and the settings screen always show the same words for
-/// the same device (app-lock spec, "The app lock is on by default").
+/// the same device (app-lock spec, "The app lock is on by default"). Each
+/// string is a catalogue key, never English (content spec, "Strings live in
+/// catalogues"); the App target fills it from Localizable.xcstrings.
 public struct BiometryStrings: Sendable, Equatable {
-    public let lockLabel: String
+    public let lockLabel: CatalogueText
     public let isLockEnabled: Bool
-    public let onlyLabel: String?
-    public let enrolmentWarning: String?
+    public let onlyLabel: CatalogueText?
+    public let enrolmentWarning: CatalogueText?
     /// The sentence onboarding's "Screen 4: permissions" shows under the app
     /// lock switch (onboarding spec: "The label function that `app-lock`
     /// defines returns it... The onboarding capability's lock sentence MUST
-    /// take its Face ID or Touch ID word from the same function.").
-    public let onboardingSentence: String
+    /// take its Face ID or Touch ID word from the same function."). `nil`
+    /// with no device passcode, because the app lock cannot turn on then.
+    public let onboardingSentence: CatalogueText?
 
-    public init(lockLabel: String, isLockEnabled: Bool, onlyLabel: String?, enrolmentWarning: String?, onboardingSentence: String) {
+    public init(lockLabel: CatalogueText, isLockEnabled: Bool, onlyLabel: CatalogueText?, enrolmentWarning: CatalogueText?, onboardingSentence: CatalogueText?) {
         self.lockLabel = lockLabel
         self.isLockEnabled = isLockEnabled
         self.onlyLabel = onlyLabel
@@ -43,41 +47,37 @@ public struct BiometryStrings: Sendable, Equatable {
 public enum BiometryLabels {
     /// Requirement: "The app lock is on by default" — "Under the disabled
     /// switch the app MUST show..."
-    public static let noPasscodeMessage = "Set a passcode on your device to lock Midmorning."
-
-    /// Info.plist's `NSFaceIDUsageDescription`. Scenario: "Face ID usage
-    /// description".
-    public static let faceIDUsageDescription = "Midmorning uses Face ID to unlock the app."
+    public static let noPasscodeMessage: CatalogueText = .key("applock.noPasscode")
 
     /// The system authentication request's reason string. Requirement:
     /// "When the app asks".
-    public static let unlockReason = "Unlock Midmorning"
+    public static let unlockReason: CatalogueText = .key("applock.unlockReason")
 
     public static func strings(for biometry: Biometry) -> BiometryStrings {
         switch biometry {
         case .faceID:
             return BiometryStrings(
-                lockLabel: "Lock with Face ID",
+                lockLabel: .key("applock.lockLabel.faceID"),
                 isLockEnabled: true,
-                onlyLabel: "Face ID only",
-                enrolmentWarning: "If Face ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on.",
-                onboardingSentence: "Midmorning asks for Face ID or your passcode when it opens."
+                onlyLabel: .key("applock.onlyLabel.faceID"),
+                enrolmentWarning: .key("applock.enrolmentWarning.faceID"),
+                onboardingSentence: .key("applock.onboardingSentence.faceID")
             )
         case .touchID:
             return BiometryStrings(
-                lockLabel: "Lock with Touch ID",
+                lockLabel: .key("applock.lockLabel.touchID"),
                 isLockEnabled: true,
-                onlyLabel: "Touch ID only",
-                enrolmentWarning: "If Touch ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on.",
-                onboardingSentence: "Midmorning asks for Touch ID or your passcode when it opens."
+                onlyLabel: .key("applock.onlyLabel.touchID"),
+                enrolmentWarning: .key("applock.enrolmentWarning.touchID"),
+                onboardingSentence: .key("applock.onboardingSentence.touchID")
             )
         case .passcodeOnly:
             return BiometryStrings(
-                lockLabel: "Lock with passcode",
+                lockLabel: .key("applock.lockLabel.passcode"),
                 isLockEnabled: true,
                 onlyLabel: nil,
                 enrolmentWarning: nil,
-                onboardingSentence: "Midmorning asks for your passcode when it opens."
+                onboardingSentence: .key("applock.onboardingSentence.passcode")
             )
         case .none:
             return BiometryStrings(
@@ -85,7 +85,7 @@ public enum BiometryLabels {
                 isLockEnabled: false,
                 onlyLabel: nil,
                 enrolmentWarning: nil,
-                onboardingSentence: ""
+                onboardingSentence: nil
             )
         }
     }

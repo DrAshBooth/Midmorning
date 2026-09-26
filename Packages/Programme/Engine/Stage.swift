@@ -33,18 +33,18 @@ public enum Stage: Int, Sendable, CaseIterable, Comparable {
         }
     }
 
-    /// The names in the "Tools" group of this stage's own stage screen
+    /// The rows in the "Tools" group of this stage's own stage screen
     /// (programme spec, "The stage screen"). Stage 6 lists two rows because
     /// both modules open together.
-    public var toolNames: [String] {
+    public var tools: [StageTool] {
         switch self {
-        case .gettingStarted: return ["Weigh-in"]
-        case .regularEating: return ["Plan"]
-        case .alternatives: return ["Alternatives list"]
-        case .problemSolving: return ["Problem solving"]
-        case .takingStock: return ["Taking stock"]
-        case .modules: return ["Food rules", "Body image"]
-        case .stayingOnTrack: return ["Staying on track"]
+        case .gettingStarted: return [.weighIn]
+        case .regularEating: return [.plan]
+        case .alternatives: return [.alternativesList]
+        case .problemSolving: return [.problemSolving]
+        case .takingStock: return [.takingStock]
+        case .modules: return [.foodRules, .bodyImage]
+        case .stayingOnTrack: return [.stayingOnTrack]
         }
     }
 

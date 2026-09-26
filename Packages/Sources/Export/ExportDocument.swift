@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// One entry line in the PDF (export spec, "Each entry in the PDF"). A
 /// value, not a model: the app maps `Record.RecordRow` to this before the
@@ -51,8 +52,8 @@ public struct ExportDayBlock: Sendable, Equatable {
 
     /// "Didn't record" first, then "Paused" (export spec: "A day with both
     /// states MUST show both lines, 'Didn't record' first.").
-    public var stateLines: [String] {
-        var lines: [String] = []
+    public var stateLines: [CatalogueText] {
+        var lines: [CatalogueText] = []
         if didntRecord { lines.append(ExportContent.didntRecordLine) }
         if paused { lines.append(ExportContent.pausedLine) }
         return lines
@@ -79,7 +80,7 @@ public struct ExportWeighInLine: Sendable, Equatable {
 /// content into lines.
 public struct ExportDocument: Sendable, Equatable {
     public let rangeText: String
-    public let dayRunLine: String
+    public let dayRunLine: CatalogueText
     public let includeContext: Bool
     public let days: [ExportDayBlock]
     /// Empty when "Include weigh-ins" is off or no weigh-in falls in the
@@ -87,7 +88,7 @@ public struct ExportDocument: Sendable, Equatable {
     /// falls in the range, the app MUST omit the page.").
     public let weighInLines: [ExportWeighInLine]
 
-    public init(rangeText: String, dayRunLine: String, includeContext: Bool, days: [ExportDayBlock], weighInLines: [ExportWeighInLine]) {
+    public init(rangeText: String, dayRunLine: CatalogueText, includeContext: Bool, days: [ExportDayBlock], weighInLines: [ExportWeighInLine]) {
         self.rangeText = rangeText
         self.dayRunLine = dayRunLine
         self.includeContext = includeContext
@@ -97,7 +98,7 @@ public struct ExportDocument: Sendable, Equatable {
 
     /// "Record 28 August – 24 September 2026" (export spec, "What the PDF
     /// never contains": "Metadata").
-    public var pdfTitle: String { "\(ExportContent.documentHeading) \(rangeText)" }
+    public var pdfTitle: CatalogueText { ExportContent.pdfTitle(rangeText: rangeText) }
 
     /// The document flattened into one ordered list of content lines, the
     /// shape `Paginator` and the app's renderer both walk (export spec, "The
@@ -106,20 +107,20 @@ public struct ExportDocument: Sendable, Equatable {
     public func contentLines() -> [ExportContentLine] {
         var lines: [ExportContentLine] = []
         lines.append(ExportContentLine(kind: .documentTitle, text: ExportContent.documentHeading))
-        lines.append(ExportContentLine(kind: .rangeLine, text: rangeText))
+        lines.append(ExportContentLine(kind: .rangeLine, text: .verbatim(rangeText)))
         lines.append(ExportContentLine(kind: .preambleLine, text: ExportContent.preambleLine))
         lines.append(ExportContentLine(kind: .starLegendLine, text: ExportContent.starLegendLine))
         lines.append(ExportContentLine(kind: .dayRunLine, text: dayRunLine))
 
         for (index, day) in days.enumerated() {
-            lines.append(ExportContentLine(kind: .dayHeading(dayIndex: index), text: day.heading))
+            lines.append(ExportContentLine(kind: .dayHeading(dayIndex: index), text: .verbatim(day.heading)))
             for state in day.stateLines {
                 lines.append(ExportContentLine(kind: .stateLine(dayIndex: index), text: state))
             }
             if !day.entries.isEmpty {
                 lines.append(ExportContentLine(kind: .columnHeadings(dayIndex: index), text: columnHeadingsText))
                 for entry in day.entries {
-                    lines.append(ExportContentLine(kind: .entryLine(dayIndex: index), text: entry.clockTime, entry: entry))
+                    lines.append(ExportContentLine(kind: .entryLine(dayIndex: index), text: .verbatim(entry.clockTime), entry: entry))
                 }
             }
         }
@@ -127,18 +128,22 @@ public struct ExportDocument: Sendable, Equatable {
         if !weighInLines.isEmpty {
             lines.append(ExportContentLine(kind: .weighInHeading, text: ExportContent.weighInsPageHeading))
             for row in weighInLines {
-                lines.append(ExportContentLine(kind: .weighInRow, text: "\(row.dateText) \(row.valueText)", weighIn: row))
+                lines.append(ExportContentLine(kind: .weighInRow, text: .verbatim("\(row.dateText) \(row.valueText)"), weighIn: row))
             }
         }
 
         return lines
     }
 
-    private var columnHeadingsText: String {
-        includeContext
-            ? "\(ExportContent.timeColumnHeading) \(ExportContent.whatColumnHeading) \(ExportContent.whereColumnHeading) \(ExportContent.contextColumnHeading)"
-            : "\(ExportContent.timeColumnHeading) \(ExportContent.whatColumnHeading) \(ExportContent.whereColumnHeading)"
+    /// The column headings in order, one part each; "Context" only when
+    /// the person includes it. The renderer draws each heading in its own
+    /// column.
+    public var columnHeadings: [CatalogueText] {
+        let headings = [ExportContent.timeColumnHeading, ExportContent.whatColumnHeading, ExportContent.whereColumnHeading]
+        return includeContext ? headings + [ExportContent.contextColumnHeading] : headings
     }
+
+    private var columnHeadingsText: CatalogueText { .list(columnHeadings) }
 }
 
 /// One line the paginator measures and the renderer draws (export spec,
@@ -160,7 +165,7 @@ public struct ExportContentLine: Sendable, Equatable {
     }
 
     public let kind: Kind
-    public let text: String
+    public let text: CatalogueText
     public let entry: ExportEntryLine?
     public let weighIn: ExportWeighInLine?
     /// True for a heading that `Paginator` repeats at the top of a page
@@ -172,7 +177,7 @@ public struct ExportContentLine: Sendable, Equatable {
     /// an H2.").
     public let isContinuation: Bool
 
-    public init(kind: Kind, text: String, entry: ExportEntryLine? = nil, weighIn: ExportWeighInLine? = nil, isContinuation: Bool = false) {
+    public init(kind: Kind, text: CatalogueText, entry: ExportEntryLine? = nil, weighIn: ExportWeighInLine? = nil, isContinuation: Bool = false) {
         self.kind = kind
         self.text = text
         self.entry = entry

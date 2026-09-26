@@ -13,7 +13,15 @@ final class DiagnosticsCountsTests: XCTestCase {
     func testSyncOffReadsNeverForTheLastSuccessfulSyncDay() throws {
         let store = try makeTemporaryStore()
         let counts = try store.diagnosticsCounts(contentVersion: 2)
-        XCTAssertEqual(counts.lastSuccessfulSyncDay, "Never")
+        XCTAssertEqual(counts.lastSuccessfulSyncDay.english, "Never")
+    }
+
+    /// The last reconcile outcome reads the winners as "kept" and the
+    /// losers as "removed", each count with its own plural forms (content
+    /// spec, "Strings live in catalogues", "Catalogue rules").
+    func testTheReconcileOutcomeReadsKeptAndRemoved() {
+        XCTAssertEqual(DiagnosticsCounts.ReconcileOutcome(winners: 4, losers: 1).text.english, "4 kept, 1 removed")
+        XCTAssertEqual(DiagnosticsCounts.ReconcileOutcome(winners: 0, losers: 0).text.english, "0 kept, 0 removed")
     }
 
     /// Scenario: Managed device — no code path reads or reacts to MDM, so

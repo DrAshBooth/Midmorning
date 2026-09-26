@@ -21,7 +21,7 @@ final class AcceptsAWeightOnTheWeighInDayOnlyTests: XCTestCase {
         let state = WeighInGate.inputState(weighInWeekday: monday, currentDayKey: dayKey(2026, 9, 24), todaysWeighIn: nil, lastWeighInDayKey: nil, now: moment(2026, 9, 24), calendar: calendar)
         guard case .refusal(let nextDayKey) = state else { return XCTFail("expected refusal") }
         let text = WeighInRefusalText.text(dayName: "Monday", nextDate: WeighInDayRule.formattedDate(dayKey: nextDayKey, calendar: calendar))
-        XCTAssertEqual(text, "Your weigh-in day is Monday. The app asks once a week, because day-to-day numbers move on their own. Next: Monday 28 September.")
+        XCTAssertEqual(text.english, "Your weigh-in day is Monday. The app asks once a week, because day-to-day numbers move on their own. Next: Monday 28 September.")
     }
 
     /// Scenario: Change the number within 10 minutes.

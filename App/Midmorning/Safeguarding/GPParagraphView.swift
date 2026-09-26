@@ -23,7 +23,7 @@ struct GPParagraphView: View {
             ))
             .frame(minHeight: 110)
             .dynamicTypeSize(.large ... .accessibility5)
-            .accessibilityLabel(CommonLabels.gpParagraphAccessibilityLabel)
+            .accessibilityLabel(CommonLabels.gpParagraphAccessibilityLabel.string)
 
             Button(isShowingCopiedLabel ? GPParagraphCopy.copiedLabel : GPParagraphCopy.copyLabel) {
                 copy()

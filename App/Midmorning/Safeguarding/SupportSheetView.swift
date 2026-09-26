@@ -15,7 +15,7 @@ struct SupportSheetView: View {
             .navigationTitle(SupportSheet.title)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(CommonLabels.close) { dismiss() }
+                    Button(CommonLabels.close.string) { dismiss() }
                 }
             }
         }

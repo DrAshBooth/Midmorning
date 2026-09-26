@@ -37,12 +37,23 @@ final class ExportRangeTests: XCTestCase {
     func testTheSwitchDefaults() {
         XCTAssertFalse(ExportContent.includeWeighInsDefault)
         XCTAssertTrue(ExportContent.includeContextDefault)
+        XCTAssertEqual(ExportContent.includeWeighInsLabel.english, "Include weigh-ins")
+        XCTAssertEqual(ExportContent.includeContextLabel.english, "Include context")
+    }
+
+    /// Requirement: "Choose a date range": the screen's title "Export", the
+    /// "From" and "To" controls and "Make PDF", from the app's catalogue.
+    func testTheScreenLabels() {
+        XCTAssertEqual(ExportContent.screenTitle.english, "Export")
+        XCTAssertEqual(ExportContent.fromLabel.english, "From")
+        XCTAssertEqual(ExportContent.toLabel.english, "To")
+        XCTAssertEqual(ExportContent.makePDFLabel.english, "Make PDF")
     }
 
     /// Scenario: The line above "Make PDF".
     func testTheDisclosureLine() {
         XCTAssertEqual(
-            ExportContent.shareDisclosureLine,
+            ExportContent.shareDisclosureLine.english,
             "The PDF leaves the app when you share it. Mail, Files and Messages keep their own copy, and Delete everything does not reach those copies."
         )
     }
@@ -52,6 +63,6 @@ final class ExportRangeTests: XCTestCase {
     /// target's catch site (untestable by `swift test`) always shows this
     /// fixed string, never the underlying error's own description.
     func testTheBuildErrorMessage() {
-        XCTAssertEqual(ExportContent.buildErrorMessage, "The PDF could not be made. Try again.")
+        XCTAssertEqual(ExportContent.buildErrorMessage.english, "The PDF could not be made. Try again.")
     }
 }

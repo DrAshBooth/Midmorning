@@ -458,7 +458,7 @@ enum ReminderCoordinator {
         for request in requests {
             let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: request.time), repeats: false)
             let content = UNMutableNotificationContent()
-            content.title = request.title
+            content.title = request.title.string
             content.body = request.body
             content.sound = .default
             content.threadIdentifier = request.threadIdentifier

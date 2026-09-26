@@ -15,7 +15,7 @@ final class ExportAccessibilityTests: XCTestCase {
             ExportEntryLine(clockTime: String(format: "%02d:00", i), starred: false, what: "Entry \(i)", whereText: "", context: "")
         }
         let day = ExportDayBlock(dayKey: "2026-09-24", heading: "Thursday 24 September 2026", didntRecord: false, paused: false, entries: entries)
-        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: "A day runs from 04:00 to 03:59.", includeContext: true, days: [day], weighInLines: [])
+        let document = ExportDocument(rangeText: "24 September 2026", dayRunLine: ExportContent.dayRunLine(dayStartHour: 4), includeContext: true, days: [day], weighInLines: [])
         let kinds = document.contentLines().map(\.kind)
         let entryIndices = kinds.indices.filter {
             if case .entryLine = kinds[$0] { return true } else { return false }

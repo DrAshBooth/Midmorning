@@ -155,6 +155,207 @@
         }
       }
     },
+    "applock.lockAfter.atOnce": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At once"
+          }
+        }
+      }
+    },
+    "applock.lockAfter.seconds %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld second"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld seconds"
+                }
+              },
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld seconds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "applock.lockAfter.minutes %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld minute"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld minutes"
+                }
+              },
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld minutes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "applock.lockLabel.faceID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock with Face ID"
+          }
+        }
+      }
+    },
+    "applock.lockLabel.touchID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock with Touch ID"
+          }
+        }
+      }
+    },
+    "applock.lockLabel.passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock with passcode"
+          }
+        }
+      }
+    },
+    "applock.noPasscode": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a passcode on your device to lock Midmorning."
+          }
+        }
+      }
+    },
+    "applock.onlyLabel.faceID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID only"
+          }
+        }
+      }
+    },
+    "applock.onlyLabel.touchID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touch ID only"
+          }
+        }
+      }
+    },
+    "applock.enrolmentWarning.faceID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If Face ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on."
+          }
+        }
+      }
+    },
+    "applock.enrolmentWarning.touchID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If Touch ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on."
+          }
+        }
+      }
+    },
+    "applock.onboardingSentence.faceID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Midmorning asks for Face ID or your passcode when it opens."
+          }
+        }
+      }
+    },
+    "applock.onboardingSentence.touchID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Midmorning asks for Touch ID or your passcode when it opens."
+          }
+        }
+      }
+    },
+    "applock.onboardingSentence.passcode": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Midmorning asks for your passcode when it opens."
+          }
+        }
+      }
+    },
+    "applock.unlockReason": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock Midmorning"
+          }
+        }
+      }
+    },
     "applock.storeOpenFailure.message": {
       "extractionState": "manual",
       "localizations": {
@@ -272,6 +473,75 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diagnostics"
+          }
+        }
+      }
+    },
+    "diagnostics.never": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
+          }
+        }
+      }
+    },
+    "diagnostics.kept %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld kept"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld kept"
+                }
+              },
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld kept"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics.removed %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld removed"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld removed"
+                }
+              },
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld removed"
+                }
+              }
+            }
           }
         }
       }
@@ -628,6 +898,94 @@
         }
       }
     },
+    "programme.tool.weighIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-in"
+          }
+        }
+      }
+    },
+    "programme.tool.plan": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plan"
+          }
+        }
+      }
+    },
+    "programme.tool.alternativesList": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternatives list"
+          }
+        }
+      }
+    },
+    "programme.tool.problemSolving": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problem solving"
+          }
+        }
+      }
+    },
+    "programme.tool.takingStock": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taking stock"
+          }
+        }
+      }
+    },
+    "programme.tool.foodRules": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Food rules"
+          }
+        }
+      }
+    },
+    "programme.tool.bodyImage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Body image"
+          }
+        }
+      }
+    },
+    "programme.tool.stayingOnTrack": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staying on track"
+          }
+        }
+      }
+    },
     "screening.height.centimetres": {
       "extractionState": "manual",
       "localizations": {
@@ -690,6 +1048,248 @@
           "stringUnit": {
             "state": "translated",
             "value": "Weight in stone"
+          }
+        }
+      }
+    },
+    "unit.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unit"
+          }
+        }
+      }
+    },
+    "unit.cm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cm"
+          }
+        }
+      }
+    },
+    "unit.ftIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ft in"
+          }
+        }
+      }
+    },
+    "unit.ft": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ft"
+          }
+        }
+      }
+    },
+    "unit.in": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in"
+          }
+        }
+      }
+    },
+    "unit.kg": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kg"
+          }
+        }
+      }
+    },
+    "unit.stLb": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "st lb"
+          }
+        }
+      }
+    },
+    "unit.st": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "st"
+          }
+        }
+      }
+    },
+    "unit.lb": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "lb"
+          }
+        }
+      }
+    },
+    "weighIn.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-in"
+          }
+        }
+      }
+    },
+    "weighIn.day": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-in day"
+          }
+        }
+      }
+    },
+    "weighIn.wontBeWeighing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I won't be weighing"
+          }
+        }
+      }
+    },
+    "weighIn.chooseADay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a weigh-in day"
+          }
+        }
+      }
+    },
+    "weighIn.weight": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight"
+          }
+        }
+      }
+    },
+    "weighIn.stone": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stone"
+          }
+        }
+      }
+    },
+    "weighIn.pounds": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pounds"
+          }
+        }
+      }
+    },
+    "weighIn.rollingAverage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rolling average"
+          }
+        }
+      }
+    },
+    "weighIn.chart.date": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "weighIn.explanation.kg": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly swings of a kilo or two are normal and mean nothing on their own."
+          }
+        }
+      }
+    },
+    "weighIn.explanation.stLb": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly swings of two or three pounds are normal and mean nothing on their own."
+          }
+        }
+      }
+    },
+    "weighIn.refusal": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your weigh-in day is %1$@. The app asks once a week, because day-to-day numbers move on their own. Next: %2$@."
+          }
+        }
+      }
+    },
+    "weighIn.belowRange": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That number is outside the range the app accepts. Check it and try again."
           }
         }
       }
@@ -1186,6 +1786,83 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "reminders.title.morningPlan": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set today's plan"
+          }
+        }
+      }
+    },
+    "reminders.title.midday": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anything to record from this morning?"
+          }
+        }
+      }
+    },
+    "reminders.title.closeTheDay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the day"
+          }
+        }
+      }
+    },
+    "reminders.title.weighInDay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-in day"
+          }
+        }
+      }
+    },
+    "reminders.title.weeklyReview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly review"
+          }
+        }
+      }
+    },
+    "reminders.title.worksheetReview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worksheet review"
+          }
+        }
+      }
+    },
+    "reminders.title.checkIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check-in"
           }
         }
       }
@@ -1784,6 +2461,226 @@
         }
       }
     },
+    "export.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
+          }
+        }
+      }
+    },
+    "export.from": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From"
+          }
+        }
+      }
+    },
+    "export.to": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To"
+          }
+        }
+      }
+    },
+    "export.includeWeighIns": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include weigh-ins"
+          }
+        }
+      }
+    },
+    "export.includeContext": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include context"
+          }
+        }
+      }
+    },
+    "export.makePDF": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make PDF"
+          }
+        }
+      }
+    },
+    "export.shareDisclosure": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The PDF leaves the app when you share it. Mail, Files and Messages keep their own copy, and Delete everything does not reach those copies."
+          }
+        }
+      }
+    },
+    "export.buildError": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The PDF could not be made. Try again."
+          }
+        }
+      }
+    },
+    "export.fileName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record %1$@ to %2$@.pdf"
+          }
+        }
+      }
+    },
+    "export.pdf.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record"
+          }
+        }
+      }
+    },
+    "export.pdf.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record %@"
+          }
+        }
+      }
+    },
+    "export.pdf.preamble": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Self-recorded on a phone. Times and words are the person's own."
+          }
+        }
+      }
+    },
+    "export.pdf.starLegend": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "* felt like a binge"
+          }
+        }
+      }
+    },
+    "export.pdf.didntRecord": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Didn't record"
+          }
+        }
+      }
+    },
+    "export.pdf.paused": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        }
+      }
+    },
+    "export.pdf.weighIns": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-ins"
+          }
+        }
+      }
+    },
+    "export.pdf.column.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
+          }
+        }
+      }
+    },
+    "export.pdf.column.what": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What"
+          }
+        }
+      }
+    },
+    "export.pdf.column.where": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where"
+          }
+        }
+      }
+    },
+    "export.pdf.column.context": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Context"
+          }
+        }
+      }
+    },
     "today.stateLine.didntRecord": {
       "extractionState": "manual",
       "localizations": {
@@ -2104,6 +3001,226 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tomorrow, %@"
+          }
+        }
+      }
+    },
+    "onboarding.screen3.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your start"
+          }
+        }
+      }
+    },
+    "onboarding.startDay.question": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When do you want to start?"
+          }
+        }
+      }
+    },
+    "onboarding.record.sentence1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each time you eat or drink, you add an entry: the time and a few words on what it was."
+          }
+        }
+      }
+    },
+    "onboarding.record.sentence2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"Toast and tea\" is a complete entry."
+          }
+        }
+      }
+    },
+    "onboarding.record.sentence3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is one star, \"felt like a binge\", and only you decide when it applies."
+          }
+        }
+      }
+    },
+    "onboarding.example.what": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toast and tea"
+          }
+        }
+      }
+    },
+    "onboarding.weighIn.explanation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once a week, on this day, the app asks for your weight and shows the trend. There is no goal and no target."
+          }
+        }
+      }
+    },
+    "onboarding.unanswered": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please answer this one."
+          }
+        }
+      }
+    },
+    "common.continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "common.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "common.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "common.close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
+    "common.call": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call"
+          }
+        }
+      }
+    },
+    "common.copyNumber": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy number"
+          }
+        }
+      }
+    },
+    "common.copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied"
+          }
+        }
+      }
+    },
+    "common.yes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        }
+      }
+    },
+    "common.no": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        }
+      }
+    },
+    "common.chosen": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chosen"
+          }
+        }
+      }
+    },
+    "safeguarding.exportControl": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export your record to take with you"
+          }
+        }
+      }
+    },
+    "safeguarding.gpParagraph.accessibilityLabel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The GP paragraph"
           }
         }
       }

@@ -2,6 +2,7 @@ import Foundation
 import LocalAuthentication
 import CryptoKit
 import AppLock
+import Constants
 
 /// Reads `mach_continuous_time`, ticks that advance through sleep, and
 /// converts them to seconds with `mach_timebase_info` (app-lock spec, "When
@@ -27,7 +28,7 @@ struct MachContinuousClock: ContinuousClockReading {
 /// with enrolled biometrics); the app-lock change's device-check bead lists
 /// every scenario this type's real behaviour must prove.
 struct LAContextAuthenticator: AuthenticationPerforming {
-    func authenticate(reason: String, policy: AppLock.AuthenticationPolicy) async -> Bool {
+    func authenticate(reason: CatalogueText, policy: AppLock.AuthenticationPolicy) async -> Bool {
         let context = LAContext()
         let laPolicy: LAPolicy = policy == .biometricsOnly
             ? .deviceOwnerAuthenticationWithBiometrics
@@ -35,7 +36,7 @@ struct LAContextAuthenticator: AuthenticationPerforming {
         var error: NSError?
         guard context.canEvaluatePolicy(laPolicy, error: &error) else { return false }
         return await withCheckedContinuation { continuation in
-            context.evaluatePolicy(laPolicy, localizedReason: reason) { success, _ in
+            context.evaluatePolicy(laPolicy, localizedReason: reason.string) { success, _ in
                 continuation.resume(returning: success)
             }
         }
