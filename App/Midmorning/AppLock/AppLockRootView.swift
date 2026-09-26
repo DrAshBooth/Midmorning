@@ -12,8 +12,8 @@ struct AppLockRootView: View {
     private enum Phase {
         case waitingForProtectedData
         case running(RecordStore, AppLockController)
-        /// data-and-privacy spec, "Launch safety": the third consecutive
-        /// launch with an uncleared marker. Skips onboarding gating and the
+        /// data-and-privacy spec, "Launch safety": the third open after two
+        /// failed launches in a row (r13-13). Skips onboarding gating and the
         /// reminder scheduler; shows only Export and Get support
         /// (`mm-t42.13`, proved end to end by `mm-t42.20`), under the app
         /// lock cover (`SafeModeRootView`, mm-t42.21).

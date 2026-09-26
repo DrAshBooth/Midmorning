@@ -20,27 +20,40 @@ final class LaunchSafetyTests: XCTestCase {
         XCTAssertEqual(outcome.newConsecutiveUnclearedCount, 1)
     }
 
-    /// Scenario: Third launch with an uncleared marker (built here over
-    /// fixture facts — `mm-t42.20` runs the real three-launch restart end to
-    /// end).
-    func testThirdConsecutiveUnclearedMarkerEntersSafeMode() {
+    /// Scenario: Third launch with an uncleared marker (ruling r13-13,
+    /// mm-t41.25): "the app ends before Today appears on two launches in a
+    /// row and the person opens it a third time". The first launch finds no
+    /// marker; the second and the third each find the marker the launch
+    /// before left. `LaunchSafetyWiringTests` runs the same three launches
+    /// over a real marker file.
+    func testThirdOpenAfterTwoFailedLaunchesEntersSafeMode() {
+        var markerWasUncleared = false
         var streak = 0
         var enteredSafeMode = [Bool]()
         for _ in 1...3 {
-            let outcome = LaunchSafety.startLaunch(markerWasUncleared: true, previousConsecutiveUnclearedCount: streak)
+            let outcome = LaunchSafety.startLaunch(markerWasUncleared: markerWasUncleared, previousConsecutiveUnclearedCount: streak)
             streak = outcome.newConsecutiveUnclearedCount
             enteredSafeMode.append(outcome.enterSafeMode)
+            markerWasUncleared = true // this launch ends before Today appears.
         }
-        XCTAssertEqual(enteredSafeMode, [false, false, true], "only the third consecutive uncleared launch enters safe mode")
-        XCTAssertEqual(streak, 3)
+        XCTAssertEqual(enteredSafeMode, [false, false, true], "the third open after two failed launches enters safe mode")
+        XCTAssertEqual(streak, 2, "two failed launches in a row came before the third open")
     }
 
-    /// A device stuck past three keeps counting; safe mode does not toggle
+    /// One failed launch is not enough: the second open is an ordinary
+    /// launch.
+    func testSecondOpenAfterOneFailedLaunchStaysOutOfSafeMode() {
+        let outcome = LaunchSafety.startLaunch(markerWasUncleared: true, previousConsecutiveUnclearedCount: 0)
+        XCTAssertFalse(outcome.enterSafeMode)
+        XCTAssertEqual(outcome.newConsecutiveUnclearedCount, 1)
+    }
+
+    /// A device stuck past two keeps counting; safe mode does not toggle
     /// off again on its own.
-    func testAFourthConsecutiveUnclearedMarkerStaysInSafeMode() {
-        let outcome = LaunchSafety.startLaunch(markerWasUncleared: true, previousConsecutiveUnclearedCount: 3)
+    func testAFourthOpenAfterThreeFailedLaunchesStaysInSafeMode() {
+        let outcome = LaunchSafety.startLaunch(markerWasUncleared: true, previousConsecutiveUnclearedCount: 2)
         XCTAssertTrue(outcome.enterSafeMode)
-        XCTAssertEqual(outcome.newConsecutiveUnclearedCount, 4)
+        XCTAssertEqual(outcome.newConsecutiveUnclearedCount, 3)
     }
 }
 

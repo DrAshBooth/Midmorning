@@ -18,15 +18,14 @@ final class LaunchSafetyWiringTests: XCTestCase {
     }
 
     /// Scenario: Third launch with an uncleared marker, over a real marker
-    /// file on disk (mm-t41.3 built this over fixture booleans only). A
-    /// launch already left the marker on disk before the scenario's own two
-    /// launches "in a row" (`LaunchSafety.startLaunch` only counts a streak
-    /// from a marker that already existed when the launch began, the same
-    /// precondition `LaunchSafetyTests`' fixture streak of 0 stands in for).
+    /// file on disk, in the scenario's own order (ruling r13-13,
+    /// mm-t41.25): "the app ends before Today appears on two launches in a
+    /// row and the person opens it a third time". No marker exists before
+    /// the first launch.
     func testThirdConsecutiveLaunchWithARealUnclearedMarkerFileEntersSafeMode() throws {
         let directory = try makeTemporaryDirectory()
         let markerURL = directory.appendingPathComponent("launch-marker.txt")
-        _ = beginLaunch(markerURL: markerURL) // an earlier launch already left the marker.
+        XCTAssertFalse(FileManager.default.fileExists(atPath: markerURL.path))
 
         // Launch 1 of 2 "in a row": ends before Today appears.
         let first = beginLaunch(markerURL: markerURL)
