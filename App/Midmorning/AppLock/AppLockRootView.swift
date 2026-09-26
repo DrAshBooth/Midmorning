@@ -196,6 +196,7 @@ private struct RunningRootView: View {
     let onDeleteFromThisDevice: () -> Void
     @StateObject private var deletionNotifier = DeletionNotifier()
     @Environment(\.scenePhase) private var scenePhase
+    @State private var showingWeighInFromReminder = false
 
     var body: some View {
         TodayView(store: store)
@@ -227,6 +228,17 @@ private struct RunningRootView: View {
                 NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
                     controller.handle(.pendingRouteResolved)
                 }
+            }
+            // A tap on the weigh-in day reminder (reminders spec, "The
+            // weigh-in day reminder"). No pending-route bypass: unlike
+            // "Add", the notification carries no authentication-required
+            // option, so the device is already unlocked by the time the app
+            // opens.
+            .fullScreenCover(isPresented: $showingWeighInFromReminder) {
+                NavigationStack { WeighInScreenView(store: store) }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .weighInReminderTapped)) { _ in
+                showingWeighInFromReminder = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .reminderAddActionTapped)) { _ in
                 controller.handle(.pendingRouteRequested(.newEntry))
