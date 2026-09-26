@@ -152,19 +152,22 @@ public final class RecordStore {
     /// Saves one entry as a new `Item` and its first `ItemVersion`, and
     /// returns the row. Trims white space and line breaks from the ends of
     /// `what` and `context`. Truncates `time` to the minute. Throws on
-    /// failure with no entry data in the error.
+    /// failure with no entry data in the error. The record day key comes from
+    /// the "Day starts at" rows in force (record spec, "The record day");
+    /// `dayStartHour` sets one fixed hour instead, for a test.
     @discardableResult
     public func add(
         time: Date, what: String, feltLikeABinge: Bool, createdAt: Date, utcOffsetSeconds: Int,
-        whereText: String = "", context: String = "", dayStartHour: Int = RecordDay.startHour
+        whereText: String = "", context: String = "", dayStartHour: Int? = nil
     ) throws -> RecordRow {
         let minute = Self.truncatedToMinute(time)
         let entryId = UUID()
         let item = Item(id: entryId)
+        let schedule = try dayStartHour.map(DayStartSchedule.constant) ?? dayStartSchedule()
         let version = ItemVersion(
             entryId: entryId,
             changedAt: createdAt,
-            dayKey: RecordDay.key(for: minute, utcOffsetSeconds: utcOffsetSeconds, startHour: dayStartHour),
+            dayKey: RecordDay.key(for: minute, utcOffsetSeconds: utcOffsetSeconds, schedule: schedule),
             time: minute,
             utcOffsetSeconds: utcOffsetSeconds,
             what: what.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -236,8 +239,9 @@ public final class RecordStore {
     /// in the calendar's zone, ordered by time, then by creation moment. An
     /// entry's day was fixed at save, so this matches by key, never by
     /// recomputing the entry's day.
-    public func entries(recordDayContaining moment: Date, calendar: Calendar, dayStartHour: Int = RecordDay.startHour) throws -> [RecordRow] {
-        try entries(dayKey: RecordDay.key(containing: moment, calendar: calendar, startHour: dayStartHour))
+    public func entries(recordDayContaining moment: Date, calendar: Calendar, dayStartHour: Int? = nil) throws -> [RecordRow] {
+        let schedule = try dayStartHour.map(DayStartSchedule.constant) ?? dayStartSchedule()
+        return try entries(dayKey: RecordDay.key(containing: moment, calendar: calendar, schedule: schedule))
     }
 
     /// The winning, non-deleted row per entry id whose winning version keys
@@ -263,25 +267,15 @@ public final class RecordStore {
     /// The earliest record day key with a non-deleted entry, or `nil` when
     /// none exists (export spec, "Choose a date range": "When the earliest
     /// record day with an entry is later, 'From' MUST default to that
-    /// day."). A coarse presence check, like `dateKeysWithContent(before:)`:
-    /// any surviving `ItemVersion` for the day counts, with no per-entry
-    /// winner picked first.
+    /// day.").
     public func earliestEntryDayKey() throws -> String? {
-        var descriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { !$0.deleted }, sortBy: [SortDescriptor(\.dayKey)])
-        descriptor.includePendingChanges = false
-        descriptor.fetchLimit = 1
-        return try context.fetch(descriptor).first?.dayKey
+        try liveEntryDayKeys(before: nil).min()
     }
 
     /// Every date key before `dateKey` that has a non-deleted entry or an
-    /// active day state, for "Earlier record days". A coarse presence check:
-    /// any surviving `ItemVersion` for the day counts, without picking a
-    /// per-entry winner first — cheap, and `entries(dayKey:)` is still the
-    /// source of truth for what a day shows once opened.
+    /// active day state, for "Earlier record days".
     public func dateKeysWithContent(before dateKey: String) throws -> Set<String> {
-        var versionDescriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { $0.dayKey < dateKey && !$0.deleted })
-        versionDescriptor.includePendingChanges = false
-        let entryDayKeys = Set(try context.fetch(versionDescriptor).map(\.dayKey))
+        let entryDayKeys = try liveEntryDayKeys(before: dateKey)
 
         var stateDescriptor = FetchDescriptor<DayState>(predicate: #Predicate { $0.dateKey < dateKey })
         stateDescriptor.includePendingChanges = false
@@ -289,6 +283,23 @@ public final class RecordStore {
         let activeStateDayKeys = Set(stateWinners.values.filter { $0.value == "on" }.map(\.dateKey))
 
         return entryDayKeys.union(activeStateDayKeys)
+    }
+
+    /// The record day keys (before `dateKey`, when given) of every entry
+    /// whose winning version is not deleted. A delete appends a deleted
+    /// version and keeps the earlier ones (data-and-privacy spec, "Entries
+    /// are append-only versions"), so a plain `!deleted` filter on versions
+    /// still matches a deleted entry's earlier version. Every version of an
+    /// entry holds the same key, because an entry never changes record day.
+    private func liveEntryDayKeys(before dateKey: String?) throws -> Set<String> {
+        var descriptor: FetchDescriptor<ItemVersion>
+        if let dateKey {
+            descriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { $0.dayKey < dateKey })
+        } else {
+            descriptor = FetchDescriptor<ItemVersion>()
+        }
+        descriptor.includePendingChanges = false
+        return Set(EntryWinner.winners(in: try context.fetch(descriptor)).values.filter { !$0.deleted }.map(\.dayKey))
     }
 
     private func winningVersion(entryId: UUID) throws -> ItemVersion? {
@@ -525,28 +536,42 @@ public final class RecordStore {
     // MARK: - The Record group: "Day starts at" and "Gap bands" (settings
     // spec, "The Record group"; decision 65)
 
+    /// Every append-only `DayStartSetting` row, one winner per effective day,
+    /// as one schedule. A screen reads it once per load and passes it to
+    /// every `RecordDay` call, so the current record day, its neighbours and
+    /// each day's start all use the day start in force, with no two-step
+    /// lookup (record spec, "The record day").
+    public func dayStartSchedule() throws -> DayStartSchedule {
+        let rows = try context.fetch(FetchDescriptor<Settings>())
+        let changes = SettingsReconciler.winners(in: rows).values.compactMap { row -> DayStartSchedule.Change? in
+            guard row.key.hasPrefix("dayStart."), let hour = Int(row.value) else { return nil }
+            return DayStartSchedule.Change(effectiveFromDayKey: String(row.key.dropFirst("dayStart.".count)), hour: hour)
+        }
+        return DayStartSchedule(changes: changes)
+    }
+
     /// The day-start hour in effect for the record day keyed `dayKey`: the
     /// latest append-only `DayStartSetting` row whose effective day is
     /// `dayKey` or earlier, or `RecordDay.startHour` when no row applies yet.
     public func dayStartHour(effectiveOn dayKey: String) throws -> Int {
-        let rows = try context.fetch(FetchDescriptor<Settings>())
-        let winner = SettingsReconciler.winners(in: rows).values
-            .compactMap { row -> (effectiveFromDayKey: String, hour: Int)? in
-                guard row.key.hasPrefix("dayStart."), let hour = Int(row.value) else { return nil }
-                return (String(row.key.dropFirst("dayStart.".count)), hour)
-            }
-            .filter { $0.effectiveFromDayKey <= dayKey }
-            .max { $0.effectiveFromDayKey < $1.effectiveFromDayKey }
-        return winner?.hour ?? RecordDay.startHour
+        try dayStartSchedule().hour(effectiveOn: dayKey)
     }
 
     /// Writes a new "Day starts at" hour, effective from the record day
     /// right after `now` — never from `now`'s own record day, so no saved
     /// entry's record day changes.
     public func setDayStartHour(_ hour: Int, now: Date, calendar: Calendar, changedAt: Date = .now) throws {
-        let currentHour = try dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar))
-        let nextDayKey = RecordDay.nextDayKey(after: now, calendar: calendar, startHour: currentHour)
-        try setSettingValue(String(hour), key: DayStartSetting.key(effectiveFromDayKey: nextDayKey), changedAt: changedAt)
+        let choices = RecordDay.startHourChoices
+        let nextDayKey = RecordDay.nextDayKey(after: now, calendar: calendar, schedule: try dayStartSchedule())
+        try setSettingValue(String(min(max(hour, choices.lowerBound), choices.upperBound)), key: DayStartSetting.key(effectiveFromDayKey: nextDayKey), changedAt: changedAt)
+    }
+
+    /// The hour the "Day starts at" row shows: the hour in force from the
+    /// record day after `now`, so the row shows a change at once, although
+    /// the change applies only from the next day start.
+    public func dayStartHourFromNextRecordDay(after now: Date, calendar: Calendar) throws -> Int {
+        let schedule = try dayStartSchedule()
+        return schedule.hour(effectiveOn: RecordDay.nextDayKey(after: now, calendar: calendar, schedule: schedule))
     }
 
     private static let gapBandsKey = "record.gapBands.enabled"
@@ -1219,9 +1244,7 @@ public final class RecordStore {
     /// is the rule; this gathers the store-wide facts it needs, since no
     /// single `Day`/`ItemVersion` row already carries "is this day paused".
     public func plannedDayKeys() throws -> Set<String> {
-        var versionDescriptor = FetchDescriptor<ItemVersion>(predicate: #Predicate { !$0.deleted })
-        versionDescriptor.includePendingChanges = false
-        let entryDayKeys = Set(try context.fetch(versionDescriptor).map(\.dayKey))
+        let entryDayKeys = try liveEntryDayKeys(before: nil)
 
         var dayDescriptor = FetchDescriptor<Day>()
         dayDescriptor.includePendingChanges = false

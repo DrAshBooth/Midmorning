@@ -65,17 +65,18 @@ final class RecordStoreTests: XCTestCase {
         newYork.timeZone = TimeZone(identifier: "America/New_York")!
         let seenFromNewYork = try reopened.entries(recordDayContaining: at(24, 22, 0), calendar: newYork)
         XCTAssertEqual(seenFromNewYork.map(\.clockTime), expected.map(\.0), "the same record day from New York, keyed at save")
-        XCTAssertEqual(RecordDay.key(for: at(25, 0, 30), utcOffsetSeconds: londonOffset), "2026-09-24")
+        XCTAssertEqual(RecordDay.key(for: at(25, 0, 30), utcOffsetSeconds: londonOffset, schedule: .standard), "2026-09-24")
         XCTAssertEqual(RecordDay.key(for: at(25, 0, 30), utcOffsetSeconds: londonOffset, startHour: 0), "2026-09-25", "a day start of 00:00 puts 00:30 on the 25th")
 
         // Clock change: the record day of Saturday 24 October 2026 is 25 hours long.
-        let clockChange = RecordDay.interval(containing: at(25, 1, 0, month: 10), calendar: london)
+        let clockChange = RecordDay.interval(containing: at(25, 1, 0, month: 10), calendar: london, schedule: .standard)
         XCTAssertEqual(clockChange.start, at(24, 4, 0, month: 10))
         XCTAssertEqual(clockChange.duration, 25 * 3600)
 
         // Night.
-        XCTAssertTrue(RecordDay.isNight(at(25, 1, 0), calendar: london))
-        XCTAssertFalse(RecordDay.isNight(at(24, 13, 30), calendar: london))
+        let thursday = RecordDay.interval(containing: at(24, 13, 30), calendar: london, schedule: .standard)
+        XCTAssertTrue(RecordDay.isNight(at(25, 1, 0), inRecordDay: thursday, calendar: london))
+        XCTAssertFalse(RecordDay.isNight(at(24, 13, 30), inRecordDay: thursday, calendar: london))
     }
 
     /// mm-t12.4, "Two files": Record.store and Local.store, each with their

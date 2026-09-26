@@ -73,12 +73,12 @@ final class PlanStoreTests: XCTestCase {
         try store.setTemplateSlotsJSON(weekdayJSON, kind: .weekday, changedAt: at(2026, 9, 20, 9))
 
         // Last opened 20:00 Monday 21 September; opens 09:00 Thursday 24 September.
-        var interval = RecordDay.interval(containing: at(2026, 9, 21, 20), calendar: london)
-        let last = RecordDay.interval(containing: at(2026, 9, 24, 9), calendar: london)
+        var interval = RecordDay.interval(containing: at(2026, 9, 21, 20), calendar: london, schedule: .standard)
+        let last = RecordDay.interval(containing: at(2026, 9, 24, 9), calendar: london, schedule: .standard)
         var materialisedKeys: [String] = []
         while interval.start < last.start {
-            interval = RecordDay.next(interval, calendar: london)
-            let dateKey = RecordDay.key(containing: interval.start, calendar: london)
+            interval = RecordDay.next(interval, calendar: london, schedule: .standard)
+            let dateKey = RecordDay.key(containing: interval.start, calendar: london, schedule: .standard)
             let weekday = london.component(.weekday, from: interval.start)
             let kind = RecordStore.TemplateKind(rawValue: Materialisation.templateKind(forRecordDayStartingOnWeekday: weekday))!
             try store.materialiseDayFromTemplate(dateKey: dateKey, slotsJSON: try store.templateSlotsJSON(kind), windowBeforeMinutes: 60, windowAfterMinutes: 90)
@@ -96,9 +96,9 @@ final class PlanStoreTests: XCTestCase {
     func testTonightForTomorrow() throws {
         let store = try makeStore()
         // 22:00 Thursday 24 September; "Tomorrow's plan" targets Friday 25 September.
-        let today = RecordDay.interval(containing: at(2026, 9, 24, 22), calendar: london)
-        let tomorrow = RecordDay.next(today, calendar: london)
-        let tomorrowKey = RecordDay.key(containing: tomorrow.start, calendar: london)
+        let today = RecordDay.interval(containing: at(2026, 9, 24, 22), calendar: london, schedule: .standard)
+        let tomorrow = RecordDay.next(today, calendar: london, schedule: .standard)
+        let tomorrowKey = RecordDay.key(containing: tomorrow.start, calendar: london, schedule: .standard)
         XCTAssertEqual(tomorrowKey, "2026-09-25")
         try store.setDayPlan(dateKey: tomorrowKey, slotsJSON: PlanCodec.encode([PlannedMeal(slotIndex: 2, time: "14:00")]), windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: at(2026, 9, 24, 22), setBy: "device", changedAt: at(2026, 9, 24, 22))
         XCTAssertEqual(PlanCodec.decode(try store.dayPlan(dateKey: "2026-09-25")!.slotsJSON).first?.time, "14:00")
@@ -109,9 +109,9 @@ final class PlanStoreTests: XCTestCase {
     func testThisMorningForToday() throws {
         let store = try makeStore()
         // 07:30 Friday 25 September; "Today's plan" targets Friday.
-        let today = RecordDay.interval(containing: at(2026, 9, 25, 7, 30), calendar: london)
-        let todayKey = RecordDay.key(containing: today.start, calendar: london)
-        let saturdayKey = RecordDay.key(containing: RecordDay.next(today, calendar: london).start, calendar: london)
+        let today = RecordDay.interval(containing: at(2026, 9, 25, 7, 30), calendar: london, schedule: .standard)
+        let todayKey = RecordDay.key(containing: today.start, calendar: london, schedule: .standard)
+        let saturdayKey = RecordDay.key(containing: RecordDay.next(today, calendar: london, schedule: .standard).start, calendar: london, schedule: .standard)
         try store.setDayPlan(dateKey: todayKey, slotsJSON: PlanCodec.encode([PlannedMeal(slotIndex: 2, time: "13:30")]), windowBeforeMinutes: 60, windowAfterMinutes: 90, setAt: at(2026, 9, 25, 7, 30), setBy: "device", changedAt: at(2026, 9, 25, 7, 30))
         XCTAssertEqual(PlanCodec.decode(try store.dayPlan(dateKey: todayKey)!.slotsJSON).first?.time, "13:30")
         XCTAssertNil(try store.dayPlan(dateKey: saturdayKey), "Saturday's plan is unchanged")
@@ -121,10 +121,10 @@ final class PlanStoreTests: XCTestCase {
     func testTomorrowAfterMidnight() throws {
         // 01:00 Saturday 26 September, day start 04:00: today is Friday 25;
         // "Tomorrow's plan" edits the record day of Saturday 26 September.
-        let today = RecordDay.interval(containing: at(2026, 9, 26, 1), calendar: london)
-        XCTAssertEqual(RecordDay.key(containing: today.start, calendar: london), "2026-09-25")
-        let tomorrow = RecordDay.next(today, calendar: london)
-        XCTAssertEqual(RecordDay.key(containing: tomorrow.start, calendar: london), "2026-09-26")
+        let today = RecordDay.interval(containing: at(2026, 9, 26, 1), calendar: london, schedule: .standard)
+        XCTAssertEqual(RecordDay.key(containing: today.start, calendar: london, schedule: .standard), "2026-09-25")
+        let tomorrow = RecordDay.next(today, calendar: london, schedule: .standard)
+        XCTAssertEqual(RecordDay.key(containing: tomorrow.start, calendar: london, schedule: .standard), "2026-09-26")
     }
 
     // MARK: mm-t23.13, "The plan's data stays on the device"

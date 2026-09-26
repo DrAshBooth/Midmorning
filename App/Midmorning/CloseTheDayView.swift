@@ -50,7 +50,7 @@ struct CloseTheDayView: View {
             }
             .getSupport()
             .sheet(isPresented: $showingNewEntry) {
-                NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
+                NewEntryView(store: store, initialTime: nil) { _ in
                     load()
                 }
             }

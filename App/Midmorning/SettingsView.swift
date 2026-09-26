@@ -30,7 +30,8 @@ struct SettingsView: View {
     /// "Delete-all").
     @EnvironmentObject private var deletionNotifier: DeletionNotifier
 
-    @State private var dayStartsAt = ClockTime.date(hour: RecordDay.startHour, minute: 0)
+    /// `load()` reads the hour in force from the next record day.
+    @State private var dayStartHour = RecordDay.startHour
     @State private var gapBandsOn = true
     @State private var weeklySummaryOn = true
     @State private var weighInWeekday: Int?
@@ -53,12 +54,22 @@ struct SettingsView: View {
             }
 
             Section("settings.group.record") {
-                DatePicker("settings.record.dayStartsAt", selection: $dayStartsAt, displayedComponents: .hourAndMinute)
-                    .onChange(of: dayStartsAt) { saveDayStartsAt() }
-                Toggle(ReviewContent.weeklySummarySwitchLabel, isOn: $weeklySummaryOn)
-                    .onChange(of: weeklySummaryOn) { _, on in try? store.setWeeklySummaryOn(on) }
-                Toggle("settings.record.gapBands", isOn: $gapBandsOn)
-                    .onChange(of: gapBandsOn) { _, on in try? store.setGapBandsOn(on) }
+                // settings spec, "The Record group": a whole hour from
+                // 00:00 to 12:00. Each control writes only from its own
+                // setter, so opening the screen writes no row (mm-t13.13).
+                Picker("settings.record.dayStartsAt", selection: dayStartHourSelection) {
+                    ForEach(RecordDay.startHourChoices, id: \.self) { hour in
+                        Text(verbatim: String(format: "%02d:00", hour)).tag(hour)
+                    }
+                }
+                Toggle(ReviewContent.weeklySummarySwitchLabel, isOn: Binding(
+                    get: { weeklySummaryOn },
+                    set: { on in weeklySummaryOn = on; try? store.setWeeklySummaryOn(on) }
+                ))
+                Toggle("settings.record.gapBands", isOn: Binding(
+                    get: { gapBandsOn },
+                    set: { on in gapBandsOn = on; try? store.setGapBandsOn(on) }
+                ))
                 // settings spec, "The Record group": "'Export' as a
                 // control." export spec, "Choose a date range": reachable
                 // from the settings screen in one tap, and from Today in two
@@ -76,12 +87,14 @@ struct SettingsView: View {
                     Text(Screen3Content.wontBeWeighingChoice).tag(Optional<Int>.none)
                 }
                 .accessibilityLabel(Screen3Content.weighInDayHeading)
-                Picker(WeighInContent.unitLabel, selection: $weighInUnit) {
+                Picker(WeighInContent.unitLabel, selection: Binding(
+                    get: { weighInUnit },
+                    set: { unit in weighInUnit = unit; try? store.setWeighInUnit(unit.rawValue) }
+                )) {
                     Text(WeighInContent.kgChoice).tag(WeightUnit.kg)
                     Text(WeighInContent.stLbChoice).tag(WeightUnit.stLb)
                 }
                 .accessibilityLabel(WeighInContent.unitLabel)
-                .onChange(of: weighInUnit) { _, unit in try? store.setWeighInUnit(unit.rawValue) }
             }
 
             Section("settings.group.privacy") {
@@ -154,9 +167,8 @@ struct SettingsView: View {
     }
 
     private func load() {
-        let dayKey = RecordDay.key(containing: Date(), calendar: .current)
-        if let hour = try? store.dayStartHour(effectiveOn: dayKey) {
-            dayStartsAt = ClockTime.date(hour: hour, minute: 0)
+        if let hour = try? store.dayStartHourFromNextRecordDay(after: Date(), calendar: .current) {
+            dayStartHour = hour
         }
         gapBandsOn = (try? store.gapBandsOn()) ?? true
         weeklySummaryOn = (try? store.weeklySummaryOn()) ?? true
@@ -183,10 +195,20 @@ struct SettingsView: View {
         }
     }
 
-    private func saveDayStartsAt() {
-        let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: dayStartsAt)
-        try? store.setDayStartHour(hour, now: Date(), calendar: calendar)
+    /// A new hour applies from the next day start (settings spec, "The
+    /// Record group"). The row shows it at once, and a second choice of the
+    /// same hour writes no row. The reminder horizon then uses the new day
+    /// start for the days it changes.
+    private var dayStartHourSelection: Binding<Int> {
+        Binding(
+            get: { dayStartHour },
+            set: { hour in
+                guard hour != dayStartHour else { return }
+                dayStartHour = hour
+                try? store.setDayStartHour(hour, now: Date(), calendar: .current)
+                ReminderCoordinator.recomputeAndApply(store: store)
+            }
+        )
     }
 
     /// settings spec, "The Weigh-in group": the same label and choices as

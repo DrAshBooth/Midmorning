@@ -30,7 +30,7 @@ final class RestartStoreTests: XCTestCase {
         let store = try makeStore()
         try store.setStartDayKey("2027-01-01", changedAt: at(2027, 1, 1, 9))
         let now = at(2027, 1, 15, 10)
-        let choice = StartDayChoice.dayKey(for: .today, now: now, calendar: london)
+        let choice = StartDayChoice.dayKey(for: .today, now: now, calendar: london, schedule: .standard)
         try store.setStartDayKey(choice, changedAt: now)
         try store.setRestartAt(now, changedAt: now)
         XCTAssertEqual(try store.startDayKey(), "2027-01-15")
@@ -41,7 +41,7 @@ final class RestartStoreTests: XCTestCase {
     func testRestartTomorrow() throws {
         let store = try makeStore()
         let now = at(2027, 1, 15, 10)
-        let choice = StartDayChoice.dayKey(for: .tomorrow, now: now, calendar: london)
+        let choice = StartDayChoice.dayKey(for: .tomorrow, now: now, calendar: london, schedule: .standard)
         try store.setStartDayKey(choice, changedAt: now)
         XCTAssertEqual(try store.startDayKey(), "2027-01-16")
     }
@@ -65,7 +65,7 @@ final class RestartStoreTests: XCTestCase {
         try store.setStartDayKey("2027-01-01", changedAt: at(2027, 1, 1, 9))
         _ = try store.add(time: at(2027, 1, 2, 9), what: "Toast", feltLikeABinge: false, createdAt: at(2027, 1, 2, 9), utcOffsetSeconds: 0)
         let now = at(2027, 1, 3, 10)
-        try store.setStartDayKey(StartDayChoice.dayKey(for: .today, now: now, calendar: london), changedAt: now)
+        try store.setStartDayKey(StartDayChoice.dayKey(for: .today, now: now, calendar: london, schedule: .standard), changedAt: now)
         XCTAssertEqual(try store.entries(dayKey: "2027-01-02").count, 1, "the entry from before the restart stays")
     }
 

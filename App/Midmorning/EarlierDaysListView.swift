@@ -31,8 +31,9 @@ struct EarlierDaysListView: View {
     private func load() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
-        let previous = RecordDay.previous(RecordDay.interval(containing: Date(), calendar: calendar), calendar: calendar)
-        let previousKey = RecordDay.key(containing: previous.start, calendar: calendar)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let previous = RecordDay.previous(RecordDay.interval(containing: Date(), calendar: calendar, schedule: schedule), calendar: calendar, schedule: schedule)
+        let previousKey = RecordDay.key(containing: previous.start, calendar: calendar, schedule: schedule)
         let content = (try? store.dateKeysWithContent(before: previousKey)) ?? []
         dayKeys = EarlierDays.list(dateKeysWithContent: content, previousRecordDayKey: previousKey)
     }
@@ -111,7 +112,7 @@ struct EarlierDayDetailView: View {
             .padding()
         }
         .sheet(item: $editingEntry) { entry in
-            EditEntryView(store: store, entry: entry, dayStartHour: RecordDay.startHour) { _ in
+            EditEntryView(store: store, entry: entry) { _ in
                 load()
             } onDelete: {
                 load()
@@ -149,19 +150,20 @@ struct EarlierDayDetailView: View {
     }
 
     private func move(by delta: Int) {
-        guard let date = DayHeading.dayKeyDate(dayKey) else { return }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
-        let interval = RecordDay.interval(containing: date.addingTimeInterval(12 * 3600), calendar: calendar)
-        let newInterval = delta > 0 ? RecordDay.next(interval, calendar: calendar) : RecordDay.previous(interval, calendar: calendar)
-        dayKey = RecordDay.key(containing: newInterval.start, calendar: calendar)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        guard let interval = RecordDay.interval(forKey: dayKey, calendar: calendar, schedule: schedule) else { return }
+        let newInterval = delta > 0 ? RecordDay.next(interval, calendar: calendar, schedule: schedule) : RecordDay.previous(interval, calendar: calendar, schedule: schedule)
+        dayKey = RecordDay.key(containing: newInterval.start, calendar: calendar, schedule: schedule)
     }
 
     private func load() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
-        let date = DayHeading.dayKeyDate(dayKey) ?? Date()
-        let interval = RecordDay.interval(containing: date.addingTimeInterval(12 * 3600), calendar: calendar)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let interval = RecordDay.interval(forKey: dayKey, calendar: calendar, schedule: schedule)
+            ?? RecordDay.interval(containing: Date(), calendar: calendar, schedule: schedule)
         let planShows = stage2OpenedDayKey.map { dayKey >= $0 } ?? false
         section = DaySection.load(dayKey: dayKey, interval: interval, role: .earlier, store: store, stage2Open: planShows, stage2OpenedDayKey: stage2OpenedDayKey)
     }

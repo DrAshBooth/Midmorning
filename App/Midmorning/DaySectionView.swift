@@ -94,8 +94,11 @@ struct DaySectionHeading: View {
             Divider()
             Button("plan.today") { openPlanBuilder(todaysPlan) }
             Button("plan.tomorrow") {
-                let tomorrow = RecordDay.next(section.interval, calendar: .current)
-                openPlanBuilder(.day(dateKey: RecordDay.key(containing: tomorrow.start, calendar: .current), titleKey: "plan.tomorrow", isCurrentDay: false))
+                // The next record day's key is the next calendar date,
+                // whatever the day start in force.
+                if let tomorrow = Materialisation.nextDateKey(after: section.id) {
+                    openPlanBuilder(.day(dateKey: tomorrow, titleKey: "plan.tomorrow", isCurrentDay: false))
+                }
             }
             Button("plan.weekday") {
                 openPlanBuilder(.template(kind: .weekday, titleKey: "plan.weekday"))

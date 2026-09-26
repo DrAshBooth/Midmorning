@@ -103,7 +103,7 @@ struct OnboardingRootView: View {
     }
 
     private func computeStartDayKey() throws -> String {
-        StartDayChoice.dayKey(for: answers.startDayChoice, now: .now, calendar: .current)
+        StartDayChoice.dayKey(for: answers.startDayChoice, now: .now, calendar: .current, schedule: try store.dayStartSchedule())
     }
 }
 

@@ -173,7 +173,7 @@ struct ReviewScreenView: View {
     }
 
     private func load() {
-        startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: now(), calendar: calendar)
+        startDay = (try? store.startDayKey()) ?? RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         summary = WeeklyReviewModel.summary(store: store, week: week, startDay: startDay, calendar: calendar)
 
         let dueDayKey = ReviewDue.dueDayKey(week: week, startDay: startDay, calendar: calendar)

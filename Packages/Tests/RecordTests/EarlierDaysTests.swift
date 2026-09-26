@@ -54,10 +54,10 @@ final class EarlierDaysTests: XCTestCase {
     func testMoveBetweenDaysAndReturnToToday() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/London")!
-        let monday = RecordDay.interval(containing: london(12, 0, day: 21), calendar: calendar)
-        let tuesday = RecordDay.next(monday, calendar: calendar)
-        XCTAssertEqual(RecordDay.key(containing: tuesday.start, calendar: calendar), "2026-09-22")
-        XCTAssertEqual(RecordDay.previous(tuesday, calendar: calendar).start, monday.start, "back to Monday")
+        let monday = RecordDay.interval(containing: london(12, 0, day: 21), calendar: calendar, schedule: .standard)
+        let tuesday = RecordDay.next(monday, calendar: calendar, schedule: .standard)
+        XCTAssertEqual(RecordDay.key(containing: tuesday.start, calendar: calendar, schedule: .standard), "2026-09-22")
+        XCTAssertEqual(RecordDay.previous(tuesday, calendar: calendar, schedule: .standard).start, monday.start, "back to Monday")
     }
 
     /// Scenario: No earlier day yet.

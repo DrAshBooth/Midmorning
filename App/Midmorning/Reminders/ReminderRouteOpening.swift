@@ -81,7 +81,7 @@ private struct ReminderRouteOpening: ViewModifier {
         guard appLockController.state.opensAReminderRoute else { return }
         _ = routes.take()
         let now = Date()
-        let currentDayKey = RecordDay.key(containing: now, calendar: .current)
+        let currentDayKey = RecordDay.key(containing: now, calendar: .current, schedule: (try? store.dayStartSchedule()) ?? .standard)
         switch route {
         case .today, .addAction:
             break

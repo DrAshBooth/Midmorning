@@ -53,8 +53,9 @@ struct RestartChoiceView: View {
     private func decide() {
         let now = Date()
         let calendar = Calendar.current
-        let dayStart = (try? store.dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar))) ?? RecordDay.startHour
-        let currentRecordDay = RecordDay.key(containing: now, calendar: calendar, startHour: dayStart)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let currentRecordDay = RecordDay.key(containing: now, calendar: calendar, schedule: schedule)
+        let dayStart = schedule.hour(effectiveOn: currentRecordDay)
         let askedAt = try? store.profile()?.askedAt
         if RestartGate.rescreenRequired(askedAt: askedAt ?? nil, now: now, currentRecordDay: currentRecordDay, dayStart: dayStart, calendar: calendar) {
             step = .rescreen
@@ -66,7 +67,7 @@ struct RestartChoiceView: View {
     private func restart(_ choice: StartDayChoice.Choice) {
         let now = Date()
         let calendar = Calendar.current
-        let newStartDay = StartDayChoice.dayKey(for: choice, now: now, calendar: calendar)
+        let newStartDay = StartDayChoice.dayKey(for: choice, now: now, calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         try? store.setStartDayKey(newStartDay, changedAt: now)
         try? store.setRestartAt(now, changedAt: now)
         onFinished()

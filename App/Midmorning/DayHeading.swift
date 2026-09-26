@@ -1,23 +1,29 @@
 import Foundation
+import Record
 
 /// The weekday-and-date text every day heading and time-control segment
 /// uses (record spec, "Today's appearance"; "The new-entry screen's
-/// controls"). Always en-GB, the Gregorian calendar and the record's zone
-/// (product-rules spec, "Dates and times in strings").
+/// controls"). Always en-GB, the Gregorian calendar and the device zone
+/// (product-rules spec, "Dates and times in strings"). A day key is read
+/// and formatted in that one calendar, so its date never moves by a day
+/// (`DayKeyText`).
 enum DayHeading {
+    /// The Gregorian calendar in the device zone.
+    static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar
+    }
+
     /// "Thursday 24 September" — no time, no year, no night suffix. Used by
     /// the new-entry and edit screens' time-control segments, and by the
     /// "Earlier days" list rows.
     static func dateOnly(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_GB")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "EEEE d MMMM"
-        return formatter.string(from: date)
+        DayKeyText.weekdayAndDate(date, calendar: calendar)
     }
 
     /// Today's own day heading: the date, with ", night" appended for the
-    /// current day between 00:00 and 03:59 (record spec, "Today's
+    /// current day between 00:00 and the day start (record spec, "Today's
     /// appearance").
     static func text(for date: Date, night: Bool) -> String {
         dateOnly(date) + (night ? ", night" : "")
@@ -27,17 +33,12 @@ enum DayHeading {
     /// "Earlier days" list (record spec, "Earlier record days": "Each row in
     /// the list MUST show the weekday and date only").
     static func dateOnly(forDayKey dayKey: String) -> String {
-        guard let date = dayKeyDate(dayKey) else { return dayKey }
-        return dateOnly(date)
+        DayKeyText.weekdayAndDate(forKey: dayKey, calendar: calendar)
     }
 
+    /// Noon on the key's calendar date in the device zone, so a weekday or
+    /// date read from it with the device calendar is the key's own.
     static func dayKeyDate(_ dayKey: String) -> Date? {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.timeZone = .gmt
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: dayKey)
+        RecordDay.noon(ofKey: dayKey, calendar: calendar)
     }
 }

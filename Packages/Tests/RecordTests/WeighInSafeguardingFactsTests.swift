@@ -29,7 +29,7 @@ final class WeighInSafeguardingFactsTests: XCTestCase {
     }
 
     private func dayKey(_ year: Int, _ month: Int, _ day: Int) -> String {
-        RecordDay.key(containing: at(year, month, day), calendar: utc)
+        RecordDay.key(containing: at(year, month, day), calendar: utc, schedule: .standard)
     }
 
     /// Every kept weigh-in as `Programme`'s own fact type, the conversion

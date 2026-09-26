@@ -54,7 +54,8 @@ enum ReminderCoordinator {
         // Both store files carry complete protection: with the device
         // locked, the next `protectedDataDidBecomeAvailable` runs this again.
         guard UIApplication.shared.isProtectedDataAvailable else { return }
-        let currentKey = RecordDay.key(containing: now, calendar: calendar)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let currentKey = RecordDay.key(containing: now, calendar: calendar, schedule: schedule)
         let applied: [QueuedAction]
         do {
             applied = try ownWrites { try ActionQueueFile.drain(into: store, currentRecordDayKey: currentKey) }
@@ -78,9 +79,10 @@ enum ReminderCoordinator {
     }
 
     private static func finish(store: RecordStore, granted: Bool, delivered: [DeliveredReminder], now: Date, calendar: Calendar) {
-        let currentInterval = RecordDay.interval(containing: now, calendar: calendar)
-        let currentKey = RecordDay.key(containing: now, calendar: calendar)
-        ownWrites { updateStopCounts(store: store, delivered: delivered, currentInterval: currentInterval, calendar: calendar) }
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let currentInterval = RecordDay.interval(containing: now, calendar: calendar, schedule: schedule)
+        let currentKey = RecordDay.key(containing: now, calendar: calendar, schedule: schedule)
+        ownWrites { updateStopCounts(store: store, delivered: delivered, currentInterval: currentInterval, schedule: schedule, calendar: calendar) }
 
         let snoozeMinutes = (try? store.remindAgainMinutes()) ?? ProgrammeConstants.default.snoozeMinutes
         if registeredSnoozeMinutes != snoozeMinutes {
@@ -177,16 +179,17 @@ enum ReminderCoordinator {
         let stage2Open = ProgrammeModel.load(store: store, now: now, calendar: calendar).state.isOpen(.regularEating)
         let silentDaysStop = SilentDayTracker.stopped(streak: (try? store.silentDayStreak()) ?? 0)
         var days: [SchedulerDay] = []
-        var previousDayKey = RecordDay.key(containing: RecordDay.previous(RecordDay.interval(containing: now, calendar: calendar), calendar: calendar).start, calendar: calendar)
-        var dayInterval = RecordDay.interval(containing: now, calendar: calendar)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        var previousDayKey = RecordDay.key(containing: RecordDay.previous(RecordDay.interval(containing: now, calendar: calendar, schedule: schedule), calendar: calendar, schedule: schedule).start, calendar: calendar, schedule: schedule)
+        var dayInterval = RecordDay.interval(containing: now, calendar: calendar, schedule: schedule)
 
         for index in 0..<constants.reminderHorizonDays {
-            let dayKey = RecordDay.key(containing: dayInterval.start, calendar: calendar)
+            let dayKey = RecordDay.key(containing: dayInterval.start, calendar: calendar, schedule: schedule)
             days.append(schedulerDay(store: store, dayKey: dayKey, dayInterval: dayInterval, isCurrentDay: index == 0, previousDayKey: previousDayKey, stage2Open: stage2Open, silentDaysStop: silentDaysStop, calendar: calendar, constants: constants))
             previousDayKey = dayKey
-            dayInterval = RecordDay.next(dayInterval, calendar: calendar)
+            dayInterval = RecordDay.next(dayInterval, calendar: calendar, schedule: schedule)
         }
-        let farDay = schedulerDay(store: store, dayKey: RecordDay.key(containing: dayInterval.start, calendar: calendar), dayInterval: dayInterval, isCurrentDay: false, previousDayKey: previousDayKey, stage2Open: stage2Open, silentDaysStop: silentDaysStop, calendar: calendar, constants: constants)
+        let farDay = schedulerDay(store: store, dayKey: RecordDay.key(containing: dayInterval.start, calendar: calendar, schedule: schedule), dayInterval: dayInterval, isCurrentDay: false, previousDayKey: previousDayKey, stage2Open: stage2Open, silentDaysStop: silentDaysStop, calendar: calendar, constants: constants)
 
         let settings = schedulerSettings(store: store, notificationPermissionGranted: notificationPermissionGranted)
         let dayKeys = days.map(\.dayKey)
@@ -363,9 +366,9 @@ enum ReminderCoordinator {
     /// folds each elapsed record day into the two counts once, and applies
     /// the current record day's own restart. Writes only a value that
     /// changed.
-    private static func updateStopCounts(store: RecordStore, delivered: [DeliveredReminder], currentInterval: DateInterval, calendar: Calendar) {
-        let currentKey = RecordDay.key(containing: currentInterval.start, calendar: calendar)
-        let nextKey = RecordDay.key(containing: RecordDay.next(currentInterval, calendar: calendar).start, calendar: calendar)
+    private static func updateStopCounts(store: RecordStore, delivered: [DeliveredReminder], currentInterval: DateInterval, schedule: DayStartSchedule, calendar: Calendar) {
+        let currentKey = RecordDay.key(containing: currentInterval.start, calendar: calendar, schedule: schedule)
+        let nextKey = RecordDay.key(containing: RecordDay.next(currentInterval, calendar: calendar, schedule: schedule).start, calendar: calendar, schedule: schedule)
         let counted: Set<ReminderKind> = [.morningPlan, .midday, .closeTheDay]
 
         let storedPending = (try? store.pendingDeliveredReminderKinds()) ?? [:]
@@ -377,12 +380,12 @@ enum ReminderCoordinator {
         let storedFoldedThrough = try? store.reminderStopsFoldedThrough()
         var elapsedKeys: [String] = []
         if storedFoldedThrough != nil || pending.keys.contains(where: { $0 < currentKey }) {
-            var interval = RecordDay.previous(currentInterval, calendar: calendar)
+            var interval = RecordDay.previous(currentInterval, calendar: calendar, schedule: schedule)
             for _ in 0..<60 {
-                let key = RecordDay.key(containing: interval.start, calendar: calendar)
+                let key = RecordDay.key(containing: interval.start, calendar: calendar, schedule: schedule)
                 if let storedFoldedThrough, key <= storedFoldedThrough { break }
                 elapsedKeys.append(key)
-                interval = RecordDay.previous(interval, calendar: calendar)
+                interval = RecordDay.previous(interval, calendar: calendar, schedule: schedule)
             }
         }
         let elapsedDays = elapsedKeys.map { key in
@@ -414,7 +417,7 @@ enum ReminderCoordinator {
 
         if counts.morningPlanUnanswered != storedCounts.morningPlanUnanswered { try? store.setMorningPlanUnansweredCount(counts.morningPlanUnanswered) }
         if counts.silentDays != storedCounts.silentDays { try? store.setSilentDayStreak(counts.silentDays) }
-        let foldedThrough = folded.foldedThrough ?? RecordDay.key(containing: RecordDay.previous(currentInterval, calendar: calendar).start, calendar: calendar)
+        let foldedThrough = folded.foldedThrough ?? RecordDay.key(containing: RecordDay.previous(currentInterval, calendar: calendar, schedule: schedule).start, calendar: calendar, schedule: schedule)
         if foldedThrough != storedFoldedThrough { try? store.setReminderStopsFoldedThrough(foldedThrough) }
         pending = pending.filter { $0.key > foldedThrough }
         if pending != storedPending { try? store.setPendingDeliveredReminderKinds(pending) }

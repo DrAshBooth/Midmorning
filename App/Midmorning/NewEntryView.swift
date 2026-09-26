@@ -5,10 +5,7 @@ import Record
 /// Save and Cancel. No title. Controls sit in `NewEntryField.order`
 /// (decision 86), so the visual order equals the VoiceOver order.
 struct NewEntryView: View {
-    enum TimeSegment: Hashable { case previous, current }
-
     let store: RecordStore
-    let day: DateInterval
     /// Set by "Add it" on the missed planned meal prompt (regular-eating-
     /// plan spec, "A missed planned meal gets one prompt": "'Add it' MUST
     /// open the new-entry screen with the time set to the planned meal's
@@ -22,20 +19,24 @@ struct NewEntryView: View {
     @State private var time = Date()
     @State private var what = ""
     @State private var whereSelection: String?
+    /// The text in "Add a place", or `nil` while that field is closed.
+    @State private var pendingPlace: String?
     @State private var feltLikeABinge = false
     @State private var context = ""
     @State private var whatIsFocused = false
     @State private var contextIsFocused = false
     @State private var customPlaces: [String] = []
-    @State private var selectedSegment: TimeSegment = .current
+    /// The previous and the current record day, under the day start in
+    /// force when the screen opens (record spec, "The record day").
+    @State private var segments: [RecordTimeControl.Segment] = []
     @State private var saveOutcome: SaveOutcome = .saved
 
-    private var previousDayInterval: DateInterval { RecordDay.previous(day, calendar: .current) }
-    private var segmentInterval: DateInterval { selectedSegment == .previous ? previousDayInterval : day }
-    private var wheelRange: ClosedRange<Date> {
-        let lower = segmentInterval.start
-        let upper = min(segmentInterval.end, openedAt)
-        return lower...max(lower, upper)
+    /// The device zone, on the Gregorian calendar (product-rules spec,
+    /// "Dates and times in strings").
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar
     }
 
     var body: some View {
@@ -55,7 +56,10 @@ struct NewEntryView: View {
             .recordSheetDetent()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("entry.cancel") { dismiss() }
+                    Button("entry.cancel") {
+                        pendingPlace = nil // Cancel keeps no place typed in "Add a place"
+                        dismiss()
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("entry.save", action: save)
@@ -68,16 +72,34 @@ struct NewEntryView: View {
         .redacted(reason: scenePhase == .active ? [] : .privacy)
         .onAppear {
             openedAt = Date()
-            time = min(initialTime ?? openedAt, wheelRange.upperBound)
+            loadSegments()
+            time = openingTime()
             customPlaces = (try? store.customPlaces()) ?? []
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
                 whatIsFocused = true
             }
         }
-        .onChange(of: selectedSegment) { _, _ in
-            time = min(max(time, wheelRange.lowerBound), wheelRange.upperBound)
+    }
+
+    private func loadSegments() {
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let current = RecordDay.interval(containing: openedAt, calendar: calendar, schedule: schedule)
+        let previous = RecordDay.previous(current, calendar: calendar, schedule: schedule)
+        segments = [previous, current].map { interval in
+            let key = RecordDay.key(containing: interval.start, calendar: calendar, schedule: schedule)
+            return RecordTimeControl.Segment(interval: interval, startHour: schedule.hour(effectiveOn: key), title: DayHeading.dateOnly(interval.start))
         }
+    }
+
+    /// The moment the screen opens, or the planned meal's time from "Add
+    /// it", kept inside the two record days and never after now. The
+    /// current record day's segment is then the selected one (record spec,
+    /// "The new-entry screen's controls").
+    private func openingTime() -> Date {
+        guard let first = segments.first else { return openedAt }
+        let range = first.interval.start...max(first.interval.start, openedAt)
+        return min(max(initialTime ?? openedAt, range.lowerBound), range.upperBound)
     }
 
     @ViewBuilder
@@ -92,7 +114,7 @@ struct NewEntryView: View {
                 onSaveFromKeyboard: save
             )
         case .whereField:
-            WhereChipsView(selection: $whereSelection, customPlaces: customPlaces, onSaveFromKeyboard: save) { newPlace in
+            WhereChipsView(selection: $whereSelection, pendingPlace: $pendingPlace, customPlaces: customPlaces, onSaveFromKeyboard: save) { newPlace in
                 try? store.touchCustomPlace(newPlace, at: Date())
                 customPlaces = (try? store.customPlaces()) ?? []
             }
@@ -119,41 +141,27 @@ struct NewEntryView: View {
     }
 
     private var timeControl: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Picker("", selection: $selectedSegment) {
-                Text(DayHeading.dateOnly(previousDayInterval.start)).tag(TimeSegment.previous)
-                Text(DayHeading.dateOnly(day.start)).tag(TimeSegment.current)
-            }
-            .pickerStyle(.segmented)
-            .accessibilityHidden(true) // the wheel below carries the spoken value
-            DatePicker("", selection: $time, in: wheelRange, displayedComponents: [.hourAndMinute])
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-                .accessibilityLabel("entry.time.accessibilityLabel")
-                .accessibilityValue(Self.spokenTime(time))
-        }
-    }
-
-    /// The time control's VoiceOver value, for example "Thursday 24 September, 21:35".
-    static func spokenTime(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_GB")
-        f.dateFormat = "EEEE d MMMM, HH:mm"
-        return f.string(from: date)
+        RecordTimeControl(segments: segments, time: $time, notAfter: openedAt, calendar: calendar)
     }
 
     private func save() {
         let now = Date()
+        let place = WhereSelection.onSave(selection: whereSelection, pendingPlace: pendingPlace)
         do {
+            if let kept = place.placeToKeep {
+                try? store.touchCustomPlace(kept, at: now)
+            }
             let entry = try store.add(
                 time: min(time, now),
                 what: what,
                 feltLikeABinge: feltLikeABinge,
                 createdAt: now,
                 utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: now),
-                whereText: whereSelection ?? "",
+                whereText: place.whereText,
                 context: context
             )
+            pendingPlace = nil
+            whereSelection = place.whereText.isEmpty ? nil : place.whereText
             dismiss()
             onSave(entry)
         } catch {

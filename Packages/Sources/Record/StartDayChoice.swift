@@ -10,19 +10,19 @@ public enum StartDayChoice {
     }
 
     /// The record-day key ("2026-09-24") the store keeps for a choice.
-    public static func dayKey(for choice: Choice, now: Date, calendar: Calendar, startHour: Int = RecordDay.startHour) -> String {
+    public static func dayKey(for choice: Choice, now: Date, calendar: Calendar, schedule: DayStartSchedule) -> String {
         switch choice {
         case .today:
-            return RecordDay.key(containing: now, calendar: calendar, startHour: startHour)
+            return RecordDay.key(containing: now, calendar: calendar, schedule: schedule)
         case .tomorrow:
-            return RecordDay.nextDayKey(after: now, calendar: calendar, startHour: startHour)
+            return RecordDay.nextDayKey(after: now, calendar: calendar, schedule: schedule)
         }
     }
 
     /// "Today, %@" / "Tomorrow, %@", with the date from the en_GB formatter,
     /// for example "Today, Thursday 24 September".
-    public static func label(for choice: Choice, now: Date, calendar: Calendar, startHour: Int = RecordDay.startHour) -> String {
-        let key = dayKey(for: choice, now: now, calendar: calendar, startHour: startHour)
+    public static func label(for choice: Choice, now: Date, calendar: Calendar, schedule: DayStartSchedule) -> String {
+        let key = dayKey(for: choice, now: now, calendar: calendar, schedule: schedule)
         let formatted = formattedDate(fromDayKey: key, calendar: calendar)
         switch choice {
         case .today: return "Today, \(formatted)"

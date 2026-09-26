@@ -27,8 +27,9 @@ enum ProgrammeModel {
     }
 
     static func load(store: RecordStore, now: Date = Date(), calendar: Calendar = .current) -> Snapshot {
-        let dayStart = (try? store.dayStartHour(effectiveOn: RecordDay.key(containing: now, calendar: calendar))) ?? RecordDay.startHour
-        let currentRecordDay = RecordDay.key(containing: now, calendar: calendar, startHour: dayStart)
+        let schedule = (try? store.dayStartSchedule()) ?? .standard
+        let currentRecordDay = RecordDay.key(containing: now, calendar: calendar, schedule: schedule)
+        let dayStart = schedule.hour(effectiveOn: currentRecordDay)
         let startDay = (try? store.startDayKey()) ?? currentRecordDay
         let settings = ProgrammeSettings(startDay: startDay, dayStart: dayStart)
 

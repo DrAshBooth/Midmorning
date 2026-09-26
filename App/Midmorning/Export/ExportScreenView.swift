@@ -31,6 +31,15 @@ struct ExportScreenView: View {
                 DatePicker(ExportContent.toLabel, selection: toDateBinding, in: ...currentDateUpperBound, displayedComponents: .date)
                     .accessibilityLabel(ExportContent.toLabel)
             }
+            // `ExportDayKey.date` is midnight GMT of the key's date, so the
+            // pickers show and set dates in GMT; in the device zone a key
+            // showed one day early west of GMT (mm-t12b.11).
+            .environment(\.timeZone, .gmt)
+            .environment(\.calendar, {
+                var gregorianGMT = Calendar(identifier: .gregorian)
+                gregorianGMT.timeZone = .gmt
+                return gregorianGMT
+            }())
 
             Section {
                 Toggle(ExportContent.includeWeighInsLabel, isOn: $includeWeighIns)
@@ -86,9 +95,7 @@ struct ExportScreenView: View {
 
     private func loadDefaultsIfNeeded() {
         guard !isLoaded else { return }
-        let today = RecordDay.key(containing: now(), calendar: calendar)
-        let dayStart = (try? store.dayStartHour(effectiveOn: today)) ?? RecordDay.startHour
-        currentDayKey = RecordDay.key(containing: now(), calendar: calendar, startHour: dayStart)
+        currentDayKey = RecordDay.key(containing: now(), calendar: calendar, schedule: (try? store.dayStartSchedule()) ?? .standard)
         let earliest = try? store.earliestEntryDayKey()
         let defaults = ExportRange.defaultRange(currentDayKey: currentDayKey, earliestEntryDayKey: earliest ?? nil)
         fromDayKey = defaults.from
