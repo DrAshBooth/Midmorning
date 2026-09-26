@@ -1,17 +1,58 @@
 import Foundation
 
 /// The file half of `LaunchSafety` (data-and-privacy spec, "Launch safety",
-/// "File protection"). The marker holds only the streak of launches that
-/// ended before Today appeared. The App target's `LaunchMarker` calls this
+/// "File protection"). The marker holds the streak of launches that ended
+/// before Today appeared. The App target's `LaunchMarker` calls this
 /// through one `LaunchSession` per process.
+///
+/// Safe mode opens the store read-only (ruling r13-05, mm-t42.23), so a
+/// safe-mode launch cannot add its launch failure to `Local.store`. The
+/// marker then also holds that failure as an uncounted failure, and the
+/// next launch with a read-write store adds it. The content is one of:
+/// - "<streak>": not cleared, and no uncounted failure.
+/// - "<streak> <uncounted>": not cleared, with uncounted failures.
+/// - "- <uncounted>": cleared (Today appeared), with uncounted failures.
 public enum LaunchMarkerFile {
     public struct Outcome: Sendable, Equatable {
         public let markerWasUncleared: Bool
         public let launchOutcome: LaunchOutcome
+        /// Launch failures that an earlier safe-mode launch found but could
+        /// not add to `Local.store`.
+        public let uncountedFailures: Int
 
-        public init(markerWasUncleared: Bool, launchOutcome: LaunchOutcome) {
+        public init(markerWasUncleared: Bool, launchOutcome: LaunchOutcome, uncountedFailures: Int = 0) {
             self.markerWasUncleared = markerWasUncleared
             self.launchOutcome = launchOutcome
+            self.uncountedFailures = uncountedFailures
+        }
+    }
+
+    /// The marker's content, read from the file.
+    struct Content: Equatable {
+        /// `nil` when the marker is cleared.
+        var streak: Int?
+        var uncountedFailures: Int
+
+        init(streak: Int?, uncountedFailures: Int) {
+            self.streak = streak
+            self.uncountedFailures = uncountedFailures
+        }
+
+        /// A marker that this code cannot read counts as not cleared, with
+        /// a streak of 0.
+        init(text: String) {
+            let parts = text.split(whereSeparator: \.isWhitespace).map(String.init)
+            let uncounted = parts.count > 1 ? max(Int(parts[1]) ?? 0, 0) : 0
+            if parts.first == "-" {
+                self.init(streak: nil, uncountedFailures: uncounted)
+            } else {
+                self.init(streak: parts.first.flatMap { Int($0) } ?? 0, uncountedFailures: uncounted)
+            }
+        }
+
+        var text: String {
+            let head = streak.map(String.init) ?? "-"
+            return uncountedFailures > 0 ? "\(head) \(uncountedFailures)" : head
         }
     }
 
@@ -21,21 +62,32 @@ public enum LaunchMarkerFile {
     /// `NSFileProtectionComplete` ("Every other file the app writes MUST
     /// carry NSFileProtectionComplete"). The marker is also excluded from
     /// backup, so a restore onto a new device never brings back an old
-    /// streak.
+    /// streak. The uncounted failures stay in the marker.
     public static func begin(at url: URL) -> Outcome {
-        let previousContent = try? String(contentsOf: url, encoding: .utf8)
-        let markerWasUncleared = previousContent != nil
-        let previousStreak = previousContent
-            .flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0
+        let previous = (try? String(contentsOf: url, encoding: .utf8)).map(Content.init(text:))
+        let markerWasUncleared = previous?.streak != nil
+        let previousStreak = previous?.streak ?? 0
+        let uncounted = previous?.uncountedFailures ?? 0
         let outcome = LaunchSafety.startLaunch(markerWasUncleared: markerWasUncleared, previousConsecutiveUnclearedCount: previousStreak)
-        try? Data(String(outcome.newConsecutiveUnclearedCount).utf8).write(to: url, options: [.atomic, .completeFileProtection])
-        try? FileProtection.excludeFromBackup(url)
-        return Outcome(markerWasUncleared: markerWasUncleared, launchOutcome: outcome)
+        write(Content(streak: outcome.newConsecutiveUnclearedCount, uncountedFailures: uncounted), at: url)
+        return Outcome(markerWasUncleared: markerWasUncleared, launchOutcome: outcome, uncountedFailures: uncounted)
     }
 
     /// "The app MUST clear the marker after Today appears."
     public static func clear(at url: URL, fileManager: FileManager = .default) {
         try? fileManager.removeItem(at: url)
+    }
+
+    /// Clears the marker, but keeps the uncounted failures in it when there
+    /// are some. The next launch then finds a cleared marker.
+    static func clear(at url: URL, keepingUncountedFailures uncounted: Int) {
+        guard uncounted > 0 else { return clear(at: url) }
+        write(Content(streak: nil, uncountedFailures: uncounted), at: url)
+    }
+
+    static func write(_ content: Content, at url: URL) {
+        try? Data(content.text.utf8).write(to: url, options: [.atomic, .completeFileProtection])
+        try? FileProtection.excludeFromBackup(url)
     }
 }
 
@@ -50,6 +102,8 @@ public final class LaunchSession {
     public let markerURL: URL
     public private(set) var outcome: LaunchMarkerFile.Outcome?
     private var launchFailureCounted = false
+    /// The failures in the marker that `Local.store` does not hold yet.
+    public private(set) var uncountedFailures = 0
 
     public init(markerURL: URL) {
         self.markerURL = markerURL
@@ -62,21 +116,37 @@ public final class LaunchSession {
         if let outcome { return outcome }
         let first = LaunchMarkerFile.begin(at: markerURL)
         outcome = first
+        uncountedFailures = first.uncountedFailures
         return first
     }
 
     /// "The app MUST add one to the launch failure count in `Local.store`
     /// each time it finds an uncleared marker." Once per launch, on the
-    /// first store that opens.
+    /// first store that opens. This also adds the failures that an earlier
+    /// safe-mode launch kept in the marker. A read-only store (safe mode)
+    /// takes no write: the marker keeps this launch's failure for the next
+    /// launch instead.
     public func countLaunchFailureIfNeeded(in store: RecordStore) {
-        guard !launchFailureCounted, outcome?.markerWasUncleared == true else { return }
+        guard !launchFailureCounted, let outcome else { return }
         launchFailureCounted = true
-        _ = try? store.incrementLaunchFailureCount()
+        let failures = uncountedFailures + (outcome.markerWasUncleared ? 1 : 0)
+        guard failures > 0 else { return }
+        var counted = 0
+        if !store.isReadOnly {
+            while counted < failures, (try? store.incrementLaunchFailureCount()) != nil {
+                counted += 1
+            }
+        }
+        uncountedFailures = failures - counted
+        LaunchMarkerFile.write(
+            .init(streak: outcome.launchOutcome.newConsecutiveUnclearedCount, uncountedFailures: uncountedFailures),
+            at: markerURL
+        )
     }
 
     /// Call after Today (or safe mode's Today) appears.
     public func clearAfterTodayAppears() {
-        LaunchMarkerFile.clear(at: markerURL)
+        LaunchMarkerFile.clear(at: markerURL, keepingUncountedFailures: uncountedFailures)
     }
 }
 

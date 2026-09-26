@@ -110,16 +110,26 @@ struct AppLockRootView: View {
     /// (`LaunchMarker.clearAfterTodayAppears`). "The app MUST NOT call
     /// `fatalError` when the container fails to open" — every throw here
     /// reaches `attemptOpen`'s `catch` instead.
+    ///
+    /// "In safe mode the app MUST open the store read-only" (ruling r13-05,
+    /// mm-t42.23): the marker chooses safe mode before the open, so a
+    /// pending migration cannot write, and safe mode writes nothing. The
+    /// launch failure then stays in the marker for the next ordinary launch
+    /// (`LaunchSession.countLaunchFailureIfNeeded`). MetricKit connects
+    /// only to a store that can save its crash count.
     private static func openStoreAndController(metricKitSubscriber: MetricKitSubscriber) throws -> (store: RecordStore, controller: AppLockController, enterSafeMode: Bool) {
         let applicationSupportDirectory = try StoreLocation.applicationSupportDirectory()
         let launch = LaunchMarker.session(applicationSupportDirectory: applicationSupportDirectory)
         let launchMarker = launch.begin()
-        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory)
+        let enterSafeMode = launchMarker.launchOutcome.enterSafeMode
+        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: applicationSupportDirectory, readOnly: enterSafeMode)
         launch.countLaunchFailureIfNeeded(in: store)
-        metricKitSubscriber.connect { [weak store] crashes in
-            for _ in 0..<crashes { _ = try? store?.incrementCrashCount() }
+        if !store.isReadOnly {
+            metricKitSubscriber.connect { [weak store] crashes in
+                for _ in 0..<crashes { _ = try? store?.incrementCrashCount() }
+            }
         }
-        return (store, makeController(store: store), launchMarker.launchOutcome.enterSafeMode)
+        return (store, makeController(store: store), enterSafeMode)
     }
 
     private static func makeController(store: RecordStore) -> AppLockController {

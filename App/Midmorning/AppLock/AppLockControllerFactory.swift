@@ -50,6 +50,8 @@ enum AppLockControllerFactory {
 /// This applies only while the setting is on and the app is locked. The
 /// first run has no kept hash, so it only saves one. Moved here from
 /// `RunningRootView`, unchanged, so that more than one phase can run it.
+/// Safe mode's read-only store (r13-05) takes no write, so there the
+/// first run saves nothing.
 @MainActor
 enum AppLockEnrolmentCheck {
     static func run(controller: AppLockController, store: RecordStore) {
@@ -57,7 +59,9 @@ enum AppLockEnrolmentCheck {
         guard let current = EnrolmentHash.current() else { return }
         let kept = (try? store.localSettingValue(key: AppLockSettingsKeys.enrolmentStateHash)) ?? nil
         if kept == nil {
-            try? store.setLocalSettingValue(current, key: AppLockSettingsKeys.enrolmentStateHash)
+            if !store.isReadOnly {
+                try? store.setLocalSettingValue(current, key: AppLockSettingsKeys.enrolmentStateHash)
+            }
             return
         }
         controller.noteEnrolmentState(current: current, kept: kept)
