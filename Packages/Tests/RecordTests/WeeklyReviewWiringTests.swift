@@ -147,7 +147,7 @@ final class WeeklyReviewWiringTests: XCTestCase {
         let starredCounts = winners.compactMap { ReviewAnswersPayload.decode($0.answersJSON).frozenCounts?.starred }
         XCTAssertEqual(starredCounts, counts)
         XCTAssertTrue(DeteriorationRule.fires(lastFrozenStarredCounts: starredCounts))
-        XCTAssertEqual(GPSuggestionPage.line(for: .deterioration), "Your starred entries have gone up for 3 weeks in a row.")
+        XCTAssertEqual(GPSuggestionPage.line(for: .deterioration), "Your starred entries have gone up each week lately.")
     }
 
     /// Scenario: Review without a weigh-in part (onboarding spec, "Screen

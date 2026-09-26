@@ -1,8 +1,9 @@
 import Foundation
 
 /// The GP paragraph and its two variants (safeguarding spec, "The GP
-/// paragraph"). `content` will bundle these from a later change; this
-/// capability names the fixed text now so every page that shows it agrees.
+/// paragraph"). This is signed-off text: the content bundle holds a copy as
+/// "gp.default", "gp.selfharm" and "gp.under18", and a content test proves
+/// that each variant here equals its bundle copy (ruling r13-02).
 public enum GPParagraphVariant: Sendable, Equatable {
     case standard, selfHarm, under18
 }

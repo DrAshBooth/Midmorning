@@ -2,7 +2,9 @@ import Foundation
 
 /// The exclusion page's fixed content (safeguarding spec, "The exclusion
 /// page"). The page shows one paragraph per reason that applies, in
-/// `ExclusionReason`'s declared order.
+/// `ExclusionReason`'s declared order. This is signed-off text: the content
+/// bundle holds a copy with "exclusion." ids, and a content test proves that
+/// each string here equals its bundle copy (ruling r13-02).
 public enum ExclusionPage {
     public static let heading = "Not right now"
     public static let intro = "From your answers, this programme isn't the right thing for you at the moment. Here's why, and what can help instead."

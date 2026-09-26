@@ -237,6 +237,9 @@ public enum ContentChecks {
         if CatalogueRules.requiresPluralForms(text), plural == nil {
             issues.append(ContentIssue(id: id, message: "holds a count with no plural forms"))
         }
+        if CatalogueRules.holdsMoreThanOneCount(text) {
+            issues.append(ContentIssue(id: id, message: "holds more than one count"))
+        }
         if let kind, CatalogueRules.exceedsLimit(text, kind: kind) {
             issues.append(ContentIssue(id: id, message: "holds \(text.count) characters, over the \(kind.limit)-character limit"))
         }

@@ -28,4 +28,9 @@ public enum RepositoryRoot {
     public static var appDirectory: URL {
         path.appendingPathComponent("App", isDirectory: true)
     }
+
+    /// The app's string catalogue, `App/Midmorning/Localizable.xcstrings`.
+    public static var appCatalogueURL: URL {
+        appDirectory.appendingPathComponent("Midmorning/Localizable.xcstrings")
+    }
 }

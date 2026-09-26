@@ -53,7 +53,7 @@ struct TodayCardSlotView: View {
         case .opening:
             let stage = card.openingStage
             let sentence = stage.flatMap { bundle?.string(id: "opening.stage\($0.rawValue)")?.text } ?? stage?.openingSentence ?? ""
-            return (stage?.title ?? "", sentence.isEmpty ? [] : [sentence])
+            return (stage?.title.string ?? "", sentence.isEmpty ? [] : [sentence])
         case .stage1:
             return (bundle?.card(id: card.id)?.title ?? "", [])
         case .plan:

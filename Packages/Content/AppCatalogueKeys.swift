@@ -6,7 +6,7 @@ import Foundation
 /// catalogues" treats both as "a string catalogue or the content bundle".
 public enum AppCatalogueKeys {
     public static func load(
-        xcstringsURL: URL = RepositoryRoot.appDirectory.appendingPathComponent("Midmorning/Localizable.xcstrings"),
+        xcstringsURL: URL = RepositoryRoot.appCatalogueURL,
         contentDirectory: URL = RepositoryRoot.contentResourcesDirectory
     ) throws -> Set<String> {
         var keys = Set(try XCStringsCatalogue.read(from: xcstringsURL).keys)

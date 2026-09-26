@@ -64,17 +64,18 @@ public enum ScreeningField: Sendable, Hashable, CaseIterable {
 public enum ScreeningFieldProblem: Sendable, Equatable {
     /// "Please answer this one."
     case unanswered
-    /// "Enter a height between 100 and 250 cm."
+    /// "Enter a height between 100 and 250 cm.", or in feet and inches.
     case heightOutOfRange
-    /// "Enter a weight of 30 kg or more."
+    /// "Enter a weight of 30 kg or more.", or in stone and pounds.
     case weightOutOfRange
 
-    /// The text under the question.
-    public func message(constants: ProgrammeConstants = .default) -> String {
+    /// The text under the question, with each limit in the unit the person
+    /// chose for that field (onboarding spec, "The one-time BMI").
+    public func message(heightUnit: HeightUnit = .cm, weightUnit: WeightUnit = .kg, constants: ProgrammeConstants = .default) -> CatalogueText {
         switch self {
-        case .unanswered: return Screen2Content.unansweredMessage
-        case .heightOutOfRange: return ScreeningLimits.heightMessage(constants: constants)
-        case .weightOutOfRange: return ScreeningLimits.weightMessage(constants: constants)
+        case .unanswered: return Screen3Content.unansweredMessage
+        case .heightOutOfRange: return ScreeningLimits.heightMessage(unit: heightUnit, constants: constants)
+        case .weightOutOfRange: return ScreeningLimits.weightMessage(unit: weightUnit, constants: constants)
         }
     }
 }

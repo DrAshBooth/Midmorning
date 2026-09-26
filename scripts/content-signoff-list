@@ -1,7 +1,9 @@
 #!/bin/bash
 # Prints every catalogue id, sorted, one per line, for the "Sign-off list"
-# section of Packages/Content/SIGNOFF.md. Run by hand and paste the result
-# in; not part of ./verify.
+# section of Packages/Content/SIGNOFF.md: the cards, the bundle strings and
+# the keys of App/Midmorning/Localizable.xcstrings that
+# Packages/Content/Resources/signed-catalogue-keys.json names. Run by hand
+# and paste the result in; not part of ./verify.
 #
 # Usage: scripts/content-signoff-list
 set -euo pipefail

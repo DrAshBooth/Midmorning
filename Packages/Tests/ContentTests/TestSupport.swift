@@ -2,12 +2,13 @@ import Foundation
 @testable import Content
 
 /// The shipped bundle, loaded once per test process from the source
-/// `Resources` directory (not the built resource bundle), so a test sees a
-/// content edit immediately.
+/// `Resources` directory (not the built resource bundle), with the signed
+/// keys of the app's `Localizable.xcstrings` (ruling r13-01), so a test sees
+/// a content edit immediately.
 enum Shipped {
     static let bundle: ContentBundle = {
         do {
-            return try ContentBundle.load(from: RepositoryRoot.contentResourcesDirectory, environment: [:])
+            return try BundleLoader.loadSource(environment: [:])
         } catch {
             fatalError("could not load the shipped content bundle: \(error)")
         }

@@ -8,6 +8,12 @@ import Constants
 /// target fills it with `CatalogueText.string`, and a test fills it from the
 /// same catalogue. "Weigh-in day" and "I won't be weighing" also label the
 /// weigh-in screen's and the settings screen's weigh-in day controls.
+///
+/// The keys under the "onboarding.record." and "onboarding.example."
+/// prefixes are signed catalogue keys (ruling r13-01). Each other key is
+/// signed-off onboarding text with a bundle copy ("onboarding.start.*",
+/// "onboarding.pleaseanswer"), and a content test proves that the two are
+/// equal (ruling r13-02).
 public enum Screen3Content {
     public static let title: CatalogueText = .key("onboarding.screen3.title")
     public static let startDayQuestion: CatalogueText = .key("onboarding.startDay.question")

@@ -1,0 +1,27 @@
+{
+  "prefixes": {
+    "record": [
+      "closeTheDay.",
+      "entry.",
+      "export.pdf.",
+      "onboarding.example.",
+      "onboarding.record.",
+      "plan.missedPrompt.",
+      "today.didntRecord",
+      "today.fastingToday",
+      "today.gapBand.",
+      "today.pauseForToday",
+      "today.stateLine."
+    ],
+    "reminders": [
+      "reminders.",
+      "settings.reminders.",
+      "today.reminders."
+    ],
+    "safeguarding": [
+      "safeguarding.",
+      "screening.",
+      "today.getSupport"
+    ]
+  }
+}

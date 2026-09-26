@@ -20,7 +20,7 @@ struct StageScreenView: View {
             if let model {
                 if let line = model.line {
                     Section {
-                        Text(line).font(.body)
+                        Text(line.string).font(.body)
                     }
                 }
                 Section {
@@ -41,7 +41,7 @@ struct StageScreenView: View {
             }
         }
         .recordListStyle()
-        .navigationTitle(model?.title ?? stage.title)
+        .navigationTitle((model?.title ?? stage.title).string)
         .getSupport()
         .sheet(item: $planBuilderMode) { mode in
             PlanBuilderView(store: store, mode: mode) { reload() }

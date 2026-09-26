@@ -10,8 +10,9 @@ import Constants
 /// The controls are keys in the app's string catalogue (content spec,
 /// "Strings live in catalogues"). The last group is text that the clinical
 /// reviewer signs off: support sheet names, screening answers and the
-/// caution sheet. Decision mm-t11.41 names its source, so it stays here
-/// until mm-t11.45 moves it.
+/// caution sheet. Ruling r13-02 keeps it here, and the content bundle holds
+/// a copy of each string; a content test proves that the two copies are
+/// equal.
 public enum CommonLabels {
     public static let continueLabel: CatalogueText = .key("common.continue")
     public static let done: CatalogueText = .key("common.done")
@@ -26,7 +27,9 @@ public enum CommonLabels {
     public static let exportControl: CatalogueText = .key("safeguarding.exportControl")
     public static let gpParagraphAccessibilityLabel: CatalogueText = .key("safeguarding.gpParagraph.accessibilityLabel")
 
-    // Signed-off text: waits for decision mm-t11.41 (mm-t11.45).
+    // Signed-off text. The bundle copies are screening.answer.*,
+    // support.gp.title, support.beatwebchat, support.samaritans.title and
+    // caution.sheet (ruling r13-02).
     public static let ratherNotSay = "I'd rather not say"
     public static let doesNotApplyToMe = "Doesn't apply to me"
     public static let treatmentYesWithAgreement = "Yes, and they are happy for me to use this"

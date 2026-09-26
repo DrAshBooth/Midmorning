@@ -48,11 +48,19 @@ final class BundledCardsTests: XCTestCase {
     /// source directory's bundle, so a device with no source tree still
     /// reads the same content (settings spec, "The About group": the app
     /// reads its own content version and draft state through this call).
+    ///
+    /// The installed app has no copy of the string catalogue as JSON, so its
+    /// bundle holds no signed catalogue keys, and its Draft flag comes from
+    /// the lock (ruling r13-01). The Draft flag MUST still agree with the
+    /// source bundle's.
     func testLoadShippedReadsFromTheModuleBundleAndMatchesTheSourceDirectory() throws {
         let fromModuleBundle = try BundleLoader.loadShipped(environment: [:])
         let fromSourceDirectory = try ContentBundle.load(from: RepositoryRoot.contentResourcesDirectory, environment: [:])
         XCTAssertEqual(fromModuleBundle.contentVersion, fromSourceDirectory.contentVersion)
         XCTAssertEqual(fromModuleBundle.bundleHash, fromSourceDirectory.bundleHash)
-        XCTAssertEqual(fromModuleBundle.isDraft, fromSourceDirectory.isDraft)
+        XCTAssertEqual(fromModuleBundle.cards, Shipped.bundle.cards)
+        XCTAssertEqual(fromModuleBundle.strings, Shipped.bundle.strings)
+        XCTAssertTrue(fromModuleBundle.signedCatalogue.isEmpty)
+        XCTAssertEqual(fromModuleBundle.isDraft, Shipped.bundle.isDraft)
     }
 }

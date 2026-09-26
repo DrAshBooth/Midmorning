@@ -29,6 +29,9 @@ public enum CatalogueStringKind: Sendable {
 /// `%1$@`.
 struct PlaceholderToken {
     let position: Int?
+    /// `true` for `%lld` or a positional `%1$lld`: a count. `%@` is never a
+    /// count (ruling r13-12).
+    let isCount: Bool
 
     var isPositional: Bool { position != nil }
 }
@@ -38,15 +41,16 @@ struct PlaceholderToken {
 /// runs the ones that apply to every string it holds, and the tests also
 /// exercise each one directly with the requirement's own fixtures.
 public enum CatalogueRules {
-    private static let placeholderPattern = try! NSRegularExpression(pattern: #"%(?:(\d+)\$)?(?:lld|@)"#)
+    private static let placeholderPattern = try! NSRegularExpression(pattern: #"%(?:(\d+)\$)?(lld|@)"#)
 
     static func placeholders(in text: String) -> [PlaceholderToken] {
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
         return placeholderPattern.matches(in: text, range: range).map { match in
+            let isCount = Range(match.range(at: 2), in: text).map { text[$0] == "lld" } ?? false
             if let r = Range(match.range(at: 1), in: text), let n = Int(text[r]) {
-                return PlaceholderToken(position: n)
+                return PlaceholderToken(position: n, isCount: isCount)
             }
-            return PlaceholderToken(position: nil)
+            return PlaceholderToken(position: nil, isCount: isCount)
         }
     }
 
@@ -57,10 +61,24 @@ public enum CatalogueRules {
         return tokens.count > 1 && tokens.contains { !$0.isPositional }
     }
 
-    /// `true` when `text` holds a bare (non-positional) `%lld`, which
-    /// carries a count and so needs plural forms.
+    /// The number of counts in `text`: every `%lld`, with or without a
+    /// position. A `%@` is not a count (ruling r13-12).
+    public static func countPlaceholderCount(_ text: String) -> Int {
+        placeholders(in: text).filter(\.isCount).count
+    }
+
+    /// `true` when `text` holds a count, `%lld` or a positional `%1$lld`,
+    /// and so needs plural forms. A `%@` alone never needs them.
     public static func requiresPluralForms(_ text: String) -> Bool {
-        placeholders(in: text).contains { !$0.isPositional }
+        countPlaceholderCount(text) > 0
+    }
+
+    /// `true` when `text` holds more than one count. A string holds at most
+    /// one count, so that its plural forms follow that one count (ruling
+    /// r13-12). A string with two counts becomes two strings with one
+    /// count each.
+    public static func holdsMoreThanOneCount(_ text: String) -> Bool {
+        countPlaceholderCount(text) > 1
     }
 
     /// `true` when `text` holds a run of two or more digits that is not the

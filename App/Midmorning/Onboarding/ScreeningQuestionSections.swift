@@ -141,7 +141,8 @@ struct ScreeningQuestionSections: View {
     @ViewBuilder
     private func message(for field: ScreeningField) -> some View {
         if let issue, issue.field == field {
-            Text(issue.problem.message()).foregroundStyle(.red)
+            Text(issue.problem.message(heightUnit: answers.heightUnit.limitUnit, weightUnit: answers.weightUnit.limitUnit).string)
+                .foregroundStyle(.red)
         }
     }
 }

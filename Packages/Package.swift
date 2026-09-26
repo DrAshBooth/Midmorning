@@ -72,8 +72,12 @@ let package = Package(
             .copy("Resources/cards.json"),
             .copy("Resources/strings.json"),
             .copy("Resources/content-lock.json"),
+            .copy("Resources/signed-catalogue-keys.json"),
         ]),
-        .testTarget(name: "ContentTests", dependencies: ["Content"], path: "Tests/ContentTests"),
+        // Also depends on `Programme` (test-only) so a test can prove that
+        // each signed-off Swift constant equals its bundle copy (ruling
+        // r13-02).
+        .testTarget(name: "ContentTests", dependencies: ["Content", "Programme"], path: "Tests/ContentTests"),
         // `ExportDocument`, `Paginator` and `ExportFileName` (export spec,
         // "The document and the paginator live in a package"): imports no
         // UIKit, so it stays testable under `swift test` on macOS, where

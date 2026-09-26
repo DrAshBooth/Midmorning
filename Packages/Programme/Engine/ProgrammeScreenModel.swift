@@ -3,10 +3,11 @@ import Constants
 
 /// One row of the Programme screen (programme spec, "The Programme screen
 /// shows where the person is"). A view renders this; it holds no rule of its
-/// own.
+/// own. Its words are keys in the app's string catalogue; the rule string
+/// is signed-off text that `StageRuleText` holds (ruling r13-02).
 public struct StageRow: Sendable, Equatable {
     public var stage: Stage
-    public var title: String
+    public var title: CatalogueText
     public var isNow: Bool
     public var isOpen: Bool
     /// Non-empty only for an open stage whose tool this build has.
@@ -23,15 +24,15 @@ public struct StageRow: Sendable, Equatable {
     /// Programme spec, "Accessibility of the Programme screen": the title,
     /// then "Now" when marked, then the rule string or "Comes in a later
     /// version" when the row shows one, comma-separated.
-    public var accessibilityLabel: String {
+    public var accessibilityLabel: CatalogueText {
         var parts = [title]
-        if isNow { parts.append("Now") }
+        if isNow { parts.append(.key("programme.now")) }
         if comesInALaterVersion {
             parts.append(StageRuleText.comesInALaterVersion)
         } else if let ruleString {
-            parts.append(ruleString)
+            parts.append(.verbatim(ruleString))
         }
-        return parts.joined(separator: ", ")
+        return .list(parts)
     }
 }
 
@@ -39,17 +40,19 @@ public struct StageRow: Sendable, Equatable {
 /// in order (programme spec, "The Programme screen shows where the person
 /// is").
 public struct ProgrammeScreenModel: Sendable, Equatable {
-    public var weekLine: String
+    /// "Week %lld", or "Starts tomorrow" before week 1.
+    public var weekLine: CatalogueText
     public var rows: [StageRow]
 }
 
 /// The stage screen's own model, pushed from a tap on a Programme screen row
 /// (programme spec, "The stage screen").
 public struct StageScreenModel: Sendable, Equatable {
-    public var title: String
-    /// `nil` when the stage's own opening record day, or the current record
-    /// day, is before week 1.
-    public var line: String?
+    public var title: CatalogueText
+    /// "Opened in week %lld" for an open stage, or the rule string for a
+    /// closed one. `nil` when the stage's own opening record day, or the
+    /// current record day, is before week 1.
+    public var line: CatalogueText?
     /// Non-empty only when the stage is open.
     public var tools: [StageTool]
 }
@@ -100,7 +103,7 @@ public enum ProgrammeScreenBuilder {
                 comesInALaterVersion: !hasTool
             )
         }
-        let weekLine = state.week.map { "Week \($0)" } ?? "Starts tomorrow"
+        let weekLine: CatalogueText = state.week.map { .key("programme.week %lld", .count($0)) } ?? .key("programme.startsTomorrow")
         return ProgrammeScreenModel(weekLine: weekLine, rows: rows)
     }
 }
@@ -115,13 +118,15 @@ public enum StageScreenBuilder {
         calendar: Calendar
     ) -> StageScreenModel {
         let isOpen = state.isOpen(stage)
-        var line: String?
+        var line: CatalogueText?
         if isOpen {
             let openedWeek = state.stageOpenedDayKey[stage].flatMap { StageEngine.week(startDay: settings.startDay, currentRecordDay: $0, calendar: calendar) }
             let currentWeek = StageEngine.week(startDay: settings.startDay, currentRecordDay: currentRecordDay, calendar: calendar)
-            line = (openedWeek != nil && currentWeek != nil) ? "Opened in week \(openedWeek!)" : nil
+            if let openedWeek, currentWeek != nil {
+                line = .key("programme.openedInWeek %lld", .count(openedWeek))
+            }
         } else {
-            line = StageRuleText.string(for: stage, constants: constants, recordedDaysCount: state.recordedDaysCount)
+            line = StageRuleText.string(for: stage, constants: constants, recordedDaysCount: state.recordedDaysCount).map(CatalogueText.verbatim)
         }
         return StageScreenModel(title: stage.title, line: line, tools: isOpen ? stage.tools : [])
     }

@@ -5,23 +5,31 @@ import Constants
 /// show (programme spec, "Reading ahead is never blocked"). Each string with
 /// a count carries a plural form; a one-sentence string never ends with a
 /// full stop, and the stage 2 string is two sentences, each ending with one.
+///
+/// This is signed-off text. The content bundle holds a copy with the ids
+/// "rule.stage2" to "rule.stage7", and a content test proves that each
+/// string here equals its bundle copy (ruling r13-02). A bundle string holds
+/// at most one count (ruling r13-12), so the stage 2 string is two bundle
+/// strings, "rule.stage2" and "rule.stage2.count", and the stage 3 string
+/// fills "rule.stage3" with "rule.stage3.days" and "rule.stage3.weeks".
 public enum StageRuleText {
     public static func plural(_ count: Int, _ singular: String, _ plural: String) -> String {
         count == 1 ? singular : plural
     }
 
-    /// "Opens after %1$lld recorded days. You have %2$lld." (stage 2).
+    /// "Opens after %lld recorded days." and "You have %lld." (stage 2).
     public static func stage2(gate: Int, recordedDaysCount: Int) -> String {
         "Opens after \(gate) recorded \(plural(gate, "day", "days")). You have \(recordedDaysCount)."
     }
 
-    /// "Opens after %1$lld days on your plan, or %2$lld weeks after your
-    /// plan starts" (stage 3). `RECORD_DAYS_FOR_STAGE_3_FALLBACK` MUST be a
-    /// multiple of 7, so `%2$lld` divides evenly.
+    /// "Opens after %1$@, or %2$@ after your plan starts" (stage 3), with
+    /// "%lld days on your plan" and "%lld weeks".
+    /// `RECORD_DAYS_FOR_STAGE_3_FALLBACK` MUST be a multiple of 7, so the
+    /// weeks divide evenly.
     public static func stage3(constants: ProgrammeConstants) -> String {
         let days = constants.daysOnPlanForStage3
         let weeks = constants.recordDaysForStage3Fallback / 7
-        return "Opens after \(days) days on your plan, or \(weeks) \(plural(weeks, "week", "weeks")) after your plan starts"
+        return "Opens after \(days) \(plural(days, "day", "days")) on your plan, or \(weeks) \(plural(weeks, "week", "weeks")) after your plan starts"
     }
 
     /// "Opens after your first urge outcome, or a week from now" (stage 4):
@@ -52,6 +60,7 @@ public enum StageRuleText {
 
     /// The row text for a build that lacks `stage`'s own tool (decision
     /// 102, programme spec, "The Programme screen shows where the person
-    /// is"): replaces the rule string and the "Now" marker alike.
-    public static let comesInALaterVersion = "Comes in a later version"
+    /// is"): replaces the rule string and the "Now" marker alike. A key in
+    /// the app's string catalogue.
+    public static let comesInALaterVersion: CatalogueText = .key("programme.comesInALaterVersion")
 }

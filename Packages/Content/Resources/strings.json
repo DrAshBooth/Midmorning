@@ -4,20 +4,77 @@
     "text": "You can now plan when to eat. The app reminds you at each planned meal."
   },
   {
+    "id": "opening.stage3",
+    "text": "Urge is now on Today. Set up your alternatives list when you have a few minutes."
+  },
+  {
+    "id": "opening.stage4",
+    "text": "The app can now show patterns from your record. The worksheet is ready."
+  },
+  {
+    "id": "opening.stage5",
+    "text": "Taking stock is ready. It takes one sitting."
+  },
+  {
+    "id": "opening.stage6",
+    "text": "Both modules are open. Start with either one."
+  },
+  {
+    "id": "opening.stage7",
+    "text": "Staying on track is open. Write your maintenance plan when you are ready."
+  },
+  {
     "id": "rule.stage2",
-    "text": "Opens after %1$lld recorded days. You have %2$lld."
+    "text": "Opens after %lld recorded days.",
+    "plural": {
+      "zero": "Opens after %lld recorded days.",
+      "one": "Opens after %lld recorded day.",
+      "other": "Opens after %lld recorded days."
+    }
+  },
+  {
+    "id": "rule.stage2.count",
+    "text": "You have %lld.",
+    "plural": {
+      "zero": "You have %lld.",
+      "one": "You have %lld.",
+      "other": "You have %lld."
+    }
   },
   {
     "id": "rule.stage3",
-    "text": "Opens after %1$lld days on your plan, or %2$lld weeks after your plan starts"
+    "text": "Opens after %1$@, or %2$@ after your plan starts"
+  },
+  {
+    "id": "rule.stage3.days",
+    "text": "%lld days on your plan",
+    "plural": {
+      "zero": "%lld days on your plan",
+      "one": "%lld day on your plan",
+      "other": "%lld days on your plan"
+    }
+  },
+  {
+    "id": "rule.stage3.weeks",
+    "text": "%lld weeks",
+    "plural": {
+      "zero": "%lld weeks",
+      "one": "%lld week",
+      "other": "%lld weeks"
+    }
   },
   {
     "id": "rule.stage4",
-    "text": "Opens after your first urge outcome"
+    "text": "Opens after your first urge outcome, or a week from now"
   },
   {
     "id": "rule.stage5",
-    "text": "Opens after six weeks in the programme"
+    "text": "Opens %lld weeks after your plan starts",
+    "plural": {
+      "zero": "Opens %lld weeks after your plan starts",
+      "one": "Opens %lld week after your plan starts",
+      "other": "Opens %lld weeks after your plan starts"
+    }
   },
   {
     "id": "rule.stage6",
@@ -25,7 +82,12 @@
   },
   {
     "id": "rule.stage7",
-    "text": "Opens after twelve weeks in the programme"
+    "text": "Opens %lld weeks after your plan starts",
+    "plural": {
+      "zero": "Opens %lld weeks after your plan starts",
+      "one": "Opens %lld week after your plan starts",
+      "other": "Opens %lld weeks after your plan starts"
+    }
   },
   {
     "id": "todaycard.plan",
@@ -64,6 +126,149 @@
     "text": "When are the hardest times of day?"
   },
   {
+    "id": "review.list.title",
+    "text": "Reviews"
+  },
+  {
+    "id": "review.list.empty",
+    "text": "No finished reviews yet"
+  },
+  {
+    "id": "review.row",
+    "text": "Week %1$lld, %2$@.",
+    "plural": {
+      "zero": "Week %1$lld, %2$@.",
+      "one": "Week %1$lld, %2$@.",
+      "other": "Week %1$lld, %2$@."
+    }
+  },
+  {
+    "id": "review.row.starred",
+    "text": "Starred entries: %lld.",
+    "plural": {
+      "zero": "Starred entries: %lld.",
+      "one": "Starred entries: %lld.",
+      "other": "Starred entries: %lld."
+    }
+  },
+  {
+    "id": "review.row.nocount",
+    "text": "Week %1$lld, %2$@",
+    "plural": {
+      "zero": "Week %1$lld, %2$@",
+      "one": "Week %1$lld, %2$@",
+      "other": "Week %1$lld, %2$@"
+    }
+  },
+  {
+    "id": "review.onething",
+    "text": "What's the one thing to change next week?"
+  },
+  {
+    "id": "review.gettingworse",
+    "text": "I'm getting worse"
+  },
+  {
+    "id": "review.gettingworse.hint",
+    "text": "Opens a page about seeing your GP."
+  },
+  {
+    "id": "review.selfharm.answered",
+    "text": "You answered this."
+  },
+  {
+    "id": "review.summaryswitch",
+    "text": "Weekly summary"
+  },
+  {
+    "id": "review.summary.days",
+    "text": "Days with an entry: %lld.",
+    "plural": {
+      "zero": "Days with an entry: %lld.",
+      "one": "Days with an entry: %lld.",
+      "other": "Days with an entry: %lld."
+    }
+  },
+  {
+    "id": "review.summary.starred",
+    "text": "Starred entries: %lld this week.",
+    "plural": {
+      "zero": "Starred entries: %lld this week.",
+      "one": "Starred entries: %lld this week.",
+      "other": "Starred entries: %lld this week."
+    }
+  },
+  {
+    "id": "review.summary.starred.twoweeks",
+    "text": "Starred entries: %1$@, %2$@."
+  },
+  {
+    "id": "review.summary.starred.thisweek",
+    "text": "%lld this week",
+    "plural": {
+      "zero": "%lld this week",
+      "one": "%lld this week",
+      "other": "%lld this week"
+    }
+  },
+  {
+    "id": "review.summary.starred.lastweek",
+    "text": "%lld last week",
+    "plural": {
+      "zero": "%lld last week",
+      "one": "%lld last week",
+      "other": "%lld last week"
+    }
+  },
+  {
+    "id": "review.summary.plan",
+    "text": "Planned meals with an entry beside them: %lld.",
+    "plural": {
+      "zero": "Planned meals with an entry beside them: %lld.",
+      "one": "Planned meals with an entry beside them: %lld.",
+      "other": "Planned meals with an entry beside them: %lld."
+    }
+  },
+  {
+    "id": "review.summary.paused",
+    "text": "Paused days: %lld.",
+    "plural": {
+      "zero": "Paused days: %lld.",
+      "one": "Paused days: %lld.",
+      "other": "Paused days: %lld."
+    }
+  },
+  {
+    "id": "review.summary.gap",
+    "text": "Longest gap between entries: %1$@, on %2$@, from %3$@ to %4$@."
+  },
+  {
+    "id": "review.summary.urges",
+    "text": "Urges: %lld.",
+    "plural": {
+      "zero": "Urges: %lld.",
+      "one": "Urges: %lld.",
+      "other": "Urges: %lld."
+    }
+  },
+  {
+    "id": "review.summary.passed",
+    "text": "Passed: %lld.",
+    "plural": {
+      "zero": "Passed: %lld.",
+      "one": "Passed: %lld.",
+      "other": "Passed: %lld."
+    }
+  },
+  {
+    "id": "review.summary.weighin",
+    "text": "Weigh-in: done on %@."
+  },
+  {
+    "id": "review.summary.words",
+    "text": "Your words this week: %@."
+  },
+  {
     "id": "gp.default",
     "text": "I'd like to talk about my eating. I've been having times when I eat a lot and feel out of control. I've been following a self-help programme on my phone and I have a record I can show you. Can we talk about what support there is?"
   },
@@ -74,6 +279,22 @@
   {
     "id": "gp.under18",
     "text": "I'd like to talk about my eating. Is there someone for people my age I can see?"
+  },
+  {
+    "id": "gp.copy",
+    "text": "Copy"
+  },
+  {
+    "id": "gp.copiedlabel",
+    "text": "Copied"
+  },
+  {
+    "id": "gp.copied",
+    "text": "Copied. It clears in a minute."
+  },
+  {
+    "id": "support.title",
+    "text": "Get support"
   },
   {
     "id": "support.beat.title",
@@ -106,6 +327,10 @@
   {
     "id": "support.beatwebchat",
     "text": "Beat webchat"
+  },
+  {
+    "id": "support.beatwebchat.url",
+    "text": "https://www.beateatingdisorders.org.uk/get-information-and-support/get-help-for-myself/i-need-support-now/one-to-one-webchat/"
   },
   {
     "id": "support.samaritans.title",
@@ -168,6 +393,26 @@
     "text": "Some people make themselves sick, use laxatives, or miss insulin or another medicine after eating. If that happens more than about twice a week, this programme isn't the right tool on its own. Talk to your GP first."
   },
   {
+    "id": "support.callwarning",
+    "text": "This call will show in your phone's Recents."
+  },
+  {
+    "id": "support.copied",
+    "text": "Copied. It clears in a minute."
+  },
+  {
+    "id": "support.selfharm",
+    "text": "That deserves a person. Samaritans are there any time, on 116 123."
+  },
+  {
+    "id": "exclusion.heading",
+    "text": "Not right now"
+  },
+  {
+    "id": "exclusion.intro",
+    "text": "From your answers, this programme isn't the right thing for you at the moment. Here's why, and what can help instead."
+  },
+  {
     "id": "exclusion.selfharm",
     "text": "You said you've had thoughts of hurting yourself. That deserves a person, not a programme. Samaritans are there any time, on 116 123. If you are in danger now, call 999."
   },
@@ -188,12 +433,196 @@
     "text": "The people treating you are the right ones to decide what sits alongside it. Ask them about Midmorning. If they're happy, you can come back and start."
   },
   {
+    "id": "exclusion.whattodo",
+    "text": "What to do instead"
+  },
+  {
+    "id": "exclusion.closing",
+    "text": "You can come back if this changes."
+  },
+  {
+    "id": "caution.sheet",
+    "text": "Your height and weight put you close to the range where this programme isn't the right tool. You can continue. If your weight falls, the app will say so and point you to your GP. If you're unsure, talk to your GP first."
+  },
+  {
+    "id": "screening.question.age",
+    "text": "How old are you?"
+  },
+  {
+    "id": "screening.question.height",
+    "text": "Your height"
+  },
+  {
+    "id": "screening.question.weight",
+    "text": "Your weight"
+  },
+  {
+    "id": "screening.question.pregnancy",
+    "text": "We ask everyone the same questions. Pregnancy changes what eating needs to look like, so: are you pregnant at the moment?"
+  },
+  {
+    "id": "screening.question.selfharm",
+    "text": "Over the last two weeks, have you had thoughts that you'd be better off dead, or of hurting yourself?"
+  },
+  {
+    "id": "screening.question.selfharm.how",
+    "text": "Have you thought about how you would do it?"
+  },
+  {
+    "id": "screening.answer.rathernotsay",
+    "text": "I'd rather not say"
+  },
+  {
+    "id": "screening.answer.doesnotapply",
+    "text": "Doesn't apply to me"
+  },
+  {
+    "id": "screening.answer.treatmentyes",
+    "text": "Yes, and they are happy for me to use this"
+  },
+  {
+    "id": "onboarding.screen1.title",
+    "text": "What this is and isn't"
+  },
+  {
+    "id": "onboarding.screen1.line2",
+    "text": "It is not a diet, and it is not for weight loss."
+  },
+  {
+    "id": "onboarding.screen1.line5",
+    "text": "If you have had anorexia or another restrictive eating problem in the past, talk to your GP before you start. The weekly weigh-in may not be right for you."
+  },
+  {
+    "id": "onboarding.screen1.line6",
+    "text": "No person and no AI reads what you write. The app counts your starred entries, times and places to build your weekly review, on this device only."
+  },
+  {
+    "id": "onboarding.screen1.line7",
+    "text": "If you need a person, Get support is on every screen."
+  },
+  {
+    "id": "onboarding.continue",
+    "text": "Continue"
+  },
+  {
+    "id": "onboarding.screen2.title",
+    "text": "A few questions first"
+  },
+  {
+    "id": "onboarding.screen2.intro",
+    "text": "We ask for your height and weight to check this programme is safe for you. The app never shows them again and never sets a goal from them."
+  },
+  {
+    "id": "onboarding.start.title",
+    "text": "Your start"
+  },
+  {
+    "id": "onboarding.start.question",
+    "text": "When do you want to start?"
+  },
+  {
+    "id": "onboarding.start.today",
+    "text": "Today, %@"
+  },
+  {
+    "id": "onboarding.start.tomorrow",
+    "text": "Tomorrow, %@"
+  },
+  {
+    "id": "onboarding.start.dayboundary",
+    "text": "A day runs from %1$@ to %2$@."
+  },
+  {
+    "id": "onboarding.start.weighinday",
+    "text": "Weigh-in day"
+  },
+  {
+    "id": "onboarding.start.wontweigh",
+    "text": "I won't be weighing"
+  },
+  {
+    "id": "onboarding.start.weighin",
+    "text": "Once a week, on this day, the app asks for your weight and shows the trend. There is no goal and no target."
+  },
+  {
+    "id": "onboarding.pleaseanswer",
+    "text": "Please answer this one."
+  },
+  {
+    "id": "onboarding.screen4.title",
+    "text": "Permissions"
+  },
+  {
+    "id": "onboarding.screen4.recordheading",
+    "text": "Your record"
+  },
+  {
+    "id": "onboarding.screen4.recordsentence",
+    "text": "Your record, plan and weigh-ins are private and sensitive."
+  },
+  {
+    "id": "onboarding.screen4.thisdevice",
+    "text": "This device only"
+  },
+  {
+    "id": "onboarding.screen4.icloud",
+    "text": "iCloud sync comes in a later version."
+  },
+  {
+    "id": "onboarding.screen4.notifications",
+    "text": "Midmorning sends reminders for your plan and your reviews. You choose which ones and when in Settings. Each reminder shows the app name and a time, nothing more."
+  },
+  {
+    "id": "onboarding.screen4.allownotifications",
+    "text": "Allow notifications"
+  },
+  {
+    "id": "onboarding.screen4.widget",
+    "text": "Add the Lock Screen widget to record in one tap."
+  },
+  {
+    "id": "onboarding.screen4.showmehow",
+    "text": "Show me how"
+  },
+  {
+    "id": "onboarding.screen4.widgetinstructions",
+    "text": "Touch and hold your Lock Screen, tap Customise, then Lock Screen, then add Midmorning."
+  },
+  {
+    "id": "onboarding.screen4.start",
+    "text": "Start"
+  },
+  {
     "id": "notrightnow.selfharm",
     "text": "You said you've had thoughts of hurting yourself. That deserves a person, not a programme. Samaritans are there any time, on 116 123. If you are in danger now, call 999."
   },
   {
     "id": "notrightnow.weight",
     "text": "Your weight has fallen to a point where this programme isn't the right tool for you. This is not a judgement about you. This is not a diagnosis. Your GP can look at this with you."
+  },
+  {
+    "id": "notrightnowpage.heading",
+    "text": "This may not be right for you now"
+  },
+  {
+    "id": "notrightnowpage.recordstays",
+    "text": "Your record stays here, and you can keep adding to it."
+  },
+  {
+    "id": "notrightnowpage.reminderspaused",
+    "text": "Reminders are paused. You can turn them on again in Settings."
+  },
+  {
+    "id": "notrightnowpage.remindersstayon",
+    "text": "Your plan and its reminders stay on. You can turn them off in Settings."
+  },
+  {
+    "id": "gpsuggestion.heading",
+    "text": "It might help to see your GP"
+  },
+  {
+    "id": "gpsuggestion.diagnosis",
+    "text": "This is not a diagnosis, and nothing here is closed to you."
   },
   {
     "id": "gpsuggestion.fallingweight",
@@ -205,12 +634,7 @@
   },
   {
     "id": "gpsuggestion.deterioration",
-    "text": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on.",
-    "plural": {
-      "zero": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on.",
-      "one": "Your starred entries have gone up for %lld week in a row. That's worth talking through with your GP. Your plan stays on.",
-      "other": "Your starred entries have gone up for %lld weeks in a row. That's worth talking through with your GP. Your plan stays on."
-    }
+    "text": "Your starred entries have gone up each week lately. That's worth talking through with your GP. Your plan stays on."
   },
   {
     "id": "gpsuggestion.gettingworse",

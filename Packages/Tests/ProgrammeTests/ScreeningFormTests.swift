@@ -29,7 +29,7 @@ final class ScreeningFormTests: XCTestCase {
     func testOneAnswerMissing() {
         let issue = ScreeningForm.firstIssue(input(pregnancy: false))
         XCTAssertEqual(issue, ScreeningFormIssue(field: .pregnancy, problem: .unanswered))
-        XCTAssertEqual(issue?.problem.message(), "Please answer this one.")
+        XCTAssertEqual(issue?.problem.message().english, "Please answer this one.")
     }
 
     /// An empty height or weight shows "Please answer this one." under that
@@ -53,14 +53,16 @@ final class ScreeningFormTests: XCTestCase {
     func testWeightBelowTheRange() {
         let issue = ScreeningForm.firstIssue(input(weight: .value(20)))
         XCTAssertEqual(issue, ScreeningFormIssue(field: .weight, problem: .weightOutOfRange))
-        XCTAssertEqual(issue?.problem.message(), "Enter a weight of 30 kg or more.")
+        XCTAssertEqual(issue?.problem.message().english, "Enter a weight of 30 kg or more.")
+        XCTAssertEqual(issue?.problem.message(weightUnit: .stLb).english, "Enter a weight of 4 st 11 lb or more.")
     }
 
     /// Scenario "Height outside the range".
     func testHeightOutsideTheRange() {
         let issue = ScreeningForm.firstIssue(input(height: .value(90)))
         XCTAssertEqual(issue, ScreeningFormIssue(field: .height, problem: .heightOutOfRange))
-        XCTAssertEqual(issue?.problem.message(), "Enter a height between 100 and 250 cm.")
+        XCTAssertEqual(issue?.problem.message().english, "Enter a height between 100 and 250 cm.")
+        XCTAssertEqual(issue?.problem.message(heightUnit: .ftIn).english, "Enter a height between 3 ft 4 in and 8 ft 2 in.")
     }
 
     /// Scenario "No upper weight bound".

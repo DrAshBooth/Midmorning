@@ -6,6 +6,14 @@ import Constants
 /// review never shows"). Every sentence is a template filled with numbers
 /// and en_GB-formatted values; the app forms no other words at runtime
 /// (design.md, "Pattern sentences and reviews are templates plus numbers").
+///
+/// This is signed-off text. The content bundle holds a copy of each
+/// template with a "review.summary." id, and a content test proves that each
+/// sentence here equals its bundle copy, filled with the same values (ruling
+/// r13-02). A bundle string holds at most one count (ruling r13-12). So the
+/// starred part with a last-week count fills "Starred entries: %1$@, %2$@."
+/// with "%lld this week" and "%lld last week", and the urge part is the two
+/// sentences "Urges: %lld." and "Passed: %lld.", joined by one space.
 public enum ReviewSummary {
     /// The summary's sentences, in the requirement's fixed order, leaving
     /// out any part `facts` has nothing for.
@@ -34,27 +42,77 @@ public enum ReviewSummary {
         facts.pausedDayKeys.intersection(facts.weekDayKeys).count
     }
 
+    // MARK: - The sentences, each filled with its values
+
+    /// "Days with an entry: %lld." ("review.summary.days").
+    public static func daysText(_ count: Int) -> String {
+        "Days with an entry: \(count)."
+    }
+
+    /// "Starred entries: %lld this week." ("review.summary.starred") with
+    /// no last-week count. With one, "Starred entries: %1$@, %2$@."
+    /// ("review.summary.starred.twoweeks"), filled with "%lld this week"
+    /// ("review.summary.starred.thisweek") and "%lld last week"
+    /// ("review.summary.starred.lastweek").
+    public static func starredText(thisWeek: Int, lastWeek: Int?) -> String {
+        guard let lastWeek else { return "Starred entries: \(thisWeek) this week." }
+        return "Starred entries: \(thisWeekPart(thisWeek)), \(lastWeekPart(lastWeek))."
+    }
+
+    private static func thisWeekPart(_ count: Int) -> String { "\(count) this week" }
+    private static func lastWeekPart(_ count: Int) -> String { "\(count) last week" }
+
+    /// "Planned meals with an entry beside them: %lld." ("review.summary.plan").
+    public static func planText(_ count: Int) -> String {
+        "Planned meals with an entry beside them: \(count)."
+    }
+
+    /// "Paused days: %lld." ("review.summary.paused").
+    public static func pausedText(_ count: Int) -> String {
+        "Paused days: \(count)."
+    }
+
+    /// "Longest gap between entries: %1$@, on %2$@, from %3$@ to %4$@."
+    /// ("review.summary.gap"), with the en_GB duration, weekday and times.
+    public static func gapText(duration: String, weekday: String, from: String, to: String) -> String {
+        "Longest gap between entries: \(duration), on \(weekday), from \(from) to \(to)."
+    }
+
+    /// "Urges: %lld." ("review.summary.urges") and "Passed: %lld."
+    /// ("review.summary.passed"), joined by one space.
+    public static func urgeText(urges: Int, passed: Int) -> String {
+        "Urges: \(urges)." + " " + "Passed: \(passed)."
+    }
+
+    /// "Weigh-in: done on %@." ("review.summary.weighin").
+    public static func weighInText(weekday: String) -> String {
+        "Weigh-in: done on \(weekday)."
+    }
+
+    /// "Your words this week: %@." ("review.summary.words").
+    public static func wordsText(_ words: String) -> String {
+        "Your words this week: \(words)."
+    }
+
+    // MARK: - The parts, from the week's facts
+
     private static func daysWithEntryLine(_ facts: ReviewWeekFacts) -> String {
-        "Days with an entry: \(daysWithEntryCount(facts))."
+        daysText(daysWithEntryCount(facts))
     }
 
     private static func starredLine(_ facts: ReviewWeekFacts) -> String {
-        let thisWeek = starredCount(facts)
-        guard let lastWeek = facts.previousWeekFrozenStarred else {
-            return "Starred entries: \(thisWeek) this week."
-        }
-        return "Starred entries: \(thisWeek) this week, \(lastWeek) last week."
+        starredText(thisWeek: starredCount(facts), lastWeek: facts.previousWeekFrozenStarred)
     }
 
     private static func planLine(_ facts: ReviewWeekFacts) -> String? {
         guard let count = facts.plannedMealsWithEntryCount else { return nil }
-        return "Planned meals with an entry beside them: \(count)."
+        return planText(count)
     }
 
     private static func pausedLine(_ facts: ReviewWeekFacts) -> String? {
         let count = pausedCount(facts)
         guard count > 0 else { return nil }
-        return "Paused days: \(count)."
+        return pausedText(count)
     }
 
     /// The largest gap, by entry time, between two consecutive entries on
@@ -77,17 +135,17 @@ public enum ReviewSummary {
         let weekday = ReviewText.weekdayName(dayKey: best.dayKey, calendar: calendar)
         let from = ClockTime.string(from: best.first, calendar: calendar)
         let to = ClockTime.string(from: best.second, calendar: calendar)
-        return "Longest gap between entries: \(DurationText.string(seconds: best.duration)), on \(weekday), from \(from) to \(to)."
+        return gapText(duration: DurationText.string(seconds: best.duration), weekday: weekday, from: from, to: to)
     }
 
     private static func urgeLine(_ facts: ReviewWeekFacts) -> String? {
         guard facts.urgesCount > 0 else { return nil }
-        return "Urges: \(facts.urgesCount). Passed: \(facts.urgesPassedCount)."
+        return urgeText(urges: facts.urgesCount, passed: facts.urgesPassedCount)
     }
 
     private static func weighInLine(_ facts: ReviewWeekFacts, calendar: Calendar) -> String? {
         guard let dayKey = facts.weighInDoneDayKey else { return nil }
-        return "Weigh-in: done on \(ReviewText.weekdayName(dayKey: dayKey, calendar: calendar))."
+        return weighInText(weekday: ReviewText.weekdayName(dayKey: dayKey, calendar: calendar))
     }
 
     /// The close-the-day words of the week, joined in record-day order, with
@@ -95,7 +153,7 @@ public enum ReviewSummary {
     private static func wordsLine(_ facts: ReviewWeekFacts) -> String? {
         let words = facts.weekDayKeys.compactMap { facts.closeTheDayWordsByDayKey[$0] }.filter { !$0.isEmpty }
         guard !words.isEmpty else { return nil }
-        return "Your words this week: \(words.joined(separator: ", "))."
+        return wordsText(words.joined(separator: ", "))
     }
 }
 

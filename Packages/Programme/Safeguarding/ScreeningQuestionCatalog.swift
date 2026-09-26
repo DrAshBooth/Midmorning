@@ -8,7 +8,10 @@ import Foundation
 /// check-in, taking stock or any other screen."). Keeping the catalog here,
 /// not only in the App target's view, lets a `swift test` run prove the
 /// constraint; the App target's screen renders this catalog and adds no
-/// question of its own.
+/// question of its own. The content bundle holds a copy of each question
+/// with a "screening.question." id (ruling r13-02). The treatment question
+/// has no copy yet: it holds "therapist", a word on the full forbidden
+/// list, and Ash decides which list applies.
 public enum ScreeningQuestionCatalog {
     /// One screening question's prompt, read by a test and by the screen.
     public static let questions: [String] = [

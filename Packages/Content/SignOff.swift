@@ -46,10 +46,25 @@ public struct SignOff: Sendable, Equatable, Codable {
     /// `directory`, if one exists, and returns it only when it matches the
     /// bundle's hash too.
     public static func matching(bundle: ContentBundle, in directory: URL) -> SignOff? {
-        let url = directory.appendingPathComponent(fileName(forContentVersion: bundle.contentVersion))
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        guard let signOff = try? JSONDecoder().decode(SignOff.self, from: data) else { return nil }
+        guard let signOff = read(contentVersion: bundle.contentVersion, from: directory) else { return nil }
         return signOff.matches(bundle) ? signOff : nil
+    }
+
+    /// Reads the sign-off file for `contentVersion` from `directory`, and
+    /// returns it only when `content-lock.json` in the same directory holds
+    /// the same content version and the sign-off's hash. The installed app
+    /// uses this check, because it cannot compute the hash of the signed
+    /// catalogue keys (ruling r13-01).
+    public static func matching(contentVersion: Int, lockIn directory: URL) -> SignOff? {
+        guard let lock = ContentLock.read(from: directory), lock.contentVersion == contentVersion else { return nil }
+        guard let signOff = read(contentVersion: contentVersion, from: directory) else { return nil }
+        return signOff.contentVersion == lock.contentVersion && signOff.bundleHash == lock.bundleHash ? signOff : nil
+    }
+
+    private static func read(contentVersion: Int, from directory: URL) -> SignOff? {
+        let url = directory.appendingPathComponent(fileName(forContentVersion: contentVersion))
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(SignOff.self, from: data)
     }
 }
 
