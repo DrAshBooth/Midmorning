@@ -28,6 +28,8 @@ struct GPParagraphView: View {
             Button(isShowingCopiedLabel ? GPParagraphCopy.copiedLabel : GPParagraphCopy.copyLabel) {
                 copy()
             }
+            // In a List row, only a tap on "Copy" itself copies.
+            .buttonStyle(.borderless)
 
             if isShowingCopiedConfirmation {
                 Text(GPParagraphCopy.copiedConfirmationLine)

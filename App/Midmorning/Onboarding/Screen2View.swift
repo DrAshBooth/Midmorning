@@ -107,13 +107,15 @@ struct Screen2View: View {
                         if invalidField == .selfHarmSecond { Text(Screen2Content.unansweredMessage).foregroundStyle(.red) }
                     }
 
-                    if answers.selfHarmFirst == .yes, answers.selfHarmSecond == .no {
+                    if showsSelfHarmSupport {
                         Text(SelfHarmItem.supportLine)
-                        SamaritansInlineRow()
-                        BeatContactsView()
                     }
                 } header: { Text(ScreeningQuestionCatalog.questions[5]) }
                 .accessibilityFocused($focusedField, equals: .selfHarmFirst)
+
+                if showsSelfHarmSupport {
+                    SelfHarmInlineSupport()
+                }
             }
             .navigationTitle(Screen2Content.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -129,6 +131,12 @@ struct Screen2View: View {
                 if newValue != .yes { answers.selfHarmSecond = nil }
             }
         }
+    }
+
+    /// "Yes" and then "No" to the self-harm item (safeguarding spec, "The
+    /// self-harm item").
+    private var showsSelfHarmSupport: Bool {
+        answers.selfHarmFirst == .yes && answers.selfHarmSecond == .no
     }
 
     private func attemptContinue() {
@@ -161,18 +169,5 @@ struct Screen2View: View {
     private func fail(_ field: Field) {
         invalidField = field
         focusedField = field
-    }
-}
-
-/// "The list": Samaritans shown inline under the self-harm support line
-/// (safeguarding spec, "The self-harm item": "Under the line the app MUST
-/// show the support sheet's items inline, with Samaritans first.").
-private struct SamaritansInlineRow: View {
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(CommonLabels.samaritansName).font(.headline)
-            Text(SupportSheet.samaritansNumber)
-            Text(SupportSheet.samaritansLine).font(.footnote).foregroundStyle(.secondary)
-        }
     }
 }

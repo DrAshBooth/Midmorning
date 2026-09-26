@@ -65,4 +65,10 @@ public enum SupportSheet {
         guard fromSelfHarmReason else { return defaultOrder }
         return [.samaritans] + defaultOrder.filter { $0 != .samaritans }
     }
+
+    /// The items a screen shows inline under the self-harm support line,
+    /// after "Yes" and then "No" (safeguarding spec, "The self-harm item":
+    /// "Under the line the app MUST show the support sheet's items inline,
+    /// with Samaritans first."). Every item of the sheet, Samaritans first.
+    public static let inlineOrder: [Item] = order(fromSelfHarmReason: true)
 }

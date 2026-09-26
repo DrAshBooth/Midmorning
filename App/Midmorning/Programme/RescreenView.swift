@@ -85,13 +85,12 @@ struct RescreenView: View {
                     }
                     if answers.selfHarmFirst == .yes, answers.selfHarmSecond == .no {
                         Text(SelfHarmItem.supportLine)
-                        VStack(alignment: .leading) {
-                            Text(CommonLabels.samaritansName).font(.headline)
-                            Text(SupportSheet.samaritansNumber)
-                            Text(SupportSheet.samaritansLine).font(.footnote).foregroundStyle(.secondary)
-                        }
                     }
                 } header: { Text(ScreeningQuestionCatalog.questions[5]) }
+
+                if answers.selfHarmFirst == .yes, answers.selfHarmSecond == .no {
+                    SelfHarmInlineSupport()
+                }
 
                 if let invalidMessage {
                     Text(invalidMessage).foregroundStyle(.red)

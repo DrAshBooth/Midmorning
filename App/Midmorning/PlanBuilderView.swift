@@ -148,6 +148,8 @@ struct PlanBuilderView: View {
                     }
                 }
             }
+            // Two controls in one List row: each needs its own tap target.
+            .buttonStyle(.borderless)
         }
         .padding(.vertical, 4)
     }

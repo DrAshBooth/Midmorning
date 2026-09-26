@@ -19,6 +19,15 @@ final class SupportSheetTests: XCTestCase {
         XCTAssertEqual(Set(order), Set(SupportSheet.defaultOrder))
     }
 
+    /// Safeguarding spec, "The self-harm item", scenario "Thoughts without a
+    /// method" (mm-t14.29): under the support line the screen shows every
+    /// item of the sheet inline, with Samaritans first.
+    func testInlineItemsUnderTheSupportLine() {
+        XCTAssertEqual(SupportSheet.inlineOrder, SupportSheet.order(fromSelfHarmReason: true))
+        XCTAssertEqual(SupportSheet.inlineOrder, [.samaritans, .beatHelpline, .beatWebchat, .lifelineNI, .nhs111, .emergency999, .talkToYourGP])
+        XCTAssertEqual(Set(SupportSheet.inlineOrder), Set(SupportSheet.Item.allCases))
+    }
+
     func testSamaritansContent() {
         XCTAssertEqual(SupportSheet.samaritansNumber, "116 123")
         XCTAssertEqual(SupportSheet.samaritansWelshNumber, "0808 164 0123")
