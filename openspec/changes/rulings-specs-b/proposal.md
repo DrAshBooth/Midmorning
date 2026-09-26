@@ -21,7 +21,7 @@ Ash ruled on 26 September 2026 on the Midmorning Decisions page. This change wri
 - `onboarding`: "Screen 2: the screening questions" and "The one-time BMI" give the neutral colour and the announcement. "The one-time BMI" gives the ft in and st lb messages and how the app rounds them.
 - `programme`: the stage 2 and stage 3 rule strings come from one-count strings. The restart sentence and the StageOpened record day key change the engine.
 - `safeguarding`: the deterioration reason reads "Your starred entries have gone up each week lately."
-- `weekly-review`: the week-1 rule allows the save before "Done". The Reviews row, the starred part and the urge part come from one-count strings.
+- `weekly-review`: the week-1 rule allows the save before "Done". The Reviews row, the starred part and the urge part come from one-count strings. The starred line of "Taking stock", which is in `v1-programme` only, also comes from one-count strings.
 - `regular-eating-plan`: the "Rename" control keeps its visible text and its longer VoiceOver label.
 - `product-rules`: the VoiceOver label rule and the validation text rule change. This change edits `openspec/changes/v1-programme/specs/product-rules/spec.md` directly, because product-rules lives only there.
 

@@ -31,6 +31,7 @@ Each task changes one requirement and its copy in `openspec/changes/v1-programme
 - [x] 5.1 Modify weekly-review "Finish and reopen a review" for r13-12: the Reviews row comes from one-count strings. Run `openspec validate rulings-specs-b --type change --strict`.
 - [x] 5.2 Modify weekly-review "The summary built from the record" for r13-12: the starred and urge parts come from one-count strings. Run `openspec validate rulings-specs-b --type change --strict`.
 - [x] 5.3 Modify weekly-review "Week-1 answers" for r13-17: save the answers so far in week 1 too. Run `openspec validate rulings-specs-b --type change --strict`.
+- [x] 5.4 Edit weekly-review "Taking stock" in v1-programme for r13-12: its starred line comes from one-count strings. This requirement is in v1-programme only. Run `openspec validate --all --strict`.
 
 ## 6. regular-eating-plan
 
