@@ -86,7 +86,7 @@ The Privacy group MUST hold these items:
 - "Sync now" as a control when sync is on
 - "Devices with your record: 2" with the day each joined
 - "Remove from iCloud" as a control when sync is off and a copy exists in iCloud
-- "Share App Analytics with Apple" as a control that opens the iOS Settings toggle
+- "Share App Analytics with Apple" as a control that opens the app's own page in the iOS Settings app, as `data-and-privacy` states
 - "Keep it private" as a control that opens the sheet `widgets-and-intents` and `safeguarding` define
 - "Delete everything" as a control
 - a link to the privacy notice

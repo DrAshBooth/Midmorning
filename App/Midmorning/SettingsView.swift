@@ -102,12 +102,10 @@ struct SettingsView: View {
                 }
                 // data-and-privacy spec, "The app holds no analytics of its
                 // own": "Share App Analytics with Apple" opens the app's own
-                // page in the iOS Settings app — the one public API Apple
-                // gives for this (`UIApplication.openSettingsURLString`).
-                // Apple has no supported deep link straight to Privacy &
-                // Security, Analytics & Improvements; a decision for Ash
-                // (see mm-t41.4's own comment) covers the gap between this
-                // and the requirement's literal wording.
+                // page in the iOS Settings app, through
+                // `UIApplication.openSettingsURLString`. iOS gives an app no
+                // public link to Privacy & Security, Analytics & Improvements.
+                // Ash ruled this on 26 September 2026 (r12-01).
                 Button("settings.privacy.shareAppAnalytics") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         UIApplication.shared.open(url)
