@@ -10,10 +10,11 @@ import Programme
 struct ReviewsListView: View {
     let store: RecordStore
     var calendar: Calendar = .current
-    /// Pushes the tapped row's week onto the caller's own navigation path,
-    /// so this screen adds no `NavigationStack` of its own — the same
-    /// single-stack shape `TodayView` already uses for every pushed screen.
-    var openWeek: (Int) -> Void
+    /// Pushes the tapped row's review (its week and its own run's start
+    /// day) onto the caller's own navigation path, so this screen adds no
+    /// `NavigationStack` of its own — the same single-stack shape
+    /// `TodayView` already uses for every pushed screen.
+    var openReview: (ReviewRunWeek) -> Void
 
     @State private var rows: [WeeklyReviewModel.ReviewListRow] = []
 
@@ -26,7 +27,7 @@ struct ReviewsListView: View {
             } else {
                 ForEach(rows) { row in
                     Button {
-                        openWeek(row.week)
+                        openReview(row.review)
                     } label: {
                         Text(verbatim: row.text)
                             .foregroundStyle(.primary)

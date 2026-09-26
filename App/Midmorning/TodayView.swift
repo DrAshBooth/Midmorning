@@ -34,9 +34,10 @@ struct CardRoute: Hashable {
 struct WeighInRoute: Hashable {}
 
 /// The "Reviews" list, and one review by its own week number (weekly-review
-/// spec, "Finish and reopen a review").
+/// spec, "Finish and reopen a review"). `runStartDay` is `nil` for the
+/// current run, or the start day of the earlier run a review belongs to.
 struct ReviewsListRoute: Hashable {}
-struct WeeklyReviewRoute: Hashable { let week: Int }
+struct WeeklyReviewRoute: Hashable { let week: Int; var runStartDay: String? = nil }
 
 struct TodayView: View {
     let store: RecordStore
@@ -93,7 +94,7 @@ struct TodayView: View {
                     Section {
                         if let note = pinnedNoteText {
                             Button {
-                                if let week = weeklyReviewSnapshot?.pinnedNoteWeek { navigationPath.append(WeeklyReviewRoute(week: week)) }
+                                if let review = weeklyReviewSnapshot?.pinnedNoteReview { navigationPath.append(WeeklyReviewRoute(week: review.week, runStartDay: review.runStartDay)) }
                             } label: {
                                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                                     Image(systemName: "pin.fill")
@@ -234,10 +235,10 @@ struct TodayView: View {
                 WeighInScreenView(store: store)
             }
             .navigationDestination(for: ReviewsListRoute.self) { _ in
-                ReviewsListView(store: store, openWeek: { week in navigationPath.append(WeeklyReviewRoute(week: week)) })
+                ReviewsListView(store: store, openReview: { review in navigationPath.append(WeeklyReviewRoute(week: review.week, runStartDay: review.runStartDay)) })
             }
             .navigationDestination(for: WeeklyReviewRoute.self) { route in
-                ReviewScreenView(store: store, week: route.week, onDone: { reload() })
+                ReviewScreenView(store: store, week: route.week, runStartDay: route.runStartDay, onDone: { reload() })
             }
             .accessibilityAction(.magicTap) { showingNewEntry = true }
         }
