@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import Record
 @testable import Plan
+import Constants
 
 /// record spec, "The gap band", scenario "Gap over four hours", when both
 /// entries match planned meals (mm-t23.18). Today draws a matched entry on
@@ -36,7 +37,7 @@ final class PlanTodayGapBandTests: XCTestCase {
         let rows = PlanTodayRows.compute(
             match: plan.match(entries: entries.map { PlanEntryFact(id: $0.id, time: $0.time) }, recordDay: recordDay, calendar: london),
             entries: entries.map { PlanDayEntry(id: $0.id, time: $0.time, starred: $0.feltLikeABinge) },
-            answers: [:], quietHours: PlanQuietHours(isOn: true, start: "22:00", end: "07:00"),
+            answers: [:], quietHours: QuietHours(isOn: true, start: "22:00", end: "07:00"),
             recordDay: recordDay, now: at(14), calendar: london
         )
         let bandIndexes = GapBand.indexesBeforeBand(sortedTimes: entries.map(\.time), stage2Open: true, dayHasExemptState: false, isCollapsed: false, maxAwakeGapHours: 4)

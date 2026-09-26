@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// One planned meal on a day or in a template: a slot and a time, held to
 /// the minute (regular-eating-plan spec, "Slots and planned meals": "A
@@ -19,11 +20,11 @@ public struct PlannedMeal: Sendable, Equatable, Codable {
     }
 
     public init(slotIndex: Int, hour: Int, minute: Int) {
-        self.init(slotIndex: slotIndex, time: PlanTime.string(hour: hour, minute: minute))
+        self.init(slotIndex: slotIndex, time: ClockTime.string(hour: hour, minute: minute))
     }
 
     public var hourAndMinute: (hour: Int, minute: Int) {
-        PlanTime.parse(time) ?? (0, 0)
+        ClockTime.parse(time) ?? (0, 0)
     }
 }
 

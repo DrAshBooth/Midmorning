@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 // MARK: - Delivered reminders are grouped and removed (reminders spec,
 // "Delivered reminders are grouped and removed")
@@ -43,7 +44,7 @@ public enum DeliveredReminderRemoval {
                 continue
             }
             if reminder.dayKey == currentRecordDayKey, reminder.kind == .plannedMeal, let end = reminder.windowEndTime,
-               ReminderClock.minutesSinceDayStart(nowClockTime, dayStartMinute: dayStartMinute) >= ReminderClock.minutesSinceDayStart(end, dayStartMinute: dayStartMinute) {
+               ClockTime.minutesSinceDayStart(nowClockTime, dayStartMinute: dayStartMinute) >= ClockTime.minutesSinceDayStart(end, dayStartMinute: dayStartMinute) {
                 ids.insert(reminder.id)
             }
         }

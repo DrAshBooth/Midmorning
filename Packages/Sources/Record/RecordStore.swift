@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import Constants
 
 /// One entry as Today reads it: the winning `ItemVersion` of one `Item`,
 /// reduced to the fields a screen needs. Not a stored type; `RecordStore`
@@ -631,7 +632,7 @@ public final class RecordStore {
 
         /// The default time as "HH:mm".
         public var defaultTime: String {
-            String(format: "%02d:%02d", defaultHourAndMinute.hour, defaultHourAndMinute.minute)
+            ClockTime.string(hour: defaultHourAndMinute.hour, minute: defaultHourAndMinute.minute)
         }
     }
 

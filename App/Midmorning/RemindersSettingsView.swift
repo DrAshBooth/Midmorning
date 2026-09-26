@@ -3,6 +3,7 @@ import UIKit
 import UserNotifications
 import Record
 import Programme
+import Constants
 
 /// The Reminders group's own screen, one tap from the settings screen
 /// (settings spec, "The Reminders group"). First cut: "Worksheet review",
@@ -111,8 +112,8 @@ struct RemindersSettingsView: View {
     /// time.
     @ViewBuilder
     private func quietHoursLine(for time: Date) -> some View {
-        let range = ReminderQuietHours.effectiveRange(on: quietHoursOn, start: ClockTime.text(from: quietHoursStart), end: ClockTime.text(from: quietHoursEnd))
-        if ReminderQuietHours.contains(time: ClockTime.text(from: time), start: range.start, end: range.end) {
+        let quietHours = QuietHours(isOn: quietHoursOn, start: ClockTime.string(from: quietHoursStart), end: ClockTime.string(from: quietHoursEnd))
+        if quietHours.contains(ClockTime.string(from: time)) {
             Text("settings.reminders.quietHoursNotSent")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -180,14 +181,14 @@ struct RemindersSettingsView: View {
 
 private extension RecordStore {
     func trySetReminderTime(_ date: Date, _ kind: ReminderTime) {
-        try? setReminderTime(ClockTime.text(from: date), kind)
+        try? setReminderTime(ClockTime.string(from: date), kind)
     }
 
     func trySetQuietHoursStart(_ date: Date) {
-        try? setQuietHoursStart(ClockTime.text(from: date))
+        try? setQuietHoursStart(ClockTime.string(from: date))
     }
 
     func trySetQuietHoursEnd(_ date: Date) {
-        try? setQuietHoursEnd(ClockTime.text(from: date))
+        try? setQuietHoursEnd(ClockTime.string(from: date))
     }
 }

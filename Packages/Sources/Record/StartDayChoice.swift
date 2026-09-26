@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// "When do you want to start?" (onboarding spec, "Screen 3: the start
 /// day"). "Today" is the record day containing `now`; "Tomorrow" is the
@@ -56,6 +57,6 @@ public enum DayBoundaryLine {
     }
 
     private static func clock(_ hour: Int, minute: Int = 0) -> String {
-        String(format: "%02d:%02d", hour, minute)
+        ClockTime.string(hour: hour, minute: minute)
     }
 }

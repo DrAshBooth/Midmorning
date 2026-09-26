@@ -5,6 +5,7 @@ import Content
 import AppLock
 import Programme
 import Export
+import Constants
 
 /// The settings screen: one screen, one tap from Today (settings spec, "One
 /// screen, one tap from Today"). Shows its groups in the spec's order:
@@ -57,7 +58,7 @@ struct SettingsView: View {
                 // setter, so opening the screen writes no row (mm-t13.13).
                 Picker("settings.record.dayStartsAt", selection: dayStartHourSelection) {
                     ForEach(RecordDay.startHourChoices, id: \.self) { hour in
-                        Text(verbatim: String(format: "%02d:00", hour)).tag(hour)
+                        Text(verbatim: ClockTime.string(hour: hour, minute: 0)).tag(hour)
                     }
                 }
                 Toggle(ReviewContent.weeklySummarySwitchLabel, isOn: Binding(

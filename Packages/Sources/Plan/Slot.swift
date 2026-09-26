@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// A slot's kind (regular-eating-plan spec, "Slots and planned meals"):
 /// "Breakfast", "Lunch" and "Evening meal" are meals; "Mid-morning",
@@ -27,7 +28,7 @@ public struct Slot: Sendable, Equatable {
     }
 
     /// The default time, as "HH:mm".
-    public var defaultTime: String { PlanTime.string(hour: defaultHour, minute: defaultMinute) }
+    public var defaultTime: String { ClockTime.string(hour: defaultHour, minute: defaultMinute) }
 
     /// The six slots, in slot-index order (regular-eating-plan spec, "Slots
     /// and planned meals"). The default times are Breakfast 08:00,

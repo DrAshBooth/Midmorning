@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Plan
+import Constants
 
 /// regular-eating-plan spec, "A missed planned meal gets one prompt"
 /// (mm-t23.11). First cut: "Skipped" and "Add it" are wired; "That was it"

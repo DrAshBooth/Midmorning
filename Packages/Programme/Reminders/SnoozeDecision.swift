@@ -87,16 +87,16 @@ public enum SnoozeDecision {
     ) -> Outcome {
         guard userInfo.snoozeCount < constants.maxSnoozes else { return .drop }
         guard let candidate = calendar.date(byAdding: .minute, value: userInfo.snoozeMinutes, to: now) else { return .drop }
-        let candidateClock = ReminderClock.string(from: candidate, calendar: calendar)
-        if ReminderQuietHours.contains(time: candidateClock, start: userInfo.quietHoursStart, end: userInfo.quietHoursEnd) {
+        let candidateClock = ClockTime.string(from: candidate, calendar: calendar)
+        if QuietHours.contains(time: candidateClock, start: userInfo.quietHoursStart, end: userInfo.quietHoursEnd) {
             return .drop
         }
         // Order both times from the planned time, so a next planned meal
         // after midnight still comes after an evening snooze.
         if let next = userInfo.nextPlannedTime {
-            let plannedMinute = ReminderClock.minutesOfDay(userInfo.plannedTime)
-            let untilNext = ReminderClock.minutesSinceDayStart(next, dayStartMinute: plannedMinute)
-            let untilSnooze = ReminderClock.minutesSinceDayStart(candidateClock, dayStartMinute: plannedMinute)
+            let plannedMinute = ClockTime.minutesOfDay(userInfo.plannedTime)
+            let untilNext = ClockTime.minutesSinceDayStart(next, dayStartMinute: plannedMinute)
+            let untilSnooze = ClockTime.minutesSinceDayStart(candidateClock, dayStartMinute: plannedMinute)
             if untilSnooze >= untilNext { return .drop }
         }
         return .scheduleAt(candidate)

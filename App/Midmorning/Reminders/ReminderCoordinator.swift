@@ -112,8 +112,8 @@ enum ReminderCoordinator {
             }
             let ids = DeliveredReminderRemoval.idsToRemove(
                 delivered: enriched, currentRecordDayKey: currentKey,
-                nowClockTime: ReminderClock.string(from: now, calendar: calendar),
-                dayStartMinute: ReminderClock.dayStartMinute(of: currentInterval.start, calendar: calendar)
+                nowClockTime: ClockTime.string(from: now, calendar: calendar),
+                dayStartMinute: ClockTime.minutesOfDay(of: currentInterval.start, calendar: calendar)
             )
             DeliveredReminderCleanup.remove(ids: ids)
         }
@@ -242,19 +242,19 @@ enum ReminderCoordinator {
 
         let entries = isCurrentDay ? ((try? store.entries(dayKey: dayKey)) ?? []) : []
         let states = (try? store.dayStates(dateKey: dayKey)) ?? []
-        let hasEntryBeforeMidday = entries.contains { clockMinutes($0.time, calendar: calendar) < 12 * 60 }
-        let hasEntryAfter17 = entries.contains { clockMinutes($0.time, calendar: calendar) >= 17 * 60 }
-        let hasPlannedMealBeforeMidday = plannedMealFacts.contains { ReminderClock.minutesOfDay($0.time) < 12 * 60 }
+        let hasEntryBeforeMidday = entries.contains { ClockTime.minutesOfDay(of: $0.time, calendar: calendar) < 12 * 60 }
+        let hasEntryAfter17 = entries.contains { ClockTime.minutesOfDay(of: $0.time, calendar: calendar) >= 17 * 60 }
+        let hasPlannedMealBeforeMidday = plannedMealFacts.contains { ClockTime.minutesOfDay($0.time) < 12 * 60 }
 
         let midday = MiddayFacts(hasEntryBeforeMidday: hasEntryBeforeMidday, hasPlannedMealBeforeMidday: hasPlannedMealBeforeMidday, isFasting: states.contains(.fasting))
 
-        let lastPlannedMeal = plannedMealFacts.max { ReminderClock.minutesOfDay($0.time) < ReminderClock.minutesOfDay($1.time) }
+        let lastPlannedMeal = plannedMealFacts.max { ClockTime.minutesOfDay($0.time) < ClockTime.minutesOfDay($1.time) }
         let closeTheDay = CloseTheDayFacts(
             stage2Open: stage2Open,
             hasEntryAfter17: hasEntryAfter17,
             lastPlannedMealTime: lastPlannedMeal?.time,
             lastPlannedMealMatched: lastPlannedMeal?.matchedBeforeReminderTime ?? false,
-            hasEntryAtOrAfterLastPlannedMealTime: lastPlannedMeal.map { meal in entries.contains { clockMinutes($0.time, calendar: calendar) >= ReminderClock.minutesOfDay(meal.time) } } ?? false
+            hasEntryAtOrAfterLastPlannedMealTime: lastPlannedMeal.map { meal in entries.contains { ClockTime.minutesOfDay(of: $0.time, calendar: calendar) >= ClockTime.minutesOfDay(meal.time) } } ?? false
         )
 
         let templatesExist = !(((try? store.templateSlotsJSON(.weekday)) ?? "[]") == "[]" && ((try? store.templateSlotsJSON(.weekend)) ?? "[]") == "[]")
@@ -342,7 +342,7 @@ enum ReminderCoordinator {
         var result: [Int: (windowEnd: String, recordedOrAnswered: Bool)] = [:]
         for window in windows {
             let recorded = settled.first { $0.slotIndex == window.slotIndex }?.recordedOrAnswered ?? false
-            result[window.slotIndex] = (ReminderClock.string(from: window.interval.end, calendar: calendar), recorded)
+            result[window.slotIndex] = (ClockTime.string(from: window.interval.end, calendar: calendar), recorded)
         }
         return result
     }
@@ -425,11 +425,6 @@ enum ReminderCoordinator {
     }
 
     // MARK: Store reads
-
-    private static func clockMinutes(_ date: Date, calendar: Calendar) -> Int {
-        let components = calendar.dateComponents([.hour, .minute], from: date)
-        return (components.hour ?? 0) * 60 + (components.minute ?? 0)
-    }
 
     private static func schedulerSettings(store: RecordStore, notificationPermissionGranted: Bool) -> SchedulerSettings {
         func on(_ kind: RecordStore.ReminderSwitch) -> Bool { (try? store.reminderSwitchOn(kind)) ?? true }

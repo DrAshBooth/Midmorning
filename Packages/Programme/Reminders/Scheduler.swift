@@ -130,7 +130,7 @@ public struct SchedulerSettings: Sendable, Equatable {
     /// The quiet-hours range every reminder and snooze reads: "off" (the
     /// start equal to the end) while the switch is off.
     public var effectiveQuietHours: (start: String, end: String) {
-        ReminderQuietHours.effectiveRange(on: quietHoursOn, start: quietHoursStart, end: quietHoursEnd)
+        QuietHours.effectiveRange(on: quietHoursOn, start: quietHoursStart, end: quietHoursEnd)
     }
 }
 
@@ -180,8 +180,8 @@ public enum Scheduler {
         result = byDay(result) { dayKey, day in SameMinuteShift.apply(day, dayStartMinute: dayStartMinutes[dayKey] ?? 0) }
 
         // Step 7: quiet hours.
-        let quiet = ReminderQuietHours.effectiveRange(on: quietHoursOn, start: quietHoursStart, end: quietHoursEnd)
-        result = result.filter { !ReminderQuietHours.contains(time: $0.time, start: quiet.start, end: quiet.end) }
+        let quiet = QuietHours.effectiveRange(on: quietHoursOn, start: quietHoursStart, end: quietHoursEnd)
+        result = result.filter { !QuietHours.contains(time: $0.time, start: quiet.start, end: quiet.end) }
 
         return result
     }
@@ -246,7 +246,7 @@ public enum Scheduler {
         var allCandidates: [ReminderCandidate] = []
         for day in days {
             dayStarts[day.dayKey] = day.dayStart
-            dayStartMinutes[day.dayKey] = ReminderClock.dayStartMinute(of: day.dayStart, calendar: calendar)
+            dayStartMinutes[day.dayKey] = ClockTime.minutesOfDay(of: day.dayStart, calendar: calendar)
             if day.isPaused { pausedDayKeys.insert(day.dayKey) }
             plannedTimes[day.dayKey] = Dictionary(day.plannedMeals.map { ($0.slotIndex, $0.time) }, uniquingKeysWith: { first, _ in first })
             slotLabelsByDay[day.dayKey] = day.slotLabels
@@ -257,7 +257,7 @@ public enum Scheduler {
         var isFarReminder = false
         if let farDay = farReminderDay {
             dayStarts[farDay.dayKey] = farDay.dayStart
-            dayStartMinutes[farDay.dayKey] = ReminderClock.dayStartMinute(of: farDay.dayStart, calendar: calendar)
+            dayStartMinutes[farDay.dayKey] = ClockTime.minutesOfDay(of: farDay.dayStart, calendar: calendar)
             if farDay.isPaused { pausedDayKeys.insert(farDay.dayKey) }
             // The far reminder counts as that day's own close-the-day
             // reminder (reminders spec: "The scheduler MUST count the far
@@ -284,7 +284,7 @@ public enum Scheduler {
 
         var requests: [ReminderRequest] = []
         for candidate in scheduled {
-            guard let dayStart = dayStarts[candidate.dayKey], let time = ReminderClock.date(atTime: candidate.time, on: dayStart, calendar: calendar) else { continue }
+            guard let dayStart = dayStarts[candidate.dayKey], let time = ClockTime.date(atTime: candidate.time, on: dayStart, calendar: calendar) else { continue }
             let farAndCloseTheDay = isFarReminder && candidate.kind == .closeTheDay && candidate.dayKey == farReminderDay?.dayKey
             let slotLabel = candidate.slotIndex.flatMap { slotLabelsByDay[candidate.dayKey]?[$0] }
             let title = DiscreetText.title(kind: candidate.kind, explicitWordingOn: settings.explicitWordingOn, slotLabel: slotLabel)
@@ -368,11 +368,11 @@ public enum Scheduler {
         after plannedTime: String, dayKey: String, in scheduled: [ReminderCandidate],
         plannedTimes: [String: [Int: String]], dayStartMinute: Int
     ) -> String? {
-        let after = ReminderClock.minutesSinceDayStart(plannedTime, dayStartMinute: dayStartMinute)
+        let after = ClockTime.minutesSinceDayStart(plannedTime, dayStartMinute: dayStartMinute)
         return scheduled
             .filter { $0.kind == .plannedMeal && $0.dayKey == dayKey }
             .compactMap { candidate in candidate.slotIndex.flatMap { plannedTimes[dayKey]?[$0] } ?? candidate.time }
-            .filter { ReminderClock.minutesSinceDayStart($0, dayStartMinute: dayStartMinute) > after }
-            .min { ReminderClock.minutesSinceDayStart($0, dayStartMinute: dayStartMinute) < ReminderClock.minutesSinceDayStart($1, dayStartMinute: dayStartMinute) }
+            .filter { ClockTime.minutesSinceDayStart($0, dayStartMinute: dayStartMinute) > after }
+            .min { ClockTime.minutesSinceDayStart($0, dayStartMinute: dayStartMinute) < ClockTime.minutesSinceDayStart($1, dayStartMinute: dayStartMinute) }
     }
 }

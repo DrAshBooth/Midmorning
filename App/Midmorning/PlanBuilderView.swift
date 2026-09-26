@@ -135,8 +135,8 @@ struct PlanBuilderView: View {
             if let gap = gapLine(after: meal) {
                 Text(gap).font(.footnote).foregroundStyle(.secondary)
             }
-            if QuietHours.contains(time: meal.time, start: quietStart, end: quietEnd), quietOn {
-                Text(QuietHours.reminderNotSentMessage).font(.footnote).foregroundStyle(.secondary)
+            if QuietHours(isOn: quietOn, start: quietStart, end: quietEnd).contains(meal.time) {
+                Text("settings.reminders.quietHoursNotSent").font(.footnote).foregroundStyle(.secondary)
             }
             HStack {
                 Button("plan.rename") { beginRename(meal.slotIndex) }
@@ -160,14 +160,14 @@ struct PlanBuilderView: View {
         let next = orderedMeals[index + 1]
         let gap = PlanOrdering.minutesAfterDayStart(time: next.time, dayStartHour: dayStartHour)
             - PlanOrdering.minutesAfterDayStart(time: meal.time, dayStartHour: dayStartHour)
-        return PlanDuration.string(minutes: gap)
+        return DurationText.string(minutes: gap)
     }
 
     private func timeBinding(for slotIndex: Int) -> Binding<Date> {
         Binding(
             get: { ClockTime.date(from: meals.first { $0.slotIndex == slotIndex }?.time ?? "00:00") },
             set: { newValue in
-                let text = ClockTime.text(from: newValue)
+                let text = ClockTime.string(from: newValue)
                 meals = PlanCodec.placing(slotIndex, at: text, in: meals)
             }
         )

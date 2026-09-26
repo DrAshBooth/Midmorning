@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Plan
+import Constants
 
 /// The planned meal rows on Today, through `PlanTodayRows.compute`, the one
 /// function the app target calls (regular-eating-plan spec, "The
@@ -34,7 +35,7 @@ final class PlanTodayRowsTests: XCTestCase {
         )
         return PlanTodayRows.compute(
             match: match, entries: entries, answers: answers,
-            quietHours: PlanQuietHours(isOn: true, start: "22:00", end: "07:00"),
+            quietHours: QuietHours(isOn: true, start: "22:00", end: "07:00"),
             recordDay: recordDay, now: now, calendar: calendar
         )
     }

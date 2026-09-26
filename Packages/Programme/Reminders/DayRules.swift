@@ -136,7 +136,7 @@ public enum CloseTheDayRule {
     /// planned meal, the stage 1 time applies. Every time is ordered from
     /// the day start, so a planned meal after midnight is the last one.
     public static func controlShows(nowClockTime: String, dayStartMinute: Int, stage2Open: Bool, plannedMealTimes: [String]) -> Bool {
-        let since = { (time: String) in ReminderClock.minutesSinceDayStart(time, dayStartMinute: dayStartMinute) }
+        let since = { (time: String) in ClockTime.minutesSinceDayStart(time, dayStartMinute: dayStartMinute) }
         let gate: String
         if stage2Open, let last = plannedMealTimes.max(by: { since($0) < since($1) }) {
             gate = last

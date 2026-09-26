@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// Orders planned meals by their place in the record day, not by raw clock
 /// time: a time before "Day starts at" belongs to the end of the record day
@@ -8,7 +9,7 @@ public enum PlanOrdering {
     /// Minutes from the record day's start to `time`, wrapping a time before
     /// `dayStartHour` to the next calendar day.
     public static func minutesAfterDayStart(time: String, dayStartHour: Int) -> Int {
-        let minutesOfDay = PlanTime.minutesOfDay(time)
+        let minutesOfDay = ClockTime.minutesOfDay(time)
         let startMinutes = dayStartHour * 60
         return ((minutesOfDay - startMinutes) % 1440 + 1440) % 1440
     }

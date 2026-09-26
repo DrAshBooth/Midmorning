@@ -22,7 +22,7 @@ final class SnoozeAReminderTests: XCTestCase {
     func testRemindMeIn15Minutes() {
         let outcome = SnoozeDecision.decide(userInfo: userInfo(snoozeCount: 0), now: date(hour: 13, minute: 0), calendar: calendar)
         guard case .scheduleAt(let when) = outcome else { return XCTFail() }
-        XCTAssertEqual(ReminderClock.string(from: when, calendar: calendar), "13:15")
+        XCTAssertEqual(ClockTime.string(from: when, calendar: calendar), "13:15")
     }
 
     /// Scenario: The thirty-minute title (the 30-minute length applies the
@@ -30,7 +30,7 @@ final class SnoozeAReminderTests: XCTestCase {
     func testTheThirtyMinuteLength() {
         let outcome = SnoozeDecision.decide(userInfo: userInfo(snoozeCount: 0, minutes: 30), now: date(hour: 13, minute: 0), calendar: calendar)
         guard case .scheduleAt(let when) = outcome else { return XCTFail() }
-        XCTAssertEqual(ReminderClock.string(from: when, calendar: calendar), "13:30")
+        XCTAssertEqual(ClockTime.string(from: when, calendar: calendar), "13:30")
     }
 
     /// Scenario: A third snooze.
@@ -56,7 +56,7 @@ final class SnoozeAReminderTests: XCTestCase {
         let info = userInfo(snoozeCount: 1, next: "16:00")
         let outcome = SnoozeDecision.decide(userInfo: info, now: date(hour: 13, minute: 15), calendar: calendar)
         guard case .scheduleAt(let when) = outcome else { return XCTFail() }
-        XCTAssertEqual(ReminderClock.string(from: when, calendar: calendar), "13:30")
+        XCTAssertEqual(ClockTime.string(from: when, calendar: calendar), "13:30")
 
         let dropped = SnoozeDecision.decide(userInfo: userInfo(snoozeCount: 2, next: "16:00"), now: date(hour: 13, minute: 15), calendar: calendar)
         XCTAssertEqual(dropped, .drop)

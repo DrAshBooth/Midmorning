@@ -1,6 +1,7 @@
 import SwiftUI
 import Record
 import Programme
+import Constants
 
 /// "Your start" (onboarding spec, "Screen 3: the start day", "Screen 3:
 /// weigh-in day and quiet hours" and "Screen 3: the record in three
@@ -126,18 +127,8 @@ struct Screen3View: View {
     /// A "HH:mm" string as a `Date` binding, for `DatePicker`.
     private func timeBinding(_ text: Binding<String>) -> Binding<Date> {
         Binding<Date>(
-            get: {
-                let parts = text.wrappedValue.split(separator: ":").compactMap { Int($0) }
-                var components = calendar.dateComponents([.year, .month, .day], from: now)
-                components.hour = parts.first ?? 0
-                components.minute = parts.count > 1 ? parts[1] : 0
-                return calendar.date(from: components) ?? now
-            },
-            set: { newDate in
-                let hour = calendar.component(.hour, from: newDate)
-                let minute = calendar.component(.minute, from: newDate)
-                text.wrappedValue = String(format: "%02d:%02d", hour, minute)
-            }
+            get: { ClockTime.date(from: text.wrappedValue, calendar: calendar) },
+            set: { text.wrappedValue = ClockTime.string(from: $0, calendar: calendar) }
         )
     }
 }

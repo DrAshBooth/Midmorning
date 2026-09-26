@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// Moves a lower-priority reminder five minutes later, repeated, until no
 /// two of one record day's candidates share a minute (reminders spec, "Two
@@ -15,7 +16,7 @@ public enum SameMinuteShift {
     /// walk orders minutes from the day start, so a time after midnight
     /// comes after a time in the evening of the same record day.
     public static func apply(_ candidates: [ReminderCandidate], dayStartMinute: Int = 0) -> [ReminderCandidate] {
-        var minutes = candidates.map { ReminderClock.minutesSinceDayStart($0.time, dayStartMinute: dayStartMinute) }
+        var minutes = candidates.map { ClockTime.minutesSinceDayStart($0.time, dayStartMinute: dayStartMinute) }
         var moved = Array(repeating: false, count: candidates.count)
         while true {
             let byMinute = Dictionary(grouping: minutes.indices, by: { minutes[$0] })
@@ -33,7 +34,7 @@ public enum SameMinuteShift {
         var result = candidates
         for index in result.indices where moved[index] {
             let clock = (minutes[index] + dayStartMinute) % 1440
-            result[index].time = ReminderClock.string(hour: clock / 60, minute: clock % 60)
+            result[index].time = ClockTime.string(hour: clock / 60, minute: clock % 60)
         }
         return result
     }

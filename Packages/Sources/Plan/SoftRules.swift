@@ -1,4 +1,5 @@
 import Foundation
+import Constants
 
 /// A planned meal's label, time and kind — the shape every screen-facing
 /// computation in this package reads (`SoftRules`, `NextPlannedMeal`,
@@ -52,7 +53,7 @@ public enum SoftRules {
             guard gapMinutes > maxAwakeGapHours * 60 else { continue }
             let earlier = orderedMeals[i]
             let later = orderedMeals[i + 1]
-            lines.append("\(PlanDuration.string(minutes: gapMinutes)) between \(earlier.label) at \(earlier.time) and \(later.label) at \(later.time).")
+            lines.append("\(DurationText.string(minutes: gapMinutes)) between \(earlier.label) at \(earlier.time) and \(later.label) at \(later.time).")
         }
         return lines
     }

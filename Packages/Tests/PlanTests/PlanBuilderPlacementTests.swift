@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Plan
+import Constants
 
 /// regular-eating-plan spec, "Place slots in the plan builder" (mm-t23.3).
 final class PlanBuilderPlacementTests: XCTestCase {
@@ -44,7 +45,7 @@ final class PlanBuilderPlacementTests: XCTestCase {
     /// Scenario: Gap shown between planned meals.
     func testGapShownBetweenPlannedMeals() {
         let gap = PlanOrdering.minutesAfterDayStart(time: "16:00", dayStartHour: 4) - PlanOrdering.minutesAfterDayStart(time: "13:00", dayStartHour: 4)
-        XCTAssertEqual(PlanDuration.string(minutes: gap), "3 hours")
+        XCTAssertEqual(DurationText.string(minutes: gap), "3 hours")
     }
 
     /// Scenario: No gap on a fasting day. The builder shows no gap line for

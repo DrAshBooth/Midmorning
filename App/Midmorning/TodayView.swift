@@ -400,8 +400,8 @@ struct TodayView: View {
     /// time, or after 17:00 in stage 1.
     private func closeTheDayShows(_ section: DaySection) -> Bool {
         CloseTheDayRule.controlShows(
-            nowClockTime: ReminderClock.string(from: Date(), calendar: .current),
-            dayStartMinute: ReminderClock.dayStartMinute(of: section.interval.start, calendar: .current),
+            nowClockTime: ClockTime.string(from: Date(), calendar: .current),
+            dayStartMinute: ClockTime.minutesOfDay(of: section.interval.start, calendar: .current),
             stage2Open: stage2Open,
             plannedMealTimes: section.plan?.rows.map(\.time) ?? []
         )
