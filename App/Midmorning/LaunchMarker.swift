@@ -1,39 +1,33 @@
 import Foundation
 import Record
 
-/// The file half of `Record.LaunchSafety`: writes the marker at start, reads
-/// back the previous launch's streak from the marker's own content (never
-/// from `Local.store`, so the safe-mode decision needs no store to open
-/// first — design.md, "The launch marker tracks a streak, separately from
-/// the lifetime count"), and clears it once Today appears.
+/// The app's one `Record.LaunchSession` (data-and-privacy spec, "Launch
+/// safety"). `AppLockRootView` begins it at the first store open attempt
+/// with protected data available, and every later attempt in the same
+/// process ("Try again", protected data again) reuses it, so the streak and
+/// the failure count rise at most once per launch. `RunningRootView` and
+/// `SafeModeView` clear the marker after Today appears, never earlier:
+/// onboarding, Today's first load and the scheduler run all come before the
+/// clear, so a crash in any of them still counts. `LaunchSafetyWiringTests`
+/// and `LaunchSessionTests` drive the same `Record` functions.
+@MainActor
 enum LaunchMarker {
-    struct Outcome {
-        let markerWasUncleared: Bool
-        let launchOutcome: LaunchOutcome
+    private static var session: LaunchSession?
+
+    /// The session for this process, made on the first call.
+    static func session(applicationSupportDirectory: URL) -> LaunchSession {
+        if let session { return session }
+        let new = LaunchSession(markerURL: StoreLayout.launchMarkerURL(applicationSupportDirectory: applicationSupportDirectory))
+        session = new
+        return new
     }
 
-    /// Data-and-privacy spec, "Launch safety": "The app MUST write a launch
-    /// marker file at start." Reads the previous streak from the marker
-    /// file (if it still exists from a launch that never cleared it), then
-    /// overwrites it with the new streak, so a crash right after this call
-    /// still leaves the right count for the next launch to find.
-    static func beginLaunch(applicationSupportDirectory: URL, fileManager: FileManager = .default) -> Outcome {
-        let url = StoreLayout.launchMarkerURL(applicationSupportDirectory: applicationSupportDirectory)
-        let previousContent = try? String(contentsOf: url, encoding: .utf8)
-        let markerWasUncleared = previousContent != nil
-        let previousStreak = previousContent
-            .flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0
-        let outcome = LaunchSafety.startLaunch(markerWasUncleared: markerWasUncleared, previousConsecutiveUnclearedCount: previousStreak)
-        try? String(outcome.newConsecutiveUnclearedCount).write(to: url, atomically: true, encoding: .utf8)
-        return Outcome(markerWasUncleared: markerWasUncleared, launchOutcome: outcome)
-    }
-
-    /// Data-and-privacy spec, "Launch safety": "The app MUST clear the
-    /// marker after Today appears." This app has no onboarding gate yet, so
-    /// reaching the running phase (task 3.1's own scope note) stands in for
-    /// "Today appears".
-    static func clearAfterTodayAppears(applicationSupportDirectory: URL, fileManager: FileManager = .default) {
-        let url = StoreLayout.launchMarkerURL(applicationSupportDirectory: applicationSupportDirectory)
-        try? fileManager.removeItem(at: url)
+    /// "The app MUST clear the marker after Today appears." Runs after the
+    /// current main-actor work, so Today's own first load and the
+    /// `onAppear` scheduler run finish first.
+    static func clearAfterTodayAppears() {
+        Task { @MainActor in
+            session?.clearAfterTodayAppears()
+        }
     }
 }

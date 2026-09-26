@@ -5,8 +5,8 @@ import XCTest
 /// mm-t42.20, the wiring bead: two `mm-t41.3` scenarios built there only
 /// over fixture facts now run end to end over real components.
 /// `App/Midmorning/LaunchMarker.swift` and `AppLockRootView.attemptOpen`
-/// (App target, untested by `swift test`) perform the same composition
-/// these tests drive directly (`no-app-target-test-runner`).
+/// (App target, untested by `swift test`) call the same
+/// `Record.LaunchMarkerFile` these tests call (mm-t41.17).
 @MainActor
 final class LaunchSafetyWiringTests: XCTestCase {
     private func makeDirectory() throws -> URL {
@@ -15,18 +15,11 @@ final class LaunchSafetyWiringTests: XCTestCase {
         return directory
     }
 
-    /// The exact file-based protocol `LaunchMarker.beginLaunch` uses: read
-    /// the previous streak (if the marker file still exists from a launch
-    /// that never cleared it), run `LaunchSafety.startLaunch`, write the new
-    /// streak back. Returns the outcome; the caller decides whether to
-    /// "clear" (delete the file) to simulate Today appearing.
+    /// One launch: the real `LaunchMarkerFile.begin` the App target's
+    /// `LaunchSession` calls. The caller decides whether to "clear" (delete
+    /// the file) to simulate Today appearing.
     private func beginLaunch(markerURL: URL) -> LaunchOutcome {
-        let previousContent = try? String(contentsOf: markerURL, encoding: .utf8)
-        let markerWasUncleared = previousContent != nil
-        let previousStreak = previousContent.flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0
-        let outcome = LaunchSafety.startLaunch(markerWasUncleared: markerWasUncleared, previousConsecutiveUnclearedCount: previousStreak)
-        try? String(outcome.newConsecutiveUnclearedCount).write(to: markerURL, atomically: true, encoding: .utf8)
-        return outcome
+        LaunchMarkerFile.begin(at: markerURL).launchOutcome
     }
 
     /// Scenario: Third launch with an uncleared marker, over a real marker
@@ -63,7 +56,7 @@ final class LaunchSafetyWiringTests: XCTestCase {
 
         // Safe mode's reduced Today appears: the marker clears, exactly as
         // it would after the ordinary Today appears.
-        try? FileManager.default.removeItem(at: markerURL)
+        LaunchMarkerFile.clear(at: markerURL)
 
         let next = beginLaunch(markerURL: markerURL)
         XCTAssertFalse(next.enterSafeMode)

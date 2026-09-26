@@ -24,5 +24,8 @@ struct SafeModeView: View {
             .navigationTitle("today.title")
             .getSupport()
         }
+        // data-and-privacy spec, "Launch safety": safe mode's own Today
+        // appeared, so the next launch starts a new streak.
+        .onAppear { LaunchMarker.clearAfterTodayAppears() }
     }
 }
