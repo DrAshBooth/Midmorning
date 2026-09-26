@@ -65,9 +65,18 @@ tells what each holds). Before each launch, a test copies one seeded store
 into the app's container. The app then opens on Today with the app lock off.
 The log and the result bundle go to `out/automated/`.
 
-The UI tests are not part of `./verify`. A simulator run needs a booted
+The UI tests are not part of `./verify`, for two reasons. First, the 21
+checks take about 430 s on a warm simulator (26 September 2026), and a warm
+`./verify` must stay under 150 s. Second, a simulator run needs a booted
 simulator of its own, and parallel worktrees share one simulator service.
-On 26 September 2026 that service stopped: every `simctl` call waited with
-no end while four simulators stayed in "Shutting Down". A `./verify` that
-needs the simulator would then fail for every worktree. The package tests
-stay in `./verify`.
+On 26 September 2026 that service stopped for about 20 minutes: every
+`simctl` call waited while four simulators stayed in "Shutting Down". The
+package tests stay in `./verify`; they take less than one second.
+
+Until mm-t12b.27 is fixed, every check that starts on Today fails: on the
+iOS 27.0 simulator Today shows a blank screen. On 26 September 2026 all 21
+checks passed on a local build with the fix of that bead, and that build
+was not committed.
+
+After a failure, the script keeps the test's screenshot and accessibility
+hierarchy in `out/automated/<test>.png` and `<test>.txt`.

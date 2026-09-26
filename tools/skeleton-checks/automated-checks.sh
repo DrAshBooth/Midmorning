@@ -53,9 +53,12 @@ for name in "$@"; do only+=("-only-testing:HarnessUITests/AutomatedChecks/$name"
 [ ${#only[@]} -eq 0 ] && only=("-only-testing:HarnessUITests/AutomatedChecks")
 rm -rf "$OUT"; mkdir -p "$OUT"
 step "run the checks"
-TEST_RUNNER_APP_DATA="$DATA" TEST_RUNNER_STORES="$HERE/stores" \
+# A failed test keeps its screen and hierarchy in $OUT. Xcode's own
+# diagnostics collection after a failure can wait ten minutes, so it is off.
+TEST_RUNNER_APP_DATA="$DATA" TEST_RUNNER_STORES="$HERE/stores" TEST_RUNNER_OUT_DIR="$OUT" \
   xcodebuild test-without-building -project "$HERE/Harness.xcodeproj" -scheme HarnessUITests \
   -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$HERE/.dd" \
+  -collect-test-diagnostics never \
   -resultBundlePath "$OUT/AutomatedChecks.xcresult" "${only[@]}" >"$OUT/xcodebuild.log" 2>&1
 status=$?
 grep -E "Test Case .* (passed|failed)|error: " "$OUT/xcodebuild.log" | sed -E 's/^.*Test Case .-\[HarnessUITests\.AutomatedChecks (test[^]]*)\]. (passed|failed).*\(([0-9.]+) seconds\).*/\2  \1 (\3 s)/'

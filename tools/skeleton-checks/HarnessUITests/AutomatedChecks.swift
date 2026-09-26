@@ -21,7 +21,16 @@ final class AutomatedChecks: XCTestCase {
         }
     }
 
+    /// After a failure, keeps the screen and the accessibility hierarchy in
+    /// `OUT_DIR`, so that the person who runs the checks can see what
+    /// showed.
     override func tearDown() {
+        if (testRun?.totalFailureCount ?? 0) > 0, let out = environment["OUT_DIR"], app.state != .notRunning {
+            let name = name.split(separator: " ").last.map { String($0.dropLast()) } ?? "failure"
+            let directory = URL(fileURLWithPath: out)
+            try? XCUIScreen.main.screenshot().pngRepresentation.write(to: directory.appendingPathComponent("\(name).png"))
+            try? app.debugDescription.write(to: directory.appendingPathComponent("\(name).txt"), atomically: true, encoding: .utf8)
+        }
         app.terminate()
     }
 
@@ -211,9 +220,9 @@ final class AutomatedChecks: XCTestCase {
         let gapBands = app.switches["Gap bands"].firstMatch
         XCTAssertTrue(scrollTo(gapBands))
         XCTAssertEqual(gapBands.value as? String, "1", "\"Gap bands\" is on")
-        let unit = element(labelBeginningWith: "Unit")
+        let unit = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Unit")).firstMatch
         XCTAssertTrue(scrollTo(unit))
-        XCTAssertTrue("\(unit.label) \(unit.value ?? "")".contains("kg"), "the unit is kg: \(unit.label) \(unit.value ?? "")")
+        XCTAssertTrue(unit.staticTexts["kg"].exists, "the unit is kg")
         app.swipeDown(); app.swipeDown(); app.swipeDown()
         app.buttons["Reminders"].firstMatch.tap()
         assertScreen("Reminders")
@@ -223,8 +232,11 @@ final class AutomatedChecks: XCTestCase {
         let quietHours = app.switches["Quiet hours"].firstMatch
         XCTAssertTrue(scrollTo(quietHours))
         XCTAssertEqual(quietHours.value as? String, "1", "quiet hours are on")
-        XCTAssertTrue(scrollTo(element(labelContaining: "22:00")), "quiet hours start at 22:00")
-        XCTAssertTrue(scrollTo(element(labelContaining: "07:00")), "quiet hours end at 07:00")
+        // The two time pickers under "Quiet hours": "Start" and "End".
+        let pickers = app.buttons.matching(NSPredicate(format: "label == %@", "Time Picker")).allElementsBoundByIndex
+        XCTAssertGreaterThanOrEqual(pickers.count, 2)
+        let quietStartAndEnd = pickers.suffix(2).map { $0.value as? String }
+        XCTAssertEqual(quietStartAndEnd, ["22:00", "07:00"], "quiet hours run from 22:00 to 07:00")
     }
 
     /// mm-t12b.1, comment of mm-t11.39: the record strings from the
@@ -264,10 +276,12 @@ final class AutomatedChecks: XCTestCase {
         for chip in ["Home", "Work", "Out", "Travelling"] {
             XCTAssertTrue(app.buttons[chip].firstMatch.exists, "the Where chips show \"\(chip)\"")
         }
+        // The Context field's label: "Context", and "What was going on just
+        // before?" while the star is on.
+        XCTAssertTrue(element(labelled: "Context").exists, "the new-entry screen shows \"Context\"")
         let knob = star.switches.firstMatch
         (knob.exists ? knob : star).tap()
-        XCTAssertTrue(element(labelled: "Context").waitForExistence(timeout: 5) || element(labelContaining: "Context").exists, "the star shows \"Context\"")
-        XCTAssertTrue(element(labelContaining: "What was going on just before?").exists, "the star shows \"What was going on just before?\"")
+        XCTAssertTrue(element(labelled: "What was going on just before?").waitForExistence(timeout: 5), "with the star on, the field reads \"What was going on just before?\"")
         app.buttons["Cancel"].firstMatch.tap()
     }
 
@@ -479,11 +493,22 @@ final class AutomatedChecks: XCTestCase {
         try launchOnToday("review")
         app.buttons["Weekly review"].firstMatch.tap()
         assertScreen("Weekly review")
-        let yes = app.buttons.matching(NSPredicate(format: "label == %@", "Yes"))
-        XCTAssertTrue(scrollTo(yes.firstMatch), "the self-harm item shows \"Yes\"")
-        yes.firstMatch.tap()
-        let secondYes = yes.element(boundBy: 1)
+        // Each row of an inline picker carries the picker's label, the
+        // question. The rows are "No", "Yes" and "Rather not say", in that
+        // order, so "Yes" is the second row.
+        let firstStep = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Over the last two weeks"))
+        XCTAssertTrue(scrollTo(firstStep.element(boundBy: 1)), "the self-harm item shows \"Yes\"")
+        firstStep.element(boundBy: 1).tap()
+        let secondStep = app.buttons.matching(NSPredicate(format: "label == %@", "Have you thought about how you would do it?"))
+        let secondYes = secondStep.element(boundBy: 1)
         XCTAssertTrue(scrollTo(secondYes), "the second step of the self-harm item shows")
+        // "Done" sits over the bottom of the form; a row under it takes no tap.
+        let done = app.buttons["Done"].firstMatch
+        var swipes = 0
+        while secondYes.frame.maxY > done.frame.minY - 8 && swipes < 5 {
+            app.swipeUp()
+            swipes += 1
+        }
         secondYes.tap()
         XCTAssertTrue(element(labelled: "This may not be right for you now").waitForExistence(timeout: 8), "the not-right-now page shows")
         let export = app.buttons["Export your record to take with you"].firstMatch
