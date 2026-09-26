@@ -27,6 +27,12 @@ struct CardRoute: Hashable {
     let cardId: String
 }
 
+/// The weigh-in screen (weigh-in spec, "The app accepts a weight on the
+/// weigh-in day only": "From Today the route is 'Programme', then 'Getting
+/// started', then 'Weigh-in'."). One route value; the screen reads every
+/// fact it needs from `store`, so the route carries no payload.
+struct WeighInRoute: Hashable {}
+
 struct TodayView: View {
     let store: RecordStore
 
@@ -181,6 +187,9 @@ struct TodayView: View {
             }
             .navigationDestination(for: CardRoute.self) { route in
                 CardScreenView(store: store, cardId: route.cardId, recordsAnswerOnAppear: openCardId == route.cardId)
+            }
+            .navigationDestination(for: WeighInRoute.self) { _ in
+                WeighInScreenView(store: store)
             }
             .accessibilityAction(.magicTap) { showingNewEntry = true }
         }

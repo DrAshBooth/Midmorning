@@ -67,7 +67,7 @@ struct RemindersSettingsView: View {
                 DatePicker("settings.reminders.time.closeTheDay", selection: $closeTheDayTime, displayedComponents: .hourAndMinute)
                     .onChange(of: closeTheDayTime) { store.trySetReminderTime($1, .closeTheDay); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.time.weighIn", selection: $weighInTime, displayedComponents: .hourAndMinute)
-                    .onChange(of: weighInTime) { store.trySetReminderTime($1, .weighIn) }
+                    .onChange(of: weighInTime) { store.trySetReminderTime($1, .weighIn); ReminderCoordinator.recomputeAndApply(store: store) }
                 DatePicker("settings.reminders.time.weeklyReview", selection: $weeklyReviewTime, displayedComponents: .hourAndMinute)
                     .onChange(of: weeklyReviewTime) { store.trySetReminderTime($1, .weeklyReview) }
             } header: {

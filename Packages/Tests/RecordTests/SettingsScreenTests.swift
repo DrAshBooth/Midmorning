@@ -153,6 +153,28 @@ final class SettingsScreenTests: XCTestCase {
         XCTAssertNil(try store.remindersPausedAt(), "the app clears remindersPausedAt")
     }
 
+    // MARK: - The Weigh-in group (mm-t22.20)
+
+    func testUnitDefaultsToKg() throws {
+        let store = try makeStore()
+        XCTAssertEqual(try store.weighInUnit(), "kg")
+    }
+
+    /// Scenario: Change the unit.
+    func testChangeTheUnit() throws {
+        let store = try makeStore()
+        try store.setWeighInUnit("stLb")
+        XCTAssertEqual(try store.weighInUnit(), "stLb", "the weigh-in screen and the export read the same row from then on")
+    }
+
+    /// The Weigh-in group's "Weigh-in day" reads and writes the same row the
+    /// weigh-in screen's own control uses.
+    func testWeighInDayIsTheSameRowAsTheWeighInScreen() throws {
+        let store = try makeStore()
+        try store.setWeighInDayChoice(.weekday(6))
+        XCTAssertEqual(try store.weighInDayChoice(), .weekday(6))
+    }
+
     // MARK: - The Privacy group: "Delete everything" calls a stub seam
 
     func testStubDeleteAllSeamDoesNothingAndNeverThrows() {

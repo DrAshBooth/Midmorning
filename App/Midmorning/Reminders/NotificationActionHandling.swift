@@ -10,6 +10,12 @@ extension Foundation.Notification.Name {
     /// entry points"). `AppLockRootView` turns this into
     /// `AppLifecycleEvent.pendingRouteRequested(.newEntry)`.
     static let reminderAddActionTapped = Foundation.Notification.Name("uk.midmorning.reminderAddActionTapped")
+
+    /// Posted on a plain tap on the weigh-in day reminder (reminders spec,
+    /// "The weigh-in day reminder": "A tap MUST open the weigh-in
+    /// screen."). `RunningRootView` presents `WeighInScreenView` over
+    /// Today when it receives this.
+    static let weighInReminderTapped = Foundation.Notification.Name("uk.midmorning.weighInReminderTapped")
 }
 
 /// Handles a planned meal reminder's three actions. Registered as
@@ -43,11 +49,15 @@ final class NotificationActionHandling: NSObject, UNUserNotificationCenterDelega
             NotificationCenter.default.post(name: .reminderAddActionTapped, object: nil)
 
         default:
-            // A plain tap (`UNNotificationDefaultActionIdentifier`) opens
-            // the app to Today, the system's own default behaviour
-            // (reminders spec: "A tap on the reminder itself MUST open
-            // Today.").
-            break
+            // A plain tap (`UNNotificationDefaultActionIdentifier`). Every
+            // reminder kind but the weigh-in day reminder opens the app to
+            // Today, the system's own default behaviour; the weigh-in day
+            // reminder's own requirement names its own screen instead
+            // (reminders spec, "The weigh-in day reminder": "A tap MUST
+            // open the weigh-in screen.").
+            if content.userInfo["kind"] as? String == ReminderKind.weighInDay.rawValue {
+                NotificationCenter.default.post(name: .weighInReminderTapped, object: nil)
+            }
         }
 
         completionHandler()

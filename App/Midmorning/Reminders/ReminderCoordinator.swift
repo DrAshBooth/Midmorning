@@ -49,7 +49,26 @@ enum ReminderCoordinator {
         let farDay = schedulerDay(store: store, dayKey: RecordDay.key(containing: dayInterval.start, calendar: calendar), dayInterval: dayInterval, isCurrentDay: false, previousDayKey: previousDayKey, calendar: calendar, constants: constants)
 
         let settings = schedulerSettings(store: store, notificationPermissionGranted: notificationPermissionGranted)
-        return Scheduler.requests(days: days, farReminderDay: farDay, settings: settings, calendar: calendar, constants: constants)
+        let extraCandidates = weighInDayCandidates(store: store, dayKeys: days.map(\.dayKey), calendar: calendar)
+        return Scheduler.requests(days: days, extraCandidates: extraCandidates, farReminderDay: farDay, settings: settings, calendar: calendar, constants: constants)
+    }
+
+    /// reminders spec, "The weigh-in day reminder": `weigh-in`'s own
+    /// candidate, fed into the same scheduler as an extra candidate
+    /// (design.md: "The same scheduler MUST schedule every reminder that
+    /// another capability asks for").
+    private static func weighInDayCandidates(store: RecordStore, dayKeys: [String], calendar: Calendar) -> [ReminderCandidate] {
+        let weighInWeekday: Int?
+        switch try? store.weighInDayChoice() {
+        case .weekday(let weekday): weighInWeekday = weekday
+        case .wontBeWeighing, nil: weighInWeekday = nil
+        }
+        let time = (try? store.reminderTime(.weighIn)) ?? RecordStore.ReminderTime.weighIn.defaultTime
+        return WeighInReminderRule.candidates(
+            weighInWeekday: weighInWeekday, dayKeys: dayKeys, time: time,
+            hasWeighIn: { dayKey in (try? store.weighIn(dateKey: dayKey)) != nil },
+            calendar: calendar
+        )
     }
 
     private static func schedulerDay(
@@ -148,6 +167,7 @@ enum ReminderCoordinator {
             .morningPlan: on(.setTodaysPlan),
             .midday: on(.midday),
             .closeTheDay: on(.closeTheDay),
+            .weighInDay: on(.weighInDay),
         ]
         return SchedulerSettings(
             switches: switches,

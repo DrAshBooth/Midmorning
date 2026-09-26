@@ -5,7 +5,7 @@
   "Template": ["id", "kind", "slotsJSON", "changedAt"],
   "Day": ["id", "dateKey", "slotsJSON", "windowBeforeMinutes", "windowAfterMinutes", "changedAt", "setAt", "setBy"],
   "Answer": ["id", "kind", "dateKey", "slotIndex", "cardId", "value", "changedAt"],
-  "Measure": ["id", "dateKey", "weightKg", "changedAt"],
+  "Measure": ["id", "dateKey", "weightKg", "unit", "savedAt", "changedAt"],
   "Session": ["id", "startedAt", "startDayKey", "outcome", "outcomeAt", "outcomeDayKey", "entryId"],
   "ListItem": ["id", "kind", "text", "position", "deleted", "changedAt"],
   "Sheet": ["id", "kind", "payloadJSON", "entryId", "deleted", "changedAt"],

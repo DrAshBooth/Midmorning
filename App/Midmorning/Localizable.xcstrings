@@ -738,6 +738,17 @@
         }
       }
     },
+    "settings.group.weighIn": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weigh-in"
+          }
+        }
+      }
+    },
     "settings.privacy.deleteEverything": {
       "extractionState": "manual",
       "localizations": {

@@ -887,6 +887,72 @@ public final class RecordStore {
         try setSettingValue(label ?? "", key: Settings.slotLabelKey(index), changedAt: changedAt)
     }
 
+    // MARK: - Weigh-in: the kept row and the Weigh-in group's unit (weigh-in
+    // spec, "The store keeps the weigh-in on the device and away from
+    // HealthKit"; settings spec, "The Weigh-in group"). The row is a
+    // `Measure` row, one per record day key; every write is a new row, like
+    // every other synced row, and `MeasureReconciler` picks the winner on
+    // read (model-foundation's own append-only pattern).
+
+    /// One saved weigh-in as the app reads it: its record day key, its kept
+    /// kilogram value, the unit the person used, and its `savedAt` and
+    /// `changedAt` moments.
+    public struct WeighInRow: Sendable, Equatable {
+        public let dateKey: String
+        public let weightKg: Double
+        public let unit: String
+        public let savedAt: Date
+        public let changedAt: Date
+    }
+
+    /// The winning weigh-in for `dateKey`, or `nil` when none exists.
+    public func weighIn(dateKey: String) throws -> WeighInRow? {
+        var descriptor = FetchDescriptor<Measure>(predicate: #Predicate { $0.dateKey == dateKey })
+        descriptor.includePendingChanges = false
+        guard let winner = MeasureReconciler.winners(in: try context.fetch(descriptor))[dateKey] else { return nil }
+        return WeighInRow(dateKey: winner.dateKey, weightKg: winner.weightKg, unit: winner.unit, savedAt: winner.savedAt, changedAt: winner.changedAt)
+    }
+
+    /// Every kept weigh-in, one per record day key, oldest first (weigh-in
+    /// spec, "The chart": "The chart MUST show every weigh-in in the
+    /// programme."; "The store keeps every weigh-in" while no weigh-in day
+    /// exists).
+    public func weighIns() throws -> [WeighInRow] {
+        let winners = MeasureReconciler.winners(in: try context.fetch(FetchDescriptor<Measure>()))
+        return winners.values
+            .map { WeighInRow(dateKey: $0.dateKey, weightKg: $0.weightKg, unit: $0.unit, savedAt: $0.savedAt, changedAt: $0.changedAt) }
+            .sorted { $0.dateKey < $1.dateKey }
+    }
+
+    /// Saves `weightKg` for `dateKey` (weigh-in spec, "The app accepts a
+    /// weight on the weigh-in day only": "For 10 minutes after 'Save', the
+    /// person MUST be able to change the number."). A later call for the
+    /// same `dateKey` keeps the first call's `savedAt` and writes a new
+    /// `changedAt`; the caller (the weigh-in screen) only offers a second
+    /// call inside the 10-minute window. `weightKg` MUST already be rounded
+    /// to two decimal places (`WeighInWeight.storedKg`); this call does not
+    /// round it again.
+    @discardableResult
+    public func saveWeighIn(dateKey: String, weightKg: Double, unit: String, at moment: Date) throws -> WeighInRow {
+        let savedAt = try weighIn(dateKey: dateKey)?.savedAt ?? moment
+        context.insert(Measure(dateKey: dateKey, weightKg: weightKg, unit: unit, savedAt: savedAt, changedAt: moment))
+        try persist()
+        return WeighInRow(dateKey: dateKey, weightKg: weightKg, unit: unit, savedAt: savedAt, changedAt: moment)
+    }
+
+    private static let weighInUnitKey = "weighIn.unit"
+
+    /// "Unit": "kg" or "st lb", default "kg" (settings spec, "The Weigh-in
+    /// group"). Read from the weigh-in screen and from the settings screen,
+    /// so both agree at once.
+    public func weighInUnit() throws -> String {
+        try settingValue(key: Self.weighInUnitKey) ?? "kg"
+    }
+
+    public func setWeighInUnit(_ unit: String, changedAt: Date = .now) throws {
+        try setSettingValue(unit, key: Self.weighInUnitKey, changedAt: changedAt)
+    }
+
     // MARK: - Programme: stage-opened rows, card answers and the restart
     // moment (programme spec, "A pure stage engine with stored openings as
     // input", "The card's answer is kept in the record", "Start week 1
