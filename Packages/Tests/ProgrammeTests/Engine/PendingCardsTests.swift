@@ -137,4 +137,14 @@ final class PendingCardsTests: XCTestCase {
         let (_, cards) = pending(openings: openings, hasTemplate: false, now: moment(2026, 10, 10, 8), currentRecordDay: dayKey(2026, 10, 10))
         XCTAssertEqual(cards.filter { $0.kind == .plan }.map(\.id), ["plancard.3"])
     }
+
+    /// `PendingCard.openingStage` parses the stage back out of an opening
+    /// card's own id, the App target's seam for pushing that stage's screen
+    /// on "Open" (programme spec, "A stage opening shows one card": "'Open'
+    /// MUST show the stage on the Programme screen.").
+    func testOpeningStageParsesTheIdAndOnlyForOpeningCards() {
+        XCTAssertEqual(PendingCard(id: "opening.3", kind: .opening, becameDueAt: .now).openingStage, .alternatives)
+        XCTAssertNil(PendingCard(id: "stage1.why", kind: .stage1, becameDueAt: .now).openingStage)
+        XCTAssertNil(PendingCard(id: "plancard.3", kind: .plan, becameDueAt: .now).openingStage)
+    }
 }
