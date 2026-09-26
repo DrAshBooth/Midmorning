@@ -9,6 +9,11 @@ struct NewEntryView: View {
 
     let store: RecordStore
     let day: DateInterval
+    /// Set by "Add it" on the missed planned meal prompt (regular-eating-
+    /// plan spec, "A missed planned meal gets one prompt": "'Add it' MUST
+    /// open the new-entry screen with the time set to the planned meal's
+    /// time"). `nil` opens with the current time, as from "Add an entry".
+    var initialTime: Date?
     let onSave: (RecordRow) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -63,7 +68,7 @@ struct NewEntryView: View {
         .redacted(reason: scenePhase == .active ? [] : .privacy)
         .onAppear {
             openedAt = Date()
-            time = min(openedAt, wheelRange.upperBound)
+            time = min(initialTime ?? openedAt, wheelRange.upperBound)
             customPlaces = (try? store.customPlaces()) ?? []
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
