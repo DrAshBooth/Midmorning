@@ -94,6 +94,8 @@ struct EarlierDayDetailView: View {
                     move(by: -1)
                 } label: {
                     Image(systemName: "chevron.left")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("today.earlierDays.previousDay")
                 Spacer()
@@ -101,6 +103,8 @@ struct EarlierDayDetailView: View {
                     move(by: 1)
                 } label: {
                     Image(systemName: "chevron.right")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("today.earlierDays.nextDay")
             }

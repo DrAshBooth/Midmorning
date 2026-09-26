@@ -37,18 +37,35 @@ struct DaySectionHeading: View {
             Menu {
                 menuItems
             } label: {
+                // product-rules spec, "Accessibility everywhere": a hit
+                // area of at least 44 by 44 points.
                 Image(systemName: "chevron.down")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("today.dayMenu.accessibilityLabel")
         }
         .textCase(nil)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
-        .accessibilityAction(named: Text(section.isExpanded ? "today.collapseDay" : "today.expandDay")) {
-            actions.setExpanded(!section.isExpanded)
-        }
-        .accessibilityAction(named: Text("today.didntRecord")) {
-            actions.toggleState(.didntRecord, !section.states.contains(.didntRecord))
+        .accessibilityActions {
+            if !section.entries.isEmpty {
+                Button(section.isExpanded ? "today.collapseDay" : "today.expandDay") {
+                    actions.setExpanded(!section.isExpanded)
+                }
+            }
+            Button("today.fastingToday") {
+                actions.toggleState(.fasting, !section.states.contains(.fasting))
+            }
+            Button("today.didntRecord") {
+                actions.toggleState(.didntRecord, !section.states.contains(.didntRecord))
+            }
+            if let openEarlierDays = actions.openEarlierDays {
+                Button("today.earlierDays", action: openEarlierDays)
+            }
+            if let openPlanBuilder = actions.openPlanBuilder {
+                Button("plan.today") { openPlanBuilder(todaysPlan) }
+            }
         }
     }
 
