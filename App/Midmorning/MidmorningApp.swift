@@ -25,6 +25,9 @@ struct MidmorningApp: App {
                 // control does with the system grey (product-rules spec,
                 // "Appearance").
                 .tint(Color.accentColor)
+                // A reminder response waits here until Today opens it
+                // (`ReminderRouteOpening`).
+                .environmentObject(appDelegate.reminderRoutes)
         }
     }
 }
@@ -40,7 +43,10 @@ struct MidmorningApp: App {
 /// reminder"), before anything else runs.
 final class AppDelegate: NSObject, UIApplicationDelegate {
     let metricKitSubscriber = MetricKitSubscriber()
-    private let notificationActionHandling = NotificationActionHandling()
+    /// Lives as long as the process, so a reminder response on a cold
+    /// launch is kept until Today appears.
+    let reminderRoutes = ReminderRouteInbox()
+    private lazy var notificationActionHandling = NotificationActionHandling(routes: reminderRoutes)
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         MXMetricManager.shared.add(metricKitSubscriber)

@@ -207,8 +207,6 @@ private struct RunningRootView: View {
     let onDeleteFromThisDevice: () -> Void
     @StateObject private var deletionNotifier = DeletionNotifier()
     @Environment(\.scenePhase) private var scenePhase
-    @State private var showingWeighInFromReminder = false
-    @State private var showingWeeklyReviewFromReminder = false
 
     var body: some View {
         TodayView(store: store)
@@ -230,9 +228,11 @@ private struct RunningRootView: View {
             }
             // A pending route always wins over the cover (app-lock spec, "A
             // new entry before authentication"): the notification action
-            // "Add" posts `.reminderAddActionTapped`, which requests the
-            // route; `AppLifecycleState.coverMode` already reads `.none`
-            // while a route is pending, so the cover steps aside on its own.
+            // "Add" requests the route through `ReminderRouteInbox`
+            // (`ReminderRouteOpening`, on Today); `AppLifecycleState
+            // .coverMode` already reads `.none` while a route is pending, so
+            // the cover steps aside on its own. Every other reminder route
+            // opens on Today's own navigation stack or sheets.
             .fullScreenCover(isPresented: Binding(
                 get: { controller.state.pendingRoute == .newEntry },
                 set: { isPresented in if !isPresented { controller.handle(.pendingRouteResolved) } }
@@ -240,29 +240,6 @@ private struct RunningRootView: View {
                 NewEntryView(store: store, day: RecordDay.interval(containing: Date(), calendar: .current), initialTime: nil) { _ in
                     controller.handle(.pendingRouteResolved)
                 }
-            }
-            // A tap on the weigh-in day reminder (reminders spec, "The
-            // weigh-in day reminder"). No pending-route bypass: unlike
-            // "Add", the notification carries no authentication-required
-            // option, so the device is already unlocked by the time the app
-            // opens.
-            .fullScreenCover(isPresented: $showingWeighInFromReminder) {
-                NavigationStack { WeighInScreenView(store: store) }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .weighInReminderTapped)) { _ in
-                showingWeighInFromReminder = true
-            }
-            // A tap on the weekly review reminder (reminders spec, "The
-            // weekly review reminder": "A tap MUST open the weekly
-            // review.").
-            .fullScreenCover(isPresented: $showingWeeklyReviewFromReminder) {
-                NavigationStack { ReviewScreenView(store: store, week: WeeklyReviewModel.load(store: store).dueWeek ?? 1) }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .weeklyReviewReminderTapped)) { _ in
-                showingWeeklyReviewFromReminder = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .reminderAddActionTapped)) { _ in
-                controller.handle(.pendingRouteRequested(.newEntry))
             }
             .onChange(of: scenePhase) { _, phase in
                 switch phase {
