@@ -676,18 +676,19 @@ public final class RecordStore {
     }
 
     /// Writes into the winning `Profile` row, or inserts the first one.
-    /// Onboarding calls this once, at "Start"; a later re-screen calls it
-    /// again with a later `changedAt`, the field `data-and-privacy` keeps on
-    /// sync. A write that is earlier than the winning row changes nothing
-    /// (`Self.wins`), so an older screening never replaces a newer one.
+    /// Onboarding calls this once, at "Start"; a re-screen calls it again.
+    /// Every call writes: a re-screen after the device clock went back
+    /// (safeguarding spec, "Re-screening at a restart": `askedAt` later than
+    /// the device clock) MUST replace the height, the BMI, the caution flag
+    /// and `askedAt`. `changedAt` never goes back, so sync still sees the
+    /// row as the latest edit.
     public func setProfile(heightCm: Double, onboardingBMI: Double, cautionFlag: Bool, askedAt: Date, changedAt: Date = .now) throws {
         if let existing = try profile() {
-            guard Self.wins(changedAt, over: existing.changedAt) else { return }
             existing.heightCm = heightCm
             existing.onboardingBMI = onboardingBMI
             existing.cautionFlag = cautionFlag
             existing.askedAt = askedAt
-            existing.changedAt = changedAt
+            existing.changedAt = max(existing.changedAt, changedAt)
         } else {
             context.insert(Profile(heightCm: heightCm, onboardingBMI: onboardingBMI, cautionFlag: cautionFlag, askedAt: askedAt, changedAt: changedAt))
         }

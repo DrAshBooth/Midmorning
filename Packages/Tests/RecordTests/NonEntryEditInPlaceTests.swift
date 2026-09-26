@@ -368,15 +368,20 @@ final class NonEntryEditInPlaceTests: XCTestCase {
 
     /// A profile write that is earlier than the winning row, for example a
     /// re-screen after the device clock goes back, changes nothing.
-    func testAnEarlierProfileWriteChangesNothing() throws {
+    func testAReScreenAfterTheClockWentBackReplacesTheProfile() throws {
+        // safeguarding spec, "Re-screening at a restart", scenario "askedAt
+        // in the future": a profile saved a year ahead, then a re-screen at
+        // the corrected clock, keeps the new answers and the new askedAt.
         let store = try makeTemporaryStore()
-        try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: moment(200), changedAt: moment(200))
-        try store.setProfile(heightCm: 160, onboardingBMI: 18, cautionFlag: true, askedAt: moment(100), changedAt: moment(100))
+        let yearAhead = moment(200 + 365 * 24 * 3600)
+        try store.setProfile(heightCm: 170, onboardingBMI: 20.76, cautionFlag: false, askedAt: yearAhead, changedAt: yearAhead)
+        try store.setProfile(heightCm: 160, onboardingBMI: 18.6, cautionFlag: true, askedAt: moment(100), changedAt: moment(100))
         let profiles = try rows(Profile.self, in: store)
-        XCTAssertEqual(profiles.count, 1)
-        XCTAssertEqual(profiles.first?.heightCm, 170)
-        XCTAssertEqual(profiles.first?.cautionFlag, false)
-        XCTAssertEqual(profiles.first?.changedAt, moment(200), "changedAt does not go back")
+        XCTAssertEqual(profiles.count, 1, "the re-screen writes into the one row")
+        XCTAssertEqual(profiles.first?.heightCm, 160)
+        XCTAssertEqual(profiles.first?.cautionFlag, true)
+        XCTAssertEqual(profiles.first?.askedAt, moment(100), "askedAt is no longer in the future")
+        XCTAssertEqual(profiles.first?.changedAt, yearAhead, "changedAt does not go back")
     }
 
     // MARK: List items
