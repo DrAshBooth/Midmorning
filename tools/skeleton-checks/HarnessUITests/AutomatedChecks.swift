@@ -372,8 +372,16 @@ final class AutomatedChecks: XCTestCase {
         XCTAssertTrue(scrollTo(count), "the collapsed previous day shows \"3 entries\"")
         let previousMenu = app.buttons.matching(identifier: "Day options").element(boundBy: 1)
         XCTAssertTrue(scrollTo(previousMenu))
+        // On some runs the heading stops just under the bottom toolbar, and
+        // a tap there opens Settings. Move it clear of the toolbar first.
+        let toolbar = app.toolbars.firstMatch
+        for _ in 0..<3 where toolbar.exists && previousMenu.frame.maxY > toolbar.frame.minY - 8 {
+            app.swipeUp()
+        }
         previousMenu.tap()
-        app.buttons["Expand day"].firstMatch.tap()
+        let expand = app.buttons["Expand day"].firstMatch
+        XCTAssertTrue(expand.waitForExistence(timeout: 5), "the previous day's menu offers \"Expand day\"")
+        expand.tap()
         XCTAssertTrue(scrollTo(element(labelled: "Paused")), "the previous day shows \"Paused\"")
         // The current record day.
         app.swipeDown(); app.swipeDown(); app.swipeDown()
