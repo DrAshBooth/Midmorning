@@ -40,7 +40,7 @@ enum SeedError: Error, CustomStringConvertible {
 
 @MainActor
 enum AutomatedScenarios {
-    static let names: Set<String> = ["week1", "review", "corrupt"]
+    static let names: Set<String> = Set(["week1", "review", "corrupt"]).union(RecordPlanScenarios.names)
 
     static func seed(_ scenario: String, storeURL: URL) throws {
         let directory = storeURL.deletingLastPathComponent()
@@ -109,7 +109,7 @@ enum AutomatedScenarios {
             try add(at: first, "Toast and tea")
             try add(at: second, "Rice and beans")
         default:
-            break
+            try RecordPlanScenarios.seed(scenario, store: store, now: now, calendar: calendar, directory: directory)
         }
         print("seeded \(scenario) at \(directory.path)")
     }
