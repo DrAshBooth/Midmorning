@@ -67,12 +67,18 @@ struct PlannedMealRowView: View {
     /// "Skipped" and "Add it". The first cut shows no "That was it" control
     /// (mm-t23.22): `PlanTodayRows` never gives a row the "was that" form,
     /// and mm-t33.14 adds the control with its action.
+    /// Each button is at least 44 points tall (regular-eating-plan spec, "A
+    /// missed planned meal gets one prompt"). The height is on the label,
+    /// so the tap target and the accessibility frame have it too; a frame
+    /// outside the button gave only the layout that height.
     private var promptButtons: some View {
         HStack(spacing: 8) {
-            Button("plan.skipped") { onSkip(row.slotIndex) }
-                .frame(minHeight: 44)
-            Button("plan.addIt") { onAddIt(row.sortTime) }
-                .frame(minHeight: 44)
+            Button { onSkip(row.slotIndex) } label: {
+                Text("plan.skipped").frame(minHeight: 44).contentShape(Rectangle())
+            }
+            Button { onAddIt(row.sortTime) } label: {
+                Text("plan.addIt").frame(minHeight: 44).contentShape(Rectangle())
+            }
         }
         // Two controls in one List row: each needs its own tap target.
         .buttonStyle(.borderless)

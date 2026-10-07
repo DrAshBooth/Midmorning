@@ -752,7 +752,9 @@ extension AutomatedChecks {
     /// Lunch row shows "Skipped, or not recorded yet?" with the two buttons
     /// "Skipped" and "Add it" only. "Add it" opens the new-entry screen at
     /// Lunch's time. mm-t11.39: that line on the screen. (The VoiceOver
-    /// actions stay a device check.)
+    /// actions stay a device check.) The spec also asks for buttons at
+    /// least 44 points tall with 8 points between them, and the keyboard in
+    /// What after "Add it".
     func testTheMissedPlannedMealPrompt() throws {
         let facts = try recordPlanFacts("planMissed")
         let lunch = facts["lunch"]!
@@ -760,10 +762,22 @@ extension AutomatedChecks {
         let row = element(labelled: "Lunch, \(lunch), Skipped, or not recorded yet?")
         XCTAssertTrue(row.waitForExistence(timeout: 8), "the Lunch row shows the prompt")
         XCTAssertTrue(row.staticTexts["Skipped, or not recorded yet?"].exists, "the Lunch row shows \"Skipped, or not recorded yet?\"")
-        XCTAssertEqual(row.buttons.allElementsBoundByIndex.map(\.label), ["Skipped", "Add it"], "the prompt shows \"Skipped\" and \"Add it\" only")
+        let buttons = row.buttons.allElementsBoundByIndex
+        XCTAssertEqual(buttons.map(\.label), ["Skipped", "Add it"], "the prompt shows \"Skipped\" and \"Add it\" only")
+        // regular-eating-plan spec: "visible buttons at least 44 points
+        // tall, with 8 points between them".
+        for button in buttons {
+            XCTAssertGreaterThanOrEqual(button.frame.height, 44, "\"\(button.label)\" is at least 44 points tall")
+        }
+        if buttons.count == 2 {
+            XCTAssertEqual(buttons[1].frame.minX - buttons[0].frame.maxX, 8, accuracy: 1, "8 points are between the two buttons")
+        }
         XCTAssertTrue(element(labelled: "\(facts["entry"]!), Apple").exists, "the later entry matches no planned meal")
         row.buttons["Add it"].tap()
         XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "\"Add it\" opens the new-entry screen")
+        let what = app.textViews["What"].firstMatch
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "the keyboard shows")
+        XCTAssertEqual(what.value(forKey: "hasKeyboardFocus") as? Bool, true, "the keyboard is in What")
         let time = app.otherElements["Time"].firstMatch
         XCTAssertTrue((time.value as? String)?.hasSuffix(", \(lunch)") ?? false, "the new-entry screen opens at \(lunch): \(String(describing: time.value))")
         app.navigationBars.buttons["Cancel"].firstMatch.tap()
