@@ -61,11 +61,11 @@ struct ExportScreenView: View {
         .navigationTitle(ExportContent.screenTitle.string)
         .getSupport()
         .onAppear(perform: loadDefaultsIfNeeded)
-        .sheet(isPresented: $isShowingShareSheet, onDismiss: cleanUpTemporaryFile) {
-            if let pendingFileURL {
-                ShareSheetView(items: [pendingFileURL])
-            }
-        }
+        // The share sheet is presented modally, not inside a SwiftUI sheet
+        // (`ShareSheetView`); it deletes the file when it closes.
+        .background(
+            ShareSheetView(isPresented: $isShowingShareSheet, items: pendingFileURL.map { [$0] } ?? [], onDismiss: cleanUpTemporaryFile)
+        )
     }
 
     // MARK: Date bindings
