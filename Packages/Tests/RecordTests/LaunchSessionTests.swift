@@ -21,8 +21,8 @@ final class LaunchSessionTests: XCTestCase {
     }
 
     /// "Try again" and a second protected-data notice open the store again
-    /// in the same process. The streak rises once for the launch, not once
-    /// for each attempt.
+    /// in the same process. The streak and the uncounted failures each rise
+    /// once for the launch, not once for each attempt.
     func testASecondOpenAttemptInTheSameLaunchDoesNotGrowTheStreak() {
         _ = LaunchMarkerFile.begin(at: markerURL) // an earlier launch left the marker.
         let session = LaunchSession(markerURL: markerURL)
@@ -32,7 +32,26 @@ final class LaunchSessionTests: XCTestCase {
 
         XCTAssertTrue(first.markerWasUncleared)
         XCTAssertEqual(first, second)
-        XCTAssertEqual(markerContent(), "1", "one launch with an uncleared marker, whatever the number of attempts")
+        XCTAssertEqual(first.uncountedFailures, 1, "this launch's failure")
+        XCTAssertEqual(markerContent(), "1 1", "one launch with an uncleared marker, whatever the number of attempts: a streak of 1 and one uncounted failure")
+    }
+
+    /// mm-t42.30: the failure of a launch that finds an uncleared marker is
+    /// in the marker before the store opens. The first store that opens for
+    /// writing moves it to `Local.store`, once.
+    func testTheMarkerKeepsTheLaunchFailureUntilTheStoreOpensForWriting() throws {
+        _ = LaunchMarkerFile.begin(at: markerURL) // an earlier launch left the marker.
+        let session = LaunchSession(markerURL: markerURL)
+        session.begin()
+        XCTAssertEqual(markerContent(), "1 1", "the failure is in the marker before the store opens")
+
+        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root)
+        XCTAssertEqual(try store.diagnosticsCounts(contentVersion: 1).launchFailures, 0)
+        session.countLaunchFailureIfNeeded(in: store)
+
+        XCTAssertEqual(try store.diagnosticsCounts(contentVersion: 1).launchFailures, 1)
+        XCTAssertEqual(session.uncountedFailures, 0)
+        XCTAssertEqual(markerContent(), "1", "Local.store holds the failure now, so the marker does not")
     }
 
     /// Scenario: Launch failures counted — once per launch, on the first
