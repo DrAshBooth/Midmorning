@@ -143,9 +143,17 @@ extension AutomatedChecks {
     /// device" after an enrolment change) and "Delete everything", and no
     /// part of the screen under it: no navigation bar, no "Get support" and
     /// no entry.
-    func assertTheLockedCover(afterAnEnrolmentChange: Bool = false, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+    ///
+    /// `overAKeptDraft`: the cover over the new-entry screen of a reminder
+    /// "Add" after the request at Save did not succeed (ruling r13-04).
+    /// That screen is in the cover's own window, and the accessibility
+    /// tree still holds it under the cover (bug filed under mm-t45; the
+    /// VoiceOver check on mm-t15.14 decides what VoiceOver reads). So the
+    /// test requires that no control of that screen can take a tap, and
+    /// that no part of Today shows.
+    func assertTheLockedCover(afterAnEnrolmentChange: Bool = false, overAKeptDraft: Bool = false, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
         let first = afterAnEnrolmentChange ? deleteFromThisDeviceButton : unlockButton
-        XCTAssertTrue(first.waitForExistence(timeout: 20), "\(message): the cover shows \"\(first.label.isEmpty ? (afterAnEnrolmentChange ? "Delete from this device" : "Unlock") : first.label)\"", file: file, line: line)
+        XCTAssertTrue(first.waitForExistence(timeout: 20), "\(message): the cover shows \"\(afterAnEnrolmentChange ? "Delete from this device" : "Unlock")\"", file: file, line: line)
         XCTAssertTrue(app.staticTexts["Midmorning"].exists, "\(message): the cover shows \"Midmorning\"", file: file, line: line)
         XCTAssertTrue(deleteEverythingButton.exists, "\(message): the cover shows \"Delete everything\"", file: file, line: line)
         if afterAnEnrolmentChange {
@@ -153,7 +161,14 @@ extension AutomatedChecks {
         } else {
             XCTAssertFalse(deleteFromThisDeviceButton.exists, "\(message): the cover shows no \"Delete from this device\"", file: file, line: line)
         }
-        XCTAssertEqual(app.navigationBars.count, 0, "\(message): no screen shows under the cover", file: file, line: line)
+        if overAKeptDraft {
+            XCTAssertFalse(app.navigationBars["Today"].exists, "\(message): no part of Today shows under the cover", file: file, line: line)
+            for control in [app.textViews["What"].firstMatch, app.navigationBars.buttons["Save"].firstMatch, app.navigationBars.buttons["Cancel"].firstMatch] where control.exists {
+                XCTAssertFalse(control.isHittable, "\(message): the cover hides \"\(control.label)\" of the new-entry screen", file: file, line: line)
+            }
+        } else {
+            XCTAssertEqual(app.navigationBars.count, 0, "\(message): no screen shows under the cover", file: file, line: line)
+        }
         XCTAssertFalse(app.buttons["Get support"].exists, "\(message): the cover shows no \"Get support\"", file: file, line: line)
         XCTAssertFalse(element(labelContaining: "Toast and tea").exists, "\(message): the cover shows no entry", file: file, line: line)
     }
@@ -218,8 +233,8 @@ extension AutomatedChecks {
         let what = app.textViews["What"].firstMatch
         what.tap()
         what.typeText("Toast and")
-        // Return within 20 seconds: no cover and no request.
-        leaveTheApp(for: 12)
+        // Return after 20 seconds: no cover and no request.
+        leaveTheApp(for: 20)
         XCTAssertTrue(what.waitForExistence(timeout: 10), "a return within the grace period shows the new-entry screen")
         XCTAssertFalse(unlockButton.exists, "a return within the grace period shows no cover")
         assertAppLockRequests(1, "a return within the grace period makes no request")
@@ -236,6 +251,27 @@ extension AutomatedChecks {
         XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "\"Unlock\" and a success take the cover off")
         XCTAssertTrue(what.waitForExistence(timeout: 8), "after Unlock the new-entry screen shows again")
         XCTAssertEqual(what.value as? String, "Toast and", "after Unlock the new-entry screen shows \"Toast and\"")
+    }
+
+    /// mm-t15.14, comment of 25 September, item (1), the timing against
+    /// the real clock: app-lock spec, "Lock after", scenario "Five
+    /// minutes": with "Lock after" "5 minutes", a return 4 minutes later
+    /// shows the screen the person left, with no request.
+    func testFiveMinutesLockAfter() throws {
+        try launchWithTheSeam("lock-week1", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        tapToolbar("Settings")
+        assertScreen("Settings")
+        let lockAfter = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Lock after")).firstMatch
+        XCTAssertTrue(scrollTo(lockAfter), "the Privacy group shows \"Lock after\"")
+        lockAfter.tap()
+        let fiveMinutes = app.buttons["5 minutes"].firstMatch
+        XCTAssertTrue(fiveMinutes.waitForExistence(timeout: 5), "\"Lock after\" offers \"5 minutes\"")
+        fiveMinutes.tap()
+        XCTAssertTrue(lockAfter.label.contains("5 minutes") || lockAfter.staticTexts["5 minutes"].exists, "\"Lock after\" reads \"5 minutes\"")
+        leaveTheApp(for: 240)
+        assertNoCover(on: "Settings", "a return after 4 minutes")
+        assertAppLockRequests(1, "a return after 4 minutes makes no request")
     }
 
     // MARK: mm-t24.22 item 3 and mm-t15.14: the lock control on Today
@@ -620,6 +656,473 @@ extension AutomatedChecks {
         scriptAppLock(["succeed"])
         unlockButton.tap()
         assertNoCover(on: "Today", "after \"Unlock\"")
+    }
+
+    // MARK: A planned meal reminder
+
+    var springboard: XCUIApplication { XCUIApplication(bundleIdentifier: "com.apple.springboard") }
+
+    /// Grants the notification permission with Today's line "Allow
+    /// notifications to get reminders." and the system request's "Allow".
+    /// A simulator that already granted it shows no line.
+    func allowNotificationsFromToday(file: StaticString = #filePath, line: UInt = #line) {
+        let permissionLine = app.buttons["Allow notifications to get reminders."].firstMatch
+        guard permissionLine.waitForExistence(timeout: 3) else { return }
+        permissionLine.tap()
+        let allow = springboard.alerts.buttons["Allow"].firstMatch
+        XCTAssertTrue(allow.waitForExistence(timeout: 8), "the system asks for the notification permission", file: file, line: line)
+        allow.tap()
+        XCTAssertTrue(permissionLine.waitForNonExistence(timeout: 8), "after \"Allow\" Today shows no permission line", file: file, line: line)
+    }
+
+    /// Sends a planned meal reminder (the category "plannedMeal", with
+    /// "Add") as a simulated notification: the test writes the payload into
+    /// the folder that `push-relay.sh` watches, and the relay sends it with
+    /// `xcrun simctl push`.
+    func sendAPlannedMealReminder(file: StaticString = #filePath, line: UInt = #line) {
+        sendAReminder(kind: "plannedMeal", file: file, line: line)
+    }
+
+    /// Sends a reminder of the kind `kind` ("plannedMeal", "weighInDay",
+    /// "weeklyReview", "closeTheDay" ...) with the category that the app
+    /// registers for it, as a simulated notification.
+    func sendAReminder(kind: String, file: StaticString = #filePath, line: UInt = #line) {
+        let folder = URL(fileURLWithPath: ProcessInfo.processInfo.environment["OUT_DIR"]!).appendingPathComponent("push")
+        let name = UUID().uuidString
+        let payload: [String: Any] = [
+            "aps": ["alert": ["title": "Lunch", "body": "12:30"], "category": kind == "plannedMeal" ? "plannedMeal" : "openOnly", "sound": "default"],
+            "kind": kind,
+        ]
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let temporary = folder.appendingPathComponent("\(name).tmp")
+            try JSONSerialization.data(withJSONObject: payload).write(to: temporary)
+            try FileManager.default.moveItem(at: temporary, to: folder.appendingPathComponent("\(name).apns"))
+        } catch {
+            XCTFail("cannot write the reminder payload: \(error)", file: file, line: line)
+            return
+        }
+        let sent = folder.appendingPathComponent("\(name).sent")
+        let deadline = Date().addingTimeInterval(20)
+        while !FileManager.default.fileExists(atPath: sent.path), Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        let output = (try? String(contentsOf: folder.appendingPathComponent("\(name).out"), encoding: .utf8)) ?? "no output; is push-relay.sh running?"
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sent.path), "push-relay.sh sends the reminder: \(output)", file: file, line: line)
+    }
+
+    /// Sends a planned meal reminder, opens its actions with a long press
+    /// on the banner, and taps "Add".
+    func tapAddOnAPlannedMealReminder(file: StaticString = #filePath, line: UInt = #line) {
+        sendAPlannedMealReminder(file: file, line: line)
+        let banner = springboard.descendants(matching: .any)["NotificationShortLookView"].firstMatch
+        XCTAssertTrue(banner.waitForExistence(timeout: 10), "the planned meal reminder shows", file: file, line: line)
+        banner.press(forDuration: 1.2)
+        let add = springboard.buttons["Add"].firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 5), "the reminder offers \"Add\"", file: file, line: line)
+        add.tap()
+    }
+
+    /// Sends a reminder of the kind `kind` and taps its banner.
+    func tapAReminder(kind: String, file: StaticString = #filePath, line: UInt = #line) {
+        sendAReminder(kind: kind, file: file, line: line)
+        let banner = springboard.descendants(matching: .any)["NotificationShortLookView"].firstMatch
+        XCTAssertTrue(banner.waitForExistence(timeout: 10), "the reminder shows", file: file, line: line)
+        banner.tap()
+    }
+
+    /// The four fixed Where chips.
+    private var fixedChips: [String] { ["Home", "Work", "Out", "Travelling"] }
+
+    /// The new-entry screen that "Add" opens: empty, with no cover and no
+    /// part of Today, the four fixed chips and "Add a place". The saved
+    /// custom place "Gym" shows only when `gymShows`.
+    func assertTheReminderNewEntryScreen(gymShows: Bool, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 10), "\(message): the new-entry screen shows", file: file, line: line)
+        dismissKeyboardTip()
+        XCTAssertFalse(unlockButton.exists, "\(message): no cover shows", file: file, line: line)
+        XCTAssertFalse(app.navigationBars["Today"].exists, "\(message): no part of Today shows", file: file, line: line)
+        XCTAssertFalse(element(labelContaining: "Toast and tea").exists, "\(message): no entry shows", file: file, line: line)
+        let whats = app.textViews.matching(identifier: "What")
+        XCTAssertEqual(whats.count, 1, "\(message): one What field shows", file: file, line: line)
+        XCTAssertEqual((whats.firstMatch.value as? String) ?? "", "", "\(message): the new-entry screen is empty", file: file, line: line)
+        for chip in fixedChips {
+            XCTAssertTrue(app.buttons[chip].firstMatch.exists, "\(message): the Where control shows \"\(chip)\"", file: file, line: line)
+        }
+        XCTAssertTrue(app.buttons["Add a place"].firstMatch.exists, "\(message): the Where control shows \"Add a place\"", file: file, line: line)
+        XCTAssertEqual(chip(beginningWith: "Gym").exists, gymShows, "\(message): the saved place \"Gym\" \(gymShows ? "shows" : "does not show")", file: file, line: line)
+    }
+
+    /// The rows on Today whose What is `what`, and not a longer What that
+    /// begins with it. A row reads "<time>, <what>" and, with a place,
+    /// ", <place>".
+    func todayRows(what: String) -> Int {
+        let pattern = ".*, \(NSRegularExpression.escapedPattern(for: what))(, .*)?"
+        return app.descendants(matching: .any).matching(NSPredicate(format: "label MATCHES %@", pattern)).count
+    }
+
+    /// mm-t15.14, comment of ruling r17-01 (mm-t15.22, commit b567a6e), with
+    /// the app lock on and the saved custom place "Gym":
+    /// (1) Lock the app. Tap Add on a planned meal reminder. The Where
+    /// control shows only the four fixed chips and "Add a place", and no
+    /// "Gym" chip. (2) "Add a place", "Park" and Return: a "Park" chip, and
+    /// no "Gym" chip. (3) Save and cancel the request: the cover shows.
+    /// Unlock: the screen shows its text, the "Park" chip and the "Gym"
+    /// chip. (4) Again, with "Toast": Save and a success save the entry, and
+    /// a new entry from Today shows the "Gym" chip.
+    /// Comment of ruling r13-04 (mm-t15.19, commit cacdb6e): (1) the
+    /// new-entry screen shows at once, empty, with no cover; (2) the request
+    /// shows before the entry saves, and after a success Today shows the
+    /// entry; (3) after a cancel the cover shows "Unlock" and "Delete
+    /// everything", the keyboard is closed and the store holds no new
+    /// entry; after Unlock the screen shows "Toast and", and Save saves with
+    /// no second request.
+    /// (The reminder is a simulated notification with the app's own
+    /// category and actions, sent by `push-relay.sh`. "No part of Today
+    /// shows during the screen's animation" stays a device check: a UI test
+    /// sees the screen before and after the animation, not during it.)
+    func testTheLockedReminderAddShowsOnlyTheFixedChips() throws {
+        try launchWithTheSeam("lock-gym", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        allowNotificationsFromToday()
+        // (1)
+        tapTheLockControl()
+        assertTheLockedCover("after the lock control")
+        tapAddOnAPlannedMealReminder()
+        assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" while the app is locked")
+        assertAppLockRequests(1, "\"Add\" makes no request")
+        // (2)
+        typePlace("Park")
+        app.textViews["Add a place"].firstMatch.typeText("\n")
+        XCTAssertTrue(chip(beginningWith: "Park").waitForExistence(timeout: 5), "a \"Park\" chip shows")
+        XCTAssertFalse(chip(beginningWith: "Gym").exists, "no \"Gym\" chip shows")
+        // (3)
+        let what = app.textViews["What"].firstMatch
+        what.tap()
+        what.typeText("Toast and")
+        scriptAppLock(["cancel"])
+        tapSaveInTheNavigationBar()
+        XCTAssertEqual(assertAppLockRequests(2, "Save makes one request").last, "biometricsAndPasscode applock.unlockReason cancel")
+        assertTheLockedCover(overAKeptDraft: true, "after a cancel at Save")
+        XCTAssertFalse(element(labelContaining: "Toast and").exists, "the cover shows no typed text")
+        XCTAssertEqual(app.keyboards.count, 0, "the keyboard is closed")
+        scriptAppLock(["succeed"])
+        unlockButton.tap()
+        XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "Unlock takes the cover off")
+        XCTAssertTrue(what.waitForExistence(timeout: 8), "after Unlock the new-entry screen shows again")
+        XCTAssertEqual(what.value as? String, "Toast and", "after Unlock the screen shows \"Toast and\"")
+        XCTAssertTrue(chip(beginningWith: "Park").exists, "after Unlock the screen shows the \"Park\" chip")
+        XCTAssertTrue(chip(beginningWith: "Gym").exists, "after Unlock the screen shows the \"Gym\" chip")
+        assertAppLockRequests(3, "Unlock makes one request")
+        tapSaveInTheNavigationBar()
+        assertNoCover(on: "Today", "after Save")
+        assertAppLockRequests(3, "Save after Unlock makes no second request")
+        XCTAssertEqual(todayRows(what: "Toast and"), 1, "Today shows the entry once: the cancelled Save saved nothing")
+        // (4)
+        tapTheLockControl()
+        assertTheLockedCover("after the lock control")
+        tapAddOnAPlannedMealReminder()
+        assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" again")
+        what.tap()
+        what.typeText("Toast")
+        scriptAppLock(["succeed"])
+        tapSaveInTheNavigationBar()
+        assertNoCover(on: "Today", "after Save and a success")
+        XCTAssertEqual(assertAppLockRequests(4, "Save makes one request").last, "biometricsAndPasscode applock.unlockReason succeed")
+        XCTAssertEqual(todayRows(what: "Toast"), 1, "Today shows the entry \"Toast\"")
+        openNewEntry()
+        XCTAssertTrue(chip(beginningWith: "Gym").exists, "a new entry from Today shows the \"Gym\" chip")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+    }
+
+    /// mm-t15.14, comment of ruling r13-04 (mm-t15.19): (5) lock the app,
+    /// tap Add on a reminder, then Cancel on the screen: the cover shows.
+    /// (4) With "Face ID only" on, Save and a failed request: the request
+    /// offers no passcode (the biometrics-only policy) and the cover shows.
+    /// (6) With the app lock off, Add and Save: no request. Comment of
+    /// ruling r17-01 (mm-t15.22): (5) with the app lock off, Add shows the
+    /// "Gym" chip at once. (A real failed Face ID, twice, stays a device
+    /// check; the seam gives the failure.)
+    func testTheReminderAddWithCancelAndWithTheAppLockOff() throws {
+        try launchWithTheSeam("lock-gym", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        allowNotificationsFromToday()
+        // r13-04 (5): Cancel shows the cover.
+        tapTheLockControl()
+        tapAddOnAPlannedMealReminder()
+        assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" while the app is locked")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        assertTheLockedCover("after Cancel on the screen")
+        assertAppLockRequests(1, "Cancel makes no request")
+        scriptAppLock(["succeed"])
+        unlockButton.tap()
+        assertNoCover(on: "Today", "after Unlock")
+        assertAppLockRequests(2, "Unlock makes one request")
+        // The app lock off.
+        openSettingsAt("Lock with passcode")
+        scriptAppLock(["succeed"])
+        flipSwitch("Lock with passcode")
+        assertAppLockRequests(3, "the app lock off makes one request")
+        XCTAssertEqual(switchValue("Lock with passcode"), "0", "the app lock is off")
+        goBack()
+        assertScreen("Today")
+        // r13-04 (6) and r17-01 (5).
+        tapAddOnAPlannedMealReminder()
+        assertTheReminderNewEntryScreen(gymShows: true, "\"Add\" with the app lock off")
+        let what = app.textViews["What"].firstMatch
+        what.tap()
+        what.typeText("Rice")
+        tapSaveInTheNavigationBar()
+        assertNoCover(on: "Today", "after Save")
+        assertAppLockRequests(3, "with the app lock off, Save makes no request")
+        XCTAssertEqual(todayRows(what: "Rice"), 1, "Today shows the entry \"Rice\"")
+
+        // r13-04 (4): "Face ID only" on, and a failed request at Save.
+        setSimulatedFaceID(enrolled: true)
+        try launchWithTheSeam("lock-face-only", results: ["succeed"], enrolmentHash: "A")
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        allowNotificationsFromToday()
+        tapTheLockControl()
+        tapAddOnAPlannedMealReminder()
+        assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" with \"Face ID only\" on")
+        what.tap()
+        what.typeText("Toast and")
+        scriptAppLock(["fail"], enrolmentHash: "A")
+        tapSaveInTheNavigationBar()
+        XCTAssertEqual(assertAppLockRequests(2, "Save makes one request").last,
+                       "biometricsOnly applock.unlockReason fail", "with \"Face ID only\" on, the request at Save offers no passcode")
+        assertTheLockedCover(overAKeptDraft: true, "after a failed request at Save")
+    }
+
+    /// mm-t15.14, comment of mm-t15.18 (commit 6391c41): open New entry
+    /// from Today, then tap "Add" on a planned meal reminder. The empty
+    /// new-entry screen shows over the sheet. Cancel it. Leave the app and
+    /// return after the grace period: the cover shows. The new-entry sheet
+    /// from Today still holds its text. ("Lock after" is "At once", so a
+    /// return after 3 seconds is after the grace period; the comment's 45
+    /// seconds with "30 seconds" is the same rule, which
+    /// `testTheCoverAfterTheGracePeriod` checks. "On a blank background"
+    /// is a look at the screen and stays a device check.)
+    func testTheReminderAddOverASheet() throws {
+        try launchWithTheSeam("lock-week1", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        allowNotificationsFromToday()
+        openNewEntry()
+        let what = app.textViews["What"].firstMatch
+        what.tap()
+        what.typeText("Soup")
+        tapAddOnAPlannedMealReminder()
+        assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" over the new-entry sheet")
+        XCTAssertFalse(element(labelContaining: "Soup").exists, "the sheet's text does not show under the screen")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(what.waitForExistence(timeout: 8), "after Cancel the sheet from Today shows")
+        XCTAssertEqual(what.value as? String, "Soup", "the sheet from Today still holds its text")
+        assertAppLockRequests(1, "the unlocked app makes no request for \"Add\"")
+        scriptAppLock(["cancel"])
+        leaveTheApp(for: 3)
+        assertTheLockedCover("a return after the grace period")
+        assertAppLockRequests(2, "the return makes one request with no tap")
+        scriptAppLock(["succeed"])
+        unlockButton.tap()
+        XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "Unlock takes the cover off")
+        XCTAssertTrue(what.waitForExistence(timeout: 8), "after Unlock the sheet shows")
+        XCTAssertEqual(what.value as? String, "Soup", "after Unlock the sheet still holds its text")
+    }
+
+    /// mm-t15.14, comment of ruling r13-04 (mm-t15.19, commit 0ab957d): (7)
+    /// lock the app, tap Add, type "Toast", type a place in "Add a place"
+    /// and keep the keyboard in that field. Save and cancel the request:
+    /// the cover shows. Unlock: the place is the selected chip. Cancel. A
+    /// new entry from Today shows no chip for that place. (8) The same, but
+    /// Save after Unlock: the entry saves with that place, and the next new
+    /// entry shows its chip. (9) Lock, Add, "Add a place", "Park" and
+    /// Return, then Cancel. After Unlock a new entry shows no "Park" chip.
+    /// (The comment's place "Gym" is "Beach" here, because the seeded
+    /// record of the r17-01 checks holds "Gym".)
+    func testATypedPlaceOnTheLockedReminderAdd() throws {
+        try launchWithTheSeam("lock-week1", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        allowNotificationsFromToday()
+        let what = app.textViews["What"].firstMatch
+        var requests = 1
+        // (7) and (8).
+        for saveAfterUnlock in [false, true] {
+            tapTheLockControl()
+            tapAddOnAPlannedMealReminder()
+            assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" while the app is locked")
+            what.tap()
+            what.typeText("Toast")
+            typePlace("Beach")
+            scriptAppLock(["cancel"])
+            tapSaveInTheNavigationBar()
+            requests += 1
+            assertAppLockRequests(requests, "Save makes one request")
+            assertTheLockedCover(overAKeptDraft: true, "after a cancel at Save")
+            scriptAppLock(["succeed"])
+            unlockButton.tap()
+            requests += 1
+            XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "Unlock takes the cover off")
+            let beach = chip(beginningWith: "Beach")
+            XCTAssertTrue(beach.waitForExistence(timeout: 8), "after Unlock the screen shows the typed place as a chip")
+            XCTAssertTrue(beach.isSelected, "the typed place is the selected chip")
+            if saveAfterUnlock {
+                tapSaveInTheNavigationBar()
+                assertNoCover(on: "Today", "after Save")
+                assertAppLockRequests(requests, "Save after Unlock makes no second request")
+                XCTAssertTrue(element(labelContaining: "Toast, Beach").waitForExistence(timeout: 5), "the entry saves with the place \"Beach\"")
+                openNewEntry()
+                XCTAssertTrue(chip(beginningWith: "Beach").exists, "the next new entry shows the \"Beach\" chip")
+            } else {
+                app.navigationBars.buttons["Cancel"].firstMatch.tap()
+                assertNoCover(on: "Today", "after Cancel")
+                openNewEntry()
+                XCTAssertFalse(chip(beginningWith: "Beach").exists, "after Cancel a new entry shows no \"Beach\" chip")
+            }
+            app.navigationBars.buttons["Cancel"].firstMatch.tap()
+            assertScreen("Today")
+        }
+        // (9)
+        tapTheLockControl()
+        tapAddOnAPlannedMealReminder()
+        assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" while the app is locked")
+        typePlace("Park")
+        app.textViews["Add a place"].firstMatch.typeText("\n")
+        XCTAssertTrue(chip(beginningWith: "Park").waitForExistence(timeout: 5), "a \"Park\" chip shows")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        assertTheLockedCover("after Cancel on the screen")
+        scriptAppLock(["succeed"])
+        unlockButton.tap()
+        assertNoCover(on: "Today", "after Unlock")
+        openNewEntry()
+        XCTAssertFalse(chip(beginningWith: "Park").exists, "after Cancel a new entry shows no \"Park\" chip")
+    }
+
+    // MARK: mm-t15.14: the cover window over each screen (mm-t15.15)
+
+    /// Leaves the app and returns after the grace period ("Lock after" "At
+    /// once"). The cover shows over the screen with the request, which the
+    /// script cancels. Then "Unlock" succeeds, and `screenShows` must hold
+    /// again. Returns the new count of requests.
+    func assertTheCoverHides(_ screen: String, requests: Int, screenShows: () -> Bool, file: StaticString = #filePath, line: UInt = #line) -> Int {
+        XCTAssertTrue(screenShows(), "\(screen) shows before the app is left", file: file, line: line)
+        scriptAppLock(["cancel"])
+        leaveTheApp(for: 3)
+        assertTheLockedCover("\(screen): a return after the grace period", file: file, line: line)
+        assertAppLockRequests(requests + 1, "\(screen): the return makes one request", file: file, line: line)
+        scriptAppLock(["succeed"])
+        unlockButton.tap()
+        XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "\(screen): Unlock takes the cover off", file: file, line: line)
+        XCTAssertTrue(screenShows(), "\(screen): after Unlock the same screen shows", file: file, line: line)
+        return requests + 2
+    }
+
+    /// mm-t15.14, comment of mm-t15.15 (commit 6391c41), check (1): open
+    /// each screen, leave the app, and return after the grace period. Each
+    /// time the cover shows over the screen. After Unlock the same screen
+    /// shows, and New entry shows "Toast and". The screens: New entry (with
+    /// "Toast and" in What), Edit entry, the plan builder, Get support,
+    /// Close the day (from its reminder), the weigh-in screen from its
+    /// reminder, the review from its reminder and the restart re-screen
+    /// sheet. (The export share sheet stays a device check: it is a system
+    /// screen in another process, and on the iOS 27.0 simulator it shows
+    /// blank, so a UI test cannot see it.)
+    /// "Lock after" is "At once" here, so a return after 3 seconds is after
+    /// the grace period. The comment's "30 seconds" and 45 seconds are the
+    /// same rule with a longer wait: `testTheCoverAfterTheGracePeriod`
+    /// checks that rule on New entry. (The App Switcher snapshot and
+    /// VoiceOver on the cover stay device checks.)
+    func testTheCoverShowsOverEachScreen() throws {
+        try launchWithTheSeam("lock-review", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        allowNotificationsFromToday()
+        var requests = 1
+        // New entry, with "Toast and".
+        openNewEntry()
+        let what = app.textViews["What"].firstMatch
+        what.tap()
+        what.typeText("Toast and")
+        requests = assertTheCoverHides("New entry", requests: requests) { what.waitForExistence(timeout: 8) && (what.value as? String) == "Toast and" }
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        assertScreen("Today")
+        // Edit entry.
+        let row = element(labelContaining: "Rice and beans")
+        XCTAssertTrue(scrollTo(row))
+        row.tap()
+        requests = assertTheCoverHides("Edit entry", requests: requests) { app.buttons["Delete entry"].waitForExistence(timeout: 8) }
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        assertScreen("Today")
+        // The plan builder.
+        tapDayMenu("Today's plan")
+        requests = assertTheCoverHides("The plan builder", requests: requests) { app.navigationBars["Today's plan"].waitForExistence(timeout: 8) }
+        app.navigationBars["Today's plan"].buttons["Cancel"].tap()
+        assertScreen("Today")
+        // Get support.
+        getSupport(on: "Today").tap()
+        requests = assertTheCoverHides("Get support", requests: requests) { app.navigationBars["Get support"].waitForExistence(timeout: 8) }
+        app.navigationBars["Get support"].buttons["Close"].tap()
+        assertScreen("Today")
+        // The weigh-in screen from its reminder.
+        tapAReminder(kind: "weighInDay")
+        requests = assertTheCoverHides("The weigh-in screen", requests: requests) { app.navigationBars["Weigh-in"].waitForExistence(timeout: 8) }
+        goBack()
+        assertScreen("Today")
+        // The review from its reminder.
+        tapAReminder(kind: "weeklyReview")
+        requests = assertTheCoverHides("The weekly review", requests: requests) { app.navigationBars["Weekly review"].waitForExistence(timeout: 8) }
+        goBack()
+        assertScreen("Today")
+        // Close the day from its reminder.
+        tapAReminder(kind: "closeTheDay")
+        requests = assertTheCoverHides("Close the day", requests: requests) { app.navigationBars["Close the day"].waitForExistence(timeout: 8) }
+        app.swipeDown(velocity: .fast)
+        if app.navigationBars["Close the day"].exists { app.buttons["Done"].firstMatch.tap() }
+        assertScreen("Today")
+        // The restart re-screen sheet: the week 1 record holds no profile,
+        // so "Start week 1 again" asks the questions first.
+        try launchWithTheSeam("lock-week1", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        tapToolbar("Programme")
+        assertScreen("Programme")
+        let restart = app.buttons["Start week 1 again"].firstMatch
+        XCTAssertTrue(scrollTo(restart))
+        restart.tap()
+        _ = assertTheCoverHides("The restart re-screen", requests: 1) { app.navigationBars["A few questions first"].waitForExistence(timeout: 8) }
+    }
+
+    /// mm-t15.14, addition of commit 758c344 to check (2), with the set-up
+    /// of that check ("Lock after" "30 seconds"): "Pull down Notification
+    /// Centre over a sheet with the keyboard up: the cover shows and the
+    /// keyboard stays. Dismiss it: the sheet shows with no authentication
+    /// request." While Notification Centre is down, the simulator hides
+    /// the keyboard from the test, so the test finds it after the dismiss,
+    /// with no new tap. (On the iOS 27.0 simulator, Notification Centre
+    /// sends the app to the background: with "At once" the return asks,
+    /// and after 45 seconds with "30 seconds" it asks too. The spec's
+    /// scenario "Inactive is not background" stays a device check; see the
+    /// bug filed under mm-t45.)
+    func testNotificationCentreOverASheet() throws {
+        try launchWithTheSeam("lock-week1-30s", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        assertAppLockRequests(1, "the launch makes one request")
+        openNewEntry()
+        let what = app.textViews["What"].firstMatch
+        what.tap()
+        what.typeText("Toast and")
+        XCTAssertEqual(app.keyboards.count, 1, "the keyboard is up")
+        // Notification Centre: a drag down from the top left corner.
+        let top = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.005))
+        top.press(forDuration: 0.1, thenDragTo: springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.75)))
+        XCTAssertTrue(app.staticTexts["Midmorning"].waitForExistence(timeout: 8), "over Notification Centre's edge the cover shows")
+        XCTAssertTrue(unlockButton.exists, "with the app lock on, the cover shows \"Unlock\"")
+        Thread.sleep(forTimeInterval: 3)
+        // Close Notification Centre: a drag up from the bottom edge.
+        let bottom = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.995))
+        bottom.press(forDuration: 0.1, thenDragTo: springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)))
+        XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "after Notification Centre closes, the cover goes")
+        XCTAssertTrue(what.waitForExistence(timeout: 5), "the sheet shows")
+        XCTAssertEqual(what.value as? String, "Toast and", "the sheet keeps its text")
+        XCTAssertEqual(app.keyboards.count, 1, "the keyboard stays")
+        assertAppLockRequests(1, "Notification Centre makes no request")
     }
 
     // MARK: mm-t42.14: safe mode with the app lock on

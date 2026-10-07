@@ -92,6 +92,8 @@ only=()
 for name in "$@"; do only+=("-only-testing:HarnessUITests/AutomatedChecks/$name"); done
 [ ${#only[@]} -eq 0 ] && only=("-only-testing:HarnessUITests/AutomatedChecks")
 rm -rf "$OUT"; mkdir -p "$OUT"
+# The app-lock checks ask for simulated notifications through $OUT/push.
+"$HERE/push-relay.sh" "$UDID" "$OUT/push" & relay=$!; trap 'kill "$relay" 2>/dev/null' EXIT
 step "run the checks"
 # A failed test keeps its screen and hierarchy in $OUT. Xcode's own
 # diagnostics collection after a failure can wait ten minutes, so it is off.
