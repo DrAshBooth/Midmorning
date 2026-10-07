@@ -121,7 +121,14 @@ struct AppLockRootView: View {
     /// "In safe mode the app MUST open the store read-only" (ruling r13-05,
     /// mm-t42.23): the marker chooses safe mode before the open, so a
     /// pending migration cannot write, and safe mode writes nothing. The
-    /// launch failure then stays in the marker for the next ordinary launch
+    /// read-only open uses the schema version that each store file holds
+    /// and no migration (ruling r15-01, mm-t42.28;
+    /// `RecordStore.makeContainers`), also when a migration stopped after
+    /// one of the two files. So when an update adds a schema version and
+    /// its migration fails, safe mode still shows its Today with Export,
+    /// its Today clears the marker, and the next ordinary launch runs the
+    /// migration again. The launch failure then stays in the marker for the
+    /// next ordinary launch
     /// (`LaunchSession.countLaunchFailureIfNeeded`). So does each MetricKit
     /// crash that safe mode receives: MetricKit delivers each payload once,
     /// and those crashes are the ones that started safe mode.

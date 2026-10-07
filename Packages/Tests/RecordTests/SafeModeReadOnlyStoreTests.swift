@@ -83,15 +83,15 @@ final class SafeModeReadOnlyStoreTests: XCTestCase {
         XCTAssertEqual(try reopened.diagnosticsCounts(contentVersion: 1).launchFailures, 0)
     }
 
-    /// Scenario "Safe mode with a pending migration": no migration step
-    /// writes to the store. The `Record.store` here holds only `Item`, as
-    /// an earlier schema with fewer record types would, so the current
-    /// schema needs a migration. SwiftData migrates in place, and a
-    /// read-only open cannot write, so the open throws and neither file
-    /// changes. The app then shows the store-failure page, not safe mode's
-    /// Today with Export: bead mm-t42.28 (label human) asks Ash how safe
-    /// mode reads a store that needs a migration.
-    func testASafeModeOpenOfAStoreThatNeedsAMigrationWritesNothing() throws {
+    /// A store at a schema version that the migration plan does not hold.
+    /// The `Record.store` here holds only `Item`, so its metadata agrees
+    /// with no version in `RecordMigrationPlan`. Safe mode opens a store
+    /// only at the version that the store holds (ruling r15-01,
+    /// mm-t42.28), so the open throws, no migration step writes to the
+    /// store, and neither file changes. The app then shows the
+    /// store-failure page. `SafeModeSchemaVersionTests` proves the open of
+    /// a store at an earlier version that the plan holds.
+    func testASafeModeOpenOfAStoreAtAnUnknownSchemaVersionWritesNothing() throws {
         let root = try makeRecordOnDisk()
         let directory = StoreLayout.storeDirectory(applicationSupportDirectory: root)
         for name in ["Record.store", "Record.store-wal", "Record.store-shm"] {
@@ -111,7 +111,9 @@ final class SafeModeReadOnlyStoreTests: XCTestCase {
         let before = storeBytes(root: root)
         XCTAssertNotNil(before["Record.store"])
 
-        XCTAssertThrowsError(try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root, readOnly: true))
+        XCTAssertThrowsError(try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root, readOnly: true)) { error in
+            guard case RecordStore.Failure.noKnownSchemaVersion = error else { return XCTFail("\(error)") }
+        }
 
         XCTAssertEqual(storeBytes(root: root), before, "no migration step writes to the store")
     }
