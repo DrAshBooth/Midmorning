@@ -128,6 +128,94 @@ final class LocalDeletionTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: exportFolder.path))
     }
 
+    /// mm-t45.11: when the person taps Print, iOS writes its own copy of
+    /// the PDF to `tmp/<UUID>/`, beside `tmp/Export`. Delete-all and "Delete
+    /// from this device" (one engine) remove that copy and each other PDF
+    /// in `tmp` ("The app MUST leave no file"), and remove `tmp/Export` as
+    /// before. Each item in `tmp` that is not a PDF stays.
+    func testPerformDeletesThePrintCopyAndEveryOtherPDFInTmp() throws {
+        let (store, appGroup, marker, cleanup) = try makeDirectories()
+        defer { cleanup() }
+        let manager = FileManager.default
+        let temporaryDirectory = store.deletingLastPathComponent().appendingPathComponent("tmp", isDirectory: true)
+        let exported = try ExportTemporaryFiles.write(Data("%PDF".utf8), fileName: "Record.pdf", temporaryDirectory: temporaryDirectory)
+        let printFolder = temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try manager.createDirectory(at: printFolder, withIntermediateDirectories: true)
+        let printCopy = printFolder.appendingPathComponent("Record 2026-10-07 to 2026-10-07.pdf")
+        try Data("%PDF".utf8).write(to: printCopy)
+        let topLevel = temporaryDirectory.appendingPathComponent("Record.PDF")
+        try Data("%PDF".utf8).write(to: topLevel)
+        let notAPDF = printFolder.appendingPathComponent("notes.txt")
+        try Data("x".utf8).write(to: notAPDF)
+        let exportFolder = ExportTemporaryFiles.directory(inTemporaryDirectory: temporaryDirectory)
+        let deletion = LocalDeletion(directory: store, appGroupDirectory: appGroup, launchMarkerURL: marker,
+                                     exportDirectory: exportFolder, temporaryDirectory: temporaryDirectory)
+
+        try deletion.perform(sideEffects: FakeDeleteAllSideEffects())
+
+        for url in [exported, printCopy, topLevel] {
+            XCTAssertFalse(manager.fileExists(atPath: url.path), "\(url.lastPathComponent) is deleted")
+        }
+        XCTAssertEqual(TemporaryPDFFiles.urls(inTemporaryDirectory: temporaryDirectory), [], "tmp holds no PDF")
+        XCTAssertFalse(manager.fileExists(atPath: exportFolder.path), "tmp/Export is deleted, as before")
+        XCTAssertTrue(manager.fileExists(atPath: notAPDF.path), "a file that is not a PDF stays")
+    }
+
+    /// mm-t45.11: a PDF in `tmp` that exists but cannot be deleted makes
+    /// the deletion throw, so no caller shows "Everything is deleted"
+    /// while a PDF stays (ruling r14-01).
+    func testPerformThrowsWhenAPDFInTmpCannotBeDeleted() throws {
+        let (store, appGroup, marker, cleanup) = try makeDirectories()
+        let temporaryDirectory = store.deletingLastPathComponent().appendingPathComponent("tmp", isDirectory: true)
+        let printFolder = temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: printFolder, withIntermediateDirectories: true)
+        let printCopy = printFolder.appendingPathComponent("Record.pdf")
+        try Data("%PDF".utf8).write(to: printCopy)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: printFolder.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: printFolder.path)
+            cleanup()
+        }
+        let deletion = LocalDeletion(directory: store, appGroupDirectory: appGroup, launchMarkerURL: marker, temporaryDirectory: temporaryDirectory)
+
+        XCTAssertThrowsError(try deletion.perform(sideEffects: FakeDeleteAllSideEffects()))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: printCopy.path))
+    }
+
+    /// A temporary directory that does not exist holds no PDF: the deletion
+    /// succeeds.
+    func testPerformSucceedsWhenTheTemporaryDirectoryIsMissing() throws {
+        let (store, appGroup, marker, cleanup) = try makeDirectories()
+        defer { cleanup() }
+        let missing = store.deletingLastPathComponent().appendingPathComponent("no-tmp", isDirectory: true)
+        let deletion = LocalDeletion(directory: store, appGroupDirectory: appGroup, launchMarkerURL: marker, temporaryDirectory: missing)
+        XCTAssertNoThrow(try deletion.perform(sideEffects: FakeDeleteAllSideEffects()))
+    }
+
+    /// A folder in `tmp` that the sweep cannot read does not stop the
+    /// deletion: the app and the print copy write only folders that the
+    /// app can read, and a folder of another owner must not stop
+    /// Delete-all every time. A PDF beside that folder still goes.
+    func testPerformSucceedsWhenAFolderInTmpCannotBeRead() throws {
+        let (store, appGroup, marker, cleanup) = try makeDirectories()
+        let temporaryDirectory = store.deletingLastPathComponent().appendingPathComponent("tmp", isDirectory: true)
+        let unreadable = temporaryDirectory.appendingPathComponent("NotOurs", isDirectory: true)
+        try FileManager.default.createDirectory(at: unreadable, withIntermediateDirectories: true)
+        let printFolder = temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: printFolder, withIntermediateDirectories: true)
+        let printCopy = printFolder.appendingPathComponent("Record.pdf")
+        try Data("%PDF".utf8).write(to: printCopy)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: unreadable.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: unreadable.path)
+            cleanup()
+        }
+        let deletion = LocalDeletion(directory: store, appGroupDirectory: appGroup, launchMarkerURL: marker, temporaryDirectory: temporaryDirectory)
+
+        XCTAssertNoThrow(try deletion.perform(sideEffects: FakeDeleteAllSideEffects()))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: printCopy.path), "the PDF beside the folder is deleted")
+    }
+
     /// mm-t41.20: a side file that exists but cannot be deleted makes the
     /// deletion throw, so no caller shows "Everything is deleted".
     func testPerformThrowsWhenAnExistingSideFileCannotBeDeleted() throws {

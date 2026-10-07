@@ -25,22 +25,29 @@ public struct LocalDeletion: Sendable {
     /// .ExportTemporaryFiles`), or `nil` when the caller has none. A PDF
     /// stays there when the process ends while the share sheet shows.
     public let exportDirectory: URL?
+    /// The app's temporary directory (`tmp`), or `nil` when the caller has
+    /// none. Each PDF in it goes (`TemporaryPDFFiles`): iOS keeps its own
+    /// copy of the export PDF in `tmp/<UUID>/` while the print options show
+    /// (mm-t45.11).
+    public let temporaryDirectory: URL?
 
-    public init(directory: URL, appGroupDirectory: URL?, launchMarkerURL: URL, exportDirectory: URL? = nil) {
+    public init(directory: URL, appGroupDirectory: URL?, launchMarkerURL: URL, exportDirectory: URL? = nil, temporaryDirectory: URL? = nil) {
         self.directory = directory
         self.appGroupDirectory = appGroupDirectory
         self.launchMarkerURL = launchMarkerURL
         self.exportDirectory = exportDirectory
+        self.temporaryDirectory = temporaryDirectory
     }
 
     /// Scenario: "Pending requests first" — cancels and deletes every
     /// notification before the store directory goes, so none can fire once
     /// the record is gone. Then deletes the whole store directory and
     /// creates it again empty, deletes the two side files, the launch
-    /// marker and the export folder (each one only if it exists), and
-    /// reloads every widget. Throws when a file that exists cannot be
-    /// deleted ("The app MUST leave no file"), so the caller never shows
-    /// the deleted screen for a deletion that did not happen.
+    /// marker and the export folder (each one only if it exists), then
+    /// each PDF in the temporary directory, and reloads every widget.
+    /// Throws when a file that exists cannot be deleted ("The app MUST
+    /// leave no file"), so the caller never shows the deleted screen for a
+    /// deletion that did not happen.
     public func perform(sideEffects: DeleteAllSideEffects, fileManager: FileManager = .default) throws {
         sideEffects.cancelEveryNotification()
         try LocalEraser.eraseAndRecreate(directory: directory, fileManager: fileManager)
@@ -52,6 +59,9 @@ public struct LocalDeletion: Sendable {
         try removeIfPresent(launchMarkerURL, fileManager: fileManager)
         if let exportDirectory {
             try removeIfPresent(exportDirectory, fileManager: fileManager)
+        }
+        if let temporaryDirectory {
+            try TemporaryPDFFiles.removeAll(inTemporaryDirectory: temporaryDirectory, fileManager: fileManager)
         }
         sideEffects.reloadWidgets()
     }

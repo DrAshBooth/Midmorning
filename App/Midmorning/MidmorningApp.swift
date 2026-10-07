@@ -54,7 +54,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         UNUserNotificationCenter.current().delegate = notificationActionHandling
         NotificationCategories.registerAll()
         // export spec, "Share sheet only": a PDF that a process left in
-        // tmp/Export when it ended with the share sheet up goes now.
+        // tmp/Export when it ended with the share sheet up goes now, and so
+        // does each other PDF in tmp: the copy that Print keeps in
+        // tmp/<UUID>/ while its options show (mm-t45.11).
         ExportTemporaryFiles.removeAll(temporaryDirectory: FileManager.default.temporaryDirectory)
         return true
     }
