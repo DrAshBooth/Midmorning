@@ -21,6 +21,12 @@ import Constants
 ///   reminder still to come: close the day at 21:45 (stage 1, no entry
 ///   after 17:00). The midday reminder does not fire (an entry before
 ///   midday), and stage 1 has no planned meal and no morning plan reminder.
+/// - `stage2Evening`: week 2, seeded in a fixed-offset zone where the local
+///   time at the seed is 19:xx. The start day is eight record days ago, and
+///   each earlier record day holds one entry, so stage 2 is open. Today's
+///   plan is set: Breakfast 08:00, Lunch 13:00, Mid-afternoon 16:00 and
+///   Evening meal 21:30. Today holds no entry. So today's reminders still
+///   to come are the Evening meal at 21:30 and close the day at 21:45.
 /// - `reminderSettings`: as `week1`, in the Mac's time zone, with a
 ///   reminder time, quiet hours and device settings that are not the
 ///   defaults (mm-t24.38): "Set today's plan time" 08:10, "Close the day
@@ -34,7 +40,7 @@ import Constants
 ///   taps "Start" on screen 4.
 @MainActor
 enum RemindersExportScenarios {
-    nonisolated static let names: Set<String> = ["stage1Morning", "stage1Evening", "reminderSettings", "unfinishedOnboarding"]
+    nonisolated static let names: Set<String> = ["stage1Morning", "stage1Evening", "stage2Evening", "reminderSettings", "unfinishedOnboarding"]
 
     /// Seeds `scenario` and stops the process when `scenario` is one of
     /// `names`. Returns for any other name. `main.swift` calls this in one
@@ -80,6 +86,34 @@ enum RemindersExportScenarios {
             let breakfast = today.start.addingTimeInterval(3600)
             try store.add(time: breakfast, what: "Toast and tea", feltLikeABinge: false, createdAt: now.addingTimeInterval(-60),
                           utcOffsetSeconds: zone.secondsFromGMT(for: breakfast))
+            print("seeded \(scenario) at \(directory.path) in \(zone.identifier)")
+        case "stage2Evening":
+            let zone = zoneWhereTheHourIs(19, at: now)
+            try Data(zone.identifier.utf8).write(to: zoneFile)
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = zone
+            let today = RecordDay.interval(containing: now, calendar: calendar, schedule: .standard)
+            let dayStart = { (offset: Int) in calendar.date(byAdding: .day, value: offset, to: today.start)! }
+            let key = { (offset: Int) in RecordDay.key(containing: dayStart(offset).addingTimeInterval(3600), calendar: calendar, schedule: .standard) }
+            try store.setOnboardingCompleted(true)
+            try store.setInstallMoment(dayStart(-9))
+            try store.setStartDayKey(key(-8))
+            try store.setWeighInDayChoice(.wontBeWeighing)
+            try store.setProfile(heightCm: 170, onboardingBMI: 22, cautionFlag: false, askedAt: dayStart(-9), changedAt: dayStart(-9))
+            // Stage 2 opens after five recorded days: one entry on each of
+            // the eight earlier record days, at 08:00 local time.
+            for offset in -8...(-1) {
+                let time = dayStart(offset).addingTimeInterval(4 * 3600)
+                try store.add(time: time, what: "Porridge", feltLikeABinge: false, createdAt: time,
+                              utcOffsetSeconds: zone.secondsFromGMT(for: time))
+            }
+            // Today's plan, set this morning: Breakfast 08:00, Lunch 13:00,
+            // Mid-afternoon 16:00 and Evening meal 21:30. No entry today.
+            let plan = #"[{"slot":0,"time":"08:00"},{"slot":2,"time":"13:00"},{"slot":3,"time":"16:00"},{"slot":4,"time":"21:30"}]"#
+            let constants = ProgrammeConstants.default
+            try store.setDayPlan(dateKey: key(0), slotsJSON: plan, windowBeforeMinutes: constants.plannedMealWindowBeforeMinutes,
+                                 windowAfterMinutes: constants.plannedMealWindowAfterMinutes,
+                                 setAt: dayStart(0).addingTimeInterval(3 * 3600), setBy: "device", changedAt: dayStart(0).addingTimeInterval(3 * 3600))
             print("seeded \(scenario) at \(directory.path) in \(zone.identifier)")
         case "reminderSettings":
             let calendar = Calendar.current

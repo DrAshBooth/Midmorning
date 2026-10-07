@@ -85,7 +85,7 @@ xcodebuild build-for-testing -project "$HERE/Harness.xcodeproj" -scheme HarnessU
 # 3. Seed the stores.
 step "seed the stores"
 (cd "$HERE/seeder" && swift build -q) || exit 1
-for scenario in week1 review corrupt stage1Morning stage1Evening reminderSettings unfinishedOnboarding; do
+for scenario in week1 review corrupt stage1Morning stage1Evening stage2Evening reminderSettings unfinishedOnboarding; do
   "$HERE/seeder/.build/debug/Seeder" "$HERE/stores/$scenario/Record.store" "$scenario" >/dev/null || exit 1
 done
 

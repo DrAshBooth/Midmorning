@@ -428,6 +428,120 @@ extension AutomatedChecks {
         XCTAssertTrue(gone.allSatisfy { $0.contains("|reminder.closeTheDay.time|21:15|") }, "no other row changes: \(gone)")
     }
 
+    /// Opens "Today's plan" from the day menu, removes the planned meal
+    /// `slotLabel`, and saves ("Save anyway" when the soft rules ask).
+    private func removeFromTodaysPlan(_ slotLabel: String, file: StaticString = #filePath, line: UInt = #line) {
+        tapDayMenu("Today's plan")
+        assertScreen("Today's plan", file: file, line: line)
+        let remove = app.buttons["Remove \(slotLabel)"].firstMatch
+        XCTAssertTrue(scrollTo(remove), "the plan builder shows \"Remove \(slotLabel)\"", file: file, line: line)
+        remove.tap()
+        XCTAssertTrue(remove.waitForNonExistence(timeout: 5), "\(slotLabel) leaves the plan", file: file, line: line)
+        let save = app.buttons["Save"].firstMatch
+        XCTAssertTrue(scrollTo(save), "the plan builder shows \"Save\"", file: file, line: line)
+        save.tap()
+        let saveAnyway = app.alerts.buttons["Save anyway"].firstMatch
+        if saveAnyway.waitForExistence(timeout: 3) { saveAnyway.tap() }
+        XCTAssertTrue(app.navigationBars["Today's plan"].waitForNonExistence(timeout: 8), "\"Save\" closes the plan builder", file: file, line: line)
+        assertScreen("Today", file: file, line: line)
+    }
+
+    /// mm-t24.22, comment of mm-t24.34, the stage 2 part (r13-19, r16-01):
+    /// "From stage 2, it shows after the last planned meal's time." The
+    /// store is in stage 2 at 19:xx local time, with today's last planned
+    /// meal at 21:30: after 17:00, Today still shows only "Pause for
+    /// today". After the Evening meal leaves today's plan, the last planned
+    /// meal is Mid-afternoon at 16:00, and "Close the day" shows beside
+    /// "Pause for today".
+    func testCloseTheDayShowsAfterTheLastPlannedMealInStage2() throws {
+        let hour = try launchOnTodayInTheSeededZone("stage2Evening")
+        XCTAssertTrue((17..<21).contains(hour), "the stage2Evening zone is after 17:00 and before 21:30 (local hour \(hour))")
+        XCTAssertFalse(app.buttons["Getting started"].exists, "the seeded store is in stage 2")
+        let pause = app.buttons["Pause for today"].firstMatch
+        XCTAssertTrue(scrollTo(pause), "Today shows \"Pause for today\"")
+        XCTAssertFalse(app.buttons["Close the day"].exists, "before the last planned meal's time (21:30), Today shows only \"Pause for today\", also after 17:00")
+        app.swipeDown(); app.swipeDown()
+        removeFromTodaysPlan("Evening meal")
+        XCTAssertTrue(scrollTo(pause), "Today shows \"Pause for today\"")
+        let closeTheDay = app.buttons["Close the day"].firstMatch
+        XCTAssertTrue(closeTheDay.waitForExistence(timeout: 5), "after the last planned meal's time (now 16:00), Today shows \"Close the day\"")
+        XCTAssertEqual(closeTheDay.frame.midY, pause.frame.midY, accuracy: 4, "\"Close the day\" shows beside \"Pause for today\"")
+        XCTAssertGreaterThan(closeTheDay.frame.minX, pause.frame.maxX, "\"Close the day\" shows beside \"Pause for today\"")
+    }
+
+    /// mm-t24.22, comment of mm-t24.23 and the lead's request ("a plan
+    /// change cancels the right reminders"), by the Diagnostics count
+    /// (r13-19, r16-01). The store is in stage 2 at 19:xx local time, with
+    /// no entry today: today's reminders still to come are the Evening
+    /// meal at 21:30 and close the day at 21:45. After the Evening meal
+    /// leaves today's plan, "Pending reminders" is one less: close the day
+    /// stays, because Mid-afternoon (16:00) has no entry, and the other
+    /// days keep theirs. (That the reminder does not fire at 21:30 needs a
+    /// real notification; it stays a device check.)
+    func testZRemovingAPlannedMealCancelsOnlyItsReminder() throws {
+        let hour = try launchOnTodayInTheSeededZone("stage2Evening")
+        XCTAssertTrue((17..<21).contains(hour), "the stage2Evening zone is before 21:30 (local hour \(hour))")
+        allowNotificationsFromTodayIfAsked()
+        guard let before = pendingReminders(where: { $0 > 2 }) else { return XCTFail("Diagnostics shows \"Pending reminders\"") }
+        XCTAssertGreaterThan(before, 2, "before the change, reminders are pending for today and the next days")
+        removeFromTodaysPlan("Evening meal")
+        let after = pendingReminders(where: { $0 == before - 1 })
+        XCTAssertEqual(after, before - 1, "removing the Evening meal cancels its reminder only; close the day and the other days keep theirs")
+    }
+
+    /// The app's App Group container (`group.uk.midmorning`) on the
+    /// simulator, found by its container metadata beside the data container.
+    private func appGroupDirectory() -> URL? {
+        let shared = URL(fileURLWithPath: runEnvironment["APP_DATA"]!)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Shared/AppGroup")
+        let directories = (try? FileManager.default.contentsOfDirectory(at: shared, includingPropertiesForKeys: nil)) ?? []
+        return directories.first { directory in
+            let metadata = directory.appendingPathComponent(".com.apple.mobile_container_manager.metadata.plist")
+            guard let data = try? Data(contentsOf: metadata),
+                  let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else { return false }
+            return plist["MCMMetadataIdentifier"] as? String == "group.uk.midmorning"
+        }
+    }
+
+    /// mm-t24.22, comment of mm-t24.24, the part after the tap (r13-19,
+    /// r16-01): with the app closed, the notification handler wrote
+    /// "Skipped" for Lunch to the action queue; the app opens, Today shows
+    /// Lunch skipped, and Diagnostics "Queue length" reads 0. The test
+    /// writes the queue file as the handler does (`queue.json` in the App
+    /// Group, format version 1). (The tap on "Skipped" on a real reminder,
+    /// with the app closed or open, and the next-planned-meal line, which
+    /// the row does not give to accessibility, stay device checks.)
+    func testAQueuedSkippedAppliesWhenTheAppOpens() throws {
+        let zone = try seededZone("stage2Evening")
+        try launchOnTodayInTheSeededZone("stage2Evening")
+        let lunch = element(labelBeginningWith: "Lunch, 13:00")
+        XCTAssertTrue(scrollTo(lunch), "Today shows the Lunch row")
+        XCTAssertFalse(lunch.label.contains("Skipped"), "before the queue, Lunch is not skipped: \(lunch.label)")
+        app.terminate()
+        // The queue file, as the notification handler writes it.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = zone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dayKey = formatter.string(from: Date().addingTimeInterval(-4 * 3600))
+        let moment = ISO8601DateFormatter().string(from: Date())
+        let queue = #"{"formatVersion":1,"actions":[{"kind":"skipped","dayKey":"\#(dayKey)","slotIndex":2,"plannedTime":"13:00","snoozeCount":0,"moment":"\#(moment)"}]}"#
+        let group = try XCTUnwrap(appGroupDirectory(), "the simulator holds the App Group container of the app")
+        let queueURL = group.appendingPathComponent("queue.json")
+        try Data(queue.utf8).write(to: queueURL)
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
+        let skipped = element(labelBeginningWith: "Lunch, 13:00, Skipped")
+        XCTAssertTrue(skipped.waitForExistence(timeout: 8) || scrollTo(skipped), "after the app opens, Today shows Lunch skipped")
+        app.swipeDown(); app.swipeDown()
+        XCTAssertEqual(diagnosticsCount("Queue length"), 0, "Diagnostics \"Queue length\" reads 0")
+        let left = (try? Data(contentsOf: queueURL)).map { String(decoding: $0, as: UTF8.self) } ?? ""
+        XCTAssertFalse(left.contains("\"skipped\""), "the app emptied the queue file: \(left)")
+    }
+
     // MARK: mm-t41.15 and mm-t42.14 (safe mode, rulings r13-13 and r13-05)
 
     /// mm-t41.15, comments of r13-13 and r13-05, parts (3) and (4)
