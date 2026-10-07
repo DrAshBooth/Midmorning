@@ -1061,6 +1061,14 @@ final class AutomatedChecks: XCTestCase {
             field.typeText(value)
         }
         app.buttons["Continue"].firstMatch.tap()
+        // On a new simulator the first use of the keyboard can show a tip
+        // with its own "Continue" (see dismissKeyboardTip). Then the tap
+        // above closes the tip, and screen 2 stays. Tap the screen's
+        // "Continue" once more, only while screen 2 still shows.
+        if !app.navigationBars["Your start"].waitForExistence(timeout: 3),
+           app.navigationBars["A few questions first"].exists {
+            app.buttons["Continue"].firstMatch.tap()
+        }
         assertScreen("Your start")
         XCTAssertTrue(element(labelBeginningWith: "Today, ").waitForExistence(timeout: 5), "screen 3 shows \"Today, <weekday date>\"")
         XCTAssertTrue(element(labelBeginningWith: "Tomorrow, ").exists, "screen 3 shows \"Tomorrow, <weekday date>\"")
