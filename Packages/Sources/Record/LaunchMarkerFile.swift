@@ -5,9 +5,14 @@ import Foundation
 /// before Today appeared. The App target's `LaunchMarker` calls this
 /// through one `LaunchSession` per process.
 ///
+/// A launch that finds an uncleared marker writes its launch failure into
+/// the marker as an uncounted failure at once, before the store opens. So
+/// a launch that stops in the store open, for example in a schema migration
+/// that crashes, keeps its failure (mm-t42.30). The first launch that opens
+/// the store for writing adds the uncounted failures to `Local.store`.
 /// Safe mode opens the store read-only (ruling r13-05, mm-t42.23), so a
 /// safe-mode launch cannot add its launch failure or a MetricKit crash
-/// count to `Local.store`. The marker then also holds those as uncounted
+/// count to `Local.store`. The marker then keeps those as uncounted
 /// failures and uncounted crashes, and the next launch with a read-write
 /// store adds them. The content is one of:
 /// - "<streak>": not cleared, and nothing uncounted.
@@ -19,8 +24,11 @@ public enum LaunchMarkerFile {
     public struct Outcome: Sendable, Equatable {
         public let markerWasUncleared: Bool
         public let launchOutcome: LaunchOutcome
-        /// Launch failures that an earlier safe-mode launch found but could
-        /// not add to `Local.store`.
+        /// Launch failures that `Local.store` does not hold yet: the failure
+        /// of this launch when the marker was uncleared, and each failure
+        /// that an earlier launch kept in the marker. An earlier launch keeps
+        /// its failure when it was in safe mode, or when it stopped before
+        /// its store opened for writing.
         public let uncountedFailures: Int
         /// MetricKit crashes that an earlier safe-mode launch received but
         /// could not add to `Local.store`.
@@ -78,11 +86,19 @@ public enum LaunchMarkerFile {
     /// carry NSFileProtectionComplete"). The marker is also excluded from
     /// backup, so a restore onto a new device never brings back an old
     /// streak. The uncounted failures and crashes stay in the marker.
+    ///
+    /// "The app MUST add one to the launch failure count in `Local.store`
+    /// each time it finds an uncleared marker." When the marker is
+    /// uncleared, this write also adds this launch's failure to the
+    /// uncounted failures. The store is not open yet, so the marker keeps
+    /// the failure until a store open for writing adds it to `Local.store`
+    /// (`LaunchSession.countLaunchFailureIfNeeded(in:)`). A launch that
+    /// stops in the store open does not lose its failure (mm-t42.30).
     public static func begin(at url: URL) -> Outcome {
         let previous = (try? String(contentsOf: url, encoding: .utf8)).map(Content.init(text:))
         let markerWasUncleared = previous?.streak != nil
         let previousStreak = previous?.streak ?? 0
-        let uncounted = previous?.uncountedFailures ?? 0
+        let uncounted = (previous?.uncountedFailures ?? 0) + (markerWasUncleared ? 1 : 0)
         let crashes = previous?.uncountedCrashes ?? 0
         let outcome = LaunchSafety.startLaunch(markerWasUncleared: markerWasUncleared, previousConsecutiveUnclearedCount: previousStreak)
         write(Content(streak: outcome.newConsecutiveUnclearedCount, uncountedFailures: uncounted, uncountedCrashes: crashes), at: url)
@@ -146,14 +162,15 @@ public final class LaunchSession {
 
     /// "The app MUST add one to the launch failure count in `Local.store`
     /// each time it finds an uncleared marker." Once per launch, on the
-    /// first store that opens. This also adds the failures and the crashes
-    /// that an earlier safe-mode launch kept in the marker. A read-only
-    /// store (safe mode) takes no write: the marker keeps this launch's
-    /// failure for the next launch instead.
+    /// first store that opens. `begin()` already wrote this launch's
+    /// failure into the marker, with the failures and the crashes that
+    /// earlier launches kept there. This adds all of them to `Local.store`
+    /// and removes them from the marker. A read-only store (safe mode)
+    /// takes no write: the marker keeps them for the next launch instead.
     public func countLaunchFailureIfNeeded(in store: RecordStore) {
         guard !launchFailureCounted, outcome != nil else { return }
         launchFailureCounted = true
-        let failures = uncountedFailures + (outcome?.markerWasUncleared == true ? 1 : 0)
+        let failures = uncountedFailures
         guard failures > 0 || uncountedCrashes > 0 else { return }
         var countedFailures = 0
         var countedCrashes = 0

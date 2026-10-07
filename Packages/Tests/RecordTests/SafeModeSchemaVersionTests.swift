@@ -367,9 +367,77 @@ final class SafeModeSchemaVersionTests: XCTestCase {
         XCTAssertEqual(storedVersion(), TestOnlyRecordSchemaV2.versionIdentifier, "the ordinary launch ran the migration")
         XCTAssertEqual(try store.entries(dayKey: "2026-09-21").map(\.what), ["Toast and tea"])
         XCTAssertEqual(try store.localSettingValue(key: "test.value"), "kept")
-        // The failure that launch 2 found is lost, because launch 2 stopped
-        // in the open before the count: bead mm-t42.30. When that bead is
-        // done, this count is exactly 2.
-        XCTAssertGreaterThanOrEqual(try store.diagnosticsCounts(contentVersion: 1).launchFailures, 1, "the failure that safe mode kept in the marker")
+        // Launch 2 stopped in the open, but its failure was in the marker
+        // already (mm-t42.30). Safe mode kept its own failure there too.
+        XCTAssertEqual(try store.diagnosticsCounts(contentVersion: 1).launchFailures, 2, "the failures that launch 2 and safe mode kept in the marker")
+    }
+
+    /// The marker as the file holds it now.
+    private func markerContent() -> String? {
+        try? String(contentsOf: markerURL, encoding: .utf8)
+    }
+
+    /// One ordinary launch that stops in the store open, as
+    /// `AppLockRootView.openStoreAndController` makes it: `begin()`, then
+    /// an open for writing whose migration stops in `Record.store`. The
+    /// process then ends, so `countLaunchFailureIfNeeded(in:)` never runs.
+    private func launchThatStopsInTheStoreOpen(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
+        let launch = LaunchSession(markerURL: markerURL)
+        XCTAssertFalse(launch.begin().launchOutcome.enterSafeMode, name, file: file, line: line)
+        XCTAssertThrowsError(try autoreleasepool {
+            _ = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root, readOnly: false, migrationPlan: TestOnlyMigrationStopsInRecordStorePlan.self)
+        }, "\(name) stops in the migration", file: file, line: line)
+    }
+
+    /// One safe-mode launch whose Today appears. Safe mode writes nothing
+    /// to `Local.store`, so `Local.store` still holds `expectedFailures`.
+    private func safeModeLaunchWhoseTodayAppears(expectedFailures: Int, file: StaticString = #filePath, line: UInt = #line) throws {
+        let launch = LaunchSession(markerURL: markerURL)
+        XCTAssertTrue(launch.begin().launchOutcome.enterSafeMode, file: file, line: line)
+        try autoreleasepool {
+            let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root, readOnly: true, migrationPlan: TestOnlyMigrationStopsInRecordStorePlan.self)
+            launch.countLaunchFailureIfNeeded(in: store)
+            XCTAssertEqual(try store.diagnosticsCounts(contentVersion: 1).launchFailures, expectedFailures, "safe mode adds nothing to Local.store", file: file, line: line)
+            launch.clearAfterTodayAppears()
+        }
+    }
+
+    /// mm-t42.30, data-and-privacy spec, "Launch safety": "The app MUST add
+    /// one to the launch failure count in `Local.store` each time it finds
+    /// an uncleared marker." Here two launches find an uncleared marker and
+    /// stop in the store open (launches 2 and 5). Each failure stays in the
+    /// marker until a store open for writing succeeds, as safe mode's
+    /// failures do. Four launches find an uncleared marker (2, 3, 5 and 6),
+    /// so `Local.store` holds exactly 4 failures at the end.
+    func testEachLaunchThatStopsInTheStoreOpenKeepsItsFailureInTheMarker() throws {
+        try writeTheV1BuildsRecord()
+
+        launchThatStopsInTheStoreOpen("launch 1")
+        XCTAssertEqual(markerContent(), "0", "launch 1 finds no marker, so it has no failure")
+        launchThatStopsInTheStoreOpen("launch 2")
+        XCTAssertEqual(markerContent(), "1 1", "launch 2 stopped in the store open, and the marker keeps its failure")
+        try safeModeLaunchWhoseTodayAppears(expectedFailures: 0) // launch 3
+        XCTAssertEqual(markerContent(), "- 2", "the failures of launch 2 and launch 3")
+
+        launchThatStopsInTheStoreOpen("launch 4")
+        XCTAssertEqual(markerContent(), "0 2", "launch 4 finds a cleared marker, so it has no failure")
+        launchThatStopsInTheStoreOpen("launch 5")
+        XCTAssertEqual(markerContent(), "1 3", "launch 5 stopped in the store open, and the marker keeps its failure")
+        try safeModeLaunchWhoseTodayAppears(expectedFailures: 0) // launch 6
+        XCTAssertEqual(markerContent(), "- 4")
+
+        // Launch 7: the stop does not come back, so the migration ends and
+        // the store opens for writing.
+        let seventh = LaunchSession(markerURL: markerURL)
+        XCTAssertFalse(seventh.begin().launchOutcome.enterSafeMode)
+        let store = try RecordStore.openInPreparedDirectory(applicationSupportDirectory: root, readOnly: false, migrationPlan: TestOnlyTwoVersionMigrationPlan.self)
+        seventh.countLaunchFailureIfNeeded(in: store)
+
+        XCTAssertEqual(storedVersion(), TestOnlyRecordSchemaV2.versionIdentifier, "the migration ran")
+        XCTAssertEqual(try store.diagnosticsCounts(contentVersion: 1).launchFailures, 4, "one failure for each launch that found an uncleared marker")
+        XCTAssertEqual(seventh.uncountedFailures, 0)
+        XCTAssertEqual(markerContent(), "0", "Local.store holds every failure now")
+        seventh.clearAfterTodayAppears()
+        XCTAssertNil(markerContent())
     }
 }
