@@ -121,7 +121,8 @@ for scenario in week1 review corrupt \
   fifteen fifteenPlan bands planMatched planBand planStar planMissed planEarly planStrings dayStart6 \
   or-tomorrow or-secondday or-plancard or-plan or-pinned or-tworuns or-deterioration or-weighin \
   stage1Morning stage1Evening stage1Paused stage2Evening stage2Morning reminderSettings unfinishedOnboarding \
-  lock-week1 lock-week1-30s lock-review lock-face-only lock-gym; do
+  lock-week1 lock-week1-30s lock-review lock-face-only lock-gym \
+  exportPages; do
   "$HERE/seeder/.build/debug/Seeder" "$HERE/stores/$scenario/Record.store" "$scenario" >/dev/null || exit 1
 done
 

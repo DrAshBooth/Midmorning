@@ -8,6 +8,7 @@ let url = URL(fileURLWithPath: args[1])
 let scenario = args.count > 2 ? args[2] : "today"
 // The stores for AutomatedChecks (ruling r13-19) live in AutomatedScenarios.swift.
 RemindersExportScenarios.seedAndExitIfNamed(scenario, storeURL: url)
+ExportPagesScenarios.seedAndExitIfNamed(scenario, storeURL: url)
 if AppLockScenarios.names.contains(scenario) { AppLockScenarios.run(scenario, storeURL: url) }
 if AutomatedScenarios.names.contains(scenario) {
     MainActor.assumeIsolated {
