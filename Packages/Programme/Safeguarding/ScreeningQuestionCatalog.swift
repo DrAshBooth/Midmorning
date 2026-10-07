@@ -10,8 +10,9 @@ import Foundation
 /// constraint; the App target's screen renders this catalog and adds no
 /// question of its own. The content bundle holds a copy of each question
 /// with a "screening.question." id (ruling r13-02). The treatment question
-/// has no copy yet: it holds "therapist", a word on the full forbidden
-/// list, and Ash decides which list applies.
+/// holds "therapist", a word on the full forbidden list. Its copy is
+/// "screening.question.treatment": the forbidden-list check skips this exact
+/// sentence (ruling r17-02, `ForbiddenList.permittedSentences`).
 public enum ScreeningQuestionCatalog {
     /// One screening question's prompt, read by a test and by the screen.
     public static let questions: [String] = [

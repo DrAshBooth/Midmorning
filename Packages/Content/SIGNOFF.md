@@ -69,7 +69,9 @@ onboarding.pleaseanswer
 onboarding.record.sentence1
 onboarding.record.sentence2
 onboarding.record.sentence3
+onboarding.screen1.line1
 onboarding.screen1.line2
+onboarding.screen1.line3
 onboarding.screen1.line5
 onboarding.screen1.line6
 onboarding.screen1.line7
@@ -95,6 +97,7 @@ onboarding.start.tomorrow
 onboarding.start.weighin
 onboarding.start.weighinday
 onboarding.start.wontweigh
+onboarding.weighIn.explanation
 opening.stage2
 opening.stage3
 opening.stage4
@@ -103,6 +106,10 @@ opening.stage6
 opening.stage7
 plan.missedPrompt.notRecordedYet
 plan.missedPrompt.wasThat
+plan.softRules.gapLine
+plan.softRules.mealLine
+plan.softRules.meals %lld
+plan.softRules.snacks %lld
 reflection.1
 reflection.2
 reflection.3
@@ -171,6 +178,7 @@ screening.question.height
 screening.question.pregnancy
 screening.question.selfharm
 screening.question.selfharm.how
+screening.question.treatment
 screening.question.weight
 screening.weight.kilograms
 screening.weight.pounds
@@ -259,4 +267,8 @@ todaycard.read
 week1.1
 week1.2
 week1.3
+weighIn.belowRange
+weighIn.explanation.kg
+weighIn.explanation.stLb
+weighIn.refusal
 ```

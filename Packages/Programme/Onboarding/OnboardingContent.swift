@@ -9,10 +9,11 @@ import Constants
 ///
 /// This is signed-off text. The content bundle holds a copy of each string
 /// with an "onboarding." or "screening." id, and a content test proves that
-/// each string here equals its bundle copy (ruling r13-02). Three strings
-/// have no bundle copy yet, because they hold a word from the forbidden
-/// list: lines 1 and 3 of screen 1 ("CBT", "therapy") and the treatment
-/// question ("therapist"). Decision mm-t11.47 sets their home (mm-t11.48).
+/// each string here equals its bundle copy (ruling r13-02). Lines 1 and 3
+/// of screen 1 ("CBT", "therapy") and the treatment question ("therapist")
+/// hold a word from the forbidden list. They have a bundle copy too: the
+/// forbidden-list check skips these exact sentences, which safeguarding
+/// permits (ruling r17-02, `ForbiddenList.permittedSentences`).
 public enum Screen1Content {
     public static let title = "What this is and isn't"
     public static let lines: [String] = [

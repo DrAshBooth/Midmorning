@@ -166,12 +166,15 @@ final class SignedTextCopiesTests: XCTestCase {
     // MARK: - Onboarding: screens 1, 2 and 4
 
     /// Lines 1 and 3 of screen 1 hold "CBT" and "therapy", words on the
-    /// forbidden list. They have no bundle copy until decision mm-t11.47
-    /// (mm-t11.48). Line 4 is the support sheet's compensation line.
+    /// forbidden list. Ruling r17-02 (mm-t11.48) gives them a bundle copy,
+    /// because the forbidden-list check skips the sentences that safeguarding
+    /// permits. Line 4 is the support sheet's compensation line.
     func testTheOnboardingTextEqualsItsBundleCopies() {
         assertCopy(Screen1Content.title, "onboarding.screen1.title")
         XCTAssertEqual(Screen1Content.lines.count, 7)
+        assertCopy(Screen1Content.lines[0], "onboarding.screen1.line1")
         assertCopy(Screen1Content.lines[1], "onboarding.screen1.line2")
+        assertCopy(Screen1Content.lines[2], "onboarding.screen1.line3")
         assertCopy(Screen1Content.lines[3], "support.gp.compensation")
         assertCopy(Screen1Content.lines[4], "onboarding.screen1.line5")
         assertCopy(Screen1Content.lines[5], "onboarding.screen1.line6")
@@ -237,11 +240,6 @@ final class SignedTextCopiesTests: XCTestCase {
             "SupportSheet.samaritansWelshLabel", "SupportSheet.samaritansWelshNumber", // "support.samaritans.welsh"
             "GPParagraph.selfHarmAddition", // "gp.selfharm"
         ]
-        // Text with a word from the forbidden list. It waits for decision
-        // mm-t11.47 (mm-t11.48).
-        let waitingForDecision: Set<String> = [
-            Screen1Content.lines[0], Screen1Content.lines[2], Screen2Content.treatmentQuestion,
-        ]
         // A file that holds the phrases a check looks for. The app does not
         // show these phrases.
         let notShown: Set<String> = ["TreatmentClaim"]
@@ -266,7 +264,7 @@ final class SignedTextCopiesTests: XCTestCase {
         }
         func shown(_ text: String) -> String? {
             let value = text.replacingOccurrences(of: #"\""#, with: "\"")
-            guard !value.contains("\\("), value.contains(where: \.isLetter), !waitingForDecision.contains(value) else { return nil }
+            guard !value.contains("\\("), value.contains(where: \.isLetter) else { return nil }
             return value
         }
         var scanned = 0
@@ -385,14 +383,16 @@ final class SignedTextCopiesTests: XCTestCase {
         assertCopy(questions[0], "screening.question.age")
         assertCopy(questions[1], "screening.question.height")
         assertCopy(questions[2], "screening.question.weight")
-        // questions[3], the treatment question, has no bundle copy yet: it
-        // holds "therapist", a word on the full forbidden list.
+        // The treatment question holds "therapist", a word on the full
+        // forbidden list. Ruling r17-02 (mm-t11.48) gives it a bundle copy.
+        assertCopy(questions[3], "screening.question.treatment")
         assertCopy(questions[4], "screening.question.pregnancy")
         assertCopy(questions[5], "screening.question.selfharm")
         assertCopy(ScreeningQuestionCatalog.selfHarmSecondQuestion, "screening.question.selfharm.how")
         assertCopy(Screen2Content.ageQuestion, "screening.question.age")
         assertCopy(Screen2Content.heightQuestion, "screening.question.height")
         assertCopy(Screen2Content.weightQuestion, "screening.question.weight")
+        assertCopy(Screen2Content.treatmentQuestion, "screening.question.treatment")
         assertCopy(Screen2Content.pregnancyQuestion, "screening.question.pregnancy")
         assertCopy(CommonLabels.ratherNotSay, "screening.answer.rathernotsay")
         assertCopy(CommonLabels.doesNotApplyToMe, "screening.answer.doesnotapply")
