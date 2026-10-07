@@ -1,5 +1,6 @@
 import XCTest
 import SQLite3
+import PDFKit
 
 /// Rulings r13-19 and r16-01 (epic mm-t45, mm-t43.32): the checks of the
 /// device-check beads mm-t24.22 (reminders), mm-t41.15 (local delete-all)
@@ -674,7 +675,124 @@ extension AutomatedChecks {
         XCTAssertEqual(diagnosticsCount("Launch failures"), 5, "Diagnostics shows a launch failure count two more than before launch 1 (3)")
     }
 
+    /// mm-t41.15, comment of mm-t41.17 and mm-t41.21, the "Try again" part
+    /// (r13-19, r16-01): "Tap 'Try again' on the store-failure page twice
+    /// in one launch: the launch failure count rises by one at most." The
+    /// launch finds an uncleared marker ("0": one launch before this one
+    /// ended before Today) and a store that cannot open.
+    /// The first "Try again" fails too. The test then puts a good store
+    /// (`week1`, count 0) in place, and the second "Try again" opens it.
+    /// The ordinary Today shows, not safe mode (the streak rose once, to 1;
+    /// a streak of 2 opens safe mode), and Diagnostics shows 1 launch
+    /// failure. (A crash in Today's
+    /// first load needs a special build, and the protection class of the
+    /// marker needs a device; both stay device checks.)
+    func testTryAgainCountsTheLaunchFailureOnce() throws {
+        try launch("corrupt", launchMarker: "0")
+        let page = element(labelled: "Midmorning cannot open your record on this device.")
+        XCTAssertTrue(page.waitForExistence(timeout: 20), "the store-open fault screen shows")
+        let tryAgain = app.buttons["Try again"].firstMatch
+        XCTAssertTrue(tryAgain.exists, "the page shows \"Try again\"")
+        tryAgain.tap()
+        sleep(1)
+        XCTAssertTrue(page.exists, "the first \"Try again\" fails: the store still cannot open")
+        // Put a good store in place of the one that cannot open.
+        let fileManager = FileManager.default
+        for file in try fileManager.contentsOfDirectory(at: recordDirectory, includingPropertiesForKeys: nil) {
+            try fileManager.removeItem(at: file)
+        }
+        let seeded = URL(fileURLWithPath: runEnvironment["STORES"]!).appendingPathComponent("week1")
+        for file in try fileManager.contentsOfDirectory(at: seeded, includingPropertiesForKeys: nil) {
+            try fileManager.copyItem(at: file, to: recordDirectory.appendingPathComponent(file.lastPathComponent))
+        }
+        tryAgain.tap()
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 10), "the second \"Try again\" opens the store")
+        XCTAssertTrue(app.buttons["Add an entry"].firstMatch.waitForExistence(timeout: 5), "the ordinary Today shows, not safe mode")
+        XCTAssertEqual(diagnosticsCount("Launch failures"), 1, "the launch failure count rose by one, not once for each \"Try again\"")
+    }
+
+    /// mm-t41.15, "Share App Analytics with Apple row opens the iOS
+    /// Settings app" (data-and-privacy spec, "The app holds no analytics of
+    /// its own"; ruling r12-01) (r13-19): one tap on the row in the Privacy
+    /// group opens the iOS Settings app. (The spec scenario says "at the
+    /// app's own page". On the iOS 27.0 simulator the app opens the Settings
+    /// app at its first page, so that part stays a device check.)
+    func testShareAppAnalyticsOpensTheIOSSettingsApp() throws {
+        try launchOnToday("week1")
+        tapToolbar("Settings")
+        assertScreen("Settings")
+        let row = app.buttons["Share App Analytics with Apple"].firstMatch
+        XCTAssertTrue(scrollTo(row), "the Privacy group shows \"Share App Analytics with Apple\"")
+        row.tap()
+        let settingsApp = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+        XCTAssertTrue(settingsApp.wait(for: .runningForeground, timeout: 15), "the row opens the iOS Settings app")
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 5), "Midmorning goes to the background")
+        settingsApp.terminate()
+    }
+
     // MARK: mm-t42.14 (export)
+
+    /// Opens the export screen from Today through Settings and taps "Make
+    /// PDF"; waits for the share sheet.
+    private func makeAPDFFromSettings(file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        tapToolbar("Settings")
+        assertScreen("Settings", file: file, line: line)
+        let export = app.buttons["Export"].firstMatch
+        XCTAssertTrue(scrollTo(export), "Settings shows \"Export\"", file: file, line: line)
+        export.tap()
+        assertScreen("Export", file: file, line: line)
+        let makePDF = app.buttons["Make PDF"].firstMatch
+        XCTAssertTrue(scrollTo(makePDF), "the export screen shows \"Make PDF\"", file: file, line: line)
+        makePDF.tap()
+        let sheet = app.otherElements["ActivityListView"].firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 15), "\"Make PDF\" shows the system share sheet", file: file, line: line)
+        return sheet
+    }
+
+    /// The text of the one PDF under `tmp/Export`.
+    private func exportedPDFText() -> String? {
+        let folder = URL(fileURLWithPath: runEnvironment["APP_DATA"]!).appendingPathComponent("tmp/Export")
+        let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil)?.allObjects as? [URL] ?? []
+        return files.first { $0.pathExtension == "pdf" }.flatMap { PDFDocument(url: $0)?.string }
+    }
+
+    /// mm-t42.14, comment of mm-t42.24, part 1 (r13-19, r16-01): make a
+    /// PDF, and while the share sheet shows, force-quit the app; open the
+    /// app again: tmp/Export holds no PDF. (Part 2, "Delete everything"
+    /// straight from the cover, needs the app lock; it stays with the
+    /// app-lock checks.)
+    func testTheNextLaunchRemovesAPDFLeftByAForceQuit() throws {
+        try launchOnToday("week1")
+        _ = makeAPDFFromSettings()
+        XCTAssertEqual(exportedPDFs().count, 1, "while the share sheet shows, tmp/Export holds the PDF")
+        app.terminate()
+        XCTAssertEqual(exportedPDFs().count, 1, "the force-quit leaves the PDF in tmp/Export")
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
+        XCTAssertEqual(exportedPDFs(), [], "after the next launch, tmp/Export holds no PDF")
+    }
+
+    /// mm-t41.15, comment of r13-13 and r13-05, part (2) (r13-19, r16-01):
+    /// in safe mode, make a PDF export; it holds the entries. The test
+    /// reads the text of the PDF in tmp/Export while the share sheet shows:
+    /// it holds the seeded entry "Toast and tea". (How the PDF looks stays
+    /// with the person who checks the export.)
+    func testTheSafeModeExportHoldsTheEntries() throws {
+        try launch("week1", launchMarker: "2")
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20), "safe mode's Today shows")
+        XCTAssertFalse(app.buttons["Add an entry"].exists, "safe mode's Today is not the full Today")
+        app.buttons["Export"].firstMatch.tap()
+        assertScreen("Export")
+        let makePDF = app.buttons["Make PDF"].firstMatch
+        XCTAssertTrue(scrollTo(makePDF), "the export screen shows \"Make PDF\"")
+        makePDF.tap()
+        let sheet = app.otherElements["ActivityListView"].firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 15), "in safe mode, \"Make PDF\" shows the system share sheet")
+        let text = exportedPDFText() ?? ""
+        XCTAssertTrue(text.contains("Toast and tea"), "the safe mode PDF holds the entry \"Toast and tea\": \(text.prefix(300))")
+        app.otherElements["PopoverDismissRegion"].firstMatch.tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 10), "the share sheet closes")
+    }
 
     /// The PDF files under the app's `tmp/Export` folder.
     private func exportedPDFs() -> [String] {
