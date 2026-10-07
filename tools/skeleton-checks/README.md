@@ -190,3 +190,4 @@ on branch rulings2-record-review: each row reads its own answer, and
 | 7 October 2026 | 237aeb7 (main), the merge of the five automation branches | iOS 27.0 (24A434) | 126 of 127 passed in 4536 s. testRecordStrings failed (the app showed Settings after a tap); it passed alone. This run does not count. |
 | 7 October 2026 | 42bf6a8 (main) | iOS 27.0 (24A434) | 143 of 144 passed in 5198 s. testRecordStrings failed again: the previous day's menu sat under the toolbar and the tap opened Settings; 1f55da8 fixes the test. |
 | 7 October 2026 | 1f55da8 (main) | iOS 27.0 (24A434) | 142 of 144 passed in 5066 s. testOnboardingScreen4WithTheAppLockOffAndOn and testSafeModeChangesNoStoreFileAndCountsBothFailures stayed on onboarding screen 2: their walk could answer one question twice and leave another blank. The next commit gives every walk the checked completeScreen2. |
+| 7 October 2026 | 567927e (main) | iOS 27.0 (24A434) | 144 of 144 passed in 5238 s. |
