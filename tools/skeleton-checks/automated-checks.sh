@@ -116,10 +116,12 @@ step "seed the stores"
 # The record and plan scenarios: seeder/Sources/Seeder/RecordPlanScenarios.swift.
 # The onboarding and review scenarios (or-*): seeder/Sources/Seeder/OnboardingReviewScenarios.swift.
 # The reminders and export scenarios: seeder/Sources/Seeder/RemindersExportScenarios.swift.
+# The app-lock scenarios (lock-*): seeder/Sources/Seeder/AppLockScenarios.swift.
 for scenario in week1 review corrupt \
   fifteen fifteenPlan bands planMatched planBand planStar planMissed planEarly planStrings dayStart6 \
   or-tomorrow or-secondday or-plancard or-plan or-pinned or-tworuns or-deterioration or-weighin \
-  stage1Morning stage1Evening stage1Paused stage2Evening stage2Morning reminderSettings unfinishedOnboarding; do
+  stage1Morning stage1Evening stage1Paused stage2Evening stage2Morning reminderSettings unfinishedOnboarding \
+  lock-week1 lock-week1-30s lock-review lock-face-only lock-gym; do
   "$HERE/seeder/.build/debug/Seeder" "$HERE/stores/$scenario/Record.store" "$scenario" >/dev/null || exit 1
 done
 
@@ -129,6 +131,8 @@ only=()
 for name in "$@"; do only+=("-only-testing:HarnessUITests/AutomatedChecks/$name"); done
 [ ${#only[@]} -eq 0 ] && only=("-only-testing:HarnessUITests/AutomatedChecks")
 rm -rf "$OUT"; mkdir -p "$OUT"
+# The app-lock checks ask for simulated notifications through $OUT/push.
+"$HERE/push-relay.sh" "$UDID" "$OUT/push" & relay=$!; trap 'kill "$relay" 2>/dev/null' EXIT
 step "run the checks"
 # A failed test keeps its screen and hierarchy in $OUT. Xcode's own
 # diagnostics collection after a failure can wait ten minutes, so it is off.

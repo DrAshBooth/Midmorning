@@ -298,6 +298,13 @@ struct TodayView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }
+        // app-lock spec, "A new entry before authentication": after Save on
+        // the new-entry screen of a reminder "Add", "the app MUST then show
+        // Today" with the entry. That screen is in the cover window, so its
+        // Save does not reach this view; the end of the pending route does.
+        .onChange(of: appLockController.state.pendingRoute) { old, new in
+            if old != nil, new == nil { reload() }
+        }
         // A queued "Skipped" reached the store (widgets-and-intents spec,
         // "The action queue").
         .onReceive(NotificationCenter.default.publisher(for: .reminderActionQueueApplied)) { _ in reload() }
