@@ -1124,12 +1124,25 @@ extension AutomatedChecks {
     /// mm-t42.14, review of mm-t45.1 (r13-19, r16-01): Print removes the
     /// share sheet before it shows its options, and it needs the PDF until
     /// they close. "Make PDF", then "Print": while the print options show,
-    /// the one PDF stays in tmp/Export. "Cancel": the export screen shows,
-    /// and no PDF stays in the app's containers. (A first version of the
-    /// fix deleted the PDF when the share sheet went, and Print then showed
+    /// the PDF stays in tmp/Export. "Cancel": the export screen shows, and
+    /// no PDF stays in the app's containers. (A first version of the fix
+    /// deleted the PDF when the share sheet went, and Print then showed
     /// "Protected PDF files can only be printed separately.". A real
     /// printer stays a device check.)
+    ///
+    /// While the print options show, iOS keeps its own copy of the PDF in
+    /// `tmp/<UUID>/`, and removes it when they close. When the app ends
+    /// first, that copy stays (bug mm-t45.11). So when this test fails
+    /// before "Cancel", it removes that copy, so that the export tests
+    /// after it do not fail because of it.
     func testPrintKeepsThePDFUntilItsOptionsClose() throws {
+        addTeardownBlock { [self] in
+            app.terminate()
+            let temporary = URL(fileURLWithPath: runEnvironment["APP_DATA"]!).appendingPathComponent("tmp")
+            for path in pdfFilesInTheAppContainers() where path.hasPrefix("tmp/") && !path.hasPrefix("tmp/Export/") {
+                try? FileManager.default.removeItem(at: temporary.deletingLastPathComponent().appendingPathComponent(path).deletingLastPathComponent())
+            }
+        }
         try launchOnToday("week1")
         let sheet = makeAPDFFromSettings()
         let print = sheet.cells.matching(identifier: "actionGroupCell").matching(NSPredicate(format: "label == %@", "Print")).firstMatch
@@ -1141,7 +1154,9 @@ extension AutomatedChecks {
         XCTAssertEqual(app.alerts.count, 0, "Print shows no message: \(app.alerts.firstMatch.label)")
         for second in 0..<3 {
             sleep(1)
-            assertTheOnePDFIsInTmpExport("\(second + 1) s after \"Print\", while the print options show")
+            let pdfs = pdfFilesInTheAppContainers()
+            XCTAssertEqual(pdfs.filter { $0.hasPrefix("tmp/Export/") }.count, 1,
+                           "\(second + 1) s after \"Print\", while the print options show, tmp/Export holds the PDF: \(pdfs)")
         }
         cancel.tap()
         XCTAssertTrue(cancel.waitForNonExistence(timeout: 10), "\"Cancel\" closes the print options")
