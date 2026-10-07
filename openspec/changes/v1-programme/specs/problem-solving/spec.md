@@ -90,24 +90,28 @@ There is one missed-slot group per slot. A missed-slot group holds the starred e
 
 ### Requirement: Pattern sentence templates
 
-Every pattern sentence MUST come from a bundled template that the clinical reviewer signed off. The app MUST fill only a template's placeholders. These are the group size, the starred total, the slot label in a missed-slot template and, in the custom chip template, the chip's text. The app MUST fill {slot} with the slot's label as the person typed it.
+Every pattern sentence MUST come from a bundled template that the clinical reviewer signed off. The app MUST fill only a template's placeholders. These are the group size, the starred total, the slot label in a missed-slot template and, in the custom chip template, the chip's text. The long-gap template also holds the gap hours. The app MUST fill {slot} with the slot's label as the person typed it.
 
 The app MUST read that label from the Settings key `slot.label.<index>`. The app MUST NOT change the label's case or add a word to it. The app MUST NOT generate any other word at runtime. The `product-rules` capability states the "No AI at runtime" rule.
+
+The group size {n}, the starred total {m} and the gap hours {hours} are counts. A template MUST NOT hold a count itself, so each count comes from a string with one count, as `content` requires in "Catalogue rules". The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld starred entries", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. Each of these strings MUST carry plural forms. The one form of "pattern.count.total" reads "%lld starred entry", and the one form of "pattern.count.hours" reads "%lld hour". Ash ruled this on 7 October 2026 (r17-05).
+
+The templates use plural verbs, for example "were". So PATTERN_MIN_STARRED MUST be 2 or more, and a test MUST check that in ProgrammeConstants. A group holds more than half of the starred total, so each group then holds 2 or more entries. So no sentence reads "1 of your 1".
 
 The bundle MUST hold one template per time band, one per weekday and one for the weekend. The bundle MUST hold one template per fixed chip and one for a custom chip. The bundle MUST hold one for the long-gap group. The bundle MUST hold one missed-slot template with a {slot} placeholder. The bundle MUST hold one combined template per time band, each with a {slot} placeholder. Every clock time in a template MUST use the 24-hour clock.
 
 The templates are:
-- "{n} of your {m} starred entries were before 12:00."
-- "{n} of your {m} starred entries were between 12:00 and 17:00."
-- "{n} of your {m} starred entries were between 17:00 and 20:00."
-- "{n} of your {m} starred entries were after 20:00."
-- "{n} of your {m} starred entries were on a Friday." and one like it per weekday
-- "{n} of your {m} starred entries were at the weekend."
-- "{n} of your {m} starred entries were at home." and one like it for "at work", "when you were out" and "when you were travelling"
-- "{n} of your {m} starred entries were at {place}." for a custom chip, where {place} is the person's chip text and the app adds no other word
-- "{n} of your {m} starred entries came more than {hours} hours after the entry before them."
-- "{n} of your {m} starred entries were on days when {slot} didn't happen." where {slot} is the slot's label as typed
-- "{n} of your {m} starred entries were after 20:00 on days when {slot} didn't happen." and one like it per time band
+- "{n} of your {m} were before 12:00."
+- "{n} of your {m} were between 12:00 and 17:00."
+- "{n} of your {m} were between 17:00 and 20:00."
+- "{n} of your {m} were after 20:00."
+- "{n} of your {m} were on a Friday." and one like it per weekday
+- "{n} of your {m} were at the weekend."
+- "{n} of your {m} were at home." and one like it for "at work", "when you were out" and "when you were travelling"
+- "{n} of your {m} were at {place}." for a custom chip, where {place} is the person's chip text and the app adds no other word
+- "{n} of your {m} came more than {hours} after the entry before them."
+- "{n} of your {m} were on days when {slot} didn't happen." where {slot} is the slot's label as typed
+- "{n} of your {m} were after 20:00 on days when {slot} didn't happen." and one like it per time band
 
 A template MUST NOT contain "you skipped". The `content` capability keeps the version of the template bundle and owns the permitted placeholders.
 
@@ -127,6 +131,10 @@ A template MUST NOT contain "you skipped". The `content` capability keeps the ve
 - **WHEN** the long-gap group holds 6 entries and the starred total is 8
 - **THEN** the sentence reads "6 of your 8 starred entries came more than 4 hours after the entry before them."
 
+#### Scenario: A gap of one hour
+- **WHEN** MAX_AWAKE_GAP_HOURS is 1, the long-gap group holds 6 entries and the starred total is 8
+- **THEN** the sentence reads "6 of your 8 starred entries came more than 1 hour after the entry before them."
+
 #### Scenario: A missed-lunch sentence
 - **WHEN** the slot label is "Lunch", the missed-lunch group holds 4 entries and the starred total is 7
 - **THEN** the sentence reads "4 of your 7 starred entries were on days when Lunch didn't happen."
@@ -138,6 +146,10 @@ A template MUST NOT contain "you skipped". The `content` capability keeps the ve
 #### Scenario: A combined sentence
 - **WHEN** the slot label is "Lunch", the combined after 20:00 and missed-lunch group holds 5 entries and the starred total is 7
 - **THEN** the sentence reads "5 of your 7 starred entries were after 20:00 on days when Lunch didn't happen."
+
+#### Scenario: A starred total minimum of 1
+- **WHEN** ProgrammeConstants holds PATTERN_MIN_STARRED as 1
+- **THEN** the constants test fails and names PATTERN_MIN_STARRED
 
 ### Requirement: How pattern sentences appear
 

@@ -126,7 +126,7 @@ The About group MUST show the app version and the content version. It MUST show 
 The page MUST hold no record content.
 
 #### Scenario: Face ID only
-- **WHEN** the person turns on "Face ID only" and taps "Turn on"
+- **WHEN** the person turns on "Face ID only", taps "Turn on" and Face ID succeeds
 - **THEN** the cover never offers the device passcode
 
 #### Scenario: Diagnostics
