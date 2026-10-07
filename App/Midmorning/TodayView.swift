@@ -230,7 +230,13 @@ struct TodayView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingNewEntry, onDismiss: newEntryDismissed) {
+            // The capture list reads `newEntryInitialTime` while the body
+            // runs, so a change to it makes a new sheet closure. Without it,
+            // the first "Add it" opened the sheet with the earlier value
+            // (nil) and so at the current time, not at the planned meal's
+            // time (regular-eating-plan spec, "A missed planned meal gets
+            // one prompt"; found by AutomatedChecks.testTheMissedPlannedMealPrompt).
+            .sheet(isPresented: $showingNewEntry, onDismiss: newEntryDismissed) { [newEntryInitialTime] in
                 NewEntryView(store: store, initialTime: newEntryInitialTime) { saved in
                     expandDayOfSavedEntry(saved)
                     reload()
