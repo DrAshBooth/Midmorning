@@ -415,7 +415,7 @@ extension AutomatedChecks {
     /// mm-t21.24, mm-t11.46 (mm-t43.33): before week 1 the Programme
     /// screen's week line reads "Starts tomorrow"; in week 1 it reads "Week
     /// 1". The rows read "Getting started" to "Staying on track", in order,
-    /// under the week line. The marked row has the label "Getting started,
+    /// under the week line. The row with "Now" has the label "Getting started,
     /// Now", and each row without its tool has the label "<stage>, Comes in
     /// a later version": the words that VoiceOver reads. "Getting started"
     /// opens the stage screen with the title "Getting started" and the line
@@ -439,7 +439,7 @@ extension AutomatedChecks {
         if let week = first(.staticText, "Week 1", in: seen) {
             XCTAssertLessThan(week.frame.maxY, tops[0], "the week line shows above the rows")
         }
-        XCTAssertTrue(seen.contains { $0.label == "Getting started, Now" }, "the marked row has the label \"Getting started, Now\"")
+        XCTAssertTrue(seen.contains { $0.label == "Getting started, Now" }, "the row with \"Now\" has the label \"Getting started, Now\"")
         for title in titles.dropFirst(2) {
             XCTAssertTrue(seen.contains { $0.label == "\(title), Comes in a later version" }, "the row \"\(title)\" has the label \"\(title), Comes in a later version\"")
         }

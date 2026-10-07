@@ -17,8 +17,9 @@ import Record
 ///   opening card is closed, and no plan is set. Today shows the plan card
 ///   "Your plan isn't set yet. It takes about two minutes.".
 /// - `or-plan`: as `or-plancard`, with a plan: Breakfast at about two hours
-///   before the seed. Its window ended, so Today shows the missed planned
-///   meal prompt, and "Close the day" beside "Pause for today".
+///   before the seed, and at the latest 20:00. Its window ended, so Today
+///   shows the missed planned meal prompt, and "Close the day" beside
+///   "Pause for today".
 /// - `or-pinned`: week 3. The review of week 1 is finished with the pinned
 ///   note "Eat breakfast"; the review of week 2 is due.
 /// - `or-tworuns`: week 3. The reviews of weeks 1 and 2 are finished, each
@@ -110,8 +111,10 @@ enum OnboardingReviewScenarios {
             try closeCard("opening.2")
             if scenario == "or-plan" {
                 // Breakfast (slot 0) at about two hours before now, on a
-                // five-minute step: its 90-minute window has ended.
-                let planned = now.addingTimeInterval(-2 * 3600)
+                // five-minute step: its 90-minute window has ended. At the
+                // latest 20:00, so that the window ends before quiet hours
+                // (22:00) and the prompt shows also on a late run.
+                let planned = min(now.addingTimeInterval(-2 * 3600), dayStart(0).addingTimeInterval(16 * 3600))
                 let parts = calendar.dateComponents([.hour, .minute], from: planned)
                 let time = String(format: "%02d:%02d", parts.hour!, parts.minute! / 5 * 5)
                 let json = "[{\"slot\":0,\"time\":\"\(time)\"}]"
