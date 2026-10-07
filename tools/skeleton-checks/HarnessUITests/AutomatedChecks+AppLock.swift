@@ -241,11 +241,13 @@ extension AutomatedChecks {
     ///
     /// `overAKeptDraft`: the cover over the new-entry screen of a reminder
     /// "Add" after the request at Save did not succeed (ruling r13-04).
-    /// That screen is in the cover's own window, and the accessibility
-    /// tree still holds it under the cover (bug mm-t45.6; the
-    /// VoiceOver check on mm-t15.14 decides what VoiceOver reads). So the
-    /// test requires that no control of that screen can take a tap, and
-    /// that no part of Today shows.
+    /// That screen is in the cover's own window, under the cover. App-lock
+    /// spec, "Unsaved text survives the lock": "The cover and the App
+    /// Switcher MUST NOT show the text". Bug mm-t45.6: the accessibility
+    /// tree held that screen under the cover, with its text. Now the tree
+    /// must hold the cover and nothing of that screen
+    /// (`assertTheTreeHoldsOnlyTheCover`). What VoiceOver speaks stays a
+    /// device check on mm-t15.14.
     func assertTheLockedCover(afterAnEnrolmentChange: Bool = false, overAKeptDraft: Bool = false, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
         let first = afterAnEnrolmentChange ? deleteFromThisDeviceButton : unlockButton
         XCTAssertTrue(first.waitForExistence(timeout: 20), "\(message): the cover shows \"\(afterAnEnrolmentChange ? "Delete from this device" : "Unlock")\"", file: file, line: line)
@@ -257,15 +259,41 @@ extension AutomatedChecks {
             XCTAssertFalse(deleteFromThisDeviceButton.exists, "\(message): the cover shows no \"Delete from this device\"", file: file, line: line)
         }
         if overAKeptDraft {
-            XCTAssertFalse(app.navigationBars["Today"].exists, "\(message): no part of Today shows under the cover", file: file, line: line)
-            for control in [app.textViews["What"].firstMatch, app.navigationBars.buttons["Save"].firstMatch, app.navigationBars.buttons["Cancel"].firstMatch] where control.exists {
-                XCTAssertFalse(control.isHittable, "\(message): the cover hides \"\(control.label)\" of the new-entry screen", file: file, line: line)
-            }
+            assertTheTreeHoldsOnlyTheCover(message, file: file, line: line)
         } else {
             XCTAssertEqual(app.navigationBars.count, 0, "\(message): no screen shows under the cover", file: file, line: line)
         }
         XCTAssertFalse(app.buttons["Get support"].exists, "\(message): the cover shows no \"Get support\"", file: file, line: line)
         XCTAssertFalse(element(labelContaining: "Toast and tea").exists, "\(message): the cover shows no entry", file: file, line: line)
+    }
+
+    /// The labels that the locked cover shows. "Midmorning" is also the
+    /// label of the app element itself.
+    static let lockedCoverLabels: Set<String> = ["Midmorning", "Unlock", "Delete everything", "Delete from this device", "Could not delete. Try again."]
+
+    /// Bug mm-t45.6: the app's accessibility tree holds the cover and no
+    /// element of a screen under it. Each element with a label holds a
+    /// label of the cover, and the tree holds no navigation bar, text view,
+    /// text field, switch, scroll view, toolbar, picker, segmented control,
+    /// cell or keyboard. Typed text is the value of its text view, so no
+    /// text view means no typed text.
+    /// The check uses queries, not `snapshot()`: under the cover over a
+    /// kept draft, the snapshot of the app held 6 elements only (not even
+    /// "Unlock"), and the queries held the whole new-entry screen (7
+    /// October 2026, iOS 27.0 simulator).
+    func assertTheTreeHoldsOnlyTheCover(_ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        let notTheCover = app.descendants(matching: .any).matching(NSPredicate(format: "label != '' AND NOT (label IN %@)", Array(Self.lockedCoverLabels)))
+        XCTAssertEqual(notTheCover.allElementsBoundByIndex.map { "\($0.elementType.rawValue) \"\($0.identifier)\" \"\($0.label)\"" }, [],
+                       "\(message): each element with a label is a part of the cover", file: file, line: line)
+        let screenParts: [(String, XCUIElementQuery)] = [
+            ("navigation bar", app.navigationBars), ("text view", app.textViews), ("text field", app.textFields),
+            ("switch", app.switches), ("scroll view", app.scrollViews), ("toolbar", app.toolbars),
+            ("picker wheel", app.pickerWheels), ("segmented control", app.segmentedControls), ("cell", app.cells),
+            ("keyboard", app.keyboards),
+        ]
+        for (name, query) in screenParts {
+            XCTAssertEqual(query.count, 0, "\(message): the tree holds no \(name) of a screen under the cover", file: file, line: line)
+        }
     }
 
     /// No cover shows, and the screen `title` shows.
@@ -1140,6 +1168,13 @@ extension AutomatedChecks {
     /// everything", the keyboard is closed and the store holds no new
     /// entry; after Unlock the screen shows "Toast and", and Save saves with
     /// no second request.
+    /// Bug mm-t45.6 (app-lock spec, "Unsaved text survives the lock": "The
+    /// cover and the App Switcher MUST NOT show the text"): after the
+    /// cancel at Save, the accessibility tree holds the cover and no
+    /// element of the new-entry screen (`assertTheTreeHoldsOnlyTheCover`).
+    /// After Unlock the What field can take a tap again and holds "Toast
+    /// and". This test failed on the code before the fix: the tree held the
+    /// What field with "Toast and", the chips, Save and Cancel.
     /// (The reminder is a simulated notification with the app's own
     /// category and actions, sent by `push-relay.sh`. "No part of Today
     /// shows during the screen's animation" stays a device check: a UI test
@@ -1166,20 +1201,18 @@ extension AutomatedChecks {
         scriptAppLock(["cancel"])
         tapSaveInTheNavigationBar()
         XCTAssertEqual(assertAppLockRequests(2, "Save makes one request").last, "biometricsAndPasscode applock.unlockReason cancel")
+        // Bug mm-t45.6: the accessibility tree holds the cover and no
+        // element of the kept draft under it: no What field, no "Toast and",
+        // no chip, no Save and no Cancel (`assertTheTreeHoldsOnlyTheCover`).
+        // What VoiceOver speaks stays a device check.
         assertTheLockedCover(overAKeptDraft: true, "after a cancel at Save")
-        // Bug mm-t45.6: the accessibility tree still holds the kept draft's
-        // What field, with "Toast and", under the cover. So the check is:
-        // only that field holds "Toast and", and it cannot take a tap.
-        // VoiceOver over the kept draft stays a device check.
-        for shown in elementsShowing("Toast and") {
-            XCTAssertTrue(shown.elementType == .textView && (shown.identifier == "What" || shown.label == "What"), "the cover shows no typed text: only the kept draft's What field holds \"Toast and\", not \(shown.elementType.rawValue) \(shown.identifier) \(shown.label)")
-            XCTAssertFalse(shown.isHittable, "the cover hides the typed text: the kept draft's What field cannot take a tap")
-        }
+        assertNoElementShows("Toast and", "the cover shows no typed text")
         XCTAssertEqual(app.keyboards.count, 0, "the keyboard is closed")
         scriptAppLock(["succeed"])
         unlockButton.tap()
         XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "Unlock takes the cover off")
         XCTAssertTrue(what.waitForExistence(timeout: 8), "after Unlock the new-entry screen shows again")
+        XCTAssertTrue(what.isHittable, "after Unlock the What field can take a tap again")
         XCTAssertEqual(what.value as? String, "Toast and", "after Unlock the screen shows \"Toast and\"")
         XCTAssertTrue(chip(beginningWith: "Park").exists, "after Unlock the screen shows the \"Park\" chip")
         XCTAssertTrue(chip(beginningWith: "Gym").exists, "after Unlock the screen shows the \"Gym\" chip")
