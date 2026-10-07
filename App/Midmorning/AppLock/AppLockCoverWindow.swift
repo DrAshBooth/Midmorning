@@ -125,7 +125,11 @@ private struct AppLockCoverWindowRoot: View {
                     authenticateBeforeSave: {
                         AppLockEnrolmentCheck.run(controller: controller, store: store)
                         return await controller.authenticateToSaveNewEntry()
-                    }
+                    },
+                    // Ruling r17-01 (mm-t15.22): while the app is locked,
+                    // the Where control shows no custom place, because a
+                    // custom place is text from the record.
+                    showsSavedPlaces: controller.state.newEntryShowsSavedPlaces
                 )
                 // "The cover and the App Switcher MUST NOT show the text"
                 // (app-lock spec, "Unsaved text survives the lock"). The
