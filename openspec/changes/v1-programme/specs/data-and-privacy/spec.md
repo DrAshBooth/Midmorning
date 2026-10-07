@@ -735,7 +735,7 @@ The app MUST add one to the launch failure count in `Local.store` each time it f
 
 When the container throws for any reason other than unavailable protected data, the app MUST show one page. The page MUST read "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything". "Try again" MUST open the container again. "Delete everything" MUST open the Delete-all confirmation. The app MUST NOT delete the store without the person's confirmation.
 
-A store that needs a schema migration cannot open read-only. So in safe mode that open throws, and the app shows the page above. The store files stay unchanged, and Export is not available. In safe mode "Try again" opens the store read-only again, so it throws again. Today does not appear, so the next launch is in safe mode again.
+In safe mode the app MUST open the store at the schema version that the store holds. A store that needs a schema migration cannot open read-only with the current schema version. So in safe mode the app MUST first read the schema version that the store's metadata names. The app MUST then open the store read-only with the `VersionedSchema` of that version from `RecordMigrationPlan.schemas`, and with no migration plan. No migration step runs, and no store file changes. When that open succeeds, the app shows Today with Export and Get support, as above. Today then appears in safe mode, so the next launch is not in safe mode. That launch MUST run the migration. When no `VersionedSchema` in the app agrees with the store's metadata, the open throws, and the app MUST show the page above. The app holds one schema version now, `RecordSchemaV1`. So a test MUST prove this rule with a second schema version that only the test holds. Ash ruled this on 7 October 2026 (r15-01).
 
 #### Scenario: Third launch with an uncleared marker
 - **WHEN** the app ends before Today appears on two launches in a row and the person opens it a third time
@@ -750,8 +750,20 @@ A store that needs a schema migration cannot open read-only. So in safe mode tha
 - **THEN** the PDF holds the record, and `Record.store` and `Local.store` hold no new or changed row
 
 #### Scenario: Safe mode with a pending migration
-- **WHEN** the store needs a schema migration and the app enters safe mode
-- **THEN** the read-only open throws, no migration step writes to the store, the store files are unchanged, and the app shows "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything"
+- **WHEN** the store is at an earlier schema version than the app and the app enters safe mode
+- **THEN** the app opens the store read-only with the store's own schema version and no migration plan, shows Today with Export and Get support, and the store files are unchanged
+
+#### Scenario: Export from a store that needs a migration
+- **WHEN** the store is at an earlier schema version than the app, the app enters safe mode and the person makes an export
+- **THEN** the PDF holds the record, and no store file changes
+
+#### Scenario: Migration after safe mode
+- **WHEN** Today appears in safe mode with a store at an earlier schema version, and the person opens the app again
+- **THEN** that launch is not in safe mode, the app runs the migration, and Today shows every entry
+
+#### Scenario: Store at an unknown schema version
+- **WHEN** the store's metadata names a schema version that the app does not hold and the app enters safe mode
+- **THEN** the open throws, the store files are unchanged, and the app shows "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything"
 
 #### Scenario: Safe mode continues
 - **WHEN** the app enters safe mode, ends before Today appears, and the person opens it again
