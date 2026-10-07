@@ -332,10 +332,12 @@ extension AutomatedChecks {
     ///   is the number of day headings less the repeated one. Each page
     ///   holds one tagged list for each day with entries on that page, and
     ///   one list item for each entry.
+    /// - Bug mm-t45.13: each tag declares the language en-GB, and the
+    ///   ActualText of each list item is the text of its entry row.
     /// (How the PDF looks, a screen reader on the PDF and the language in a
-    /// PDF reader's document properties stay device checks. The test writes
-    /// to the log the language that the PDF declares and the ActualText of
-    /// the list items.)
+    /// PDF reader's document properties stay device checks. Core Graphics
+    /// has no key for the language of the whole document, so the test
+    /// writes to the log the language of the document catalog.)
     func testTheLongExportKeepsEachHeadingWithItsLinesAndOneH2PerDay() throws {
         try launchOnToday("exportPages")
         tapToolbar("Settings")
@@ -400,6 +402,7 @@ extension AutomatedChecks {
         var repeatedPerPage: [Int] = []
         var listsPerPage: [Int] = []
         var entriesPerPage: [Int] = []
+        var entryRowsPerPage: [[String]] = []
         for rows in recordPages {
             let headings = rows.filter(isDayHeading)
             let repeated = rows.first.map { isDayHeading($0) && seen.contains($0) } == true ? 1 : 0
@@ -414,6 +417,7 @@ extension AutomatedChecks {
             }
             listsPerPage.append(daysWithEntries.count)
             entriesPerPage.append(rows.filter(isEntryRow).count)
+            entryRowsPerPage.append(rows.filter(isEntryRow))
         }
         XCTAssertEqual(seen.count, 7, "the record pages show the seven day headings of the range: \(seen.sorted())")
         XCTAssertGreaterThanOrEqual(repeatedPerPage.reduce(0, +), 1, "the long day continues on the next page, which repeats its heading: \(summary)")
@@ -432,11 +436,18 @@ extension AutomatedChecks {
                            "page \(page + 1): one tagged list for each day with entries on the page")
             XCTAssertEqual(all.filter { $0.type == "LI" && $0.page == page }.count, entriesPerPage[page],
                            "page \(page + 1): one tagged list item for each entry on the page")
+            // Scenario "One pass per entry": each list item reads the
+            // entry's row: the time, the asterisk when starred, the What
+            // and the Where (bug mm-t45.13).
+            XCTAssertEqual(all.filter { $0.type == "LI" && $0.page == page }.map { $0.actualText ?? "(no ActualText)" }, entryRowsPerPage[page],
+                           "page \(page + 1): the ActualText of each list item is the text of its entry row")
         }
         XCTAssertEqual(h2.filter { $0.page == recordPages.count }.count, 0, "the weigh-in page holds no H2")
-        let languages = Set(all.compactMap(\.language))
-        print("mm-t42.14 export language: the catalog declares \(tree.catalogLanguage ?? "no language"); the tag elements declare \(languages.isEmpty ? "no language" : languages.sorted().joined(separator: ", "))")
-        let itemTexts = all.filter { $0.type == "LI" }.compactMap(\.actualText)
-        print("mm-t42.14 export list items: \(itemTexts.count) of \(all.filter { $0.type == "LI" }.count) hold an ActualText\(itemTexts.first.map { ", the first: \($0)" } ?? "")")
+        // The language (bug mm-t45.13): each tag declares en-GB. Core
+        // Graphics has no key for the language of the whole document.
+        let tagged = all.filter { ["H1", "H2", "L", "LI"].contains($0.type) }
+        let withoutEnGB = tagged.filter { $0.language != "en-GB" }
+        XCTAssertEqual(withoutEnGB.count, 0, "each H1, H2, L and LI declares the language en-GB; \(withoutEnGB.count) of \(tagged.count) do not")
+        print("mm-t42.14 export language: the document catalog declares \(tree.catalogLanguage ?? "no language"); \(tagged.count - withoutEnGB.count) of \(tagged.count) tags declare en-GB")
     }
 }

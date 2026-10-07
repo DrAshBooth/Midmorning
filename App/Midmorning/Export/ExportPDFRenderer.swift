@@ -113,7 +113,7 @@ enum ExportPDFRenderer {
             switch line.kind {
             case .entryLine:
                 if !listIsOpen {
-                    CGPDFContextBeginTag(cg, .list, languageProperties() as CFDictionary)
+                    CGPDFContextBeginTag(cg, .list, ExportTagProperties.properties())
                     listIsOpen = true
                 }
             default:
@@ -122,7 +122,7 @@ enum ExportPDFRenderer {
 
             switch line.kind {
             case .documentTitle:
-                CGPDFContextBeginTag(cg, .header1, languageProperties() as CFDictionary)
+                CGPDFContextBeginTag(cg, .header1, ExportTagProperties.properties())
                 drawText(line.text.string, font: titleFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
                 CGPDFContextEndTag(cg)
             case .dayHeading where line.isContinuation:
@@ -135,7 +135,7 @@ enum ExportPDFRenderer {
                 // so each page still opens its own list.
                 drawText(line.text.string, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
             case .dayHeading:
-                CGPDFContextBeginTag(cg, .header2, languageProperties() as CFDictionary)
+                CGPDFContextBeginTag(cg, .header2, ExportTagProperties.properties())
                 drawText(line.text.string, font: dayHeadingFont, in: CGRect(x: margin, y: y, width: contentWidth, height: lineHeight))
                 CGPDFContextEndTag(cg)
             case .weighInHeading:
@@ -152,9 +152,7 @@ enum ExportPDFRenderer {
             case .entryLine:
                 if let entry = line.entry {
                     let actualText = entry.accessibilityText(includeContext: includeContext)
-                    var properties = languageProperties()
-                    properties[CGPDFTagProperty.actualText] = actualText as CFString
-                    CGPDFContextBeginTag(cg, .listItem, properties as CFDictionary)
+                    CGPDFContextBeginTag(cg, .listItem, ExportTagProperties.properties(actualText: actualText))
                     drawEntry(entry, at: y, height: lineHeight, includeContext: includeContext)
                     CGPDFContextEndTag(cg)
                 }
@@ -164,15 +162,6 @@ enum ExportPDFRenderer {
         }
 
         closeListIfOpen()
-    }
-
-    private static func languageProperties() -> [CGPDFTagProperty: Any] {
-        // export spec, "Accessibility of the export": "When the system's PDF
-        // renderer can write the tag, the PDF MUST declare the language
-        // en-GB." Verified on a built app per the change's own device check
-        // (the spec's own "spike"); there is no separate document-level
-        // language key in CGPDFContext, only this per-tag property.
-        [CGPDFTagProperty.languageText: "en-GB" as CFString]
     }
 
     private static func drawColumnHeadings(at y: CGFloat, includeContext: Bool) {
