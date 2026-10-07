@@ -59,15 +59,32 @@ public enum RecordSchemaV1: RecordStoreSchemaVersion {
 ///
 /// Each schema version here is a `RecordStoreSchemaVersion`. An ordinary
 /// open uses the newest version and this plan, so a store at an earlier
-/// version migrates. Safe mode opens the store read-only at the version
-/// that the store's metadata names, with no migration (ruling r15-01,
-/// mm-t42.28; `RecordStore.makeContainer`). So from the second version on,
-/// the reads that Export uses must also read the model types of each
-/// earlier version: safe mode opens a store at an earlier version with
-/// that version's own types.
+/// version migrates. Safe mode opens each store file read-only at the
+/// version that the file's metadata names, with no migration (ruling
+/// r15-01, mm-t42.28; `RecordStore.makeContainers`). So from the second
+/// version on, the reads that Export uses must also read the model types
+/// of each earlier version: safe mode opens a store at an earlier version
+/// with that version's own types. Bead mm-7sm holds this work, and
+/// `FrozenSchemaTests.testOneSchemaVersionInV1` names it when a second
+/// version comes.
 public enum RecordMigrationPlan: SchemaMigrationPlan {
     public static var schemas: [any VersionedSchema.Type] { [RecordSchemaV1.self] }
     public static var stages: [MigrationStage] { [] }
+}
+
+/// The schema version of each of the two store files. SwiftData migrates
+/// `Record.store` and `Local.store` one at a time, and each file keeps its
+/// migration on its own. So when a launch stops in a migration after the
+/// first file, the two files hold different versions until the next
+/// ordinary open migrates the second file.
+struct StoreFileSchemaVersions {
+    /// The version that the metadata of `Record.store` names.
+    let record: any RecordStoreSchemaVersion.Type
+    /// The version that the metadata of `Local.store` names.
+    let local: any RecordStoreSchemaVersion.Type
+
+    /// True when both files hold the same version.
+    var areTheSame: Bool { record.versionIdentifier == local.versionIdentifier }
 }
 
 extension SchemaMigrationPlan {
@@ -77,22 +94,35 @@ extension SchemaMigrationPlan {
         schemas.compactMap { $0 as? any RecordStoreSchemaVersion.Type }
     }
 
-    /// The schema version that the metadata of the store files in
-    /// `directory` names (ruling r15-01, mm-t42.28): the one version whose
-    /// model agrees with the version hashes in the metadata of both
-    /// `Record.store` and `Local.store`. Reads only the metadata, so no
-    /// file changes. Nil when a file is missing or no version in the plan
-    /// agrees, for example a store from a later build.
-    static func storeSchemaVersion(ofFilesIn directory: URL) -> (any RecordStoreSchemaVersion.Type)? {
-        let metadata = RecordStore.storeFileNames.map { name in
-            try? NSPersistentStoreCoordinator.metadataForPersistentStore(
-                type: .sqlite, at: directory.appendingPathComponent(name)
-            )
-        }
-        guard metadata.allSatisfy({ $0 != nil }) else { return nil }
+    /// The schema version that the metadata of the store file at `url`
+    /// names (ruling r15-01, mm-t42.28): the version whose model agrees
+    /// with the version hashes in the file's metadata. Reads only the
+    /// metadata, so the file does not change. Nil when the file is missing
+    /// or no version in the plan agrees, for example a file from a later
+    /// build.
+    static func storeSchemaVersion(ofFileAt url: URL) -> (any RecordStoreSchemaVersion.Type)? {
+        guard let metadata = try? NSPersistentStoreCoordinator.metadataForPersistentStore(type: .sqlite, at: url) else { return nil }
         return storeSchemaVersions.first { version in
             guard let model = NSManagedObjectModel.makeManagedObjectModel(for: version.models) else { return false }
-            return metadata.allSatisfy { model.isConfiguration(withName: nil, compatibleWithStoreMetadata: $0 ?? [:]) }
+            return model.isConfiguration(withName: nil, compatibleWithStoreMetadata: metadata)
         }
+    }
+
+    /// The schema version of each store file in `directory`. Nil when a
+    /// file is missing or the plan holds no version that agrees with the
+    /// metadata of a file.
+    static func storeFileSchemaVersions(in directory: URL) -> StoreFileSchemaVersions? {
+        let urls = RecordStore.storeFileNames.map { directory.appendingPathComponent($0) }
+        guard let record = storeSchemaVersion(ofFileAt: urls[0]), let local = storeSchemaVersion(ofFileAt: urls[1]) else { return nil }
+        return StoreFileSchemaVersions(record: record, local: local)
+    }
+
+    /// The one schema version that both store files in `directory` hold.
+    /// Nil when a file is missing, when the plan holds no version that
+    /// agrees with the metadata of a file, or when the two files hold
+    /// different versions.
+    static func storeSchemaVersion(ofFilesIn directory: URL) -> (any RecordStoreSchemaVersion.Type)? {
+        guard let versions = storeFileSchemaVersions(in: directory), versions.areTheSame else { return nil }
+        return versions.record
     }
 }

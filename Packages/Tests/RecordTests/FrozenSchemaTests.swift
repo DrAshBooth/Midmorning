@@ -109,7 +109,10 @@ final class FrozenSchemaTests: XCTestCase {
 
     /// Scenario: One schema version in V1.
     func testOneSchemaVersionInV1() {
-        XCTAssertEqual(RecordMigrationPlan.schemas.count, 1)
+        XCTAssertEqual(
+            RecordMigrationPlan.schemas.count, 1,
+            "Before a build adds a schema version, do bead mm-7sm: safe mode opens a store at an earlier version with that version's own model types, so the reads that Export uses must read those types (ruling r15-01)"
+        )
         XCTAssertEqual(ObjectIdentifier(RecordMigrationPlan.schemas[0]), ObjectIdentifier(RecordSchemaV1.self))
         XCTAssertEqual(RecordSchemaV1.versionIdentifier, Schema.Version(1, 0, 0))
         XCTAssertTrue(RecordMigrationPlan.stages.isEmpty, "no migration stage exists yet")
