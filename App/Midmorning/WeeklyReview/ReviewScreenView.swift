@@ -106,21 +106,29 @@ struct ReviewScreenView: View {
                 Text(ReviewContent.selfHarmAnsweredLine)
                     .accessibilityLabel(ReviewContent.selfHarmAnsweredLine)
             } else {
+                // Each row of an inline picker is one answer, and VoiceOver
+                // reads the row's own answer. An accessibility label on the
+                // picker goes to every row, so the picker has none. Its
+                // label is hidden, so each question shows once: step 1 as
+                // the section header, step 2 as the header row above its
+                // answers (mm-t32.28).
                 Picker(ScreeningQuestionCatalog.questions[5], selection: $selfHarmFirst) {
                     Text(CommonLabels.no.string).tag(SelfHarmFirstAnswer?.some(.no))
                     Text(CommonLabels.yes.string).tag(SelfHarmFirstAnswer?.some(.yes))
                     Text(CommonLabels.ratherNotSay).tag(SelfHarmFirstAnswer?.some(.ratherNotSay))
                 }
                 .pickerStyle(.inline)
-                .accessibilityLabel(ScreeningQuestionCatalog.questions[5])
+                .labelsHidden()
 
                 if selfHarmFirst == .yes {
+                    Text(ScreeningQuestionCatalog.selfHarmSecondQuestion)
+                        .accessibilityAddTraits(.isHeader)
                     Picker(ScreeningQuestionCatalog.selfHarmSecondQuestion, selection: $selfHarmSecond) {
                         Text(CommonLabels.no.string).tag(SelfHarmSecondAnswer?.some(.no))
                         Text(CommonLabels.yes.string).tag(SelfHarmSecondAnswer?.some(.yes))
                     }
                     .pickerStyle(.inline)
-                    .accessibilityLabel(ScreeningQuestionCatalog.selfHarmSecondQuestion)
+                    .labelsHidden()
                 }
 
                 if selfHarmFirst == .yes, selfHarmSecond == .no {

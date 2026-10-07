@@ -134,11 +134,9 @@ Two bugs change what the suite checks until they are fixed:
   mm-t12b.28 makes the helper require the "Cancel" button. The fix waits
   for decision r16-03.
 
-mm-t32.28 (each self-harm row at the review reads the question) does not
-change the result: `reviewSelfHarmRows` finds the rows by the question
-while the bug is open and by the answer after its fix. On 26 September
-2026 the review checks passed both with and without a local fix of
-mm-t32.28.
+mm-t32.28 (each self-harm row at the review reads the question) is fixed
+on branch rulings2-record-review: each row reads its own answer, and
+`reviewSelfHarmRows` finds the rows by the answer only.
 
 | Date | Commit | Runtime | Result |
 |------|--------|---------|--------|

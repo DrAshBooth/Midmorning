@@ -236,16 +236,9 @@ final class AutomatedChecks: XCTestCase {
     }
 
     /// The rows of step 1 or step 2 of the self-harm item at the review, top
-    /// to bottom. mm-t32.28: while that bug is open, each row reads the
-    /// question of its picker; after its fix, each row reads its own answer
-    /// ("No", "Yes", "I'd rather not say"). This helper finds the rows in
-    /// both cases, so the fix of mm-t32.28 does not make these checks fail.
+    /// to bottom. Each row reads its own answer ("No", "Yes", "I'd rather
+    /// not say"), not the question (mm-t32.28).
     func reviewSelfHarmRows(step: Int) -> [XCUIElement] {
-        let question = step == 1
-            ? NSPredicate(format: "label BEGINSWITH %@", "Over the last two weeks")
-            : NSPredicate(format: "label == %@", "Have you thought about how you would do it?")
-        let byQuestion = app.buttons.matching(question).allElementsBoundByIndex
-        if !byQuestion.isEmpty { return byQuestion }
         let answers = NSPredicate(format: "label IN %@", ["No", "Yes", "I'd rather not say"])
         let rows = app.buttons.matching(answers).allElementsBoundByIndex.sorted { $0.frame.minY < $1.frame.minY }
         // Step 1 has three rows; step 2, when it shows, has the next two.
