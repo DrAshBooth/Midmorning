@@ -141,3 +141,4 @@ on branch rulings2-record-review: each row reads its own answer, and
 | Date | Commit | Runtime | Result |
 |------|--------|---------|--------|
 | 26 September 2026 | rulings-automation, not committed: the build removed the two modifiers of mm-t12b.27 | iOS 27.0 (24A434) | 35 of 35 passed in 794 s. This run does not count, because the build was not committed. |
+| 7 October 2026 | 458b403 (rulings2-record-review), a branch build before the merge: the fixes of mm-t12b.27 and mm-t32.28 | iOS 27.0 (24A434) | 5 of 5 passed in 210 s: testGetSupportOnToday, testRecordStrings, testExportFromTheNotRightNowPage, testStepTwoLosesItsAnswerWhenStepOneChanges and testTheAnsweredSelfHarmItemStaysAnswered. This run does not count for gate mm-t43.31, because only the named checks ran, on a branch build. |
