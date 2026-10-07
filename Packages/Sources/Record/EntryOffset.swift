@@ -8,9 +8,11 @@ import Foundation
 /// offset, so an entry that the person backdates across a clock change
 /// keeps its own clock time and its own record day. On edit, the offset is
 /// the one of the entry's edit zone at the edited time (record spec, "Edit
-/// an entry", in change `rulings-specs-a`). `RecordStore.add` and
-/// `RecordStore.update` apply these rules, so the new-entry screen and the
-/// edit screen pass no offset.
+/// an entry"). Ash ruled on 7 October 2026 (r15-02, mm-t12b.25,
+/// mm-t12b.26) that the time control and the save use the same edit zone:
+/// travel never moves an entry, and the control and Today show the same
+/// clock time. `RecordStore.add` and `RecordStore.update` apply these
+/// rules, so the new-entry screen and the edit screen pass no offset.
 public enum EntryOffset {
     /// The offset a new entry keeps: the offset of `deviceZone` at
     /// `entryTime`.
@@ -28,13 +30,22 @@ public enum EntryOffset {
     /// control showed, and the edited time and that offset still give the
     /// entry's record day key. When the time stays, the entry's own offset,
     /// so an edit of the What, the Where, the star or the Context does not
-    /// move the entry's clock time. mm-t12b.25 and mm-t12b.26 ask Ash to
-    /// confirm this rule for an entry from another zone.
+    /// move the entry's clock time.
     public static func forEdit(entryTime: Date, entryOffsetSeconds: Int, editedTime: Date, deviceZone: TimeZone = .current) -> Int {
+        forEdit(
+            entryTime: entryTime, entryOffsetSeconds: entryOffsetSeconds, editedTime: editedTime,
+            editZone: editZone(entryTime: entryTime, entryOffsetSeconds: entryOffsetSeconds, deviceZone: deviceZone)
+        )
+    }
+
+    /// The offset an edit keeps in `editZone`, the zone that the edit
+    /// screen's time control showed. The edit screen gives its own zone, so
+    /// the save uses the zone of the control also when the device zone
+    /// changes while the screen is open (ruling r15-02).
+    public static func forEdit(entryTime: Date, entryOffsetSeconds: Int, editedTime: Date, editZone: TimeZone) -> Int {
         let edited = RecordStore.truncatedToMinute(editedTime)
         guard edited != RecordStore.truncatedToMinute(entryTime) else { return entryOffsetSeconds }
-        return editZone(entryTime: entryTime, entryOffsetSeconds: entryOffsetSeconds, deviceZone: deviceZone)
-            .secondsFromGMT(for: edited)
+        return editZone.secondsFromGMT(for: edited)
     }
 
     /// The entry's edit zone: the zone of the edit screen's time control
@@ -44,7 +55,8 @@ public enum EntryOffset {
     /// a record day on a clock-change date is 23 or 25 hours long. Otherwise
     /// the person saved the entry in another zone, and the control uses a
     /// fixed zone at the entry's own offset, so it opens at the clock time
-    /// that Today shows on the row.
+    /// that Today shows on the row. The edit zone of an edit zone is that
+    /// same zone.
     public static func editZone(entryTime: Date, entryOffsetSeconds: Int, deviceZone: TimeZone = .current) -> TimeZone {
         if deviceZone.secondsFromGMT(for: entryTime) == entryOffsetSeconds { return deviceZone }
         return TimeZone(secondsFromGMT: entryOffsetSeconds) ?? deviceZone
