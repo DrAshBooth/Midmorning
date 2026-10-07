@@ -76,14 +76,14 @@ shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
 items: mm-t12b.6, .7, .9, .10 and .12; mm-t13.11 and .13; mm-t21.28;
 mm-t22.24 ("saves nothing"); mm-t32.19, .20 and .24. Each of these items
 has an "Automated by ... (r13-19, r16-01)" comment on its device-check bead.
-Ash can skip them on the same terms as the other UI-test items (see "When
-Ash can skip a device check"). mm-t43.32 (epic mm-t45) automates the other
-flow checks that the simulator can run. Until it adds the test for an item,
-that item stays on its device-check bead. A part of a flow that needs a
-device or a person stays a device check, for example the VoiceOver action
-of mm-t12b.7. "Point contrast" on mm-t22.16 stays a device check: it
-measures a colour in dark mode with Increase Contrast, and a colour needs a
-person's eye on a real screen.
+Ash can skip them under the same conditions as the other UI-test items
+(see "When Ash can skip a device check"). mm-t43.32 and mm-t43.33 (epic
+mm-t45) automate the other flow checks that the simulator can run. Until
+one of them adds the test for an item, that item stays on its device-check
+bead. A part of a flow that needs a device or a person stays a device
+check, for example the VoiceOver action of mm-t12b.7. "Point contrast" on
+mm-t22.16 stays a device check: it measures a colour in dark mode with
+Increase Contrast, and a colour needs a person's eye on a real screen.
 
 The script makes and boots its own simulator (`mm-automated-checks`), so it
 does not disturb a simulator that another session uses. It reads the
