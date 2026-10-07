@@ -557,4 +557,452 @@ extension AutomatedChecks {
         XCTAssertEqual(kept?.value, answer, "the review keeps the answer under \"\(question)\"", file: file, line: line)
     }
 
+    // MARK: The support items inline and in the sheet
+
+    /// The inline items under the self-harm support line, in order, with
+    /// Samaritans first (safeguarding spec, "The self-harm item").
+    static let inlineOrder = ["Samaritans", "Beat helpline", "Beat webchat", "Lifeline, Northern Ireland", "NHS 111", "999", "Talk to your GP"]
+    static let supportHeaders: Set<String> = ["Samaritans", "Beat helpline", "Lifeline, Northern Ireland", "NHS 111", "999", "Talk to your GP"]
+    static let supportNumbers = ["116 123", "0808 164 0123", "0808 801 0677", "0808 801 0432", "0808 801 0433", "0808 801 0434", "0808 808 8000", "111", "999"]
+    static let recentsWarning = "This call will show in your phone's Recents."
+    static let copiedLine = "Copied. It clears in a minute."
+
+    /// The row of one number: one element that reads "<label>, <number>".
+    func numberRow(_ number: String, in seen: [Seen]) -> Seen? {
+        seen.first { $0.type == .staticText && $0.label.hasSuffix(", " + number) }
+    }
+
+    /// The control `label` ("Call", "Copy number" or "Copied") in the same
+    /// row as `row`, to its right.
+    func control(_ label: String, besideRow row: Seen, in seen: [Seen]) -> Seen? {
+        seen.first { $0.type == .button && $0.label == label && $0.frame.midY >= row.frame.minY && $0.frame.midY <= row.frame.maxY && $0.frame.minX >= row.frame.maxX - 1 }
+    }
+
+    /// Taps "Call" beside 116 123: the Recents warning shows as an alert
+    /// with "Call" and "Cancel". "Cancel" closes it, and no call starts: the
+    /// app stays in front and the system shows no call.
+    func callSamaritansAndCancel(bar: String?, file: StaticString = #filePath, line: UInt = #line) {
+        guard let row = reveal(bar: bar, { self.numberRow("116 123", in: $0) }),
+              let call = control("Call", besideRow: row, in: look()) else {
+            XCTFail("116 123 shows with \"Call\"", file: file, line: line)
+            return
+        }
+        tap(call.frame)
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "\"Call\" shows the Recents warning first", file: file, line: line)
+        XCTAssertTrue(alert.staticTexts[Self.recentsWarning].exists, "the warning reads \"\(Self.recentsWarning)\"", file: file, line: line)
+        XCTAssertTrue(alert.buttons["Call"].exists, "the warning shows \"Call\"", file: file, line: line)
+        alert.buttons["Cancel"].tap()
+        XCTAssertTrue(alert.waitForNonExistence(timeout: 5), "\"Cancel\" closes the warning", file: file, line: line)
+        XCTAssertEqual(app.state, .runningForeground, "no call starts: the app stays in front", file: file, line: line)
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        XCTAssertEqual(springboard.alerts.count, 0, "no call starts: the system shows no call", file: file, line: line)
+    }
+
+    /// mm-t14.29: after "Yes" and then "No" to the self-harm item, the
+    /// support line shows, and under it every item of the support sheet
+    /// inline, with Samaritans first. Each number shows "Call" and "Copy
+    /// number". "Call" beside 116 123 shows the Recents warning, and
+    /// "Cancel" starts no call. The confirming control `bar` stays active.
+    func assertInlineSupportAfterYesThenNo(bar: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertNotNil(reveal(bar: bar, { self.first(.staticText, Self.supportLine, in: $0) }), "the support line shows", file: file, line: line)
+        callSamaritansAndCancel(bar: bar, file: file, line: line)
+        // Bring the support line near the top, then walk down the items.
+        _ = reveal(bar: bar) { self.first(.staticText, Self.supportLine, in: $0) }
+        var order: [String] = []
+        var numbers: [String: Bool] = [:]
+        for _ in 0..<16 {
+            let seen = look()
+            let bounds = listBounds(seen, bar: bar)
+            let lineBottom = first(.staticText, Self.supportLine, in: seen)?.frame.maxY ?? -.infinity
+            let items = seen.filter { item in
+                item.frame.minY > lineBottom && (
+                    (item.type == .staticText && item.frame.minX < 24 && Self.supportHeaders.contains(item.label))
+                    || (item.type == .button && item.label == "Beat webchat"))
+            }.sorted { $0.frame.minY < $1.frame.minY }
+            for item in items where !order.contains(item.label) { order.append(item.label) }
+            for number in Self.supportNumbers {
+                guard let row = numberRow(number, in: seen), row.frame.minY > lineBottom else { continue }
+                numbers[number] = control("Call", besideRow: row, in: seen) != nil && control("Copy number", besideRow: row, in: seen) != nil
+            }
+            if order.contains("Talk to your GP"), numbers.count == Self.supportNumbers.count { break }
+            dragList(by: (bounds.bottom - bounds.top) * 0.7, bounds: bounds)
+        }
+        XCTAssertEqual(order, Self.inlineOrder, "the support sheet's items show inline under the line, with Samaritans first", file: file, line: line)
+        for number in Self.supportNumbers {
+            XCTAssertEqual(numbers[number], true, "\(number) shows \"Call\" and \"Copy number\"", file: file, line: line)
+        }
+        XCTAssertEqual(widest(bar, in: look())?.isEnabled, true, "\"\(bar)\" stays active", file: file, line: line)
+    }
+
+    // MARK: mm-t14.29 (comment of 15:19 on mm-t14.28)
+
+    /// mm-t14.28, mm-t14.29 (mm-t43.32), on onboarding screen 2: "Yes" and
+    /// then "No" to the self-harm item show the support line and the inline
+    /// support items, Samaritans first, with "Call" and "Copy number" on
+    /// each number. "Call" shows the Recents warning, and "Cancel" starts
+    /// no call. "Continue" stays active. (The call itself stays a device
+    /// check.)
+    func testInlineSupportAfterYesThenNoOnScreen2() throws {
+        try openScreen2()
+        answer(Self.selfHarmQuestion, "Yes")
+        answer(Self.selfHarmStep2Question, "No")
+        assertInlineSupportAfterYesThenNo(bar: "Continue")
+    }
+
+    /// mm-t14.28, mm-t14.29 (mm-t43.32): the same at the weekly review,
+    /// where "Done" stays active.
+    func testInlineSupportAfterYesThenNoAtTheReview() throws {
+        try launchOnToday("review")
+        openTheDueReview()
+        answer(Self.selfHarmQuestion, "Yes", bar: "Done")
+        answer(Self.selfHarmStep2Question, "No", bar: "Done")
+        assertInlineSupportAfterYesThenNo(bar: "Done")
+    }
+
+    /// mm-t14.28, mm-t14.29 (mm-t43.32): the same at the restart re-screen.
+    func testInlineSupportAfterYesThenNoAtTheRescreen() throws {
+        try openRescreen()
+        answer(Self.selfHarmQuestion, "Yes")
+        answer(Self.selfHarmStep2Question, "No")
+        assertInlineSupportAfterYesThenNo(bar: "Continue")
+    }
+
+    // MARK: mm-t14.36 (comment of 15:46 on mm-t14.28)
+
+    /// mm-t14.28, mm-t14.36 (mm-t43.32): in the support sheet, "Copy
+    /// number" beside 116 123 reads "Copied" for about two seconds and then
+    /// reads "Copy number" again. "Copied. It clears in a minute." shows
+    /// under that number, once, and stays until the sheet closes. (The
+    /// pasteboard itself and the largest text size of mm-t14.41 stay device
+    /// checks.)
+    func testCopyNumberShowsCopiedForAboutTwoSeconds() throws {
+        try launchOnToday("week1")
+        getSupport(on: "Today").tap()
+        XCTAssertTrue(app.navigationBars["Get support"].waitForExistence(timeout: 8), "the support sheet shows")
+        guard let row = reveal(extra: 80, { self.numberRow("116 123", in: $0) }),
+              let copy = control("Copy number", besideRow: row, in: look()) else {
+            XCTFail("116 123 shows with \"Copy number\"")
+            return
+        }
+        let start = Date()
+        tap(copy.frame)
+        var copiedAt: TimeInterval?
+        var backAt: TimeInterval?
+        while Date().timeIntervalSince(start) < 6 {
+            let seen = look()
+            let elapsed = Date().timeIntervalSince(start)
+            if control("Copied", besideRow: row, in: seen) != nil {
+                if copiedAt == nil { copiedAt = elapsed }
+            } else if copiedAt != nil, control("Copy number", besideRow: row, in: seen) != nil {
+                backAt = elapsed
+                break
+            }
+        }
+        XCTAssertNotNil(copiedAt, "the control reads \"Copied\"")
+        XCTAssertLessThan(copiedAt ?? 99, 1.2, "the control reads \"Copied\" at once")
+        XCTAssertNotNil(backAt, "the control reads \"Copy number\" again")
+        XCTAssertGreaterThanOrEqual(backAt ?? 0, 1.5, "\"Copied\" shows for about two seconds")
+        XCTAssertLessThanOrEqual(backAt ?? 99, 3.5, "\"Copied\" shows for about two seconds")
+        // The confirmation line, under that number, until the sheet closes.
+        for check in ["after the label changes back", "five seconds later"] {
+            if check == "five seconds later" { sleep(5) }
+            let seen = look()
+            let lines = seen.filter { $0.type == .staticText && $0.label == Self.copiedLine }
+            XCTAssertEqual(lines.count, 1, "\"\(Self.copiedLine)\" shows once, \(check)")
+            if let shown = lines.first, let number = numberRow("116 123", in: seen) {
+                XCTAssertGreaterThanOrEqual(shown.frame.minY, number.frame.maxY - 1, "the line shows under the number, \(check)")
+                XCTAssertLessThan(shown.frame.minY - number.frame.maxY, 40, "the line shows right under the number, \(check)")
+                XCTAssertLessThan(shown.frame.minY, first(.staticText, "Any time, about anything.", in: seen)?.frame.minY ?? .infinity, "the line shows in the row of 116 123, \(check)")
+            }
+        }
+        app.navigationBars["Get support"].buttons["Close"].tap()
+        XCTAssertTrue(app.navigationBars["Get support"].waitForNonExistence(timeout: 5))
+        getSupport(on: "Today").tap()
+        XCTAssertTrue(app.navigationBars["Get support"].waitForExistence(timeout: 8))
+        XCTAssertNotNil(reveal(extra: 80, { self.numberRow("116 123", in: $0) }))
+        XCTAssertFalse(look().contains { $0.label == Self.copiedLine }, "after the sheet closes, the line is gone")
+    }
+
+    // MARK: mm-t32.24 (comment of 15:27 on mm-t32.17)
+
+    /// mm-t32.17, mm-t32.24 (mm-t43.32), at the restart re-screen: step 1
+    /// "Yes", step 2 "Yes", then step 1 "No" and "Yes" again: step 2 shows
+    /// again with no answer. The same with step 2 "No".
+    func testRescreenStepTwoLosesItsAnswerWhenStepOneChanges() throws {
+        try openRescreen()
+        for step2 in ["Yes", "No"] {
+            answer(Self.selfHarmQuestion, "Yes")
+            answer(Self.selfHarmStep2Question, step2)
+            answer(Self.selfHarmQuestion, "No")
+            XCTAssertNil(first(.staticText, Self.selfHarmStep2Question, in: look()), "step 2 hides after step 1 \"No\"")
+            answer(Self.selfHarmQuestion, "Yes")
+            XCTAssertNotNil(reveal(extra: 110, bar: "Continue", { self.first(.staticText, Self.selfHarmStep2Question, in: $0) }), "step 2 shows again")
+            let seen = look()
+            let rows = ["No", "Yes"].compactMap { answerRow($0, under: Self.selfHarmStep2Question, in: seen) }
+            XCTAssertEqual(rows.count, 2, "step 2 shows \"No\" and \"Yes\"")
+            XCTAssertFalse(rows.contains { $0.isSelected }, "after step 2 \"\(step2)\", step 2 shows again with no answer")
+        }
+    }
+
+    // MARK: mm-t32.28 (comment of 08:19 on mm-t32.17)
+
+    /// The rows under `question`, top to bottom, read `answers`; the
+    /// question shows once, and no row reads the question.
+    func assertRowsReadTheirAnswers(_ question: String, _ answers: [String], bar: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertNotNil(reveal(extra: CGFloat(answers.count) * 56, bar: bar, { self.first(.staticText, question, in: $0) }), "the screen shows \"\(question)\"", file: file, line: line)
+        let seen = look()
+        guard let header = first(.staticText, question, in: seen) else { return }
+        let rows = seen.filter { $0.type == .button && $0.frame.minY >= header.frame.maxY - 1 }
+            .sorted { $0.frame.minY < $1.frame.minY }
+            .prefix(answers.count)
+            .map(\.label)
+        XCTAssertEqual(Array(rows), answers, "each row under \"\(question)\" is one element labelled with its own answer", file: file, line: line)
+        XCTAssertEqual(seen.filter { $0.label == question }.count, 1, "\"\(question)\" shows once", file: file, line: line)
+        XCTAssertFalse(seen.contains { $0.type != .staticText && $0.label.contains(question) }, "no row reads \"\(question)\"", file: file, line: line)
+    }
+
+    /// mm-t32.17, mm-t32.28: at the weekly review, each row of the
+    /// self-harm item is an element labelled with its own answer: "No",
+    /// "Yes" and "I'd rather not say" for step 1, then "No" and "Yes" for
+    /// step 2. Each question shows once, and no row reads the question.
+    /// (The VoiceOver walk stays a device check.)
+    func testEachSelfHarmRowAtTheReviewReadsItsAnswer() throws {
+        try launchOnToday("review")
+        openTheDueReview()
+        assertRowsReadTheirAnswers(Self.selfHarmQuestion, ["No", "Yes", "I'd rather not say"], bar: "Done")
+        answer(Self.selfHarmQuestion, "Yes", bar: "Done")
+        assertRowsReadTheirAnswers(Self.selfHarmStep2Question, ["No", "Yes"], bar: "Done")
+    }
+
+    /// mm-t32.17, mm-t32.28: on onboarding screen 2 and at the restart
+    /// re-screen, each row of the treatment, pregnancy and self-harm
+    /// questions is an element labelled with its own answer, and each
+    /// question shows once. (The VoiceOver walk stays a device check.)
+    func testEachScreeningRowReadsItsAnswer() throws {
+        for opening in ["screen 2", "re-screen"] {
+            if opening == "screen 2" { try openScreen2() } else { try openRescreen() }
+            assertRowsReadTheirAnswers(Self.treatmentQuestion, ["No", "Yes, and they are happy for me to use this", "Yes"], bar: "Continue")
+            assertRowsReadTheirAnswers(Self.pregnancyQuestion, ["No", "Yes", "Doesn't apply to me"], bar: "Continue")
+            assertRowsReadTheirAnswers(Self.selfHarmQuestion, ["No", "Yes", "I'd rather not say"], bar: "Continue")
+            answer(Self.selfHarmQuestion, "Yes")
+            assertRowsReadTheirAnswers(Self.selfHarmStep2Question, ["No", "Yes"], bar: "Continue")
+        }
+    }
+
+    // MARK: mm-t32.19 with a pinned note (comment of 15:27 on mm-t32.17)
+
+    /// mm-t32.17, mm-t32.19 (mm-t43.32): with the pinned note "Eat
+    /// breakfast" of the review of week 1, the review of week 2 gets an
+    /// answer under "What made things harder?", then "I'm getting worse"
+    /// and "Done" on the GP page. Back on Today, "Weekly review" and the
+    /// pinned note still show, and the review opens again with the answer.
+    func testGettingWorseKeepsThePinnedNoteAndTheReviewDue() throws {
+        try launchOnToday("or-pinned")
+        XCTAssertTrue(element(labelled: "Eat breakfast").waitForExistence(timeout: 5), "Today shows the pinned note of the review of week 1")
+        openTheDueReview()
+        fill("What made things harder?", "Late shifts", bar: "Done")
+        tapGettingWorse()
+        tapDoneOnThePage("It might help to see your GP")
+        assertTodayKeepsTheReviewAndTheNote("Eat breakfast", question: "What made things harder?", answer: "Late shifts")
+    }
+
+    /// mm-t32.17, mm-t32.19 (mm-t43.32): the same with "Yes" and then
+    /// "Yes" to the self-harm item, and "Done" on the not-right-now page.
+    func testSelfHarmYesYesKeepsThePinnedNoteAndTheReviewDue() throws {
+        try launchOnToday("or-pinned")
+        XCTAssertTrue(element(labelled: "Eat breakfast").waitForExistence(timeout: 5), "Today shows the pinned note of the review of week 1")
+        openTheDueReview()
+        fill("What made things harder?", "Late shifts", bar: "Done")
+        answer(Self.selfHarmQuestion, "Yes", bar: "Done")
+        answer(Self.selfHarmStep2Question, "Yes", bar: "Done", verify: false)
+        tapDoneOnThePage("This may not be right for you now")
+        assertTodayKeepsTheReviewAndTheNote("Eat breakfast", question: "What made things harder?", answer: "Late shifts")
+    }
+
+    /// Leaves the review with no "Done": Today still shows the "Weekly
+    /// review" line and the pinned note `note`, and the review opens again
+    /// with `answer` under `question`.
+    func assertTodayKeepsTheReviewAndTheNote(_ note: String, question: String, answer: String, file: StaticString = #filePath, line: UInt = #line) {
+        goBack()
+        assertScreen("Today", file: file, line: line)
+        XCTAssertTrue(app.buttons["Weekly review"].firstMatch.waitForExistence(timeout: 5), "Today still shows \"Weekly review\"", file: file, line: line)
+        XCTAssertTrue(element(labelled: note).exists, "Today still shows the pinned note \"\(note)\"", file: file, line: line)
+        openTheDueReview(file: file, line: line)
+        XCTAssertEqual(reveal(bar: "Done", field(question))?.value, answer, "the review keeps the answer", file: file, line: line)
+    }
+
+    // MARK: mm-t32.21 (comment of 15:27 on mm-t32.17)
+
+    /// mm-t32.17, mm-t32.21 (mm-t43.32): with 2, 3, 4 and 5 starred entries
+    /// in weeks 2 to 5, the app freezes those counts, and the review of
+    /// week 5 opens with the GP suggestion page. After "Done" on the page
+    /// and a return to Today, the review opens again from Today with no
+    /// page. After "Done" on the review, it opens from the "Reviews" list
+    /// with no page. (The open from the reminder needs a real reminder and
+    /// stays a device check.)
+    func testTheDeteriorationPageShowsOnce() throws {
+        let heading = "It might help to see your GP"
+        try launchOnToday("or-deterioration")
+        openTheDueReview()
+        XCTAssertTrue(element(labelled: heading).waitForExistence(timeout: 8), "the review of week 5 opens with the GP suggestion page")
+        XCTAssertTrue(text("Your starred entries have gone up each week lately.").exists, "the page gives the deterioration reason")
+        tapDoneOnThePage(heading)
+        XCTAssertNotNil(reveal(bar: "Done", { self.first(.staticText, "Starred entries: 5 this week, 4 last week.", in: $0) }), "the review reads the frozen counts of weeks 4 and 5")
+        goBack()
+        assertScreen("Today")
+        openTheDueReview()
+        XCTAssertFalse(element(labelled: heading).waitForExistence(timeout: 3), "a new open from Today shows no GP suggestion page")
+        tapConfirm("Done")
+        assertScreen("Today")
+        XCTAssertFalse(app.buttons["Weekly review"].exists, "\"Done\" finishes the review")
+        tapToolbar("Reviews")
+        assertScreen("Reviews")
+        let row = element(labelBeginningWith: "Week 5, ")
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "the \"Reviews\" list shows the review of week 5")
+        XCTAssertTrue(row.label.hasSuffix("Starred entries: 5."), "the row shows the frozen count 5: \(row.label)")
+        row.tap()
+        assertScreen("Weekly review")
+        XCTAssertFalse(element(labelled: heading).waitForExistence(timeout: 3), "an open from the \"Reviews\" list shows no GP suggestion page")
+    }
+
+    // MARK: mm-t32.22 (comment of 15:27 on mm-t32.17)
+
+    /// The date range of a "Reviews" row for the record days `first` to
+    /// `last` days from the current record day, as the app writes it
+    /// (`ReviewText.weekDateRangeText`).
+    func weekRangeText(first firstOffset: Int, last lastOffset: Int) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        let recordDay = calendar.component(.hour, from: now) < 4 ? calendar.date(byAdding: .day, value: -1, to: now)! : now
+        let today = calendar.startOfDay(for: recordDay)
+        let start = calendar.date(byAdding: .day, value: firstOffset, to: today)!
+        let end = calendar.date(byAdding: .day, value: lastOffset, to: today)!
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_GB")
+        formatter.dateFormat = calendar.component(.month, from: start) == calendar.component(.month, from: end) ? "d" : "d MMMM"
+        let startText = formatter.string(from: start)
+        formatter.dateFormat = "d MMMM"
+        return "\(startText)–\(formatter.string(from: end))"
+    }
+
+    /// mm-t32.17, mm-t32.22 (mm-t43.32): with the reviews of weeks 1 and 2
+    /// finished, "Start week 1 again" and "Today". The "Reviews" list then
+    /// shows both first-run rows, "Week 2" above "Week 1", each with its
+    /// own dates. A tap on each row opens that review with its saved
+    /// answers. A tap on the first-run pinned note opens its review.
+    func testTwoFirstRunReviewsAfterARestart() throws {
+        try launchOnToday("or-tworuns")
+        XCTAssertTrue(element(labelled: "Plan lunch").waitForExistence(timeout: 5), "Today shows the pinned note of the review of week 2")
+        tapToolbar("Programme")
+        assertScreen("Programme")
+        let restart = app.buttons["Start week 1 again"].firstMatch
+        XCTAssertTrue(scrollTo(restart))
+        restart.tap()
+        XCTAssertTrue(app.navigationBars["Start week 1 again"].waitForExistence(timeout: 8), "the start-day choice shows, with no re-screen")
+        app.collectionViews.buttons["Today"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Start week 1 again"].waitForNonExistence(timeout: 5))
+        goBack()
+        assertScreen("Today")
+        tapToolbar("Reviews")
+        assertScreen("Reviews")
+        let week2 = element(labelBeginningWith: "Week 2, \(weekRangeText(first: -8, last: -2)).")
+        let week1 = element(labelBeginningWith: "Week 1, \(weekRangeText(first: -15, last: -9)).")
+        XCTAssertTrue(week2.waitForExistence(timeout: 5), "the list shows the first-run row of week 2 with its own dates")
+        XCTAssertTrue(week1.exists, "the list shows the first-run row of week 1 with its own dates")
+        XCTAssertLessThan(week2.frame.minY, week1.frame.minY, "the newest review shows first")
+        week1.tap()
+        assertScreen("Weekly review")
+        XCTAssertEqual(reveal(bar: "Done", field("What is hardest at the moment?"))?.value, "Evenings", "the review of week 1 opens with its week-1 answers")
+        XCTAssertEqual(reveal(bar: "Done", field("What made things harder?"))?.value, "Week one harder", "the review of week 1 opens with its own answers")
+        goBack()
+        assertScreen("Reviews")
+        week2.tap()
+        assertScreen("Weekly review")
+        XCTAssertEqual(reveal(bar: "Done", field("What made things harder?"))?.value, "Week two harder", "the review of week 2 opens with its own answers")
+        XCTAssertFalse(app.textFields["What is hardest at the moment?"].exists, "the review of week 2 asks no week-1 question")
+        goBack()
+        assertScreen("Reviews")
+        goBack()
+        assertScreen("Today")
+        let note = element(labelled: "Plan lunch")
+        XCTAssertTrue(note.waitForExistence(timeout: 5), "Today shows the first-run pinned note")
+        note.tap()
+        assertScreen("Weekly review")
+        XCTAssertEqual(reveal(bar: "Done", field("What made things harder?"))?.value, "Week two harder", "the pinned note opens its own review")
+    }
+
+    // MARK: mm-t32.23 (comment of 15:27 on mm-t32.17)
+
+    /// mm-t32.17, mm-t32.23 (mm-t43.32): after a done weigh-in, the review
+    /// of that week shows "Weigh-in: done on <weekday>.". After "I won't be
+    /// weighing" in Settings, the same review shows no weigh-in line.
+    func testNoWeighInLineAfterIWontBeWeighing() throws {
+        let weighInLine: ([Seen]) -> Seen? = { $0.first { $0.type == .staticText && $0.label.hasPrefix("Weigh-in: done on ") } }
+        try launchOnToday("or-weighin")
+        openTheDueReview()
+        XCTAssertNotNil(reveal(bar: "Done", weighInLine), "before the change, the review shows the weigh-in line")
+        goBack()
+        assertScreen("Today")
+        tapToolbar("Settings")
+        assertScreen("Settings")
+        let picker = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Weigh-in day")).firstMatch
+        XCTAssertTrue(scrollTo(picker), "Settings shows \"Weigh-in day\"")
+        picker.tap()
+        let wontBeWeighing = app.buttons["I won't be weighing"].firstMatch
+        XCTAssertTrue(wontBeWeighing.waitForExistence(timeout: 5), "\"Weigh-in day\" offers \"I won't be weighing\"")
+        wontBeWeighing.tap()
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.staticTexts["I won't be weighing"].exists || picker.label.contains("I won't be weighing") || (picker.value as? String) == "I won't be weighing", "Settings shows \"I won't be weighing\"")
+        goBack()
+        assertScreen("Today")
+        openTheDueReview()
+        let summary = reveal(bar: "Done") { $0.first { $0.type == .staticText && $0.label.hasPrefix("Days with an entry:") } }
+        XCTAssertNotNil(summary, "the review shows its summary")
+        XCTAssertNil(weighInLine(look()), "after \"I won't be weighing\", the review shows no weigh-in line")
+    }
+
+    // MARK: mm-t21.28 (comment of 15:31 on mm-t21.24)
+
+    /// mm-t21.24, mm-t21.28 (mm-t43.32): with stage 2 open and no plan,
+    /// Today shows "Your plan isn't set yet. It takes about two minutes.".
+    /// "Plan" on the stage 2 screen and "Save" set the weekday plan; back on
+    /// Today, at once and with no restart, the line is gone. (The plan rows
+    /// show from the next record day: regular-eating-plan spec, "Weekday
+    /// and weekend templates", says that a change to a template MUST NOT
+    /// change the current record day's plan.)
+    func testPlanOnTheStage2ScreenRemovesThePlanCard() throws {
+        try launchOnToday("or-plancard")
+        let cardLine = text("Your plan isn't set yet. It takes about two minutes.")
+        XCTAssertTrue(cardLine.waitForExistence(timeout: 8), "before the plan, Today shows the plan card")
+        tapToolbar("Programme")
+        assertScreen("Programme")
+        element(labelBeginningWith: "Regular eating").tap()
+        assertScreen("Regular eating")
+        // The "Tools" group holds "Plan". The group is one accessibility
+        // container, so the test taps the row's point on the screen.
+        guard let plan = reveal({ self.first(.button, "Plan", in: $0) }) else {
+            XCTFail("the stage 2 screen shows \"Plan\"")
+            return
+        }
+        tap(plan.frame)
+        XCTAssertTrue(app.navigationBars["Weekday plan"].waitForExistence(timeout: 8), "\"Plan\" opens the weekday plan")
+        for slot in ["Breakfast", "Mid-morning", "Lunch", "Mid-afternoon", "Evening meal"] {
+            let place = app.buttons[slot].firstMatch
+            XCTAssertTrue(scrollTo(place), "the plan builder offers \"\(slot)\"")
+            place.tap()
+        }
+        let save = app.buttons["Save"].firstMatch
+        XCTAssertTrue(scrollTo(save), "the plan builder shows \"Save\"")
+        save.tap()
+        let saveAnyway = app.alerts.buttons["Save anyway"].firstMatch
+        if saveAnyway.waitForExistence(timeout: 2) { saveAnyway.tap() }
+        XCTAssertTrue(app.navigationBars["Weekday plan"].waitForNonExistence(timeout: 5), "\"Save\" closes the plan builder")
+        assertScreen("Regular eating")
+        goBack()
+        assertScreen("Programme")
+        goBack()
+        assertScreen("Today")
+        XCTAssertTrue(cardLine.waitForNonExistence(timeout: 5), "at once, Today shows no \"Your plan isn't set yet\"")
+    }
 }
