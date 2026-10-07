@@ -5,8 +5,10 @@ import Constants
 
 /// The app-lock test seam for the UI tests in
 /// `tools/skeleton-checks/HarnessUITests` (rulings r13-19 and r16-01, epic
-/// mm-t45). A simulator cannot answer a real system authentication request
-/// from a test, so these tests could not drive the app lock before.
+/// mm-t45). A test cannot choose the result of each real system
+/// authentication request, so these tests could not drive the app lock
+/// before. (The script result `system` makes the real request. A test
+/// answers it with the simulator's Face ID and the prompt's "Cancel".)
 ///
 /// The seam obeys three rules:
 /// - It is compiled only in a Debug build: every line of this file is
@@ -21,7 +23,9 @@ import Constants
 ///   request (`LAContextAuthenticator`, through
 ///   `AppLockControllerFactory`) and the enrolment state hash
 ///   (`EnrolmentHash.current`). The device's `Biometry`, the cover, the
-///   controller, the store and the deletion stay real.
+///   controller, the store and the deletion stay real. The script result
+///   `system` makes the real request, so a test can count the requests
+///   while the simulator shows the real prompt.
 ///
 /// The value of `environmentKey` is the path of a JSON script file (see
 /// `Script`). The test writes the file, and it can change it at any time,
@@ -43,6 +47,12 @@ enum AppLockTestSeam {
         /// The device has no passcode: `LAContextAuthenticator` makes no
         /// request and returns `false`.
         case noPasscode
+        /// The real system authentication request (`LAContextAuthenticator`).
+        /// The simulator shows its own prompt, and the test answers it with
+        /// the simulator's Face ID notifications and the prompt's buttons.
+        /// The log still records the request, so a test can count the real
+        /// requests too.
+        case system
     }
 
     /// The script file.
@@ -109,7 +119,8 @@ enum AppLockTestSeam {
 }
 
 /// The scripted system authentication request. It waits a short time, as
-/// the real request does, then returns the next result of the script.
+/// the real request does, then returns the next result of the script. The
+/// result `system` makes the real request instead.
 struct ScriptedAuthenticator: AuthenticationPerforming {
     /// A scripted authenticator when the seam is on; else `nil`.
     static func fromLaunchEnvironment() -> ScriptedAuthenticator? {
@@ -118,6 +129,9 @@ struct ScriptedAuthenticator: AuthenticationPerforming {
 
     func authenticate(reason: CatalogueText, policy: AuthenticationPolicy) async -> Bool {
         let outcome = AppLockTestSeam.takeNextOutcome(reason: reason, policy: policy)
+        if outcome == .system {
+            return await LAContextAuthenticator().authenticate(reason: reason, policy: policy)
+        }
         try? await Task.sleep(nanoseconds: 300_000_000)
         return outcome == .succeed
     }

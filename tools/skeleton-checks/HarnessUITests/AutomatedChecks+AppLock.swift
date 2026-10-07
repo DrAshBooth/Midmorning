@@ -11,14 +11,36 @@ import notify
 /// next result of a script file, and gives the enrolment state hash from
 /// the same file. The test writes the file, and the app writes one log line
 /// for each request. So a test can make a request succeed, fail or cancel,
-/// count the requests and read the policy of each one. The real Face ID
-/// prompt, the passcode entry, a real enrolment change and the App Switcher
-/// stay device checks.
+/// count the requests and read the policy of each one. The script result
+/// "system" makes the real request: the simulator shows its real Face ID
+/// prompt, and the test answers it with the simulator's Face ID
+/// notifications and the prompt's "Cancel"
+/// (`testTheRealRequestCancelStartsNoSecondRequest`). The real Face ID
+/// prompt on a device, the passcode entry, a real enrolment change and the
+/// App Switcher stay device checks.
 ///
 /// The device's `Biometry` stays real. On the iOS simulator with no Face ID
 /// enrolled, LocalAuthentication gives "passcode only". A test that needs
 /// Face ID enrols it with the simulator's own notification
 /// (`setSimulatedFaceID`), and its teardown takes the enrolment off again.
+///
+/// The seeded stores (`seeder/Sources/Seeder/AppLockScenarios.swift`;
+/// `automated-checks.sh` seeds them): `lock-week1`, `lock-week1-30s`,
+/// `lock-review`, `lock-face-only` and `lock-gym`. Each one has the app lock
+/// on. The tests with the app lock off use `week1`.
+///
+/// The reminders are simulated notifications with the app's own
+/// categories. A UI test cannot run `xcrun simctl`, so it writes the
+/// payload into `$OUT/push` (`OUT_DIR` + "/push"), and
+/// `tools/skeleton-checks/push-relay.sh`, which `automated-checks.sh`
+/// starts before the checks, sends it with `xcrun simctl push`.
+///
+/// Notification Centre: on the iOS 27.0 simulator it sends the app to the
+/// background (bug mm-t45.7), and the simulator suspends the app about 1.5
+/// seconds after the pull. After that, each query of the app's
+/// accessibility tree waits about 90 seconds and fails. So a test reads the
+/// app once, at once, after the pull (`pullDownNotificationCentreAndReadTheApp`),
+/// and makes its checks on that snapshot.
 extension AutomatedChecks {
     // MARK: The app-lock test seam
 
@@ -58,15 +80,16 @@ extension AutomatedChecks {
         return text.split(separator: "\n").map(String.init)
     }
 
-    /// Waits until the app made `count` requests, then waits 2 seconds more
-    /// and requires that no other request starts. Returns the log lines.
+    /// Waits until the app made `count` requests, then waits `settle`
+    /// seconds more and requires that no other request starts. Returns the
+    /// log lines.
     @discardableResult
-    func assertAppLockRequests(_ count: Int, _ message: String, file: StaticString = #filePath, line: UInt = #line) -> [String] {
+    func assertAppLockRequests(_ count: Int, _ message: String, settle: TimeInterval = 2, file: StaticString = #filePath, line: UInt = #line) -> [String] {
         let deadline = Date().addingTimeInterval(8)
         while appLockRequests().count < count, Date() < deadline {
             Thread.sleep(forTimeInterval: 0.2)
         }
-        Thread.sleep(forTimeInterval: 2)
+        Thread.sleep(forTimeInterval: settle)
         let requests = appLockRequests()
         XCTAssertEqual(requests.count, count, "\(message): \(requests)", file: file, line: line)
         return requests
@@ -161,6 +184,50 @@ extension AutomatedChecks {
         XCTAssertTrue(files.contains("Record.store") && files.contains("Local.store"), "\(message): the store directory holds Record.store and Local.store: \(files)", file: file, line: line)
     }
 
+    /// What the store directory holds now: the name of each file, and the
+    /// bytes of `Record.store` and its write-ahead log.
+    struct StoreContents: Equatable {
+        let files: [String]
+        let record: Data?
+        let recordLog: Data?
+    }
+
+    func storeContents() -> StoreContents {
+        StoreContents(
+            files: filesInTheStoreDirectory(),
+            record: try? Data(contentsOf: storeDirectory.appendingPathComponent("Record.store")),
+            recordLog: try? Data(contentsOf: storeDirectory.appendingPathComponent("Record.store-wal"))
+        )
+    }
+
+    /// Nothing is deleted: the store directory holds the same files as
+    /// `before`, with Record.store and Local.store, and Record.store (with
+    /// its write-ahead log) holds the same bytes.
+    func assertNothingIsDeleted(since before: StoreContents, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        assertTheStoreDirectoryHoldsTheStores(message, file: file, line: line)
+        let now = storeContents()
+        XCTAssertEqual(now.files, before.files, "\(message): the store directory holds the same files", file: file, line: line)
+        XCTAssertNotNil(now.record, "\(message): Record.store can be read", file: file, line: line)
+        XCTAssertTrue(now.record == before.record && now.recordLog == before.recordLog, "\(message): Record.store holds the same bytes", file: file, line: line)
+    }
+
+    // MARK: Text on the screen
+
+    /// The elements that show `text`: an element whose label holds it, or
+    /// a text view or text field whose value holds it. Typed text is the
+    /// value of the field; the label of the What field is "What".
+    func elementsShowing(_ text: String) -> [XCUIElement] {
+        let labelled = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).allElementsBoundByIndex
+        let fields = app.textViews.allElementsBoundByIndex + app.textFields.allElementsBoundByIndex
+        return labelled + fields.filter { ($0.value as? String)?.contains(text) == true }
+    }
+
+    /// No element shows `text`, by its label or by its value.
+    func assertNoElementShows(_ text: String, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        let found = elementsShowing(text)
+        XCTAssertEqual(found.count, 0, "\(message): no element shows \"\(text)\" (label or value): \(found.map { "\($0.elementType.rawValue) \($0.identifier) \($0.label)" })", file: file, line: line)
+    }
+
     // MARK: The cover
 
     var unlockButton: XCUIElement { app.buttons["Unlock"].firstMatch }
@@ -233,6 +300,9 @@ extension AutomatedChecks {
     /// everything", and nothing of Today. (VoiceOver focus on "Unlock" after
     /// the cancel stays a device check: a UI test cannot read the VoiceOver
     /// focus.)
+    /// The scripted cancel here changes no scene phase. The real system
+    /// request does, so "no second request starts" after a cancel of the
+    /// real request is `testTheRealRequestCancelStartsNoSecondRequest`.
     func testTheAppLockAsksAtLaunch() throws {
         try launchWithTheSeam("lock-week1", results: ["cancel"])
         assertTheLockedCover("at launch")
@@ -244,6 +314,74 @@ extension AutomatedChecks {
         assertNoCover(on: "Today", "after \"Unlock\" and a success")
         assertAppLockRequests(2, "\"Unlock\" makes one request")
         XCTAssertTrue(element(labelContaining: "Toast and tea").exists, "Today shows its entry after Unlock")
+    }
+
+    // MARK: The real system authentication request
+
+    /// The real Face ID request on the simulator: a view of the springboard.
+    var realFaceIDRequest: XCUIElement { springboard.otherElements["authentication_ui"].firstMatch }
+
+    /// "Cancel" in "Face Not Recognised" of the real request.
+    var realRequestCancel: XCUIElement { springboard.buttons["com.apple.localauthentication.ax.authentication.button.cancel"].firstMatch }
+
+    /// Shows the simulator a face that matches the enrolled face, or a face
+    /// that does not. The simulator's Features menu sends the same
+    /// notifications.
+    func showTheSimulatorAFace(matching: Bool) {
+        notify_post(matching ? "com.apple.BiometricKit_Sim.pearl.match" : "com.apple.BiometricKit_Sim.pearl.nomatch")
+    }
+
+    /// The real Face ID request shows. The face does not match, and the
+    /// person taps "Cancel" in "Face Not Recognised".
+    func cancelTheRealRequest(_ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(realFaceIDRequest.waitForExistence(timeout: 10), "\(message): the real Face ID request shows with no tap", file: file, line: line)
+        showTheSimulatorAFace(matching: false)
+        XCTAssertTrue(realRequestCancel.waitForExistence(timeout: 10), "\(message): after a face that does not match, the request offers \"Cancel\"", file: file, line: line)
+        realRequestCancel.tap()
+        XCTAssertTrue(realRequestCancel.waitForNonExistence(timeout: 10), "\(message): \"Cancel\" closes the request", file: file, line: line)
+    }
+
+    /// mm-t15.14, comment of mm-t15.17 (commit 1f42d63), with the real
+    /// system authentication request on the simulator: "open the app from
+    /// the Home Screen. The cover and the Face ID request show with no tap.
+    /// Cancel the request: the cover stays with 'Unlock', no second request
+    /// starts." The real request changes the scene phase of the app, and
+    /// the app asks each time it becomes active while a request is due. So
+    /// the return to active after the cancel must not start a second
+    /// request. With "Lock after" "At once" (as here), such a request would
+    /// start again after each cancel. The test seam gives each request to
+    /// LocalAuthentication (script result "system") and logs it, so the
+    /// test counts the real requests. A second request gets no script
+    /// result, and the log shows it as "unscripted".
+    /// The test does the same check after a return from the background
+    /// after the grace period, and "Unlock" with a face that matches.
+    /// (The real request on a device stays a device check: a device can
+    /// give other scene phases than the iOS 27.0 simulator, mm-t45.7.)
+    func testTheRealRequestCancelStartsNoSecondRequest() throws {
+        setSimulatedFaceID(enrolled: true)
+        try launchWithTheSeam("lock-week1", results: ["system"])
+        // The launch.
+        cancelTheRealRequest("at launch")
+        assertTheLockedCover("after a cancel of the real request at launch")
+        XCTAssertEqual(assertAppLockRequests(1, "no second request starts after a cancel of the real request at launch", settle: 5),
+                       ["biometricsAndPasscode applock.unlockReason system"], "the launch makes one real request, which offers the passcode")
+        XCTAssertFalse(realFaceIDRequest.exists, "no second real request shows")
+        assertTheLockedCover("5 seconds after the cancel")
+        // "Unlock" and a face that matches.
+        scriptAppLock(["system"])
+        unlockButton.tap()
+        XCTAssertTrue(realFaceIDRequest.waitForExistence(timeout: 10), "\"Unlock\" shows the real Face ID request")
+        showTheSimulatorAFace(matching: true)
+        assertNoCover(on: "Today", "after \"Unlock\" and a face that matches")
+        assertAppLockRequests(2, "\"Unlock\" makes one request", settle: 5)
+        // A return after the grace period ("At once").
+        scriptAppLock(["system"])
+        leaveTheApp(for: 3)
+        cancelTheRealRequest("a return after the grace period")
+        assertTheLockedCover("after a cancel of the real request at a return")
+        assertAppLockRequests(3, "no second request starts after a cancel of the real request at a return", settle: 5)
+        XCTAssertFalse(realFaceIDRequest.exists, "no second real request shows")
+        assertTheLockedCover("5 seconds after the cancel at a return")
     }
 
     /// mm-t15.14, comment of mm-t15.17: "Leave for 45 seconds and return:
@@ -273,7 +411,7 @@ extension AutomatedChecks {
         assertTheLockedCover("a return after 45 seconds")
         XCTAssertEqual(assertAppLockRequests(2, "a return after the grace period makes one request with no tap").last,
                        "biometricsAndPasscode applock.unlockReason cancel")
-        XCTAssertFalse(element(labelContaining: "Toast and").exists, "the cover shows no typed text")
+        assertNoElementShows("Toast and", "the cover shows no typed text")
         scriptAppLock(["succeed"])
         unlockButton.tap()
         XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "\"Unlock\" and a success take the cover off")
@@ -377,6 +515,43 @@ extension AutomatedChecks {
         bottom.press(forDuration: 0.1, thenDragTo: springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)))
     }
 
+    /// Notification Centre shows: the springboard shows its date view.
+    var notificationCentre: XCUIElement { springboard.otherElements["lockscreen-date-view"].firstMatch }
+
+    /// Each element of a snapshot: first the element, then its children.
+    func elements(of snapshot: XCUIElementSnapshot) -> [XCUIElementSnapshot] {
+        [snapshot] + snapshot.children.flatMap { elements(of: $0) }
+    }
+
+    /// Pulls Notification Centre down and reads the app's accessibility
+    /// tree once, at once. On the iOS 27.0 simulator the app goes to the
+    /// background under Notification Centre (mm-t45.7), and the simulator
+    /// suspends it about 1.5 seconds after the pull. A later query of the
+    /// app waits about 90 seconds and fails. So the checks under
+    /// Notification Centre use this one snapshot. Returns each element of
+    /// the tree, or `nil` when the app did not answer; then Notification
+    /// Centre closes again, and the caller starts its scenario again, once.
+    func pullDownNotificationCentreAndReadTheApp(file: StaticString = #filePath, line: UInt = #line) -> [XCUIElementSnapshot]? {
+        XCTAssertFalse(notificationCentre.exists, "before the pull, Notification Centre does not show", file: file, line: line)
+        pullDownNotificationCentre()
+        let tree = try? elements(of: app.snapshot())
+        XCTAssertTrue(notificationCentre.waitForExistence(timeout: 5), "Notification Centre shows over the app", file: file, line: line)
+        if tree == nil { closeNotificationCentre() }
+        return tree
+    }
+
+    /// The snapshot `tree` holds an element of the type `type` with the
+    /// label `label`.
+    func tree(_ tree: [XCUIElementSnapshot], has type: XCUIElement.ElementType, _ label: String) -> Bool {
+        tree.contains { $0.elementType == type && $0.label == label }
+    }
+
+    /// The elements of the snapshot `tree` that show `text`, by the label
+    /// or by the value.
+    func tree(_ tree: [XCUIElementSnapshot], showing text: String) -> [XCUIElementSnapshot] {
+        tree.filter { $0.label.contains(text) || (($0.value as? String)?.contains(text) ?? false) }
+    }
+
     /// mm-t15.14, comment of 25 September, item (2) "The cover", the part
     /// of the scenario "App lock off" that the simulator can show. App-lock
     /// spec, "The cover": "With the app lock off, the app MUST still show
@@ -390,34 +565,43 @@ extension AutomatedChecks {
     /// device check: a UI test cannot see the snapshot. On the iOS 27.0
     /// simulator, Notification Centre sends the app to the background, not
     /// to inactive (bug mm-t45.7); with the app lock off, the cover rule is
-    /// the same for both phases.)
+    /// the same for both phases. The checks under Notification Centre use
+    /// one snapshot of the app (`pullDownNotificationCentreAndReadTheApp`).)
     func testTheCoverWhileNotActiveWithTheAppLockOff() throws {
-        try launchWithTheSeam("week1", results: [])
-        assertNoCover(on: "Today", "with the app lock off, the launch")
-        XCTAssertTrue(element(labelContaining: "Toast and tea").waitForExistence(timeout: 5), "Today shows its entry")
-        pullDownNotificationCentre()
-        let title = app.staticTexts["Midmorning"]
-        XCTAssertTrue(title.waitForExistence(timeout: 8), "with the app lock off, the app shows the cover while it is not active")
-        XCTAssertFalse(unlockButton.exists, "with the app lock off, the cover shows no \"Unlock\"")
-        XCTAssertFalse(deleteEverythingButton.exists, "with the app lock off, the cover shows no \"Delete everything\"")
-        XCTAssertFalse(deleteFromThisDeviceButton.exists, "with the app lock off, the cover shows no \"Delete from this device\"")
-        XCTAssertEqual(app.navigationBars.count, 0, "with the app lock off, the cover hides Today")
-        XCTAssertFalse(app.buttons["Get support"].exists, "the cover shows no \"Get support\"")
-        XCTAssertFalse(element(labelContaining: "Toast and tea").exists, "the cover shows no entry")
-        Thread.sleep(forTimeInterval: 2)
-        closeNotificationCentre()
-        XCTAssertTrue(title.waitForNonExistence(timeout: 8), "with the app lock off, the cover goes when the app is active again")
-        assertNoCover(on: "Today", "with the app lock off, after Notification Centre closes")
-        XCTAssertTrue(element(labelContaining: "Toast and tea").exists, "Today shows its entry again")
-        assertAppLockRequests(0, "with the app lock off, the app makes no request")
+        for attempt in 1...2 {
+            try launchWithTheSeam("week1", results: [])
+            assertNoCover(on: "Today", "with the app lock off, the launch")
+            XCTAssertTrue(element(labelContaining: "Toast and tea").waitForExistence(timeout: 5), "Today shows its entry")
+            guard let cover = pullDownNotificationCentreAndReadTheApp() else {
+                XCTAssertLessThan(attempt, 2, "the app answers the query at once after the pull of Notification Centre (two tries; mm-t45.7)")
+                continue
+            }
+            XCTAssertTrue(tree(cover, has: .staticText, "Midmorning"), "with the app lock off, the app shows the cover while it is not active")
+            XCTAssertFalse(tree(cover, has: .button, "Unlock"), "with the app lock off, the cover shows no \"Unlock\"")
+            XCTAssertFalse(tree(cover, has: .button, "Delete everything"), "with the app lock off, the cover shows no \"Delete everything\"")
+            XCTAssertFalse(tree(cover, has: .button, "Delete from this device"), "with the app lock off, the cover shows no \"Delete from this device\"")
+            XCTAssertFalse(cover.contains { $0.elementType == .navigationBar }, "with the app lock off, the cover hides Today")
+            XCTAssertFalse(tree(cover, has: .button, "Get support"), "the cover shows no \"Get support\"")
+            XCTAssertEqual(tree(cover, showing: "Toast and tea").count, 0, "the cover shows no entry")
+            Thread.sleep(forTimeInterval: 2)
+            closeNotificationCentre()
+            let title = app.staticTexts["Midmorning"]
+            XCTAssertTrue(title.waitForNonExistence(timeout: 8), "with the app lock off, the cover goes when the app is active again")
+            assertNoCover(on: "Today", "with the app lock off, after Notification Centre closes")
+            XCTAssertTrue(element(labelContaining: "Toast and tea").exists, "Today shows its entry again")
+            assertAppLockRequests(0, "with the app lock off, the app makes no request")
+            return
+        }
     }
 
     // MARK: mm-t15.14 item (3): Delete everything from the cover
 
     /// mm-t15.14, comment of 25 September, item (3), "Delete everything
     /// from the cover": "Delete everything" makes the request first. After
-    /// a cancel the cover stays and nothing is deleted. After a success,
-    /// "Delete everything?" shows with "Cancel"; "Cancel" keeps the cover.
+    /// a cancel the cover stays and nothing is deleted: the store directory
+    /// holds the same files, and Record.store holds the same bytes. After a
+    /// success, "Delete everything?" shows with "Cancel"; "Cancel" keeps the
+    /// cover and deletes nothing.
     /// The confirmation shows "Everything is deleted.", and the next launch
     /// shows onboarding, because the record is gone. (The real system
     /// request stays a device check.)
@@ -431,16 +615,20 @@ extension AutomatedChecks {
         try launchWithTheSeam("lock-week1", results: ["cancel"])
         assertTheLockedCover("at launch")
         assertAppLockRequests(1, "the launch makes one request")
+        let before = storeContents()
+        XCTAssertNotNil(before.record, "before \"Delete everything\", Record.store can be read")
         scriptAppLock(["cancel"])
         deleteEverythingButton.tap()
         assertAppLockRequests(2, "\"Delete everything\" makes the request")
         XCTAssertFalse(app.alerts.firstMatch.exists, "after a cancel, no \"Delete everything?\" shows")
         assertTheLockedCover("after a cancel of the request")
+        assertNothingIsDeleted(since: before, "after a cancel of the request")
         scriptAppLock(["succeed"])
         deleteEverythingButton.tap()
         XCTAssertTrue(app.alerts["Delete everything?"].waitForExistence(timeout: 8), "after a success, \"Delete everything?\" shows")
         tapDialogButton("Cancel")
         assertTheLockedCover("after \"Cancel\" in \"Delete everything?\"")
+        assertNothingIsDeleted(since: before, "after \"Cancel\" in \"Delete everything?\"")
         // Ruling r14-01: a deletion that fails keeps the cover, with the line.
         makeTheDeletionFail()
         scriptAppLock(["succeed"])
@@ -979,7 +1167,14 @@ extension AutomatedChecks {
         tapSaveInTheNavigationBar()
         XCTAssertEqual(assertAppLockRequests(2, "Save makes one request").last, "biometricsAndPasscode applock.unlockReason cancel")
         assertTheLockedCover(overAKeptDraft: true, "after a cancel at Save")
-        XCTAssertFalse(element(labelContaining: "Toast and").exists, "the cover shows no typed text")
+        // Bug mm-t45.6: the accessibility tree still holds the kept draft's
+        // What field, with "Toast and", under the cover. So the check is:
+        // only that field holds "Toast and", and it cannot take a tap.
+        // VoiceOver over the kept draft stays a device check.
+        for shown in elementsShowing("Toast and") {
+            XCTAssertTrue(shown.elementType == .textView && (shown.identifier == "What" || shown.label == "What"), "the cover shows no typed text: only the kept draft's What field holds \"Toast and\", not \(shown.elementType.rawValue) \(shown.identifier) \(shown.label)")
+            XCTAssertFalse(shown.isHittable, "the cover hides the typed text: the kept draft's What field cannot take a tap")
+        }
         XCTAssertEqual(app.keyboards.count, 0, "the keyboard is closed")
         scriptAppLock(["succeed"])
         unlockButton.tap()
@@ -1088,7 +1283,7 @@ extension AutomatedChecks {
         what.typeText("Soup")
         tapAddOnAPlannedMealReminder()
         assertTheReminderNewEntryScreen(gymShows: false, "\"Add\" over the new-entry sheet")
-        XCTAssertFalse(element(labelContaining: "Soup").exists, "the sheet's text does not show under the screen")
+        assertNoElementShows("Soup", "the sheet's text does not show under the screen")
         app.navigationBars.buttons["Cancel"].firstMatch.tap()
         XCTAssertTrue(what.waitForExistence(timeout: 8), "after Cancel the sheet from Today shows")
         XCTAssertEqual(what.value as? String, "Soup", "the sheet from Today still holds its text")
@@ -1273,7 +1468,10 @@ extension AutomatedChecks {
     /// on a planned meal reminder opens Today. ("Add" is
     /// `testTheLockedReminderAddShowsOnlyTheFixedChips`. The cold launch
     /// stays a device check: the app that a tap starts gets no launch
-    /// environment, so the test seam is off.)
+    /// environment, so the test seam is off. A tap on the far reminder also
+    /// stays a device check: the app finds it by its request identifier
+    /// "far.<day key>", and `xcrun simctl push` cannot set that identifier.
+    /// The package test `ReminderTapRouteTests` gives its route, Today.)
     func testReminderTapsWithTheAppLockOn() throws {
         try launchWithTheSeam("lock-review", results: ["succeed"])
         assertNoCover(on: "Today", "after the request at launch succeeds")
@@ -1377,25 +1575,37 @@ extension AutomatedChecks {
     /// spec's scenario "Inactive is not background", stay device checks
     /// until a device on iOS 27 shows the phase (mm-t45.7). The cover, the
     /// kept keyboard and the kept text use the same code in both phases.
+    /// The checks under Notification Centre use one snapshot of the app
+    /// (`pullDownNotificationCentreAndReadTheApp`): the simulator suspends
+    /// the app soon after the pull.
     func testNotificationCentreOverASheet() throws {
-        try launchWithTheSeam("lock-week1-30s", results: ["succeed"])
-        assertNoCover(on: "Today", "after the request at launch succeeds")
-        assertAppLockRequests(1, "the launch makes one request")
-        openNewEntry()
-        let what = app.textViews["What"].firstMatch
-        what.tap()
-        what.typeText("Toast and")
-        XCTAssertEqual(app.keyboards.count, 1, "the keyboard is up")
-        pullDownNotificationCentre()
-        XCTAssertTrue(app.staticTexts["Midmorning"].waitForExistence(timeout: 8), "over Notification Centre's edge the cover shows")
-        XCTAssertTrue(unlockButton.exists, "with the app lock on, the cover shows \"Unlock\"")
-        Thread.sleep(forTimeInterval: 3)
-        closeNotificationCentre()
-        XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "after Notification Centre closes, the cover goes")
-        XCTAssertTrue(what.waitForExistence(timeout: 5), "the sheet shows")
-        XCTAssertEqual(what.value as? String, "Toast and", "the sheet keeps its text")
-        XCTAssertEqual(app.keyboards.count, 1, "the keyboard stays")
-        assertAppLockRequests(1, "Notification Centre makes no request")
+        for attempt in 1...2 {
+            try launchWithTheSeam("lock-week1-30s", results: ["succeed"])
+            assertNoCover(on: "Today", "after the request at launch succeeds")
+            assertAppLockRequests(1, "the launch makes one request")
+            openNewEntry()
+            let what = app.textViews["What"].firstMatch
+            what.tap()
+            what.typeText("Toast and")
+            XCTAssertEqual(app.keyboards.count, 1, "the keyboard is up")
+            guard let cover = pullDownNotificationCentreAndReadTheApp() else {
+                XCTAssertLessThan(attempt, 2, "the app answers the query at once after the pull of Notification Centre (two tries; mm-t45.7)")
+                continue
+            }
+            XCTAssertTrue(tree(cover, has: .staticText, "Midmorning"), "over Notification Centre's edge the cover shows")
+            XCTAssertTrue(tree(cover, has: .button, "Unlock"), "with the app lock on, the cover shows \"Unlock\"")
+            XCTAssertTrue(tree(cover, has: .button, "Delete everything"), "with the app lock on, the cover shows \"Delete everything\"")
+            XCTAssertFalse(cover.contains { $0.elementType == .navigationBar }, "the cover hides the sheet")
+            XCTAssertEqual(tree(cover, showing: "Toast and").count, 0, "the cover shows no typed text")
+            Thread.sleep(forTimeInterval: 3)
+            closeNotificationCentre()
+            XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "after Notification Centre closes, the cover goes")
+            XCTAssertTrue(what.waitForExistence(timeout: 5), "the sheet shows")
+            XCTAssertEqual(what.value as? String, "Toast and", "the sheet keeps its text")
+            XCTAssertEqual(app.keyboards.count, 1, "the keyboard stays")
+            assertAppLockRequests(1, "Notification Centre makes no request")
+            return
+        }
     }
 
     // MARK: mm-t42.14: safe mode with the app lock on
