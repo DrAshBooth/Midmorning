@@ -5,8 +5,10 @@ import XCTest
 /// its device-check bead and the check it replaces.
 ///
 /// Run these with `tools/skeleton-checks/automated-checks.sh`. The script
-/// builds and installs the app, seeds the stores (`seeder`, scenarios
-/// `week1`, `review` and `corrupt`) and gives this bundle two paths:
+/// builds and installs the app, seeds the stores (`seeder`; the script
+/// lists each scenario, and `seeder/Sources/Seeder/AutomatedScenarios.swift`
+/// and the `*Scenarios.swift` files beside it tell what each store holds)
+/// and gives this bundle two paths:
 /// `APP_DATA`, the app's data container, and `STORES`, the seeded stores.
 /// Before each launch a test puts one seeded store into the container, so
 /// every test starts from a known record. It also gives `CONTENT_DRAFT`,

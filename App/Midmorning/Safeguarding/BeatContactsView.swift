@@ -104,10 +104,15 @@ struct NumberRow: View {
     }
 
     /// Starts the system call flow. `tel://` with digits only, per the
-    /// number's own formatting (no spaces or punctuation in the URL).
+    /// number's own formatting (no spaces or punctuation in the URL). This
+    /// is the app's only route to a call. A Debug build also writes the URL
+    /// to the call record that the UI tests read (`CallRecorder`).
     static func startCall(_ number: String) {
         let digits = number.filter(\.isNumber)
         guard let url = URL(string: "tel://\(digits)") else { return }
+        #if DEBUG
+        CallRecorder.record(url)
+        #endif
         UIApplication.shared.open(url)
     }
 }

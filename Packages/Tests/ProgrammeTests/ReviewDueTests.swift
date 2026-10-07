@@ -44,6 +44,18 @@ final class ReviewDueTests: XCTestCase {
         XCTAssertNil(week)
     }
 
+    /// "Reviews" shows from the moment the first weekly review becomes
+    /// due, and a restart does not hide it: the first run's Review rows
+    /// stay (mm-t32.22). Before any review is due, it does not show.
+    func testReviewsStaysAfterARestart() {
+        XCTAssertFalse(ReviewDue.reviewsControlShows(latestDueWeek: nil, storeHoldsAWeeklyReview: false), "no \"Reviews\" before the first review is due")
+        XCTAssertTrue(ReviewDue.reviewsControlShows(latestDueWeek: 1, storeHoldsAWeeklyReview: true), "\"Reviews\" while a review of the run is due")
+        let newStart = dayKey(2026, 10, 20)
+        let latest = ReviewDue.latestDueWeek(startDay: newStart, currentRecordDay: newStart, calendar: calendar)
+        XCTAssertNil(latest, "on the new start day no review of the new run is due")
+        XCTAssertTrue(ReviewDue.reviewsControlShows(latestDueWeek: latest, storeHoldsAWeeklyReview: true), "after a restart, \"Reviews\" stays while the first run's rows stay")
+    }
+
     func testWeekDayKeysAreTheSevenDaysInOrder() {
         let keys = ReviewDue.weekDayKeys(week: 3, startDay: startDay, calendar: calendar)
         XCTAssertEqual(keys, [dayKey(2026, 10, 12), dayKey(2026, 10, 13), dayKey(2026, 10, 14), dayKey(2026, 10, 15), dayKey(2026, 10, 16), dayKey(2026, 10, 17), dayKey(2026, 10, 18)])
