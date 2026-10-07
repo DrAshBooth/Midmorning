@@ -41,7 +41,7 @@ Added by the second review round, 25 September 2026:
 - "Skipped, or was that 14:45?" / "That was it" / "Add it"
 - "If you can, leave the room and walk for ten minutes. If you can't leave, walk to the door and back, or stand at a window for two minutes."
 - "Put music or a podcast on" / "Do one small job with your hands"
-- "{n} of your {m} starred entries were at {place}."
+- "{n} of your {m} were at {place}.", filled as "4 of your 6 starred entries were at Mum's."
 - "One question left." / "Please answer this one."
 - "That is the app's name. Choose another word."
 - "If Face ID stops working, the only way back in is Delete everything."

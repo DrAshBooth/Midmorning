@@ -155,7 +155,9 @@ The content test MUST match each entry as a whole word, case-insensitive. A word
 
 The full forbidden list applies to the cards, the opening sentences, the rule strings and the Today card strings. It also applies to the pattern templates, every question and the alternatives examples. The content test MUST check each of those families against the full list. The content test MUST check the strings with ids support.*, gp.*, exclusion.*, notrightnow.* and gpsuggestion.* against the short list only. The short list is "Fairburn", "Oxford", "CREDO", "CBT-E", "CBT", "binger", "bingeing", "binge episode", "you've got this", "well done", "great job" and "proud".
 
-The content test MUST skip three bundle strings, and no other. It MUST match each of them as one whole string, character for character, and not word by word. The three strings are "Midmorning is a 12-week self-help programme for people who binge eat. It uses ideas from CBT.", "It is not therapy, and it does not replace your GP or anyone treating you." and "Are you getting help from a clinic or a therapist for your eating at the moment?". The first two are the lines of onboarding screen 1 that `safeguarding` permits in "What is a treatment claim". The third is the screening treatment question that `onboarding` states in "Screen 2: the screening questions". A string that is not equal to one of the three MUST get the check of its family. The forbidden lists MUST NOT change. Ash ruled this on 7 October 2026 (r17-02).
+The content test MUST skip four permitted sentences, and no other text. The permitted sentences are "It is not therapy.", "It is not therapy, and it does not replace your GP or anyone treating you.", "It uses ideas from CBT." and "Are you getting help from a clinic or a therapist for your eating at the moment?". `safeguarding` permits the first three in "What is a treatment claim". The second is line 3 of onboarding screen 1, and the `safeguarding` scenario "A negative statement" passes it. The fourth is the screening treatment question that `onboarding` states in "Screen 2: the screening questions".
+
+The content test MUST divide each card text and each bundle string into sentences. A sentence ends at a full stop, a question mark or an exclamation mark that a space or a line break follows. The last sentence ends at the end of the text. The content test MUST skip a sentence only when it is equal to a permitted sentence, character for character. The content test MUST NOT compare word by word. It MUST check each other sentence of that text against the list of its family. A phrase from a list MUST NOT match across a permitted sentence. The forbidden lists MUST NOT change. Ash ruled this on 7 October 2026 (r17-02).
 
 #### Scenario: A forbidden word
 - **WHEN** a card's body holds "This programme treats binge eating."
@@ -189,9 +191,21 @@ The content test MUST skip three bundle strings, and no other. It MUST match eac
 - **WHEN** "maintenance.2" holds "your recovery"
 - **THEN** the content test fails and names "maintenance.2" and "recovery"
 
-#### Scenario: A permitted line of onboarding screen 1
-- **WHEN** the bundle holds "It is not therapy, and it does not replace your GP or anyone treating you." as a line of onboarding screen 1
+#### Scenario: Line 1 of onboarding screen 1
+- **WHEN** the bundle holds "Midmorning is a 12-week self-help programme for people who binge eat. It uses ideas from CBT." as line 1 of onboarding screen 1
+- **THEN** the content test checks the first sentence against the full list, skips "It uses ideas from CBT." and passes the string
+
+#### Scenario: Line 3 of onboarding screen 1
+- **WHEN** the bundle holds "It is not therapy, and it does not replace your GP or anyone treating you." as line 3 of onboarding screen 1
 - **THEN** the content test passes the string
+
+#### Scenario: A card with a permitted sentence
+- **WHEN** a card's body holds "It is not therapy. It is a programme."
+- **THEN** the content test passes the card
+
+#### Scenario: A permitted sentence next to a forbidden word
+- **WHEN** a card's body holds "It is not therapy. Therapy is not the word."
+- **THEN** the content test skips the first sentence, checks the second, fails and names the card's id and "therapy"
 
 #### Scenario: The screening treatment question
 - **WHEN** the bundle holds the question "Are you getting help from a clinic or a therapist for your eating at the moment?"

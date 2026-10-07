@@ -96,7 +96,7 @@ The app MUST read that label from the Settings key `slot.label.<index>`. The app
 
 The group size {n}, the starred total {m} and the gap hours {hours} are counts. A template MUST NOT hold a count itself, so each count comes from a string with one count, as `content` requires in "Catalogue rules". The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld starred entries", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. Each of these strings MUST carry plural forms. The one form of "pattern.count.total" reads "%lld starred entry", and the one form of "pattern.count.hours" reads "%lld hour". Ash ruled this on 7 October 2026 (r17-05).
 
-The templates use plural verbs, for example "were". So PATTERN_MIN_STARRED MUST be 2 or more, and a test MUST check that in ProgrammeConstants. A group holds more than half of the starred total, so each group then holds 2 or more entries. So no sentence reads "1 of your 1".
+The templates use plural verbs, for example "were". The group minimum, PATTERN_MIN_GROUP = 3 in "The pattern window and the minimum data", keeps {n} at 3 or more. So the verbs agree with {n}, and no sentence reads "1 of your 1".
 
 The bundle MUST hold one template per time band, one per weekday and one for the weekend. The bundle MUST hold one template per fixed chip and one for a custom chip. The bundle MUST hold one for the long-gap group. The bundle MUST hold one missed-slot template with a {slot} placeholder. The bundle MUST hold one combined template per time band, each with a {slot} placeholder. Every clock time in a template MUST use the 24-hour clock.
 
@@ -146,10 +146,6 @@ A template MUST NOT contain "you skipped". The `content` capability keeps the ve
 #### Scenario: A combined sentence
 - **WHEN** the slot label is "Lunch", the combined after 20:00 and missed-lunch group holds 5 entries and the starred total is 7
 - **THEN** the sentence reads "5 of your 7 starred entries were after 20:00 on days when Lunch didn't happen."
-
-#### Scenario: A starred total minimum of 1
-- **WHEN** ProgrammeConstants holds PATTERN_MIN_STARRED as 1
-- **THEN** the constants test fails and names PATTERN_MIN_STARRED
 
 ### Requirement: How pattern sentences appear
 
