@@ -33,6 +33,7 @@ extension AutomatedChecks {
     /// One element of a snapshot: its type, label, value and frame.
     struct Seen {
         let type: XCUIElement.ElementType
+        let identifier: String
         let label: String
         let value: String?
         let placeholder: String?
@@ -41,13 +42,13 @@ extension AutomatedChecks {
         let isEnabled: Bool
     }
 
-    /// Every element on the screen, in one snapshot.
-    func look() -> [Seen] {
-        guard let root = try? app.snapshot() else { return [] }
+    /// Every element on the screen (or under `element`), in one snapshot.
+    func look(_ element: XCUIElement? = nil) -> [Seen] {
+        guard let root = try? (element ?? app).snapshot() else { return [] }
         var all: [Seen] = []
         func walk(_ snapshot: XCUIElementSnapshot) {
-            all.append(Seen(type: snapshot.elementType, label: snapshot.label, value: snapshot.value as? String,
-                            placeholder: snapshot.placeholderValue, frame: snapshot.frame,
+            all.append(Seen(type: snapshot.elementType, identifier: snapshot.identifier, label: snapshot.label,
+                            value: snapshot.value as? String, placeholder: snapshot.placeholderValue, frame: snapshot.frame,
                             isSelected: snapshot.isSelected, isEnabled: snapshot.isEnabled))
             snapshot.children.forEach(walk)
         }
@@ -1004,5 +1005,401 @@ extension AutomatedChecks {
         goBack()
         assertScreen("Today")
         XCTAssertTrue(cardLine.waitForNonExistence(timeout: 5), "at once, Today shows no \"Your plan isn't set yet\"")
+    }
+
+    // MARK: mm-t14.30 (comment of 15:19 on mm-t14.28)
+
+    /// What a tap can start: the Recents warning, Beat's page in the
+    /// in-app browser, a "Copied" control, a "Copied. It clears in a
+    /// minute." line, or the new-entry screen.
+    struct Effects: Equatable, CustomStringConvertible {
+        var warning = 0
+        var browser = 0
+        var copiedControls = 0
+        var copiedLines = 0
+        var newEntry = 0
+
+        var description: String {
+            "warning \(warning), browser \(browser), \"Copied\" \(copiedControls), copied line \(copiedLines), new entry \(newEntry)"
+        }
+
+        static func - (lhs: Effects, rhs: Effects) -> Effects {
+            Effects(warning: lhs.warning - rhs.warning, browser: lhs.browser - rhs.browser, copiedControls: lhs.copiedControls - rhs.copiedControls,
+                    copiedLines: lhs.copiedLines - rhs.copiedLines, newEntry: lhs.newEntry - rhs.newEntry)
+        }
+    }
+
+    func effects() -> Effects {
+        let seen = look()
+        return Effects(
+            warning: seen.contains { $0.type == .alert } ? 1 : 0,
+            // The in-app browser's view is not part of the snapshot, so a
+            // query finds it.
+            browser: app.otherElements["TopBrowserBar"].exists ? 1 : 0,
+            copiedControls: seen.filter { $0.type == .button && $0.label == "Copied" }.count,
+            copiedLines: seen.filter { $0.type == .staticText && $0.label == Self.copiedLine }.count,
+            newEntry: seen.contains { $0.type == .switch && $0.label == "felt like a binge" } ? 1 : 0
+        )
+    }
+
+    /// Taps the centre of `frame` and asserts that only `expected` follows:
+    /// each other effect stays as it was. It waits up to 4 seconds for the
+    /// expected effect (the browser takes a moment to show), and then looks
+    /// once more, so that a second action that comes late also shows.
+    func assertTapRunsOnly(_ expected: Effects, at frame: CGRect, _ what: String, file: StaticString = #filePath, line: UInt = #line) {
+        let before = effects()
+        tap(frame)
+        let start = Date()
+        var change = Effects()
+        var reached = false
+        repeat {
+            sleep(1)
+            change = effects() - before
+            reached = change == expected
+        } while !reached && Date().timeIntervalSince(start) < 4
+        XCTAssertEqual(change, expected, "a tap on \(what) runs only its own action", file: file, line: line)
+        guard reached else { return }
+        sleep(1)
+        var late = effects() - before
+        // A "Copied" control reads "Copy" again after two seconds; only the
+        // line under it stays.
+        if expected.copiedControls > 0, late.copiedControls == 0 { late.copiedControls = expected.copiedControls }
+        XCTAssertEqual(late, expected, "a tap on \(what) starts no second action later", file: file, line: line)
+    }
+
+    /// The point of the text of a borderless control: its leading part,
+    /// where the label is. A List row gives the control the full row as its
+    /// frame, but only the label takes the tap.
+    func textPoint(of frame: CGRect) -> CGRect {
+        CGRect(x: frame.minX + 24, y: frame.minY, width: 8, height: frame.height)
+    }
+
+    /// In the support items (the sheet or inline), each control alone runs
+    /// only its own action: "Call", "Copy number", "Beat webchat" and the GP
+    /// paragraph's "Copy". A tap on the text of a number row, away from its
+    /// controls, runs nothing.
+    func checkEachSupportControlAlone(bar: String?, file: StaticString = #filePath, line: UInt = #line) {
+        // "Call" beside the England number.
+        guard let row = reveal(extra: 60, bar: bar, { self.numberRow("0808 801 0677", in: $0) }) else {
+            XCTFail("the support items show 0808 801 0677", file: file, line: line)
+            return
+        }
+        let seen = look()
+        guard let call = control("Call", besideRow: row, in: seen), let copy = control("Copy number", besideRow: row, in: seen) else {
+            XCTFail("0808 801 0677 shows \"Call\" and \"Copy number\"", file: file, line: line)
+            return
+        }
+        assertTapRunsOnly(Effects(warning: 1), at: call.frame, "\"Call\"", file: file, line: line)
+        app.alerts.firstMatch.buttons["Cancel"].tap()
+        XCTAssertTrue(app.alerts.firstMatch.waitForNonExistence(timeout: 5), file: file, line: line)
+        // The text of the row, away from its controls.
+        assertTapRunsOnly(Effects(), at: row.frame, "the text of the number row", file: file, line: line)
+        // "Beat webchat".
+        guard let webchat = reveal(bar: bar, { self.first(.button, "Beat webchat", in: $0) }) else {
+            XCTFail("the support items show \"Beat webchat\"", file: file, line: line)
+            return
+        }
+        assertTapRunsOnly(Effects(browser: 1), at: textPoint(of: webchat.frame), "\"Beat webchat\"", file: file, line: line)
+        let browserClose = app.otherElements["TopBrowserBar"].buttons["Close"].firstMatch
+        XCTAssertTrue(browserClose.waitForExistence(timeout: 5), "the browser shows \"Close\"", file: file, line: line)
+        browserClose.tap()
+        XCTAssertTrue(app.otherElements["TopBrowserBar"].waitForNonExistence(timeout: 5), file: file, line: line)
+        // The GP paragraph's "Copy".
+        guard let gpCopy = reveal(bar: bar, { self.first(.button, "Copy", in: $0) }) else {
+            XCTFail("the support items show the GP paragraph's \"Copy\"", file: file, line: line)
+            return
+        }
+        assertTapRunsOnly(Effects(copiedControls: 1, copiedLines: 1), at: textPoint(of: gpCopy.frame), "the GP paragraph's \"Copy\"", file: file, line: line)
+        // The text above the GP paragraph, away from a control.
+        if let compensation = look().first(where: { $0.type == .staticText && $0.label.hasPrefix("Some people make themselves sick") }) {
+            assertTapRunsOnly(Effects(), at: compensation.frame, "the text of the GP row", file: file, line: line)
+        } else {
+            XCTFail("the GP item shows its first sentence", file: file, line: line)
+        }
+        // "Copy number" beside the England number, once the GP "Copied"
+        // reads "Copy" again.
+        sleep(2)
+        guard let row2 = reveal(extra: 60, bar: bar, { self.numberRow("0808 801 0677", in: $0) }),
+              let copy2 = control("Copy number", besideRow: row2, in: look()) else {
+            XCTFail("0808 801 0677 shows \"Copy number\" again", file: file, line: line)
+            return
+        }
+        _ = copy
+        assertTapRunsOnly(Effects(copiedControls: 1, copiedLines: 1), at: copy2.frame, "\"Copy number\"", file: file, line: line)
+    }
+
+    /// mm-t14.28, mm-t14.30 (mm-t43.32), in the support sheet: "Call",
+    /// "Copy number", "Beat webchat" and the GP paragraph's "Copy" each run
+    /// only their own action, and a tap on the text of a row runs nothing.
+    /// (The call itself and Safari's page stay device checks.)
+    func testEachSupportSheetControlRunsOnlyItsOwnAction() throws {
+        try launchOnToday("week1")
+        getSupport(on: "Today").tap()
+        XCTAssertTrue(app.navigationBars["Get support"].waitForExistence(timeout: 8), "the support sheet shows")
+        checkEachSupportControlAlone(bar: nil)
+    }
+
+    /// mm-t14.28, mm-t14.30 (mm-t43.32): the same in the inline support on
+    /// onboarding screen 2, after "Yes" and then "No" to the self-harm
+    /// item.
+    func testEachInlineSupportControlRunsOnlyItsOwnAction() throws {
+        try openScreen2()
+        answer(Self.selfHarmQuestion, "Yes")
+        answer(Self.selfHarmStep2Question, "No")
+        checkEachSupportControlAlone(bar: "Continue")
+    }
+
+    /// mm-t14.28, mm-t14.30 (mm-t43.32), a Today card: a tap on the card's
+    /// title runs nothing; "Close" removes the card and opens nothing;
+    /// "Read" opens the card screen, and the card does not come back.
+    func testEachTodayCardControlRunsOnlyItsOwnAction() throws {
+        try launchOnToday("or-secondday")
+        let title = text("Why write it down")
+        XCTAssertTrue(title.waitForExistence(timeout: 8), "Today shows the stage 1 card")
+        title.tap()
+        sleep(1)
+        XCTAssertTrue(app.navigationBars["Today"].exists, "a tap on the card's title opens nothing")
+        XCTAssertTrue(title.exists, "a tap on the card's title keeps the card")
+        let cell = app.cells.containing(NSPredicate(format: "label == %@", "Why write it down")).firstMatch
+        cell.buttons["Close"].firstMatch.tap()
+        XCTAssertTrue(title.waitForNonExistence(timeout: 5), "\"Close\" removes the card")
+        XCTAssertTrue(app.navigationBars["Today"].exists, "\"Close\" opens nothing")
+        XCTAssertFalse(app.navigationBars["Why write it down"].exists, "\"Close\" does not open the card screen")
+
+        try launchOnToday("or-secondday")
+        XCTAssertTrue(title.waitForExistence(timeout: 8))
+        app.cells.containing(NSPredicate(format: "label == %@", "Why write it down")).firstMatch.buttons["Read"].firstMatch.tap()
+        assertScreen("Why write it down")
+        goBack()
+        assertScreen("Today")
+        XCTAssertFalse(title.exists, "after \"Read\", the card does not come back")
+    }
+
+    /// mm-t14.28, mm-t14.30 (mm-t43.32), the plan builder: "Rename" opens
+    /// only the rename sheet and keeps the planned meal; a tap between the
+    /// two controls runs nothing; "Remove" removes only that planned meal
+    /// and opens no sheet.
+    func testRenameAndRemoveInThePlanBuilderRunAlone() throws {
+        try launchOnToday("review")
+        tapDayMenu("Today's plan")
+        assertScreen("Today's plan")
+        let place = app.buttons["Breakfast"].firstMatch
+        XCTAssertTrue(place.waitForExistence(timeout: 5), "the plan builder offers \"Breakfast\"")
+        place.tap()
+        let rename = app.buttons["Rename Breakfast"].firstMatch
+        let remove = app.buttons["Remove Breakfast"].firstMatch
+        XCTAssertTrue(rename.waitForExistence(timeout: 5) && remove.exists, "the planned meal shows \"Rename\" and \"Remove\"")
+        rename.tap()
+        XCTAssertTrue(app.navigationBars["Rename"].waitForExistence(timeout: 5), "\"Rename\" opens the rename sheet")
+        app.navigationBars["Rename"].buttons["Cancel"].tap()
+        XCTAssertTrue(app.navigationBars["Rename"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(remove.exists, "\"Rename\" keeps the planned meal")
+        // Between the two controls.
+        let between = CGRect(x: (rename.frame.maxX + remove.frame.minX) / 2 - 4, y: rename.frame.minY, width: 8, height: rename.frame.height)
+        tap(between)
+        sleep(1)
+        XCTAssertFalse(app.navigationBars["Rename"].exists, "a tap between the controls opens no sheet")
+        XCTAssertTrue(remove.exists, "a tap between the controls keeps the planned meal")
+        remove.tap()
+        XCTAssertTrue(remove.waitForNonExistence(timeout: 5), "\"Remove\" removes the planned meal")
+        XCTAssertFalse(app.navigationBars["Rename"].exists, "\"Remove\" opens no rename sheet")
+        XCTAssertTrue(app.buttons["Breakfast"].firstMatch.exists, "\"Breakfast\" is free to place again")
+        app.navigationBars["Today's plan"].buttons["Cancel"].tap()
+    }
+
+    /// mm-t14.28, mm-t14.30 (mm-t43.32), the missed planned meal prompt: a
+    /// tap on the row's slot label runs nothing; "Add it" opens only the
+    /// new-entry screen and does not answer "Skipped"; "Skipped" answers
+    /// "Skipped" and opens nothing.
+    func testSkippedAndAddItOnAMissedMealRunAlone() throws {
+        try launchOnToday("or-plan")
+        let prompt = text("Skipped, or not recorded yet?")
+        XCTAssertTrue(prompt.waitForExistence(timeout: 8), "Today shows the missed planned meal prompt")
+        let rowFinder: ([Seen]) -> Seen? = { $0.first { $0.type == .staticText && $0.label == "Breakfast" } }
+        guard let slot = rowFinder(look()) else {
+            XCTFail("the planned meal row shows \"Breakfast\"")
+            return
+        }
+        assertTapRunsOnly(Effects(), at: slot.frame, "the slot label of the row")
+        XCTAssertTrue(prompt.exists, "a tap on the row's text keeps the prompt")
+        let addIt = app.buttons["Add it"].firstMatch
+        addIt.tap()
+        XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "\"Add it\" opens the new-entry screen")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(prompt.exists, "\"Add it\" does not answer \"Skipped\": the prompt stays")
+        assertTapRunsOnly(Effects(), at: app.buttons["Skipped"].firstMatch.frame, "\"Skipped\"")
+        XCTAssertTrue(prompt.waitForNonExistence(timeout: 5), "\"Skipped\" answers the prompt")
+        XCTAssertTrue(app.staticTexts["Skipped"].firstMatch.exists, "the row reads \"Skipped\"")
+    }
+
+    // MARK: mm-t14.38 to mm-t14.40 (comment of 15:46 on mm-t14.28)
+
+    /// The colour of one point of `image`, as red, green and blue from 0 to 1.
+    func colour(at point: CGPoint, in image: CGImage, scale: CGFloat) -> [CGFloat] {
+        var pixel: [UInt8] = [0, 0, 0, 0]
+        let space = CGColorSpaceCreateDeviceRGB()
+        pixel.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: space,
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
+            context.draw(image, in: CGRect(x: -point.x * scale, y: -(CGFloat(image.height) - point.y * scale), width: CGFloat(image.width), height: CGFloat(image.height)))
+        }
+        return pixel.prefix(3).map { CGFloat($0) / 255 }
+    }
+
+    /// The confirming control `label` is a filled button across the full
+    /// width, below the content of `container`: after a scroll to the end,
+    /// no element of the content is lower than its top. Filled: a point at
+    /// each end of the button, away from its title, differs clearly in
+    /// colour from the background just above the button.
+    func assertFullWidthFilledBelowTheContent(_ label: String, in container: XCUIElement, _ screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(container.waitForExistence(timeout: 8), "\(screen) shows", file: file, line: line)
+        var last = ""
+        for _ in 0..<10 {
+            container.swipeUp()
+            let now = look(container).filter { $0.type == .staticText || $0.type == .button }.map(\.label).joined(separator: "|")
+            if now == last { break }
+            last = now
+        }
+        sleep(1)
+        let seen = look()
+        guard let button = widest(label, in: seen) else {
+            XCTFail("\(screen) shows \"\(label)\"", file: file, line: line)
+            return
+        }
+        let window = app.windows.firstMatch.frame
+        XCTAssertGreaterThanOrEqual(button.frame.width, window.width - 48, "on \(screen), \"\(label)\" spans the full width", file: file, line: line)
+        XCTAssertTrue(button.isEnabled, "on \(screen), \"\(label)\" is active", file: file, line: line)
+        let content = look(container).filter { item in
+            [.staticText, .textField, .textView, .button, .switch].contains(item.type) && item.frame.height > 0
+                && item.frame != button.frame && item.frame.minY < window.maxY && item.frame.maxY > 0
+        }
+        let lowest = content.max { $0.frame.maxY < $1.frame.maxY }
+        if let lowest {
+            XCTAssertLessThanOrEqual(lowest.frame.maxY, button.frame.minY + 1, "on \(screen), \"\(label)\" shows below the content (lowest: \(lowest.label))", file: file, line: line)
+        }
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else {
+            XCTFail("no screenshot", file: file, line: line)
+            return
+        }
+        let scale = CGFloat(image.width) / window.width
+        let background = colour(at: CGPoint(x: button.frame.midX, y: button.frame.minY - 5), in: image, scale: scale)
+        for x in [button.frame.minX + button.frame.height, button.frame.maxX - button.frame.height] {
+            let inside = colour(at: CGPoint(x: x, y: button.frame.midY), in: image, scale: scale)
+            let difference = zip(inside, background).map { abs($0 - $1) }.reduce(0, +)
+            XCTAssertGreaterThan(difference, 0.4, "on \(screen), \"\(label)\" is a filled button (\(inside) against \(background))", file: file, line: line)
+        }
+    }
+
+    /// The list or scroll view of the screen on top: of the lists that
+    /// show, the one that starts lowest (a sheet starts under the screen
+    /// it covers).
+    func topList() -> XCUIElement {
+        let lists = app.collectionViews.allElementsBoundByIndex.filter { $0.exists }
+        return lists.max { $0.frame.minY < $1.frame.minY } ?? app.collectionViews.firstMatch
+    }
+
+    /// mm-t14.28, mm-t14.38 to mm-t14.40 (mm-t43.32), onboarding: on
+    /// screens 1 to 4 the confirming control ("Continue", then "Start") is a
+    /// filled button across the full width, below the content. On screen
+    /// 4, "Show me how" opens a sheet with "Close", and one tap on "Close"
+    /// returns to screen 4. (The heading rotor stays a VoiceOver device
+    /// check.)
+    func testOnboardingConfirmingButtonsAndShowMeHow() throws {
+        try launch(nil)
+        assertFullWidthFilledBelowTheContent("Continue", in: app.scrollViews.firstMatch, "screen 1")
+        let firstContinue = app.buttons["Continue"].firstMatch
+        firstContinue.tap()
+        assertScreen("A few questions first")
+        assertFullWidthFilledBelowTheContent("Continue", in: app.collectionViews.firstMatch, "screen 2")
+        answer(Self.treatmentQuestion, "No")
+        answer(Self.pregnancyQuestion, "No")
+        answer(Self.selfHarmQuestion, "No")
+        fill("Weight in kilograms", "65")
+        fill("Height in centimetres", "170")
+        fill("How old are you?", "30")
+        tapConfirm()
+        dismissKeyboardTipBesideAFullWidthControl()
+        assertScreen("Your start")
+        assertFullWidthFilledBelowTheContent("Continue", in: app.collectionViews.firstMatch, "screen 3")
+        guard let wont = reveal(bar: "Continue", { self.first(.button, "I won't be weighing", in: $0) }) else {
+            XCTFail("screen 3 offers \"I won't be weighing\"")
+            return
+        }
+        tap(wont.frame)
+        tapConfirm()
+        assertScreen("Permissions")
+        assertFullWidthFilledBelowTheContent("Start", in: app.collectionViews.firstMatch, "screen 4")
+        guard let showMeHow = reveal(bar: "Start", { self.first(.button, "Show me how", in: $0) }) else {
+            XCTFail("screen 4 shows \"Show me how\"")
+            return
+        }
+        tap(showMeHow.frame)
+        let sheet = app.navigationBars["Show me how"]
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5), "\"Show me how\" opens its sheet")
+        XCTAssertTrue(sheet.buttons["Close"].exists, "the sheet shows \"Close\"")
+        sheet.buttons["Close"].tap()
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "one tap on \"Close\" closes the sheet")
+        assertScreen("Permissions")
+    }
+
+    /// mm-t14.28, mm-t14.38 (mm-t43.32): on the exclusion page and on the
+    /// caution sheet, the confirming control ("Done", "Continue") is a
+    /// filled button across the full width, below the content.
+    func testExclusionAndCautionConfirmingButtons() throws {
+        try openScreen2()
+        fill("How old are you?", "17")
+        fill("Height in centimetres", "170")
+        fill("Weight in kilograms", "65")
+        for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] { answer(question, "No") }
+        tapConfirm()
+        let exclusion = app.scrollViews.containing(NSPredicate(format: "label == %@", "Not right now")).firstMatch
+        assertFullWidthFilledBelowTheContent("Done", in: exclusion, "the exclusion page")
+
+        try openScreen2()
+        fill("How old are you?", "30")
+        fill("Height in centimetres", "170")
+        fill("Weight in kilograms", "54")
+        for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] { answer(question, "No") }
+        tapConfirm()
+        let caution = app.scrollViews.containing(NSPredicate(format: "label BEGINSWITH %@", "Your height and weight put you close")).firstMatch
+        assertFullWidthFilledBelowTheContent("Continue", in: caution, "the caution sheet")
+    }
+
+    /// mm-t14.28, mm-t14.38 to mm-t14.40 (mm-t43.32): on the weekly
+    /// review, the GP suggestion page and the not-right-now page, the
+    /// confirming control ("Done") is a filled button across the full
+    /// width, below the content.
+    func testReviewAndPageConfirmingButtons() throws {
+        try launchOnToday("review")
+        openTheDueReview()
+        assertFullWidthFilledBelowTheContent("Done", in: app.collectionViews.firstMatch, "the weekly review")
+        tapGettingWorse()
+        let gpPage = app.scrollViews.containing(NSPredicate(format: "label == %@", "It might help to see your GP")).firstMatch
+        assertFullWidthFilledBelowTheContent("Done", in: gpPage, "the GP suggestion page")
+        tapDoneOnThePage("It might help to see your GP")
+        answer(Self.selfHarmQuestion, "Yes", bar: "Done")
+        answer(Self.selfHarmStep2Question, "Yes", bar: "Done", verify: false)
+        let notRightNow = app.scrollViews.containing(NSPredicate(format: "label == %@", "This may not be right for you now")).firstMatch
+        assertFullWidthFilledBelowTheContent("Done", in: notRightNow, "the not-right-now page")
+    }
+
+    /// mm-t14.28, mm-t14.38 and mm-t14.39 (mm-t43.32): on Close the day,
+    /// "Done" is a filled button across the full width, below the content,
+    /// and "Get support" is the only control in the navigation bar, in the
+    /// trailing position.
+    func testCloseTheDayConfirmingButtonAndGetSupport() throws {
+        try launchOnToday("or-plan")
+        let closeTheDay = app.buttons["Close the day"].firstMatch
+        XCTAssertTrue(closeTheDay.waitForExistence(timeout: 8), "Today shows \"Close the day\" after the last planned meal")
+        closeTheDay.tap()
+        let bar = app.navigationBars["Close the day"]
+        XCTAssertTrue(bar.waitForExistence(timeout: 5), "Close the day shows")
+        let buttons = bar.buttons.allElementsBoundByIndex.filter { $0.exists }
+        XCTAssertEqual(buttons.map(\.label), ["Get support"], "\"Get support\" is the only control in the navigation bar")
+        if let support = buttons.first {
+            XCTAssertGreaterThan(support.frame.minX, bar.frame.midX, "\"Get support\" is in the trailing position")
+        }
+        assertFullWidthFilledBelowTheContent("Done", in: topList(), "Close the day")
     }
 }
