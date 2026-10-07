@@ -57,9 +57,10 @@ extension AutomatedChecks {
     }
 
     /// Opens Settings, then Diagnostics, from Today, reads the number in the
-    /// row `label`, and goes back to Today.
-    private func diagnosticsCount(_ label: String, file: StaticString = #filePath, line: UInt = #line) -> Int? {
-        tapToolbar("Settings")
+    /// row `label`, and goes back to Today. With `fromSettings`, it starts
+    /// and ends on the settings screen.
+    private func diagnosticsCount(_ label: String, fromSettings: Bool = false, file: StaticString = #filePath, line: UInt = #line) -> Int? {
+        if !fromSettings { tapToolbar("Settings") }
         assertScreen("Settings", file: file, line: line)
         let diagnostics = app.buttons["Diagnostics"].firstMatch
         XCTAssertTrue(scrollTo(diagnostics), "Settings shows \"Diagnostics\"", file: file, line: line)
@@ -71,18 +72,20 @@ extension AutomatedChecks {
         let number = text.split(whereSeparator: { !$0.isNumber }).first.flatMap { Int($0) }
         goBack()
         assertScreen("Settings", file: file, line: line)
-        goBack()
-        assertScreen("Today", file: file, line: line)
+        if !fromSettings {
+            goBack()
+            assertScreen("Today", file: file, line: line)
+        }
         return number
     }
 
     /// Reads "Pending reminders" until `condition` holds, at most four
     /// times: the scheduler applies a change a moment after the store write
     /// (`ReminderCoordinator.scheduleRecompute`).
-    private func pendingReminders(where condition: (Int) -> Bool) -> Int? {
+    private func pendingReminders(fromSettings: Bool = false, where condition: (Int) -> Bool) -> Int? {
         var count: Int?
         for _ in 0..<4 {
-            count = diagnosticsCount("Pending reminders")
+            count = diagnosticsCount("Pending reminders", fromSettings: fromSettings)
             if let count, condition(count) { return count }
             sleep(1)
         }
@@ -274,15 +277,35 @@ extension AutomatedChecks {
     /// do not answer the permission request on screen 4. Today shows
     /// "Allow notifications to get reminders.". A tap shows the system
     /// request. "Allow": the line goes, and Diagnostics "Pending reminders"
-    /// is more than 0. (The "Deny" path and the badge in the iOS Settings
-    /// app stay device checks: the permission comes back only with a new
-    /// install.)
+    /// is more than 0. Item 1 of the first comment, the effect on the
+    /// Reminders group: before the answer it shows "Reminders need
+    /// notification permission." and "Allow notifications"; after "Allow"
+    /// it shows neither, and no denied line. (The "Deny" path and the badge
+    /// in the iOS Settings app stay device checks: the permission comes
+    /// back only with a new install.)
     func testZFreshInstallAsksForNotificationsOnToday() throws {
+        func openReminders() {
+            tapToolbar("Settings")
+            assertScreen("Settings")
+            app.buttons["Reminders"].firstMatch.tap()
+            assertScreen("Reminders")
+        }
+        func backToToday() {
+            goBack()
+            assertScreen("Settings")
+            goBack()
+            assertScreen("Today")
+        }
         try launch(nil)
         finishOnboarding()
         let line = app.buttons["Allow notifications to get reminders."].firstMatch
         XCTAssertTrue(line.waitForExistence(timeout: 8),
                       "on a fresh install, Today shows \"Allow notifications to get reminders.\" (a test that answers the system request must run after this one: automated-checks.sh installs the app new for each run)")
+        openReminders()
+        let needsPermission = element(labelled: "Reminders need notification permission.")
+        XCTAssertTrue(needsPermission.waitForExistence(timeout: 5), "before the answer, the Reminders group shows \"Reminders need notification permission.\"")
+        XCTAssertTrue(app.buttons["Allow notifications"].firstMatch.exists, "before the answer, the Reminders group shows \"Allow notifications\"")
+        backToToday()
         line.tap()
         let alert = notificationPermissionAlert
         XCTAssertTrue(alert.waitForExistence(timeout: 10), "a tap on the line shows the system request")
@@ -291,6 +314,60 @@ extension AutomatedChecks {
         XCTAssertFalse(app.buttons["Notifications are off in iOS Settings."].exists, "after \"Allow\", Today shows no denied line")
         let pending = pendingReminders(where: { $0 > 0 })
         XCTAssertGreaterThan(pending ?? 0, 0, "after \"Allow\", Diagnostics \"Pending reminders\" is more than 0")
+        openReminders()
+        XCTAssertTrue(app.switches["Planned meals"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(needsPermission.exists, "after \"Allow\", the Reminders group shows no permission line")
+        XCTAssertFalse(app.buttons["Allow notifications"].exists, "after \"Allow\", the Reminders group shows no \"Allow notifications\"")
+        XCTAssertFalse(element(labelBeginningWith: "Notifications are off in iOS Settings.").exists, "after \"Allow\", the Reminders group shows no denied line")
+    }
+
+    /// mm-t24.22, item 2 of the first comment (r13-19, r16-01): the
+    /// schedule computes again after "Turn reminders on", a switch, a time
+    /// change and a quiet hours change, by the Diagnostics count. The store
+    /// is in stage 1 at 10:xx local time, with the reminders paused. Paused:
+    /// 0 pending. "Turn reminders on": more than 0 (P). "Close the day" off:
+    /// fewer (S). On again: P. "Close the day time" 22:30, inside quiet
+    /// hours: S again, because quiet hours drop every close-the-day
+    /// reminder. Quiet hours off: P again. (A new schedule on app activation
+    /// gives the same count, so the count cannot show it; that part stays a
+    /// device check.)
+    func testZRemindersScreenChangesComputeTheScheduleAgain() throws {
+        try launchOnTodayInTheSeededZone("stage1Paused")
+        allowNotificationsFromTodayIfAsked()
+        XCTAssertEqual(pendingReminders(where: { $0 == 0 }), 0, "while the reminders are paused, nothing is pending")
+        tapToolbar("Settings")
+        assertScreen("Settings")
+        func inReminders(_ change: () -> Void) {
+            // Diagnostics is at the bottom of Settings; Reminders is at the top.
+            let reminders = app.buttons["Reminders"].firstMatch
+            for _ in 0..<6 where !(reminders.exists && reminders.isHittable) { app.swipeDown() }
+            reminders.tap()
+            assertScreen("Reminders")
+            change()
+            goBack()
+            assertScreen("Settings")
+        }
+        inReminders {
+            XCTAssertTrue(element(labelled: "Reminders are paused.").waitForExistence(timeout: 5), "the Reminders group shows \"Reminders are paused.\"")
+            app.buttons["Turn reminders on"].firstMatch.tap()
+            XCTAssertTrue(element(labelled: "Reminders are paused.").waitForNonExistence(timeout: 5), "\"Turn reminders on\" removes the line")
+        }
+        guard let all = pendingReminders(fromSettings: true, where: { $0 > 0 }) else { return XCTFail("Diagnostics shows \"Pending reminders\"") }
+        XCTAssertGreaterThan(all, 0, "after \"Turn reminders on\", reminders are pending")
+        inReminders { flipSwitch("Close the day") }
+        guard let withoutCloseTheDay = pendingReminders(fromSettings: true, where: { $0 < all }) else { return XCTFail("Diagnostics shows \"Pending reminders\"") }
+        XCTAssertLessThan(withoutCloseTheDay, all, "\"Close the day\" off cancels the close-the-day reminders")
+        inReminders { flipSwitch("Close the day") }
+        XCTAssertEqual(pendingReminders(fromSettings: true, where: { $0 == all }), all, "\"Close the day\" on schedules them again")
+        inReminders {
+            guard let time = timePicker(showing: "21:45") else { return XCTFail("the Reminders group shows \"Close the day time\" 21:45") }
+            turnTheWheels(of: time, toHour: "22", minute: "30")
+            XCTAssertNotNil(timePicker(showing: "22:30"), "\"Close the day time\" shows 22:30")
+        }
+        XCTAssertEqual(pendingReminders(fromSettings: true, where: { $0 == withoutCloseTheDay }), withoutCloseTheDay,
+                       "a close-the-day time inside quiet hours (22:00 to 07:00) drops every close-the-day reminder")
+        inReminders { flipSwitch("Quiet hours") }
+        XCTAssertEqual(pendingReminders(fromSettings: true, where: { $0 == all }), all, "with quiet hours off, the close-the-day reminders at 22:30 are pending again")
     }
 
     /// mm-t24.22, comment of mm-t24.37, item 3 (r13-19, r16-01): on

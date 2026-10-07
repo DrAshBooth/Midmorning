@@ -21,6 +21,9 @@ import Constants
 ///   reminder still to come: close the day at 21:45 (stage 1, no entry
 ///   after 17:00). The midday reminder does not fire (an entry before
 ///   midday), and stage 1 has no planned meal and no morning plan reminder.
+/// - `stage1Paused`: as `stage1Morning`, and the reminders are paused
+///   ("Reminders are paused." and "Turn reminders on" in Settings,
+///   Reminders), so the scheduler schedules nothing.
 /// - `stage2Evening`: week 2, seeded in a fixed-offset zone where the local
 ///   time at the seed is 19:xx. The start day is eight record days ago, and
 ///   each earlier record day holds one entry, so stage 2 is open. Today's
@@ -40,7 +43,7 @@ import Constants
 ///   taps "Start" on screen 4.
 @MainActor
 enum RemindersExportScenarios {
-    nonisolated static let names: Set<String> = ["stage1Morning", "stage1Evening", "stage2Evening", "reminderSettings", "unfinishedOnboarding"]
+    nonisolated static let names: Set<String> = ["stage1Morning", "stage1Evening", "stage1Paused", "stage2Evening", "reminderSettings", "unfinishedOnboarding"]
 
     /// Seeds `scenario` and stops the process when `scenario` is one of
     /// `names`. Returns for any other name. `main.swift` calls this in one
@@ -69,8 +72,8 @@ enum RemindersExportScenarios {
         try store.setLocalSettingValue("false", key: AppLockSettingsKeys.enabled)
 
         switch scenario {
-        case "stage1Morning", "stage1Evening":
-            let zone = zoneWhereTheHourIs(scenario == "stage1Morning" ? 10 : 19, at: now)
+        case "stage1Morning", "stage1Evening", "stage1Paused":
+            let zone = zoneWhereTheHourIs(scenario == "stage1Evening" ? 19 : 10, at: now)
             try Data(zone.identifier.utf8).write(to: zoneFile)
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = zone
@@ -86,6 +89,9 @@ enum RemindersExportScenarios {
             let breakfast = today.start.addingTimeInterval(3600)
             try store.add(time: breakfast, what: "Toast and tea", feltLikeABinge: false, createdAt: now.addingTimeInterval(-60),
                           utcOffsetSeconds: zone.secondsFromGMT(for: breakfast))
+            if scenario == "stage1Paused" {
+                try store.pauseReminders(at: now.addingTimeInterval(-3600), changedAt: now.addingTimeInterval(-3600))
+            }
             print("seeded \(scenario) at \(directory.path) in \(zone.identifier)")
         case "stage2Evening":
             let zone = zoneWhereTheHourIs(19, at: now)
