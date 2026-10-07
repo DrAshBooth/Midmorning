@@ -147,7 +147,7 @@ extension AutomatedChecks {
     /// `overAKeptDraft`: the cover over the new-entry screen of a reminder
     /// "Add" after the request at Save did not succeed (ruling r13-04).
     /// That screen is in the cover's own window, and the accessibility
-    /// tree still holds it under the cover (bug filed under mm-t45; the
+    /// tree still holds it under the cover (bug mm-t45.6; the
     /// VoiceOver check on mm-t15.14 decides what VoiceOver reads). So the
     /// test requires that no control of that screen can take a tap, and
     /// that no part of Today shows.
@@ -408,6 +408,20 @@ extension AutomatedChecks {
         XCTAssertTrue(element(labelBeginningWith: "This device").waitForExistence(timeout: 10), "the deleted screen shows")
         XCTAssertFalse(failure.exists, "the line goes")
         assertAppLockRequests(0, "\"Delete from this device\" makes no request")
+
+        // "Delete everything after an enrolment change": the confirmation
+        // deletes everything, and the next launch shows onboarding. (The
+        // erasure marker needs sync, 4.1b.)
+        try launchWithTheSeam("lock-face-only", results: [], enrolmentHash: "B")
+        assertTheLockedCover(afterAnEnrolmentChange: true, "after an enrolment change")
+        deleteEverythingButton.tap()
+        XCTAssertTrue(app.alerts["Delete everything?"].waitForExistence(timeout: 8), "\"Delete everything\" shows its confirmation on one tap")
+        tapDialogButton("Delete everything")
+        XCTAssertTrue(element(labelBeginningWith: "Everything is deleted.").waitForExistence(timeout: 10), "the deleted screen shows")
+        assertAppLockRequests(0, "after an enrolment change the deletion makes no request")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["Continue"].firstMatch.waitForExistence(timeout: 20), "after the deletion, the app opens on onboarding")
     }
 
     // MARK: mm-t15.14: "Face ID only" (rulings r15-03 and r13-06)
@@ -464,6 +478,15 @@ extension AutomatedChecks {
         let faceIDOnly = openSettingsAt("Face ID only")
         XCTAssertTrue(faceIDOnly.isEnabled, "\"Face ID only\" is enabled with Face ID enrolled and the app lock on")
         XCTAssertEqual(switchValue("Face ID only"), "0")
+        // "Cancel the turn-on": the warning, and "Cancel" leaves the setting
+        // off, with no request.
+        flipSwitch("Face ID only")
+        XCTAssertTrue(app.alerts["Face ID only"].waitForExistence(timeout: 8), "the warning \"Face ID only\" shows")
+        XCTAssertTrue(app.alerts["Face ID only"].staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "If Face ID stops working, you can delete this device")).firstMatch.exists,
+                      "the warning reads \"If Face ID stops working, you can delete this device's copy. ...\"")
+        tapDialogButton("Cancel")
+        XCTAssertEqual(switchValue("Face ID only"), "0", "\"Cancel\" leaves the setting off")
+        assertAppLockRequests(1, "\"Cancel\" in the warning makes no request")
         // (1) Turn on, with a success.
         turnOnFaceIDOnly("succeed", enrolmentHash: "A")
         XCTAssertEqual(assertAppLockRequests(2, "\"Turn on\" makes one request").last,
@@ -1109,6 +1132,59 @@ extension AutomatedChecks {
         _ = assertTheCoverHides("The restart re-screen", requests: 1) { app.navigationBars["A few questions first"].waitForExistence(timeout: 8) }
     }
 
+    /// mm-t24.22, comment of mm-t24.29 (commit 7d7d651), the app-lock part:
+    /// "With the app lock on, every tap but 'Add' shows the cover first and
+    /// opens its screen after Unlock". A tap on the weigh-in day, the
+    /// weekly review, the close-the-day, the midday and the morning plan
+    /// reminder, each while the app is locked: the cover stays and no
+    /// screen opens; after "Unlock" the reminder's own screen shows. A tap
+    /// on a planned meal reminder opens Today. ("Add" is
+    /// `testTheLockedReminderAddShowsOnlyTheFixedChips`. The cold launch
+    /// stays a device check: the app that a tap starts gets no launch
+    /// environment, so the test seam is off.)
+    func testReminderTapsWithTheAppLockOn() throws {
+        try launchWithTheSeam("lock-review", results: ["succeed"])
+        assertNoCover(on: "Today", "after the request at launch succeeds")
+        allowNotificationsFromToday()
+        var requests = 1
+        let screens: [(kind: String, name: String, shows: () -> Bool, close: () -> Void)] = [
+            ("weighInDay", "the weigh-in screen", { self.app.navigationBars["Weigh-in"].waitForExistence(timeout: 8) }, { self.goBack() }),
+            ("weeklyReview", "the weekly review", { self.app.navigationBars["Weekly review"].waitForExistence(timeout: 8) }, { self.goBack() }),
+            ("closeTheDay", "Close the day", { self.app.navigationBars["Close the day"].waitForExistence(timeout: 8) }, {
+                self.app.swipeDown(velocity: .fast)
+                if self.app.navigationBars["Close the day"].exists { self.app.buttons["Done"].firstMatch.tap() }
+            }),
+            ("midday", "the new-entry screen", { self.app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8) }, {
+                self.app.navigationBars.buttons["Cancel"].firstMatch.tap()
+            }),
+            ("morningPlan", "Today's plan", { self.app.navigationBars["Today's plan"].waitForExistence(timeout: 8) }, {
+                self.app.navigationBars["Today's plan"].buttons["Cancel"].tap()
+            }),
+        ]
+        for screen in screens {
+            tapTheLockControl()
+            assertTheLockedCover("the lock control before the \(screen.kind) reminder")
+            tapAReminder(kind: screen.kind)
+            assertTheLockedCover("a tap on the \(screen.kind) reminder while the app is locked")
+            assertAppLockRequests(requests, "a tap on a reminder makes no request")
+            scriptAppLock(["succeed"])
+            unlockButton.tap()
+            requests += 1
+            XCTAssertTrue(unlockButton.waitForNonExistence(timeout: 8), "Unlock takes the cover off")
+            XCTAssertTrue(screen.shows(), "after Unlock the \(screen.kind) reminder opens \(screen.name)")
+            screen.close()
+            assertScreen("Today")
+        }
+        // A tap on a planned meal reminder opens Today.
+        tapTheLockControl()
+        tapAReminder(kind: "plannedMeal")
+        assertTheLockedCover("a tap on the planned meal reminder while the app is locked")
+        scriptAppLock(["succeed"])
+        unlockButton.tap()
+        assertNoCover(on: "Today", "after Unlock the planned meal reminder opens Today")
+        XCTAssertEqual(app.navigationBars.count, 1, "only Today shows")
+    }
+
     /// mm-t15.14, addition of commit 758c344 to check (2), with the set-up
     /// of that check ("Lock after" "30 seconds"): "Pull down Notification
     /// Centre over a sheet with the keyboard up: the cover shows and the
@@ -1119,7 +1195,7 @@ extension AutomatedChecks {
     /// sends the app to the background: with "At once" the return asks,
     /// and after 45 seconds with "30 seconds" it asks too. The spec's
     /// scenario "Inactive is not background" stays a device check; see the
-    /// bug filed under mm-t45.)
+    /// bug mm-t45.7.)
     func testNotificationCentreOverASheet() throws {
         try launchWithTheSeam("lock-week1-30s", results: ["succeed"])
         assertNoCover(on: "Today", "after the request at launch succeeds")
