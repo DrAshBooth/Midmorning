@@ -23,7 +23,10 @@ struct MachContinuousClock: ContinuousClockReading {
 /// "Fallback to the device passcode" — `.biometricsAndPasscode` maps to
 /// `deviceOwnerAuthentication`, which offers the device passcode.
 /// Requirement: "Face ID only or Touch ID only" — `.biometricsOnly` maps to
-/// `deviceOwnerAuthenticationWithBiometrics`, which never does. Untestable
+/// `deviceOwnerAuthenticationWithBiometrics`, which never does. For that
+/// policy the context also sets an empty `localizedFallbackTitle`, so after a
+/// failed attempt iOS shows no "Enter Password" button (scenario "Face ID
+/// fails at Turn on": the request offers no "Enter Passcode"). Untestable
 /// under `swift test` (LocalAuthentication needs a device or a simulator
 /// with enrolled biometrics); the app-lock change's device-check bead lists
 /// every scenario this type's real behaviour must prove.
@@ -33,6 +36,9 @@ struct LAContextAuthenticator: AuthenticationPerforming {
         let laPolicy: LAPolicy = policy == .biometricsOnly
             ? .deviceOwnerAuthenticationWithBiometrics
             : .deviceOwnerAuthentication
+        if policy == .biometricsOnly {
+            context.localizedFallbackTitle = ""
+        }
         var error: NSError?
         guard context.canEvaluatePolicy(laPolicy, error: &error) else { return false }
         return await withCheckedContinuation { continuation in

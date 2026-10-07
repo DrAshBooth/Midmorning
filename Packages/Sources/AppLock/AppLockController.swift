@@ -243,16 +243,16 @@ public final class AppLockController: ObservableObject {
     /// does not lock the person out later. This is not a reset: the kept
     /// hash then compares as before. The app reads `currentEnrolmentHash`
     /// only after the request succeeds. When the device gives no hash, the
-    /// kept hash stays as it is.
+    /// setting stays off, the app saves no value, the kept hash does not
+    /// change and this returns `false`. Thus an old kept hash never comes
+    /// back into use (app-lock "Face ID only or Touch ID only").
     @discardableResult
-    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: @autoclosure () -> String? = nil) async -> Bool {
+    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: @autoclosure () -> String?) async -> Bool {
         let succeeded = await authenticator.authenticate(reason: BiometryLabels.unlockReason, policy: .biometricsOnly)
-        guard succeeded else { return false }
+        guard succeeded, let hash = currentEnrolmentHash() else { return false }
         state.faceOrTouchOnlyEnabled = true
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.faceOrTouchOnly)
-        if let hash = currentEnrolmentHash() {
-            settings?.setAppLockSetting(hash, forKey: AppLockSettingsKeys.enrolmentStateHash)
-        }
+        settings?.setAppLockSetting(hash, forKey: AppLockSettingsKeys.enrolmentStateHash)
         return true
     }
 

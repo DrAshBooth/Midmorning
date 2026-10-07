@@ -121,16 +121,18 @@ item needs a new line for the commit of that build (gate mm-t43.31). A
 build on which Ash does each of those checks by hand does not need the
 line.
 
-Two bugs change what the suite checks until they are fixed:
+Two bugs change what the suite checks:
 
 - mm-t12b.27: on the iOS 27.0 simulator Today is blank while TodayView,
   NewEntryView and EditEntryView apply `.privacySensitive()`. Every check
   that starts on Today fails on the committed code until this bug is fixed.
   The fix waits for decision r16-02.
 - mm-t12b.28: on iOS 27, "Delete this entry?" shows no "Cancel".
-  `tapDialogButton` taps outside the dialog to cancel. The fix of
-  mm-t12b.28 makes the helper require the "Cancel" button. The fix waits
-  for decision r16-03.
+  This occurs with a confirmation dialog, which shows as a popover with
+  no "Cancel" from iOS 26. Ash ruled on 7 October 2026 (r16-03) that each
+  confirmation with a "Cancel" is an alert, which shows both buttons.
+  Commit d9340d7 makes this change. `tapDialogButton` fails when no alert
+  with a "Cancel" button shows.
 
 mm-t32.28 (each self-harm row at the review reads the question) does not
 change the result: `reviewSelfHarmRows` finds the rows by the question

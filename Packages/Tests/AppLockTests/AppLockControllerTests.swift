@@ -166,7 +166,8 @@ final class AppLockControllerTests: XCTestCase {
 
     func testTurningFaceOrTouchOnlyOffNeedsAuthentication() async {
         let (controller, _, _) = makeController()
-        await controller.confirmTurnOnFaceOrTouchOnly()
+        await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: "H1")
+        XCTAssertTrue(controller.state.faceOrTouchOnlyEnabled)
         let succeeded = await controller.tapTurnOffFaceOrTouchOnly()
         XCTAssertTrue(succeeded)
         XCTAssertFalse(controller.state.faceOrTouchOnlyEnabled)
@@ -221,14 +222,22 @@ final class AppLockControllerTests: XCTestCase {
         XCTAssertEqual(controller.state.coverMode, .lockedAfterEnrolmentChange)
     }
 
-    /// A turn-on with no hash from the device keeps the hash already kept.
-    func testATurnOnWithNoHashKeepsTheKeptHash() async {
+    /// Ruling r15-03 (mm-t15.21): when the device gives no enrolment state
+    /// hash after the request succeeds, the setting stays off, the app
+    /// saves no value and the kept hash does not change. Thus the old kept
+    /// hash does not come back into use.
+    func testATurnOnWithNoHashKeepsTheSettingOffAndTheKeptHash() async {
         let settings = InMemoryAppLockSettings([AppLockSettingsKeys.enrolmentStateHash: "H1"])
-        let (controller, _) = makeController(settings: settings)
+        let (controller, authenticator) = makeController(settings: settings, authenticationResult: true)
 
-        await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: nil)
+        let turnedOn = await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: nil)
 
-        XCTAssertTrue(controller.state.faceOrTouchOnlyEnabled)
+        XCTAssertFalse(turnedOn)
+        let requests = await authenticator.requests
+        XCTAssertEqual(requests, [.init(reason: BiometryLabels.unlockReason, policy: .biometricsOnly)])
+        XCTAssertFalse(controller.state.faceOrTouchOnlyEnabled)
+        XCTAssertEqual(controller.state.authenticationPolicy, .biometricsAndPasscode)
+        XCTAssertNil(settings.values[AppLockSettingsKeys.faceOrTouchOnly])
         XCTAssertEqual(settings.values[AppLockSettingsKeys.enrolmentStateHash], "H1")
     }
 
