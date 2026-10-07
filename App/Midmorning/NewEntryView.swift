@@ -19,6 +19,14 @@ struct NewEntryView: View {
     /// "Add a place" stays in memory until Save succeeds (`unsavedPlaces`),
     /// so the store gets nothing before the authentication.
     var authenticateBeforeSave: (@MainActor () async -> Bool)?
+    /// app-lock spec, "A new entry before authentication" (ruling r17-01,
+    /// mm-t15.22). `false` while the app is locked
+    /// (`AppLifecycleState.newEntryShowsSavedPlaces`): the Where control
+    /// shows only the four fixed chips and the places added on this
+    /// screen, and the screen does not read the custom places. When it
+    /// changes to `true` (after "Unlock", or after the request at Save
+    /// succeeds), the custom chips show too.
+    var showsSavedPlaces = true
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -84,7 +92,7 @@ struct NewEntryView: View {
             openedAt = Date()
             loadSegments()
             time = openingTime()
-            customPlaces = (try? store.customPlaces()) ?? []
+            if showsSavedPlaces { customPlaces = (try? store.customPlaces()) ?? [] }
             Task {
                 try? await Task.sleep(for: .milliseconds(300))
                 whatIsFocused = true
@@ -124,7 +132,7 @@ struct NewEntryView: View {
                 onSaveFromKeyboard: save
             )
         case .whereField:
-            WhereChipsView(selection: $whereSelection, pendingPlace: $pendingPlace, customPlaces: unsavedPlaces.chips(savedPlaces: customPlaces), onSaveFromKeyboard: save) { newPlace in
+            WhereChipsView(selection: $whereSelection, pendingPlace: $pendingPlace, customPlaces: unsavedPlaces.chips(savedPlaces: showsSavedPlaces ? customPlaces : []), onSaveFromKeyboard: save) { newPlace in
                 // Return, or the end of editing in "Add a place". The cover
                 // closes the keyboard after a cancelled request at Save,
                 // which ends editing too: on a pending route's screen the
@@ -135,6 +143,11 @@ struct NewEntryView: View {
                 }
                 try? store.touchCustomPlace(newPlace, at: Date())
                 customPlaces = (try? store.customPlaces()) ?? []
+            }
+            // Ruling r17-01: after "Unlock", the screen stays with its
+            // text, and its custom chips show.
+            .onChange(of: showsSavedPlaces) { _, shows in
+                if shows { customPlaces = (try? store.customPlaces()) ?? [] }
             }
         case .star:
             // A neutral system grey, not the default green: the star is

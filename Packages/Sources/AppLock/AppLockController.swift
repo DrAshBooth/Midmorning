@@ -25,11 +25,12 @@ public final class AppLockController: ObservableObject {
     /// not set it: after that tap, only "Unlock" asks.
     public private(set) var authenticationRequestDue: Bool
 
-    /// The last "Delete everything" from the cover (ruling r14-01,
-    /// mm-t41.26). The cover shows "Could not delete. Try again." under its
+    /// The last deletion from the cover: "Delete everything" (ruling
+    /// r14-01, mm-t41.26) or "Delete from this device" (ruling r17-04,
+    /// mm-t41.27). The cover shows "Could not delete. Try again." under its
     /// controls while this is `.failed`. A new deletion or a successful
     /// authentication removes the line.
-    @Published public private(set) var deleteEverythingOutcome: DeleteAllOutcome?
+    @Published public private(set) var coverDeletionOutcome: DeleteAllOutcome?
 
     public init(
         state: AppLifecycleState,
@@ -61,7 +62,7 @@ public final class AppLockController: ObservableObject {
             }
         case .authenticationSucceeded:
             authenticationRequestDue = false
-            deleteEverythingOutcome = nil
+            coverDeletionOutcome = nil
         default:
             break
         }
@@ -167,27 +168,30 @@ public final class AppLockController: ObservableObject {
     /// screen follows the deletion).
     @discardableResult
     public func confirmDeleteEverything() async -> Bool {
-        deleteEverythingOutcome = nil
-        do {
-            try await deleteAllSeam.deleteEverything()
-            deleteEverythingOutcome = .deleted
-            return true
-        } catch {
-            deleteEverythingOutcome = .failed
-            return false
-        }
+        await runCoverDeletion { try await $0.deleteEverything() }
     }
 
     /// "Delete from this device" after an enrolment change makes no
     /// authentication request: the enrolment change is why the cover offers
     /// this control instead of "Unlock" in the first place. Returns whether
-    /// the deletion succeeded.
+    /// the deletion succeeded. Ruling r17-04 (mm-t41.27): after a failure,
+    /// the cover shows the same line as after a failed "Delete
+    /// everything", "Could not delete. Try again.", under its controls.
     @discardableResult
     public func confirmDeleteFromThisDevice() async -> Bool {
+        await runCoverDeletion { try await $0.deleteFromThisDevice() }
+    }
+
+    /// One deletion from the cover. The failure line goes while the
+    /// deletion runs. Then `coverDeletionOutcome` holds the result.
+    private func runCoverDeletion(_ deletion: (DeleteAllPerforming) async throws -> Void) async -> Bool {
+        coverDeletionOutcome = nil
         do {
-            try await deleteAllSeam.deleteFromThisDevice()
+            try await deletion(deleteAllSeam)
+            coverDeletionOutcome = .deleted
             return true
         } catch {
+            coverDeletionOutcome = .failed
             return false
         }
     }
@@ -226,23 +230,30 @@ public final class AppLockController: ObservableObject {
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.enabled)
     }
 
-    /// The "Face ID only"/"Touch ID only" warning's "Turn on": no new
-    /// authentication request, only the warning the person just read. The
-    /// person is past the lock already: the Privacy group shows only under
-    /// an unlocked app, and the control is disabled while the app lock is
-    /// off.
+    /// The "Face ID only"/"Touch ID only" warning's "Turn on". Ruling
+    /// r15-03 (mm-t15.21): first, the app makes a biometrics-only system
+    /// authentication request, which never offers the device passcode. Thus
+    /// the person proves that the biometric works before the app depends on
+    /// it. On a cancel or a failure, the setting stays off, the app saves
+    /// no value and no hash, and this returns `false`. A biometry lockout
+    /// also makes the request fail, so no old hash stays in use.
     ///
     /// Ruling r13-06 (mm-t15.20): each turn-on saves the current enrolment
     /// state hash, so an enrolment change made while the setting was off
     /// does not lock the person out later. This is not a reset: the kept
-    /// hash then compares as before. With no `currentEnrolmentHash` (the
-    /// device gave none), the kept hash stays as it is.
-    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: String? = nil) {
+    /// hash then compares as before. The app reads `currentEnrolmentHash`
+    /// only after the request succeeds. When the device gives no hash, the
+    /// setting stays off, the app saves no value, the kept hash does not
+    /// change and this returns `false`. Thus an old kept hash never comes
+    /// back into use (app-lock "Face ID only or Touch ID only").
+    @discardableResult
+    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: @autoclosure () -> String?) async -> Bool {
+        let succeeded = await authenticator.authenticate(reason: BiometryLabels.unlockReason, policy: .biometricsOnly)
+        guard succeeded, let hash = currentEnrolmentHash() else { return false }
         state.faceOrTouchOnlyEnabled = true
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.faceOrTouchOnly)
-        if let currentEnrolmentHash {
-            settings?.setAppLockSetting(currentEnrolmentHash, forKey: AppLockSettingsKeys.enrolmentStateHash)
-        }
+        settings?.setAppLockSetting(hash, forKey: AppLockSettingsKeys.enrolmentStateHash)
+        return true
     }
 
     /// Requirement: "Face ID only or Touch ID only" — "The app MUST make

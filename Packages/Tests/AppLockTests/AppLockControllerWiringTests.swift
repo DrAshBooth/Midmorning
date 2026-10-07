@@ -110,7 +110,7 @@ final class AppLockControllerWiringTests: XCTestCase {
     func testFaceIDOnlyOnAndOffWritesItsKey() async {
         let settings = InMemoryAppLockSettings()
         let (controller, _) = makeController(settings: settings)
-        controller.confirmTurnOnFaceOrTouchOnly()
+        await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: "H1")
         XCTAssertEqual(settings.values[AppLockSettingsKeys.faceOrTouchOnly], "true")
         await controller.tapTurnOffFaceOrTouchOnly()
         XCTAssertEqual(settings.values[AppLockSettingsKeys.faceOrTouchOnly], "false")
@@ -133,7 +133,7 @@ final class AppLockControllerWiringTests: XCTestCase {
         let settings = InMemoryAppLockSettings()
         let (controller, _) = makeController(settings: settings)
         controller.setLockAfterSeconds(120)
-        controller.confirmTurnOnFaceOrTouchOnly()
+        await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: "H1")
         await controller.tapTurnOffAppLock()
 
         let relaunched = AppLockController(

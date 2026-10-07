@@ -80,8 +80,10 @@ struct CoverView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
                 // data-and-privacy spec, "Delete-all" (ruling r14-01): one
-                // line under the controls after a failed deletion.
-                if controller.deleteEverythingOutcome == .failed {
+                // line under the controls after a failed deletion. The
+                // same line after a failed "Delete from this device"
+                // (ruling r17-04, mm-t41.27).
+                if controller.coverDeletionOutcome == .failed {
                     Text(DeleteAllOutcome.failureMessage.string)
                         .foregroundStyle(.secondary)
                 }
@@ -101,10 +103,12 @@ struct CoverView: View {
                 focusedControl = showsUnlock ? .unlock : .deleteFromThisDevice
             }
         }
-        .confirmationDialog(
+        // Ruling r16-03 (mm-t12b.28): each confirmation is an alert, which
+        // shows both buttons. From iOS 26 a confirmation dialog shows no
+        // "Cancel".
+        .alert(
             "applock.deleteEverything.confirm.title",
-            isPresented: $isShowingDeleteEverythingConfirmation,
-            titleVisibility: .visible
+            isPresented: $isShowingDeleteEverythingConfirmation
         ) {
             Button("applock.cover.deleteEverything", role: .destructive) {
                 Task {
@@ -117,10 +121,9 @@ struct CoverView: View {
         } message: {
             Text("applock.deleteEverything.confirm.message")
         }
-        .confirmationDialog(
+        .alert(
             "applock.deleteFromThisDevice.confirm.title",
-            isPresented: $isShowingDeleteFromThisDeviceConfirmation,
-            titleVisibility: .visible
+            isPresented: $isShowingDeleteFromThisDeviceConfirmation
         ) {
             Button("applock.cover.deleteFromThisDevice", role: .destructive) {
                 Task {
