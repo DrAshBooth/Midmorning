@@ -73,6 +73,10 @@ step "build the app"
 xcodebuild -project "$ROOT/App/Midmorning.xcodeproj" -scheme Midmorning \
   -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$HERE/.dd-app" -quiet build || exit 1
 step "install the app"
+# A new install each run: only a new install gives back the notification
+# permission "not determined" that testZFreshInstallAsksForNotificationsOnToday
+# needs (mm-t24.25). The tests copy their own store before each launch.
+xcrun simctl uninstall "$UDID" uk.midmorning.app >/dev/null 2>&1
 xcrun simctl install "$UDID" "$HERE/.dd-app/Build/Products/Debug-iphonesimulator/Midmorning.app" || exit 1
 step "build the UI tests"
 xcodebuild build-for-testing -project "$HERE/Harness.xcodeproj" -scheme HarnessUITests \
@@ -81,7 +85,7 @@ xcodebuild build-for-testing -project "$HERE/Harness.xcodeproj" -scheme HarnessU
 # 3. Seed the stores.
 step "seed the stores"
 (cd "$HERE/seeder" && swift build -q) || exit 1
-for scenario in week1 review corrupt; do
+for scenario in week1 review corrupt stage1Morning stage1Evening reminderSettings unfinishedOnboarding; do
   "$HERE/seeder/.build/debug/Seeder" "$HERE/stores/$scenario/Record.store" "$scenario" >/dev/null || exit 1
 done
 
