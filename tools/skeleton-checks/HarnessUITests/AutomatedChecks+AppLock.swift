@@ -629,11 +629,12 @@ extension AutomatedChecks {
             field.tap()
             field.typeText(value)
         }
-        app.buttons["Continue"].firstMatch.tap()
-        // The keyboard tip of a new simulator can take the first tap.
-        if !app.navigationBars["Your start"].waitForExistence(timeout: 3),
-           app.navigationBars["A few questions first"].exists {
+        // The keyboard tip of a new simulator, or the number pad while it
+        // moves, can take a tap on "Continue". Tap again, only while screen
+        // 2 still shows.
+        for _ in 0..<3 {
             app.buttons["Continue"].firstMatch.tap()
+            if app.navigationBars["Your start"].waitForExistence(timeout: 4) || !app.navigationBars["A few questions first"].exists { break }
         }
         assertScreen("Your start", file: file, line: line)
         let wontBeWeighing = app.buttons["I won't be weighing"].firstMatch
