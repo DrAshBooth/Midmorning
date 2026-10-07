@@ -117,11 +117,13 @@ step "seed the stores"
 # The onboarding and review scenarios (or-*): seeder/Sources/Seeder/OnboardingReviewScenarios.swift.
 # The reminders and export scenarios: seeder/Sources/Seeder/RemindersExportScenarios.swift.
 # The app-lock scenarios (lock-*): seeder/Sources/Seeder/AppLockScenarios.swift.
+# The reminder tap scenario (tap-night): seeder/Sources/Seeder/ReminderTapScenarios.swift.
 for scenario in week1 review corrupt \
   fifteen fifteenPlan bands planMatched planBand planStar planMissed planEarly planStrings dayStart6 \
   or-tomorrow or-secondday or-plancard or-plan or-pinned or-tworuns or-deterioration or-weighin \
   stage1Morning stage1Evening stage1Paused stage2Evening stage2Morning reminderSettings unfinishedOnboarding \
-  lock-week1 lock-week1-30s lock-review lock-face-only lock-gym; do
+  lock-week1 lock-week1-30s lock-review lock-face-only lock-gym \
+  tap-night; do
   "$HERE/seeder/.build/debug/Seeder" "$HERE/stores/$scenario/Record.store" "$scenario" >/dev/null || exit 1
 done
 
