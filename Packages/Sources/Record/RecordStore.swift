@@ -105,44 +105,38 @@ public final class RecordStore {
     /// Thrown by the store. Carries no entry data.
     public enum Failure: Error {
         case saveFailed
+        /// A read-only open found no schema version in the migration plan
+        /// that agrees with the metadata of the store files.
+        case noKnownSchemaVersion
     }
+
+    /// The names of the two store files in the store directory.
+    nonisolated static let storeFileNames = ["Record.store", "Local.store"]
 
     public let container: ModelContainer
     private let context: ModelContext
     /// True for safe mode's open (data-and-privacy spec, "Launch safety":
     /// "In safe mode the app MUST open the store read-only"; ruling r13-05,
     /// mm-t42.23). Both configurations then carry `allowsSave: false`, so
-    /// no save and no migration can write to either file. A store that
-    /// needs a migration cannot open read-only: SwiftData migrates in
-    /// place, so the open throws and the files do not change. Bead
-    /// mm-t42.28 (label human) asks Ash how safe mode reads that store.
+    /// no save and no migration can write to either file. The open uses
+    /// the schema version that the store holds and no migration plan, so
+    /// a store that needs a migration opens too (ruling r15-01, mm-t42.28;
+    /// `makeContainer`).
     public let isReadOnly: Bool
 
     /// Opens the store from the two files in `directory`: `Record.store` and
     /// `Local.store`. Sync is off: both configurations carry
     /// `cloudKitDatabase: .none` (sync turns on in 4.1b, on CKSyncEngine, not
     /// SwiftData's own mirroring). `readOnly` is for safe mode only.
-    public init(directory: URL, readOnly: Bool = false) throws {
+    public convenience init(directory: URL, readOnly: Bool = false) throws {
+        try self.init(directory: directory, readOnly: readOnly, migrationPlan: RecordMigrationPlan.self)
+    }
+
+    /// `migrationPlan` is `RecordMigrationPlan` in the app. A test gives a
+    /// plan with a test-only schema version.
+    init(directory: URL, readOnly: Bool, migrationPlan: any SchemaMigrationPlan.Type) throws {
         isReadOnly = readOnly
-        let recordConfiguration = ModelConfiguration(
-            "Record",
-            schema: Schema(RecordSchema.models),
-            url: directory.appendingPathComponent("Record.store"),
-            allowsSave: !readOnly,
-            cloudKitDatabase: .none
-        )
-        let localConfiguration = ModelConfiguration(
-            "Local",
-            schema: Schema(RecordSchema.localModels),
-            url: directory.appendingPathComponent("Local.store"),
-            allowsSave: !readOnly,
-            cloudKitDatabase: .none
-        )
-        container = try ModelContainer(
-            for: Schema(RecordSchema.models + RecordSchema.localModels),
-            migrationPlan: RecordMigrationPlan.self,
-            configurations: recordConfiguration, localConfiguration
-        )
+        container = try Self.makeContainer(directory: directory, readOnly: readOnly, migrationPlan: migrationPlan)
         context = ModelContext(container)
         context.autosaveEnabled = false
         // Every file `Record.store` and `Local.store` create (each one's

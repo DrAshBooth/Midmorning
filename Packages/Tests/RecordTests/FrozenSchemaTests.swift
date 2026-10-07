@@ -115,6 +115,18 @@ final class FrozenSchemaTests: XCTestCase {
         XCTAssertTrue(RecordMigrationPlan.stages.isEmpty, "no migration stage exists yet")
     }
 
+    /// Each schema version holds the types of both store files, because
+    /// the metadata of both files holds the hashes of all those types. A
+    /// staged migration and safe mode's read-only open (ruling r15-01,
+    /// mm-t42.28) find a store's version from those hashes.
+    func testEachSchemaVersionHoldsTheTypesOfBothStoreFiles() {
+        XCTAssertEqual(RecordMigrationPlan.storeSchemaVersions.count, RecordMigrationPlan.schemas.count)
+        XCTAssertEqual(
+            Set(Schema(versionedSchema: RecordSchemaV1.self).entities.map(\.name)),
+            RecordSchema.neutralModelNames.union(["LocalSetting"])
+        )
+    }
+
     /// Scenario: Every earlier version opens. V1 is the first TestFlight
     /// schema, so its own fixture is the one this test opens; a later change
     /// adds one fixture per further version, through the same harness.
