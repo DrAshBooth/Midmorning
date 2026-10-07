@@ -43,8 +43,24 @@ extension AutomatedChecks {
     }
 
     /// Every element on the screen (or under `element`), in one snapshot.
-    func look(_ element: XCUIElement? = nil) -> [Seen] {
-        guard let root = try? (element ?? app).snapshot() else { return [] }
+    /// A snapshot that fails three times fails the test: an empty list
+    /// would let a check that something does not show pass with no look.
+    func look(_ element: XCUIElement? = nil, file: StaticString = #filePath, line: UInt = #line) -> [Seen] {
+        var snapshot: XCUIElementSnapshot?
+        var failure: Error?
+        for attempt in 0..<3 {
+            if attempt > 0 { usleep(500_000) }
+            do {
+                snapshot = try (element ?? app).snapshot()
+                break
+            } catch {
+                failure = error
+            }
+        }
+        guard let root = snapshot else {
+            XCTFail("a snapshot of the screen failed: \(failure.map { "\($0)" } ?? "no snapshot")", file: file, line: line)
+            return []
+        }
         var all: [Seen] = []
         func walk(_ snapshot: XCUIElementSnapshot) {
             all.append(Seen(type: snapshot.elementType, identifier: snapshot.identifier, label: snapshot.label,
@@ -579,35 +595,101 @@ extension AutomatedChecks {
         seen.first { $0.type == .button && $0.label == label && $0.frame.midY >= row.frame.minY && $0.frame.midY <= row.frame.maxY && $0.frame.minX >= row.frame.maxX - 1 }
     }
 
-    /// Taps "Call" beside 116 123: the Recents warning shows as an alert
-    /// with "Call" and "Cancel". "Cancel" closes it, and no call starts: the
-    /// app stays in front and the system shows no call.
-    func callSamaritansAndCancel(bar: String?, file: StaticString = #filePath, line: UInt = #line) {
-        guard let row = reveal(bar: bar, { self.numberRow("116 123", in: $0) }),
+    // MARK: The call record
+
+    /// The simulator has no app for a `tel://` URL, so a call cannot start
+    /// or show there. A Debug build of the app writes each call that it
+    /// asks iOS to start to `tmp/CallRecord` in its container, when the
+    /// launch environment holds this key (`CallRecorder` in the App target;
+    /// `SupportCallSourceTests` proves that `NumberRow.startCall` is the
+    /// app's only route to a call, and that a Release build has no record).
+    static let callRecordKey = "MIDMORNING_CALL_RECORD"
+
+    var callRecordFile: URL {
+        URL(fileURLWithPath: ProcessInfo.processInfo.environment["APP_DATA"] ?? "/dev/null").appendingPathComponent("tmp/CallRecord")
+    }
+
+    /// Turns on the call record for each launch of this test, and removes
+    /// the record of an earlier test. Call it before the first launch.
+    func turnOnTheCallRecord() {
+        app.launchEnvironment[Self.callRecordKey] = "1"
+        try? FileManager.default.removeItem(at: callRecordFile)
+    }
+
+    /// The URL of each call that the app asked iOS to start since
+    /// `turnOnTheCallRecord`, in order. No file means no call. Each test
+    /// that reads the record also shows, with "Call" on the warning, that
+    /// the record gets a call in that run, so a check for no call can fail.
+    func recordedCalls(file: StaticString = #filePath, line: UInt = #line) -> [String] {
+        guard app.launchEnvironment[Self.callRecordKey] == "1" else {
+            XCTFail("the test turns on the call record before its first launch", file: file, line: line)
+            return []
+        }
+        guard let text = try? String(contentsOf: callRecordFile, encoding: .utf8) else { return [] }
+        return text.split(separator: "\n").map(String.init)
+    }
+
+    /// The `tel://` URL that `NumberRow.startCall` makes for `number`.
+    static func callURL(_ number: String) -> String {
+        "tel://" + number.filter(\.isNumber)
+    }
+
+    /// Taps "Call" beside `number` and returns the Recents warning, which
+    /// shows as an alert with "Call" and "Cancel".
+    func openTheRecentsWarning(beside number: String, bar: String?, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
+        guard let row = reveal(bar: bar, { self.numberRow(number, in: $0) }),
               let call = control("Call", besideRow: row, in: look()) else {
-            XCTFail("116 123 shows with \"Call\"", file: file, line: line)
-            return
+            XCTFail("\(number) shows with \"Call\"", file: file, line: line)
+            return nil
         }
         tap(call.frame)
         let alert = app.alerts.firstMatch
-        XCTAssertTrue(alert.waitForExistence(timeout: 5), "\"Call\" shows the Recents warning first", file: file, line: line)
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "\"Call\" beside \(number) shows the Recents warning first", file: file, line: line)
         XCTAssertTrue(alert.staticTexts[Self.recentsWarning].exists, "the warning reads \"\(Self.recentsWarning)\"", file: file, line: line)
         XCTAssertTrue(alert.buttons["Call"].exists, "the warning shows \"Call\"", file: file, line: line)
+        XCTAssertTrue(alert.buttons["Cancel"].exists, "the warning shows \"Cancel\"", file: file, line: line)
+        return alert
+    }
+
+    /// "Call" beside `number`, then "Call" on the Recents warning: the app
+    /// asks iOS to start the call to `number`, and to nothing else.
+    func callAndConfirm(_ number: String, bar: String?, file: StaticString = #filePath, line: UInt = #line) {
+        let before = recordedCalls(file: file, line: line)
+        guard let alert = openTheRecentsWarning(beside: number, bar: bar, file: file, line: line) else { return }
+        XCTAssertEqual(recordedCalls(file: file, line: line), before, "\"Call\" beside \(number) starts no call before the warning", file: file, line: line)
+        alert.buttons["Call"].tap()
+        XCTAssertTrue(alert.waitForNonExistence(timeout: 5), "\"Call\" closes the warning", file: file, line: line)
+        sleep(1)
+        XCTAssertEqual(recordedCalls(file: file, line: line), before + [Self.callURL(number)], "\"Call\" on the warning starts the call to \(number)", file: file, line: line)
+    }
+
+    /// "Call" beside 116 123 shows the Recents warning with "Call" and
+    /// "Cancel". "Cancel" closes it, the screen `screen` returns, and the
+    /// app starts no call: the call record stays empty. Then, as the
+    /// positive control, "Call" beside 116 123 and "Call" on the warning
+    /// write the call to 116 123, so the record works in this run.
+    func callSamaritansCancelThenCall(bar: String?, screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(recordedCalls(file: file, line: line), [], "no call before the test", file: file, line: line)
+        guard let alert = openTheRecentsWarning(beside: "116 123", bar: bar, file: file, line: line) else { return }
+        XCTAssertEqual(recordedCalls(file: file, line: line), [], "\"Call\" beside 116 123 starts no call before the warning", file: file, line: line)
         alert.buttons["Cancel"].tap()
         XCTAssertTrue(alert.waitForNonExistence(timeout: 5), "\"Cancel\" closes the warning", file: file, line: line)
-        XCTAssertEqual(app.state, .runningForeground, "no call starts: the app stays in front", file: file, line: line)
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-        XCTAssertEqual(springboard.alerts.count, 0, "no call starts: the system shows no call", file: file, line: line)
+        assertScreen(screen, file: file, line: line)
+        sleep(1)
+        XCTAssertEqual(recordedCalls(file: file, line: line), [], "\"Cancel\" starts no call", file: file, line: line)
+        callAndConfirm("116 123", bar: bar, file: file, line: line)
+        assertScreen(screen, file: file, line: line)
     }
 
     /// mm-t14.29: after "Yes" and then "No" to the self-harm item, the
     /// support line shows, and under it every item of the support sheet
     /// inline, with Samaritans first. Each number shows "Call" and "Copy
     /// number". "Call" beside 116 123 shows the Recents warning, and
-    /// "Cancel" starts no call. The confirming control `bar` stays active.
-    func assertInlineSupportAfterYesThenNo(bar: String, file: StaticString = #filePath, line: UInt = #line) {
+    /// "Cancel" starts no call (`callSamaritansCancelThenCall`). The
+    /// confirming control `bar` stays active.
+    func assertInlineSupportAfterYesThenNo(bar: String, screen: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertNotNil(reveal(bar: bar, { self.first(.staticText, Self.supportLine, in: $0) }), "the support line shows", file: file, line: line)
-        callSamaritansAndCancel(bar: bar, file: file, line: line)
+        callSamaritansCancelThenCall(bar: bar, screen: screen, file: file, line: line)
         // Bring the support line near the top, then walk down the items.
         _ = reveal(bar: bar) { self.first(.staticText, Self.supportLine, in: $0) }
         var order: [String] = []
@@ -642,31 +724,74 @@ extension AutomatedChecks {
     /// then "No" to the self-harm item show the support line and the inline
     /// support items, Samaritans first, with "Call" and "Copy number" on
     /// each number. "Call" shows the Recents warning, and "Cancel" starts
-    /// no call. "Continue" stays active. (The call itself stays a device
-    /// check.)
+    /// no call (the call record stays empty; "Call" on the warning then
+    /// writes the call to 116 123). "Continue" stays active. (The system
+    /// call flow stays a device check.)
     func testInlineSupportAfterYesThenNoOnScreen2() throws {
+        turnOnTheCallRecord()
         try openScreen2()
         answer(Self.selfHarmQuestion, "Yes")
         answer(Self.selfHarmStep2Question, "No")
-        assertInlineSupportAfterYesThenNo(bar: "Continue")
+        assertInlineSupportAfterYesThenNo(bar: "Continue", screen: "A few questions first")
     }
 
     /// mm-t14.28, mm-t14.29 (mm-t43.32): the same at the weekly review,
     /// where "Done" stays active.
     func testInlineSupportAfterYesThenNoAtTheReview() throws {
+        turnOnTheCallRecord()
         try launchOnToday("review")
         openTheDueReview()
         answer(Self.selfHarmQuestion, "Yes", bar: "Done")
         answer(Self.selfHarmStep2Question, "No", bar: "Done")
-        assertInlineSupportAfterYesThenNo(bar: "Done")
+        assertInlineSupportAfterYesThenNo(bar: "Done", screen: "Weekly review")
     }
 
     /// mm-t14.28, mm-t14.29 (mm-t43.32): the same at the restart re-screen.
     func testInlineSupportAfterYesThenNoAtTheRescreen() throws {
+        turnOnTheCallRecord()
         try openRescreen()
         answer(Self.selfHarmQuestion, "Yes")
         answer(Self.selfHarmStep2Question, "No")
-        assertInlineSupportAfterYesThenNo(bar: "Continue")
+        assertInlineSupportAfterYesThenNo(bar: "Continue", screen: "A few questions first")
+    }
+
+    /// mm-t14.28, item 7 of the comment of 06:10 (mm-t14.24; safeguarding
+    /// spec, "The support sheet"), in the sheet from Today. "Cancel the
+    /// call": "Call" beside 116 123 shows the Recents warning with "Call"
+    /// and "Cancel"; "Cancel" returns to the sheet, and the app starts no
+    /// call. "Call Samaritans": "Call" on the warning starts the call to
+    /// 116 123. "Call Beat in Scotland": "Call" beside 0808 801 0432 and
+    /// "Call" on the warning start the call to 0808 801 0432. A test can
+    /// see the app's call only in the call record; the system call flow
+    /// that follows stays a device check.
+    func testCallAndCancelInTheSupportSheet() throws {
+        turnOnTheCallRecord()
+        try launchOnToday("week1")
+        getSupport(on: "Today").tap()
+        assertScreen("Get support")
+        callSamaritansCancelThenCall(bar: nil, screen: "Get support")
+        callAndConfirm("0808 801 0432", bar: nil)
+        assertScreen("Get support")
+        XCTAssertEqual(recordedCalls(), [Self.callURL("116 123"), Self.callURL("0808 801 0432")], "the app started only the two confirmed calls")
+    }
+
+    /// mm-t14.28, item 6 of the comment of 06:10 (mm-t14.19; safeguarding
+    /// spec, "The exclusion page", scenario "Call Beat"): on the exclusion
+    /// page, "Call" beside England 0808 801 0677 shows the Recents warning,
+    /// and "Call" on the warning starts the call to 0808 801 0677. The
+    /// system call flow that follows stays a device check.
+    func testCallBeatOnTheExclusionPage() throws {
+        turnOnTheCallRecord()
+        try openScreen2()
+        fill("How old are you?", "17")
+        fill("Height in centimetres", "170")
+        fill("Weight in kilograms", "65")
+        for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] { answer(question, "No") }
+        tapConfirm()
+        XCTAssertTrue(element(labelled: "Not right now").waitForExistence(timeout: 8), "the exclusion page shows")
+        callAndConfirm("0808 801 0677", bar: nil)
+        XCTAssertTrue(element(labelled: "Not right now").exists, "the exclusion page stays after the call")
+        XCTAssertEqual(recordedCalls(), [Self.callURL("0808 801 0677")], "the app started only the confirmed call")
     }
 
     // MARK: mm-t14.36 (comment of 15:46 on mm-t14.28)
@@ -1011,24 +1136,27 @@ extension AutomatedChecks {
 
     /// What a tap can start: the Recents warning, Beat's page in the
     /// in-app browser, a "Copied" control, a "Copied. It clears in a
-    /// minute." line, or the new-entry screen.
+    /// minute." line, the new-entry screen, or a call (in the call record).
     struct Effects: Equatable, CustomStringConvertible {
         var warning = 0
         var browser = 0
         var copiedControls = 0
         var copiedLines = 0
         var newEntry = 0
+        var calls = 0
 
         var description: String {
-            "warning \(warning), browser \(browser), \"Copied\" \(copiedControls), copied line \(copiedLines), new entry \(newEntry)"
+            "warning \(warning), browser \(browser), \"Copied\" \(copiedControls), copied line \(copiedLines), new entry \(newEntry), calls \(calls)"
         }
 
         static func - (lhs: Effects, rhs: Effects) -> Effects {
             Effects(warning: lhs.warning - rhs.warning, browser: lhs.browser - rhs.browser, copiedControls: lhs.copiedControls - rhs.copiedControls,
-                    copiedLines: lhs.copiedLines - rhs.copiedLines, newEntry: lhs.newEntry - rhs.newEntry)
+                    copiedLines: lhs.copiedLines - rhs.copiedLines, newEntry: lhs.newEntry - rhs.newEntry, calls: lhs.calls - rhs.calls)
         }
     }
 
+    /// The effects on the screen now. A test that reads them turns on the
+    /// call record first (`turnOnTheCallRecord`).
     func effects() -> Effects {
         let seen = look()
         return Effects(
@@ -1038,7 +1166,8 @@ extension AutomatedChecks {
             browser: app.otherElements["TopBrowserBar"].exists ? 1 : 0,
             copiedControls: seen.filter { $0.type == .button && $0.label == "Copied" }.count,
             copiedLines: seen.filter { $0.type == .staticText && $0.label == Self.copiedLine }.count,
-            newEntry: seen.contains { $0.type == .switch && $0.label == "felt like a binge" } ? 1 : 0
+            newEntry: seen.contains { $0.type == .switch && $0.label == "felt like a binge" } ? 1 : 0,
+            calls: recordedCalls().count
         )
     }
 
@@ -1077,7 +1206,9 @@ extension AutomatedChecks {
     /// In the support items (the sheet or inline), each control alone runs
     /// only its own action: "Call", "Copy number", "Beat webchat" and the GP
     /// paragraph's "Copy". A tap on the text of a number row, away from its
-    /// controls, runs nothing.
+    /// controls, runs nothing. No tap starts a call; at the end, "Call" and
+    /// "Call" on the warning write the one call, so the call record works
+    /// in this run.
     func checkEachSupportControlAlone(bar: String?, file: StaticString = #filePath, line: UInt = #line) {
         // "Call" beside the England number.
         guard let row = reveal(extra: 60, bar: bar, { self.numberRow("0808 801 0677", in: $0) }) else {
@@ -1092,6 +1223,8 @@ extension AutomatedChecks {
         assertTapRunsOnly(Effects(warning: 1), at: call.frame, "\"Call\"", file: file, line: line)
         app.alerts.firstMatch.buttons["Cancel"].tap()
         XCTAssertTrue(app.alerts.firstMatch.waitForNonExistence(timeout: 5), file: file, line: line)
+        sleep(1)
+        XCTAssertEqual(recordedCalls(file: file, line: line), [], "\"Cancel\" starts no call", file: file, line: line)
         // The text of the row, away from its controls.
         assertTapRunsOnly(Effects(), at: row.frame, "the text of the number row", file: file, line: line)
         // "Beat webchat".
@@ -1126,6 +1259,9 @@ extension AutomatedChecks {
         }
         _ = copy
         assertTapRunsOnly(Effects(copiedControls: 1, copiedLines: 1), at: copy2.frame, "\"Copy number\"", file: file, line: line)
+        // The positive control: the call record gets a confirmed call.
+        callAndConfirm("0808 801 0677", bar: bar, file: file, line: line)
+        XCTAssertEqual(recordedCalls(file: file, line: line), [Self.callURL("0808 801 0677")], "only the confirmed call started", file: file, line: line)
     }
 
     /// mm-t14.28, mm-t14.30 (mm-t43.32), in the support sheet: "Call",
@@ -1133,6 +1269,7 @@ extension AutomatedChecks {
     /// only their own action, and a tap on the text of a row runs nothing.
     /// (The call itself and Safari's page stay device checks.)
     func testEachSupportSheetControlRunsOnlyItsOwnAction() throws {
+        turnOnTheCallRecord()
         try launchOnToday("week1")
         getSupport(on: "Today").tap()
         XCTAssertTrue(app.navigationBars["Get support"].waitForExistence(timeout: 8), "the support sheet shows")
@@ -1143,6 +1280,7 @@ extension AutomatedChecks {
     /// onboarding screen 2, after "Yes" and then "No" to the self-harm
     /// item.
     func testEachInlineSupportControlRunsOnlyItsOwnAction() throws {
+        turnOnTheCallRecord()
         try openScreen2()
         answer(Self.selfHarmQuestion, "Yes")
         answer(Self.selfHarmStep2Question, "No")
@@ -1175,17 +1313,24 @@ extension AutomatedChecks {
         XCTAssertFalse(title.exists, "after \"Read\", the card does not come back")
     }
 
-    /// mm-t14.28, mm-t14.30 (mm-t43.32), the plan builder: "Rename" opens
-    /// only the rename sheet and keeps the planned meal; a tap between the
-    /// two controls runs nothing; "Remove" removes only that planned meal
-    /// and opens no sheet.
+    /// mm-t14.28, mm-t14.30 (mm-t43.32), the plan builder with two planned
+    /// meals, Breakfast and Lunch: "Rename" opens only the rename sheet and
+    /// keeps the planned meal; a tap between the two controls runs nothing;
+    /// "Remove" removes only that planned meal (Lunch stays) and opens no
+    /// sheet.
     func testRenameAndRemoveInThePlanBuilderRunAlone() throws {
         try launchOnToday("review")
         tapDayMenu("Today's plan")
         assertScreen("Today's plan")
-        let place = app.buttons["Breakfast"].firstMatch
-        XCTAssertTrue(place.waitForExistence(timeout: 5), "the plan builder offers \"Breakfast\"")
-        place.tap()
+        for slot in ["Breakfast", "Lunch"] {
+            let place = app.buttons[slot].firstMatch
+            XCTAssertTrue(scrollTo(place), "the plan builder offers \"\(slot)\"")
+            place.tap()
+            XCTAssertTrue(app.buttons["Remove \(slot)"].firstMatch.waitForExistence(timeout: 5), "\"\(slot)\" is a planned meal")
+        }
+        let renameLunch = app.buttons["Rename Lunch"].firstMatch
+        let removeLunch = app.buttons["Remove Lunch"].firstMatch
+        _ = scrollTo(app.buttons["Remove Breakfast"].firstMatch)
         let rename = app.buttons["Rename Breakfast"].firstMatch
         let remove = app.buttons["Remove Breakfast"].firstMatch
         XCTAssertTrue(rename.waitForExistence(timeout: 5) && remove.exists, "the planned meal shows \"Rename\" and \"Remove\"")
@@ -1204,6 +1349,7 @@ extension AutomatedChecks {
         XCTAssertTrue(remove.waitForNonExistence(timeout: 5), "\"Remove\" removes the planned meal")
         XCTAssertFalse(app.navigationBars["Rename"].exists, "\"Remove\" opens no rename sheet")
         XCTAssertTrue(app.buttons["Breakfast"].firstMatch.exists, "\"Breakfast\" is free to place again")
+        XCTAssertTrue(scrollTo(removeLunch) && renameLunch.exists, "\"Remove\" on Breakfast removes only Breakfast: Lunch stays a planned meal")
         app.navigationBars["Today's plan"].buttons["Cancel"].tap()
     }
 
@@ -1212,6 +1358,7 @@ extension AutomatedChecks {
     /// new-entry screen and does not answer "Skipped"; "Skipped" answers
     /// "Skipped" and opens nothing.
     func testSkippedAndAddItOnAMissedMealRunAlone() throws {
+        turnOnTheCallRecord()
         try launchOnToday("or-plan")
         let prompt = text("Skipped, or not recorded yet?")
         XCTAssertTrue(prompt.waitForExistence(timeout: 8), "Today shows the missed planned meal prompt")
@@ -1252,7 +1399,15 @@ extension AutomatedChecks {
     /// no element of the content is lower than its top. Filled: a point at
     /// each end of the button, away from its title, differs clearly in
     /// colour from the background just above the button.
-    func assertFullWidthFilledBelowTheContent(_ label: String, in container: XCUIElement, _ screen: String, file: StaticString = #filePath, line: UInt = #line) {
+    ///
+    /// Which button: a page or a sheet that covers another screen holds
+    /// its button inside its scroll view (`inPage`), and the screen under
+    /// it stays in the hierarchy with its own button. So the button comes
+    /// from `container`, never from the screen under it. A list screen
+    /// holds its button in the bottom inset, outside the list; the button
+    /// then comes from the whole screen, and the test first proves that the
+    /// screen shows only one full-width button with that label.
+    func assertFullWidthFilledBelowTheContent(_ label: String, in container: XCUIElement, _ screen: String, inPage: Bool, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(container.waitForExistence(timeout: 8), "\(screen) shows", file: file, line: line)
         var last = ""
         for _ in 0..<10 {
@@ -1262,12 +1417,16 @@ extension AutomatedChecks {
             last = now
         }
         sleep(1)
-        let seen = look()
+        let window = app.windows.firstMatch.frame
+        let seen = inPage ? look(container) : look()
+        if !inPage {
+            let wide = seen.filter { $0.type == .button && $0.label == label && $0.frame.width >= window.width - 48 }
+            XCTAssertEqual(wide.count, 1, "on \(screen), one full-width \"\(label)\" shows, so the button read is the screen's own", file: file, line: line)
+        }
         guard let button = widest(label, in: seen) else {
-            XCTFail("\(screen) shows \"\(label)\"", file: file, line: line)
+            XCTFail("\(screen) shows \"\(label)\"\(inPage ? " inside the page" : "")", file: file, line: line)
             return
         }
-        let window = app.windows.firstMatch.frame
         XCTAssertGreaterThanOrEqual(button.frame.width, window.width - 48, "on \(screen), \"\(label)\" spans the full width", file: file, line: line)
         XCTAssertTrue(button.isEnabled, "on \(screen), \"\(label)\" is active", file: file, line: line)
         let content = look(container).filter { item in
@@ -1307,11 +1466,11 @@ extension AutomatedChecks {
     /// check.)
     func testOnboardingConfirmingButtonsAndShowMeHow() throws {
         try launch(nil)
-        assertFullWidthFilledBelowTheContent("Continue", in: app.scrollViews.firstMatch, "screen 1")
+        assertFullWidthFilledBelowTheContent("Continue", in: app.scrollViews.firstMatch, "screen 1", inPage: true)
         let firstContinue = app.buttons["Continue"].firstMatch
         firstContinue.tap()
         assertScreen("A few questions first")
-        assertFullWidthFilledBelowTheContent("Continue", in: app.collectionViews.firstMatch, "screen 2")
+        assertFullWidthFilledBelowTheContent("Continue", in: app.collectionViews.firstMatch, "screen 2", inPage: false)
         answer(Self.treatmentQuestion, "No")
         answer(Self.pregnancyQuestion, "No")
         answer(Self.selfHarmQuestion, "No")
@@ -1321,7 +1480,7 @@ extension AutomatedChecks {
         tapConfirm()
         dismissKeyboardTipBesideAFullWidthControl()
         assertScreen("Your start")
-        assertFullWidthFilledBelowTheContent("Continue", in: app.collectionViews.firstMatch, "screen 3")
+        assertFullWidthFilledBelowTheContent("Continue", in: app.collectionViews.firstMatch, "screen 3", inPage: false)
         guard let wont = reveal(bar: "Continue", { self.first(.button, "I won't be weighing", in: $0) }) else {
             XCTFail("screen 3 offers \"I won't be weighing\"")
             return
@@ -1329,7 +1488,7 @@ extension AutomatedChecks {
         tap(wont.frame)
         tapConfirm()
         assertScreen("Permissions")
-        assertFullWidthFilledBelowTheContent("Start", in: app.collectionViews.firstMatch, "screen 4")
+        assertFullWidthFilledBelowTheContent("Start", in: app.collectionViews.firstMatch, "screen 4", inPage: false)
         guard let showMeHow = reveal(bar: "Start", { self.first(.button, "Show me how", in: $0) }) else {
             XCTFail("screen 4 shows \"Show me how\"")
             return
@@ -1354,7 +1513,7 @@ extension AutomatedChecks {
         for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] { answer(question, "No") }
         tapConfirm()
         let exclusion = app.scrollViews.containing(NSPredicate(format: "label == %@", "Not right now")).firstMatch
-        assertFullWidthFilledBelowTheContent("Done", in: exclusion, "the exclusion page")
+        assertFullWidthFilledBelowTheContent("Done", in: exclusion, "the exclusion page", inPage: true)
 
         try openScreen2()
         fill("How old are you?", "30")
@@ -1363,7 +1522,7 @@ extension AutomatedChecks {
         for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] { answer(question, "No") }
         tapConfirm()
         let caution = app.scrollViews.containing(NSPredicate(format: "label BEGINSWITH %@", "Your height and weight put you close")).firstMatch
-        assertFullWidthFilledBelowTheContent("Continue", in: caution, "the caution sheet")
+        assertFullWidthFilledBelowTheContent("Continue", in: caution, "the caution sheet", inPage: true)
     }
 
     /// mm-t14.28, mm-t14.38 to mm-t14.40 (mm-t43.32): on the weekly
@@ -1373,15 +1532,15 @@ extension AutomatedChecks {
     func testReviewAndPageConfirmingButtons() throws {
         try launchOnToday("review")
         openTheDueReview()
-        assertFullWidthFilledBelowTheContent("Done", in: app.collectionViews.firstMatch, "the weekly review")
+        assertFullWidthFilledBelowTheContent("Done", in: app.collectionViews.firstMatch, "the weekly review", inPage: false)
         tapGettingWorse()
         let gpPage = app.scrollViews.containing(NSPredicate(format: "label == %@", "It might help to see your GP")).firstMatch
-        assertFullWidthFilledBelowTheContent("Done", in: gpPage, "the GP suggestion page")
+        assertFullWidthFilledBelowTheContent("Done", in: gpPage, "the GP suggestion page", inPage: true)
         tapDoneOnThePage("It might help to see your GP")
         answer(Self.selfHarmQuestion, "Yes", bar: "Done")
         answer(Self.selfHarmStep2Question, "Yes", bar: "Done", verify: false)
         let notRightNow = app.scrollViews.containing(NSPredicate(format: "label == %@", "This may not be right for you now")).firstMatch
-        assertFullWidthFilledBelowTheContent("Done", in: notRightNow, "the not-right-now page")
+        assertFullWidthFilledBelowTheContent("Done", in: notRightNow, "the not-right-now page", inPage: true)
     }
 
     /// mm-t14.28, mm-t14.38 and mm-t14.39 (mm-t43.32): on Close the day,
@@ -1400,6 +1559,6 @@ extension AutomatedChecks {
         if let support = buttons.first {
             XCTAssertGreaterThan(support.frame.minX, bar.frame.midX, "\"Get support\" is in the trailing position")
         }
-        assertFullWidthFilledBelowTheContent("Done", in: topList(), "Close the day")
+        assertFullWidthFilledBelowTheContent("Done", in: topList(), "Close the day", inPage: false)
     }
 }
