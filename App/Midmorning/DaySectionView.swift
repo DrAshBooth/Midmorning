@@ -207,12 +207,13 @@ extension View {
     /// Asks once before a delete: "Delete this entry?" with "Delete" and
     /// "Cancel" (record spec, "Delete an entry"). `pending` holds the entry
     /// that a swipe or the VoiceOver action chose; "Delete" calls
-    /// `onDelete` with it.
+    /// `onDelete` with it. Ruling r16-03 (mm-t12b.28): an alert, not a
+    /// confirmation dialog. From iOS 26 a confirmation dialog shows as a
+    /// popover with no "Cancel"; an alert shows both buttons.
     func deleteEntryConfirmation(_ pending: Binding<RecordRow?>, onDelete: @escaping (RecordRow) -> Void) -> some View {
-        confirmationDialog(
+        alert(
             "entry.delete.confirmTitle",
             isPresented: Binding(get: { pending.wrappedValue != nil }, set: { if !$0 { pending.wrappedValue = nil } }),
-            titleVisibility: .visible,
             presenting: pending.wrappedValue
         ) { entry in
             Button("entry.delete.action", role: .destructive) { onDelete(entry) }

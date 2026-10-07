@@ -27,10 +27,11 @@ struct PrivacyAppLockControls: View {
                 Text(strings.lockLabel.string)
             }
         }
-        .confirmationDialog(
+        // Ruling r16-03 (mm-t12b.28): an alert shows "Turn on" and
+        // "Cancel"; from iOS 26 a confirmation dialog shows no "Cancel".
+        .alert(
             strings.onlyLabel?.string ?? "",
-            isPresented: $isShowingFaceOrTouchOnlyWarning,
-            titleVisibility: .visible
+            isPresented: $isShowingFaceOrTouchOnlyWarning
         ) {
             Button("applock.faceOrTouchOnly.turnOn") {
                 // Ruling r15-03: a biometrics-only system authentication

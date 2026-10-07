@@ -92,7 +92,9 @@ struct EditEntryView: View {
                     Button("entry.save", action: save)
                 }
             }
-            .confirmationDialog("entry.delete.confirmTitle", isPresented: $showingDeleteConfirm, titleVisibility: .visible) {
+            // Ruling r16-03 (mm-t12b.28): an alert shows "Delete" and
+            // "Cancel"; from iOS 26 a confirmation dialog shows no "Cancel".
+            .alert("entry.delete.confirmTitle", isPresented: $showingDeleteConfirm) {
                 Button("entry.delete.action", role: .destructive) {
                     try? store.delete(entryId: entry.id, deletedAt: Date())
                     dismiss()

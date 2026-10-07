@@ -46,10 +46,11 @@ struct StoreOpenFailureView: View {
         .sheet(isPresented: $isShowingSupportSheet) {
             SupportSheetView()
         }
-        .confirmationDialog(
+        // Ruling r16-03 (mm-t12b.28): an alert shows "Delete everything"
+        // and "Cancel"; from iOS 26 a confirmation dialog shows no "Cancel".
+        .alert(
             "applock.deleteEverything.confirm.title",
-            isPresented: $isShowingDeleteConfirmation,
-            titleVisibility: .visible
+            isPresented: $isShowingDeleteConfirmation
         ) {
             Button("settings.privacy.deleteEverything", role: .destructive) {
                 // The deleted screen only after a deletion that succeeded;

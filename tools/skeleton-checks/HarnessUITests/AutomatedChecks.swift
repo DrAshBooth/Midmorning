@@ -148,28 +148,20 @@ final class AutomatedChecks: XCTestCase {
     }
 
     /// Taps the button of a dialog: "Delete" or "Cancel" in "Delete this
-    /// entry?". A swipe action with the same label can stay on screen under
-    /// the dialog, so the dialog's own button is the last match.
+    /// entry?". The helper looks only in the alert, so a swipe action with
+    /// the same label under the alert does not get the tap.
     ///
-    /// mm-t12b.28: on iOS 27 the dialog is a popover that shows no
-    /// "Cancel"; a tap outside the popover cancels. Until that bug is fixed,
-    /// "Cancel" taps outside the popover when the dialog shows no "Cancel".
-    /// The fix of mm-t12b.28 makes this helper require the "Cancel" button.
+    /// Ruling r16-03 (mm-t12b.28): each confirmation dialog with a "Cancel"
+    /// is an alert, which shows both buttons. From iOS 26 a confirmation
+    /// dialog shows as a popover with no "Cancel". So this helper requires
+    /// the alert and its "Cancel" button before it taps `label`.
     func tapDialogButton(_ label: String, file: StaticString = #filePath, line: UInt = #line) {
-        let inSheet = app.sheets.buttons[label]
-        if inSheet.exists {
-            inSheet.tap()
-            return
-        }
-        let matches = app.buttons.matching(NSPredicate(format: "label == %@", label))
-        if label == "Cancel", matches.count == 0 {
-            let outside = app.otherElements["PopoverDismissRegion"].firstMatch
-            XCTAssertTrue(outside.exists, "the dialog shows \"Cancel\" or closes with a tap outside it", file: file, line: line)
-            outside.tap()
-            return
-        }
-        XCTAssertGreaterThan(matches.count, 0, "the dialog shows \"\(label)\"", file: file, line: line)
-        matches.element(boundBy: matches.count - 1).tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5), "the dialog shows as an alert", file: file, line: line)
+        XCTAssertTrue(alert.buttons["Cancel"].exists, "the dialog shows \"Cancel\"", file: file, line: line)
+        let button = alert.buttons[label]
+        XCTAssertTrue(button.exists, "the dialog shows \"\(label)\"", file: file, line: line)
+        button.tap()
     }
 
     /// Scrolls up with a slow drag from the upper part of the screen until
@@ -496,9 +488,8 @@ final class AutomatedChecks: XCTestCase {
         let delete = app.buttons["Delete everything"].firstMatch
         XCTAssertTrue(scrollTo(delete))
         delete.tap()
-        let confirm = app.buttons.matching(NSPredicate(format: "label == %@", "Delete everything"))
-        XCTAssertTrue(confirm.element(boundBy: 1).waitForExistence(timeout: 5), "the confirmation shows")
-        confirm.allElementsBoundByIndex.last!.tap()
+        // Ruling r16-03: the confirmation is an alert with "Cancel".
+        tapDialogButton("Delete everything")
         XCTAssertTrue(element(labelBeginningWith: "Everything is deleted.").waitForExistence(timeout: 10), "the deleted screen shows")
         assertSupportSheetOpens(from: app.buttons["Get support"].firstMatch)
     }
@@ -816,11 +807,12 @@ final class AutomatedChecks: XCTestCase {
     }
 
     /// mm-t12b.1, comment of mm-t12b.7: a swipe on an entry row and
-    /// "Delete" show "Delete this entry?" with "Delete", and the row stays
-    /// on screen while the dialog shows. A cancel keeps the entry. "Delete"
-    /// removes it, with no message. (The "Cancel" button waits for bug
-    /// mm-t12b.28. The VoiceOver action and the planned meal row from stage
-    /// 2 stay device checks.)
+    /// "Delete" show "Delete this entry?" with "Delete" and "Cancel", and
+    /// the row stays on screen while the dialog shows. A cancel keeps the
+    /// entry. "Delete" removes it, with no message. (Ruling r16-03,
+    /// mm-t12b.28: the dialog is an alert, and `tapDialogButton` requires
+    /// its "Cancel". The VoiceOver action and the planned meal row from
+    /// stage 2 stay device checks.)
     func testDeleteAnEntryAsksFirst() throws {
         try launchOnToday("week1")
         let row = element(labelContaining: "Toast and tea")
@@ -828,9 +820,6 @@ final class AutomatedChecks: XCTestCase {
         row.swipeLeft()
         app.buttons["Delete"].firstMatch.tap()
         XCTAssertTrue(element(labelled: "Delete this entry?").waitForExistence(timeout: 5), "\"Delete this entry?\" shows")
-        // The "Cancel" button part of this check is not automated: on iOS 27
-        // the dialog shows no "Cancel" (bug mm-t12b.28). `tapDialogButton`
-        // cancels with a tap outside the dialog until that bug is fixed.
         XCTAssertTrue(row.exists, "the row stays on screen while the dialog shows")
         tapDialogButton("Cancel")
         XCTAssertTrue(element(labelled: "Delete this entry?").waitForNonExistence(timeout: 5))
@@ -840,6 +829,8 @@ final class AutomatedChecks: XCTestCase {
         XCTAssertTrue(element(labelled: "Delete this entry?").waitForExistence(timeout: 5))
         tapDialogButton("Delete")
         XCTAssertTrue(row.waitForNonExistence(timeout: 5), "Delete removes the entry")
+        // The alert of the dialog itself closes after the tap.
+        XCTAssertTrue(app.alerts.firstMatch.waitForNonExistence(timeout: 5), "the delete shows no message")
         XCTAssertEqual(app.alerts.count, 0, "the delete shows no message")
         XCTAssertFalse(element(labelContaining: "eleted").exists, "the delete shows no message")
     }
