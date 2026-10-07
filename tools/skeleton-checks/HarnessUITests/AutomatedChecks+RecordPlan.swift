@@ -468,6 +468,45 @@ extension AutomatedChecks {
         XCTAssertFalse(element(labelled: "Gap of more than 4 hours").exists, "a day before the stage 2 day shows no band")
     }
 
+    /// mm-t12b.1, comment of mm-t12b.19, the part after the 44-point
+    /// check of `testEarlierDayControls`: a tap near the edge of the hit
+    /// area of the day menu's chevron, and of the previous-day and next-day
+    /// chevrons on an earlier day, makes the control respond. Each tap is 8
+    /// points inside a corner of the 44-point area: outside the glyph in
+    /// its centre, so a hit area of the glyph only would not respond.
+    func testTheChevronsRespondToATapNearTheirEdge() throws {
+        let facts = try recordPlanFacts("bands")
+        try launchOnToday("bands")
+        func tapNearCorner(_ control: XCUIElement, _ corner: (CGFloat, CGFloat)) {
+            let frame = control.frame
+            XCTAssertGreaterThanOrEqual(min(frame.width, frame.height), 44, "\(control.label) has a hit area of at least 44 by 44 points")
+            let dx = corner.0 == 0 ? 8 / frame.width : 1 - 8 / frame.width
+            let dy = corner.1 == 0 ? 8 / frame.height : 1 - 8 / frame.height
+            control.coordinate(withNormalizedOffset: CGVector(dx: dx, dy: dy)).tap()
+        }
+        // The day menu: a tap near its top-leading corner opens the menu.
+        let menu = app.buttons["Day options"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 8))
+        tapNearCorner(menu, (0, 0))
+        XCTAssertTrue(app.buttons["Earlier days"].firstMatch.waitForExistence(timeout: 5), "a tap near the edge of the day menu opens the menu")
+        app.buttons["Earlier days"].firstMatch.tap()
+        assertScreen("Earlier days")
+        let after = recordPlanDayText(facts["after"]!)
+        let opened = recordPlanDayText(facts["opened"]!)
+        app.collectionViews.firstMatch.cells.containing(NSPredicate(format: "label == %@", after)).firstMatch.tap()
+        XCTAssertTrue(app.navigationBars[after].waitForExistence(timeout: 8))
+        // The previous-day chevron: a tap near its bottom-trailing corner.
+        tapNearCorner(app.buttons["Previous day"], (1, 1))
+        XCTAssertTrue(app.navigationBars[opened].waitForExistence(timeout: 5), "a tap near the edge of the previous-day chevron moves to the previous day")
+        // The next-day chevron: a tap near its top-leading corner.
+        tapNearCorner(app.buttons["Next day"], (0, 0))
+        XCTAssertTrue(app.navigationBars[after].waitForExistence(timeout: 5), "a tap near the edge of the next-day chevron moves to the next day")
+        tapNearCorner(app.buttons["Previous day"], (0, 1))
+        XCTAssertTrue(app.navigationBars[opened].waitForExistence(timeout: 5), "a tap near another corner of the previous-day chevron moves to the previous day")
+        tapNearCorner(app.buttons["Next day"], (1, 0))
+        XCTAssertTrue(app.navigationBars[after].waitForExistence(timeout: 5), "a tap near another corner of the next-day chevron moves to the next day")
+    }
+
     /// mm-t12b.1, comment of mm-t11.39: a failed save shows "Could not
     /// save. Try again." on the new-entry screen and on the edit screen; the
     /// screen stays open with the typed text, and nothing is saved. The test
