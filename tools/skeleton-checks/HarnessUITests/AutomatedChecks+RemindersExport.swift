@@ -9,20 +9,21 @@ import PDFKit
 /// lock control, VoiceOver and the largest text size stay device checks.
 ///
 /// The seeder scenarios are in `seeder/Sources/Seeder/RemindersExportScenarios.swift`.
-/// `stage1Morning` and `stage1Evening` are seeded in a fixed-offset zone; a
-/// test launches the app with `TZ` set to that zone, so a check of the time
-/// of day does not depend on the hour of the run.
+/// `stage1Morning`, `stage1Evening`, `stage1Paused` and `stage2Evening` are
+/// seeded in a fixed-offset zone; a test launches the app with `TZ` set to
+/// that zone, so a check of the time of day does not depend on the hour of
+/// the run.
 ///
 /// The notification permission: `automated-checks.sh` installs the app new
 /// for each run, so a run starts with the permission "not determined", and
 /// Today shows "Allow notifications to get reminders." in every test. An
-/// answer to the system request stays for the rest of the run. So the two
-/// tests that answer it have names that begin with "testZ": XCTest runs the
-/// tests of a class in name order, and every other test then runs before
-/// them, with the permission line that it was written with.
+/// answer to the system request stays for the rest of the run. So the tests
+/// that answer it have names that begin with "testZ": XCTest runs the tests
+/// of a class in name order, and every other test then runs before them,
+/// with the permission line that it was written with.
 /// `testZFreshInstallAsksForNotificationsOnToday` needs the permission "not
-/// determined" and allows notifications; `testZPauseForTodayCancelsOnlyTodaysReminders`
-/// reads "Pending reminders", which needs that permission, and allows
+/// determined" and allows notifications. The other "testZ" tests read
+/// "Pending reminders", which needs that permission; each allows
 /// notifications itself when it runs alone.
 extension AutomatedChecks {
     private var runEnvironment: [String: String] { ProcessInfo.processInfo.environment }
