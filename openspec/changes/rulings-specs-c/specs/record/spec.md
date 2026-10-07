@@ -1,9 +1,5 @@
 # record
 
-## Purpose
-
-Ash's rulings of 7 October 2026 change two record requirements. The cover hides entries when the app is not active (r16-02). An edit saves in the edit zone that the time control showed (r15-02).
-
 ## MODIFIED Requirements
 
 ### Requirement: Today hides entries when the app is not active
@@ -28,7 +24,7 @@ A tap on a row on Today or on an earlier day MUST open the entry for editing. Th
 
 The time control MUST offer only times inside the entry's own record day. The time control MUST show one segment, which names that record day. The time control MUST show and offer times in the entry's edit zone. When the device's current time zone gives the entry's kept UTC offset at the entry's time, the edit zone is the device's current time zone. Otherwise the edit zone is a fixed zone at the entry's kept UTC offset. The app MUST find the edit zone when the edit screen opens. The app MUST compute that record day's bounds in the edit zone, from the day start row. That row is the one in force for that record day key, as `data-and-privacy` states. In the device's current time zone, a record day on a clock-change date is 23 or 25 hours long, as "The record day" requirement states. The time control MUST NOT offer a time after the current moment.
 
-On save the app MUST use the edit zone that the time control showed, also when the device's current time zone changes while the edit screen is open. On save the app MUST keep the UTC offset of that edit zone at the edited time. In a fixed zone, that offset is the entry's kept offset. On save the app MUST keep the entry's record day as it was. The edited time and its offset then still give that record day's key. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day. The edit zone follows Ash's ruling of 26 September 2026 on the offset at the entry's own time. After travel, it also follows the ruling of 25 September 2026. Ash ruled on 7 October 2026 that an edit uses the edit zone for the time control and for the offset on save (r15-02). So travel never moves an entry, and the time control and Today show the same clock time.
+On save the app MUST use the edit zone that the time control showed. This rule also applies when the device's current time zone changes while the edit screen is open. On save the app MUST keep the UTC offset of that edit zone at the edited time. In a fixed zone, that offset is the entry's kept offset. On save the app MUST keep the entry's record day as it was. The edited time and its offset then still give that record day's key. On save the app MUST keep the entry's creation moment as it was. On save the app MUST close the screen as the "Save is quiet" requirement describes. The app MUST NOT show an "edited" label or any text about the edit. "Cancel" MUST discard every change. Ash ruled on 25 September 2026 that an edit keeps the entry in its own record day. The edit zone follows Ash's ruling of 26 September 2026 on the offset at the entry's own time. After travel, it also follows the ruling of 25 September 2026. Ash ruled on 7 October 2026 that an edit uses the edit zone for the time control and for the offset on save (r15-02). So travel never moves an entry, and the time control and Today show the same clock time.
 
 #### Scenario: Change the What
 - **WHEN** the person taps the 13:05 entry "Toast and tea", changes What to "Toast, tea and a biscuit" and saves

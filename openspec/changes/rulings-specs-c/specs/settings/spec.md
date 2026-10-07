@@ -1,9 +1,5 @@
 # settings
 
-## Purpose
-
-Ash's ruling of 7 October 2026 (r15-03) changes one settings scenario: "Face ID only" turns on after Face ID succeeds.
-
 ## MODIFIED Requirements
 
 ### Requirement: The About group

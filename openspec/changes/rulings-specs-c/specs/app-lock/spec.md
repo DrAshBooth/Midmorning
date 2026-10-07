@@ -1,9 +1,5 @@
 # app-lock
 
-## Purpose
-
-Ash's rulings of 7 October 2026 change four app-lock requirements: the biometrics-only request at "Turn on" (r15-03), the Where chips before authentication (r17-01), the line after a failed "Delete from this device" (r17-04), and the cover over the new-entry screen while the app is not active (r16-02).
-
 ## MODIFIED Requirements
 
 ### Requirement: The cover
@@ -44,7 +40,7 @@ The cover MUST show "Delete from this device" only after an enrolment change, ab
 
 "Delete from this device" MUST delete only this device's copy: `Local.store` and `Record.store`. It MUST write no erasure marker. It MUST delete no zone in iCloud. The data-and-privacy capability owns the deletion and states what else it deletes. "Delete everything" MUST stay a separate control on the same cover with its own confirmation. The app MUST start onboarding only at the next launch.
 
-When the deletion fails, the app MUST show the cover again with the line "Could not delete. Try again." under its controls, the same line as after a failed Delete-all. The app MUST NOT show the deleted screen. Ash ruled this on 7 October 2026 (r17-04).
+When the deletion fails, the app MUST show the cover again with the line "Could not delete. Try again." under its controls, the same line as after a failed Delete-all. The app MUST NOT show the screen that starts with "This device's copy is deleted." Ash ruled this on 7 October 2026 (r17-04).
 
 #### Scenario: Delete from this device
 - **WHEN** the cover shows no "Unlock" and the person taps "Delete from this device", then "Delete from this device" in the confirmation
@@ -60,7 +56,7 @@ When the deletion fails, the app MUST show the cover again with the line "Could 
 
 #### Scenario: Deletion fails from this device
 - **WHEN** the cover shows no "Unlock", the person taps "Delete from this device", then "Delete from this device" in the confirmation, and the app cannot delete the store directory
-- **THEN** the app shows the cover with "Midmorning", "Delete from this device", "Delete everything" and "Could not delete. Try again.", and no deleted screen
+- **THEN** the app shows the cover with "Midmorning", "Delete from this device", "Delete everything" and "Could not delete. Try again.", and not the screen that starts with "This device's copy is deleted."
 
 ### Requirement: Face ID only or Touch ID only
 

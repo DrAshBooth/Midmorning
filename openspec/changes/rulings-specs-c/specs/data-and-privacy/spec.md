@@ -1,9 +1,5 @@
 # data-and-privacy
 
-## Purpose
-
-Ash's ruling of 7 October 2026 (r15-01) changes one data-and-privacy requirement: safe mode opens a store that needs a schema migration at the schema version that the store holds.
-
 ## MODIFIED Requirements
 
 ### Requirement: Launch safety

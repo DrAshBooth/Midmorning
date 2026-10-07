@@ -5,13 +5,16 @@ Each task changes one requirement and its copy in `openspec/changes/v1-programme
 ## 1. data-and-privacy
 
 - [x] 1.1 Modify data-and-privacy "Launch safety" for r15-01: open the store at its own schema version with no migration plan. Run `openspec validate rulings-specs-c --type change --strict`.
+- [ ] 1.2 Gate: after Ash rules on mm-ue6, make "Launch safety" agree with the ruling, here and in the v1-programme copy. Run `openspec validate rulings-specs-c --type change --strict`.
+  For option 1, write "the metadata of each store file". The open throws only when no `VersionedSchema` agrees with the metadata of a file. Add a scenario for a store where only one file migrated.
 
 ## 2. app-lock
 
 - [x] 2.1 Modify app-lock "Face ID only or Touch ID only" for r15-03: make the biometrics-only request at "Turn on" before the hash save, with no comparison with the kept hash. Run `openspec validate rulings-specs-c --type change --strict`.
 - [x] 2.2 Modify app-lock "A new entry before authentication" for r17-01: show no custom place from the store before authentication. Run `openspec validate rulings-specs-c --type change --strict`.
 - [x] 2.3 Modify app-lock "Delete from this device after an enrolment change" for r17-04: show "Could not delete. Try again." after a failed deletion. Run `openspec validate rulings-specs-c --type change --strict`.
-- [x] 2.4 Modify app-lock "The cover" for r17-04 and r16-02: name the line after a failed "Delete from this device", and cover the new-entry screen while the app is not active. Run `openspec validate rulings-specs-c --type change --strict`.
+- [x] 2.4 Modify app-lock "The cover" for r17-04: name the line after a failed "Delete from this device". Run `openspec validate rulings-specs-c --type change --strict`.
+- [x] 2.5 Modify app-lock "The cover" for r16-02: cover the new-entry screen while the app is not active. Run `openspec validate rulings-specs-c --type change --strict`.
 
 ## 3. record
 
