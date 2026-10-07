@@ -248,6 +248,23 @@ extension AutomatedChecks {
         assertScreen("A few questions first", file: file, line: line)
     }
 
+    /// Fills onboarding screen 2 with answers that exclude nothing (age 30,
+    /// 170 cm, 65 kg, and "No" to the three questions), each answer found
+    /// by its own question and checked, then taps "Continue" and waits for
+    /// screen 3. The other groups' onboarding walks use this, because a
+    /// "first open No" search can answer one question twice and leave
+    /// another unanswered, so that screen 2 stays.
+    func completeScreen2(file: StaticString = #filePath, line: UInt = #line) {
+        fill("How old are you?", "30", file: file, line: line)
+        fill("Height in centimetres", "170", file: file, line: line)
+        fill("Weight in kilograms", "65", file: file, line: line)
+        for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] {
+            answer(question, "No", file: file, line: line)
+        }
+        tapConfirm(file: file, line: line)
+        assertScreen("Your start", file: file, line: line)
+    }
+
     /// Today, "Programme", "Start week 1 again": the restart re-screen. The
     /// `week1` store holds no profile, so the re-screen shows first.
     func openRescreen(file: StaticString = #filePath, line: UInt = #line) throws {

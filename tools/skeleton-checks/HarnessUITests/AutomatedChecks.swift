@@ -1040,46 +1040,7 @@ final class AutomatedChecks: XCTestCase {
         XCTAssertTrue(firstContinue.waitForExistence(timeout: 20), "onboarding screen 1 shows")
         XCTAssertTrue(scrollTo(firstContinue))
         firstContinue.tap()
-        // Screen 2: "No" to the three questions, then an age, a height and a
-        // weight that exclude nothing. The questions come first, while no
-        // keyboard covers the lower part of the form.
-        // "Continue" sits over the bottom of the form; a row under it takes
-        // no tap.
-        let continueButton = app.buttons["Continue"].firstMatch
-        for question in 1...3 {
-            var answered = false
-            for _ in 0..<8 {
-                let open = app.buttons.matching(NSPredicate(format: "label == %@", "No")).allElementsBoundByIndex
-                    .filter { $0.isHittable && !$0.isSelected && $0.frame.maxY < continueButton.frame.minY - 8 }
-                    .sorted { $0.frame.minY < $1.frame.minY }
-                if let first = open.first {
-                    first.tap()
-                    answered = true
-                    break
-                }
-                app.swipeUp()
-            }
-            XCTAssertTrue(answered, "screen 2 shows question \(question) with \"No\"")
-        }
-        // The fields from the bottom up, so that each field is above the
-        // number pad of the field before it.
-        for (label, value) in [("Weight in kilograms", "65"), ("Height in centimetres", "170"), ("How old are you?", "30")] {
-            let field = app.textFields[label].firstMatch
-            for _ in 0..<8 where !(field.exists && field.isHittable) { app.swipeDown() }
-            XCTAssertTrue(field.isHittable, "screen 2 shows \"\(label)\"")
-            field.tap()
-            field.typeText(value)
-        }
-        app.buttons["Continue"].firstMatch.tap()
-        // On a new simulator the first use of the keyboard can show a tip
-        // with its own "Continue" (see dismissKeyboardTip). Then the tap
-        // above closes the tip, and screen 2 stays. Tap the screen's
-        // "Continue" once more, only while screen 2 still shows.
-        if !app.navigationBars["Your start"].waitForExistence(timeout: 3),
-           app.navigationBars["A few questions first"].exists {
-            app.buttons["Continue"].firstMatch.tap()
-        }
-        assertScreen("Your start")
+        completeScreen2()
         XCTAssertTrue(element(labelBeginningWith: "Today, ").waitForExistence(timeout: 5), "screen 3 shows \"Today, <weekday date>\"")
         XCTAssertTrue(element(labelBeginningWith: "Tomorrow, ").exists, "screen 3 shows \"Tomorrow, <weekday date>\"")
         XCTAssertTrue(scrollTo(element(labelled: "A day runs from 04:00 to 03:59.")), "screen 3 shows the day boundary line")

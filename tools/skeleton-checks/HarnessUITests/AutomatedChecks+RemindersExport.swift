@@ -273,38 +273,7 @@ extension AutomatedChecks {
         XCTAssertTrue(firstContinue.waitForExistence(timeout: 20), "onboarding screen 1 shows", file: file, line: line)
         XCTAssertTrue(scrollTo(firstContinue), file: file, line: line)
         firstContinue.tap()
-        // Screen 2 (the same steps as testOnboardingScreen3).
-        let continueButton = app.buttons["Continue"].firstMatch
-        for question in 1...3 {
-            var answered = false
-            for _ in 0..<8 {
-                let open = app.buttons.matching(NSPredicate(format: "label == %@", "No")).allElementsBoundByIndex
-                    .filter { $0.isHittable && !$0.isSelected && $0.frame.maxY < continueButton.frame.minY - 8 }
-                    .sorted { $0.frame.minY < $1.frame.minY }
-                if let first = open.first {
-                    first.tap()
-                    answered = true
-                    break
-                }
-                app.swipeUp()
-            }
-            XCTAssertTrue(answered, "screen 2 shows question \(question) with \"No\"", file: file, line: line)
-        }
-        for (label, value) in [("Weight in kilograms", "65"), ("Height in centimetres", "170"), ("How old are you?", "30")] {
-            let field = app.textFields[label].firstMatch
-            for _ in 0..<8 where !(field.exists && field.isHittable) { app.swipeDown() }
-            XCTAssertTrue(field.isHittable, "screen 2 shows \"\(label)\"", file: file, line: line)
-            field.tap()
-            field.typeText(value)
-        }
-        // The keyboard and its tip can take a tap on "Continue"; on 7
-        // October 2026 two taps did not open screen 3 once. So the test taps
-        // again, three times at most, while screen 2 stays.
-        for _ in 0..<3 where app.navigationBars["A few questions first"].exists {
-            app.buttons["Continue"].firstMatch.tap()
-            if app.navigationBars["Your start"].waitForExistence(timeout: 3) { break }
-        }
-        assertScreen("Your start", file: file, line: line)
+        completeScreen2(file: file, line: line)
         // Screen 3.
         tapAbove({ app.buttons["Continue"].firstMatch.frame.minY }, label: "I won't be weighing", file: file, line: line)
         onScreen3()

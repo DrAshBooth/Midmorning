@@ -946,37 +946,8 @@ extension AutomatedChecks {
         XCTAssertTrue(firstContinue.waitForExistence(timeout: 20), "onboarding screen 1 shows", file: file, line: line)
         XCTAssertTrue(scrollTo(firstContinue), file: file, line: line)
         firstContinue.tap()
+        completeScreen2(file: file, line: line)
         let continueButton = app.buttons["Continue"].firstMatch
-        for question in 1...3 {
-            var answered = false
-            for _ in 0..<8 {
-                let open = app.buttons.matching(NSPredicate(format: "label == %@", "No")).allElementsBoundByIndex
-                    .filter { $0.isHittable && !$0.isSelected && $0.frame.maxY < continueButton.frame.minY - 8 }
-                    .sorted { $0.frame.minY < $1.frame.minY }
-                if let first = open.first {
-                    first.tap()
-                    answered = true
-                    break
-                }
-                app.swipeUp()
-            }
-            XCTAssertTrue(answered, "screen 2 shows question \(question) with \"No\"", file: file, line: line)
-        }
-        for (label, value) in [("Weight in kilograms", "65"), ("Height in centimetres", "170"), ("How old are you?", "30")] {
-            let field = app.textFields[label].firstMatch
-            for _ in 0..<8 where !(field.exists && field.isHittable) { app.swipeDown() }
-            XCTAssertTrue(field.isHittable, "screen 2 shows \"\(label)\"", file: file, line: line)
-            field.tap()
-            field.typeText(value)
-        }
-        // The keyboard tip of a new simulator, or the number pad while it
-        // moves, can take a tap on "Continue". Tap again, only while screen
-        // 2 still shows.
-        for _ in 0..<3 {
-            app.buttons["Continue"].firstMatch.tap()
-            if app.navigationBars["Your start"].waitForExistence(timeout: 4) || !app.navigationBars["A few questions first"].exists { break }
-        }
-        assertScreen("Your start", file: file, line: line)
         let wontBeWeighing = app.buttons["I won't be weighing"].firstMatch
         XCTAssertTrue(dragTo(wontBeWeighing, above: continueButton.frame.minY - 8), "screen 3 shows \"I won't be weighing\"", file: file, line: line)
         wontBeWeighing.tap()
