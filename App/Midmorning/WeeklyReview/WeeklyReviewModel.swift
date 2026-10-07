@@ -27,7 +27,8 @@ enum WeeklyReviewModel {
         let pinnedNoteReview: ReviewRunWeek?
         /// `true` from the moment the first weekly review becomes due
         /// (record spec, "The Today stack": "'Reviews', from the moment the
-        /// first weekly review becomes due").
+        /// first weekly review becomes due"), also after a restart
+        /// (`ReviewDue.reviewsControlShows`).
         let reviewsControlShows: Bool
         /// The latest week whose review is due, finished or not, or `nil`
         /// before the first review is due. A tap on the weekly review
@@ -46,7 +47,10 @@ enum WeeklyReviewModel {
         )
         let dueDayKey = dueWeek.map { ReviewDue.dueDayKey(week: $0, startDay: startDay, calendar: calendar) }
         let latestDueWeek = ReviewDue.latestDueWeek(startDay: startDay, currentRecordDay: currentRecordDay, calendar: calendar)
-        let reviewsControlShows = latestDueWeek != nil
+        // A restart does not hide "Reviews": the first run's rows stay
+        // (mm-t32.22).
+        let storeHoldsAWeeklyReview = !((try? store.reviewRowWinners(kind: .weeklyReview, now: now, calendar: calendar)) ?? []).isEmpty
+        let reviewsControlShows = ReviewDue.reviewsControlShows(latestDueWeek: latestDueWeek, storeHoldsAWeeklyReview: storeHoldsAWeeklyReview)
         let (note, noteReview) = currentPinnedNoteAndReview(store: store, startDay: startDay, calendar: calendar, now: now)
         return Snapshot(
             dueWeek: dueWeek, dueDayKey: dueDayKey, startDay: startDay, calendar: calendar,

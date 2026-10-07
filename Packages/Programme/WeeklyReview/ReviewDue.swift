@@ -41,6 +41,18 @@ public enum ReviewDue {
         return week - 1
     }
 
+    /// Whether Today's bottom toolbar shows "Reviews" (programme spec,
+    /// "From the moment the first weekly review becomes due, the 'Reviews'
+    /// list MUST be one tap from Today."; record spec, "The Today stack").
+    /// That moment stays in the past after "Start week 1 again": the app
+    /// wrote a Review row when the first review became due, and the restart
+    /// keeps every row. So the control shows while a review of the current
+    /// run is due, and also when the store holds a weekly Review row from an
+    /// earlier run (mm-t32.22).
+    public static func reviewsControlShows(latestDueWeek: Int?, storeHoldsAWeeklyReview: Bool) -> Bool {
+        latestDueWeek != nil || storeHoldsAWeeklyReview
+    }
+
     /// The week whose "Weekly review" line Today shows: the latest due
     /// week, unless the person already finished it ("While a review is due
     /// and not finished, Today MUST show the line").
