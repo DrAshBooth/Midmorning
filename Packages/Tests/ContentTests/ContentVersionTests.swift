@@ -91,6 +91,52 @@ final class ContentVersionTests: XCTestCase {
         XCTAssertTrue(ContentLock.disagrees(lock, with: changed))
     }
 
+    /// Ruling r17-03: the weigh-in text and the plan soft rules are signed.
+    /// The bundle hash covers each key, and the sign-off list holds it. The
+    /// weigh-in controls and labels stay interface text.
+    func testTheWeighInTextAndThePlanSoftRulesAreSigned() throws {
+        let signed = try SignedCatalogueKeys.read(from: RepositoryRoot.contentResourcesDirectory)
+        XCTAssertEqual(signed.prefixes["weigh-in"], ["onboarding.weighIn.explanation", "weighIn.belowRange", "weighIn.explanation.", "weighIn.refusal"])
+        XCTAssertEqual(signed.prefixes["regular-eating-plan"], ["plan.softRules."])
+        let keys = [
+            "weighIn.explanation.kg", "weighIn.explanation.stLb", "weighIn.refusal", "weighIn.belowRange",
+            "onboarding.weighIn.explanation",
+            "plan.softRules.mealLine", "plan.softRules.gapLine", "plan.softRules.meals %lld", "plan.softRules.snacks %lld",
+        ]
+        for key in keys {
+            XCTAssertTrue(signed.isSigned(key), key)
+            XCTAssertNotNil(Shipped.bundle.signedCatalogue[key], key)
+            XCTAssertTrue(Shipped.bundle.signOffIds.contains(key), key)
+        }
+        for key in ["weighIn.title", "weighIn.chooseADay", "weighIn.weight", "weighIn.rollingAverage", "weighIn.chart.date"] {
+            XCTAssertFalse(signed.isSigned(key), key)
+        }
+    }
+
+    /// Ruling r17-03: a change to the weigh-in explanation or to a soft rule,
+    /// with no version rise, fails the lock check.
+    func testAWeighInOrSoftRuleChangeWithNoVersionRiseFailsTheLockCheck() throws {
+        let lock = try XCTUnwrap(ContentLock.read(from: RepositoryRoot.contentResourcesDirectory))
+        let changes: [(key: String, from: String, to: String)] = [
+            (
+                "weighIn.explanation.kg",
+                "Weekly swings of a kilo or two are normal and mean nothing on their own.",
+                "Weekly swings of a kilo or two are normal."
+            ),
+            (
+                "plan.softRules.mealLine",
+                "This day has %1$@ and %2$@. Three meals and two or three snacks keep the gaps short. Save anyway?",
+                "This day has %1$@ and %2$@. Save anyway?"
+            ),
+        ]
+        for change in changes {
+            let catalogue = try catalogueCopy(changing: change.key, from: change.from, to: change.to)
+            let changed = try ContentBundle.load(from: RepositoryRoot.contentResourcesDirectory, catalogue: catalogue, environment: [:])
+            XCTAssertEqual(changed.contentVersion, lock.contentVersion, change.key)
+            XCTAssertTrue(ContentLock.disagrees(lock, with: changed), change.key)
+        }
+    }
+
     /// A change to a plural form of a signed key also changes the hash.
     func testAPluralFormChangeOfASignedKeyChangesTheHash() throws {
         let key = "reminders.action.snooze %lld"
@@ -109,11 +155,12 @@ final class ContentVersionTests: XCTestCase {
     }
 
     /// Ruling r13-01: one file lists the signed prefixes, grouped by the
-    /// record, reminders and safeguarding families. Each prefix names at
-    /// least one real key, so the list stays up to date.
+    /// record, reminders and safeguarding families. Ruling r17-03 adds the
+    /// weigh-in and regular-eating-plan families. Each prefix names at least
+    /// one real key, so the list stays up to date.
     func testEverySignedPrefixNamesARealCatalogueKey() throws {
         let signed = try SignedCatalogueKeys.read(from: RepositoryRoot.contentResourcesDirectory)
-        XCTAssertEqual(Set(signed.prefixes.keys), ["record", "reminders", "safeguarding"])
+        XCTAssertEqual(Set(signed.prefixes.keys), ["record", "regular-eating-plan", "reminders", "safeguarding", "weigh-in"])
         let keys = try XCStringsCatalogue.readEntries(from: RepositoryRoot.appCatalogueURL).keys
         for prefix in signed.allPrefixes {
             XCTAssertTrue(keys.contains { $0.hasPrefix(prefix) }, "no catalogue key starts with \(prefix)")

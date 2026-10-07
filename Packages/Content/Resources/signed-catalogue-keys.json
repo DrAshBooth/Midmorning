@@ -13,6 +13,9 @@
       "today.pauseForToday",
       "today.stateLine."
     ],
+    "regular-eating-plan": [
+      "plan.softRules."
+    ],
     "reminders": [
       "reminders.",
       "settings.reminders.",
@@ -22,6 +25,12 @@
       "safeguarding.",
       "screening.",
       "today.getSupport"
+    ],
+    "weigh-in": [
+      "onboarding.weighIn.explanation",
+      "weighIn.belowRange",
+      "weighIn.explanation.",
+      "weighIn.refusal"
     ]
   }
 }

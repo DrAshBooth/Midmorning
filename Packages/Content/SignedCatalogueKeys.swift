@@ -3,16 +3,19 @@ import Foundation
 /// `Packages/Content/Resources/signed-catalogue-keys.json`: the key prefixes
 /// of `Localizable.xcstrings` whose text goes under the content hash, the
 /// content version rise and the clinical sign-off (ruling r13-01). These are
-/// the families that hold record, safeguarding and reminder text. A key
-/// that no prefix matches is interface chrome, and a change to it needs no
-/// content version rise.
+/// the families that hold record, safeguarding and reminder text, and the
+/// two families of clinical guidance that ruling r17-03 adds: the weigh-in
+/// text and the soft rules of the regular eating plan. A key that no prefix
+/// matches is interface chrome, and a change to it needs no content version
+/// rise.
 ///
 /// The bundle hash, `scripts/content-lock` and `scripts/content-signoff-list`
 /// read this one file. To put a family under the sign-off, add its prefix
 /// here and run `scripts/content-lock`.
 public struct SignedCatalogueKeys: Sendable, Equatable, Codable {
-    /// The prefixes, grouped by the family they belong to: "record",
-    /// "reminders" and "safeguarding".
+    /// The prefixes, grouped by the capability that owns the text:
+    /// "record", "regular-eating-plan", "reminders", "safeguarding" and
+    /// "weigh-in".
     public let prefixes: [String: [String]]
 
     public init(prefixes: [String: [String]]) {
