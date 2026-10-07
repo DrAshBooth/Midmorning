@@ -8,16 +8,14 @@
 # check passes on a committed build. A tester build or a release build that
 # skips such a check needs a new run on its own commit (gate mm-t43.31;
 # README.md, "When Ash can skip a device check"). Run between 09:00 and
-# 03:30: the seeder stops before 09:00. A full run must also reach
-# testZRemovingAPlannedMealCancelsOnlyItsReminder before 21:25 in the Mac's
-# zone, because the notification daemon reads the app's reminder times in
-# that zone (see the comment at the top of AutomatedChecks+RemindersExport.swift).
-# So start a full run early enough, for example by 20:00.
+# 03:30: the seeder stops before 09:00.
 #
 # The app is installed new for each run. The tests in FRESH_PERMISSION_TESTS
 # (step 4) need the notification permission "not determined", so they run
 # first, in a pass of their own, before any other test can answer the
-# system request.
+# system request. testZFreshInstallAsksForNotificationsOnToday answers
+# "Allow" in that pass, so the script then installs the app new again: the
+# other tests start with the permission "not determined", as before.
 #
 # At the end the script writes the line for the README table: the date, the
 # commit, the simulator runtime and the result. A run on a working tree with
@@ -91,18 +89,23 @@ APP_BUNDLE="$HERE/.dd-app/Build/Products/Debug-iphonesimulator/Midmorning.app"
 # Just after a boot, an uninstall left that section, and the new install kept
 # the old answer (7 October 2026). A second install and uninstall removed it.
 # So the script uninstalls until the section is gone, three times at most.
+# A new install also gives a new data container; DATA is its path.
 SECTIONS="$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/BulletinBoard/VersionedSectionInfo.plist"
-for attempt in 1 2 3; do
-  xcrun simctl uninstall "$UDID" uk.midmorning.app >/dev/null 2>&1
-  for _ in $(seq 1 20); do
-    grep -q "uk.midmorning.app" "$SECTIONS" 2>/dev/null || break 2
-    sleep 0.5
+install_new() {
+  for attempt in 1 2 3; do
+    xcrun simctl uninstall "$UDID" uk.midmorning.app >/dev/null 2>&1
+    for _ in $(seq 1 20); do
+      grep -q "uk.midmorning.app" "$SECTIONS" 2>/dev/null || break 2
+      sleep 0.5
+    done
+    xcrun simctl install "$UDID" "$APP_BUNDLE" >/dev/null 2>&1
+    sleep 2
   done
-  xcrun simctl install "$UDID" "$APP_BUNDLE" >/dev/null 2>&1
-  sleep 2
-done
-grep -q "uk.midmorning.app" "$SECTIONS" 2>/dev/null && echo "WARNING: the notification permission of the old install can stay; testZFreshInstallAsksForNotificationsOnToday can fail."
-xcrun simctl install "$UDID" "$APP_BUNDLE" || exit 1
+  grep -q "uk.midmorning.app" "$SECTIONS" 2>/dev/null && echo "WARNING: the notification permission of the old install can stay; a test that needs the permission \"not determined\" can fail."
+  xcrun simctl install "$UDID" "$APP_BUNDLE" || return 1
+  DATA=$(xcrun simctl get_app_container "$UDID" uk.midmorning.app data) || return 1
+}
+install_new || exit 1
 step "build the UI tests"
 xcodebuild build-for-testing -project "$HERE/Harness.xcodeproj" -scheme HarnessUITests \
   -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$HERE/.dd" -quiet || exit 1
@@ -110,13 +113,12 @@ xcodebuild build-for-testing -project "$HERE/Harness.xcodeproj" -scheme HarnessU
 # 3. Seed the stores.
 step "seed the stores"
 (cd "$HERE/seeder" && swift build -q) || exit 1
-for scenario in week1 review corrupt stage1Morning stage1Evening stage1Paused stage2Evening reminderSettings unfinishedOnboarding; do
+for scenario in week1 review corrupt stage1Morning stage1Evening stage1Paused stage2Evening stage2Morning reminderSettings unfinishedOnboarding; do
   "$HERE/seeder/.build/debug/Seeder" "$HERE/stores/$scenario/Record.store" "$scenario" >/dev/null || exit 1
 done
 
 # 4. Run the checks. The tests copy a seeded store into the app's data
-# container before each launch.
-DATA=$(xcrun simctl get_app_container "$UDID" uk.midmorning.app data) || exit 1
+# container (DATA) before each launch.
 only=()
 for name in "$@"; do only+=("-only-testing:HarnessUITests/AutomatedChecks/$name"); done
 [ ${#only[@]} -eq 0 ] && only=("-only-testing:HarnessUITests/AutomatedChecks")
@@ -130,7 +132,15 @@ step "run the checks"
 # stays until the next install, and tests in several files answer it. So
 # these tests run first, in a pass of their own (FreshPermission.xcresult),
 # and every other test runs after them. A name that no test file holds is
-# left out.
+# left out. testZFreshInstallAsksForNotificationsOnToday answers "Allow" in
+# the first pass. With the permission "allowed", the app schedules real
+# reminders for each seeded store, and a reminder can show a banner over the
+# navigation bar during a later test. So the script installs the app new
+# between the two passes, and the second pass starts with the permission
+# "not determined". A test in the second pass that answers the request
+# itself (the testZ reminder count tests, which run last; the reminder
+# tests of the app lock) leaves the permission "allowed" for the tests that
+# run after it.
 FRESH_PERMISSION_TESTS=(testZFreshInstallAsksForNotificationsOnToday testFifteenEntriesKeepThePinnedHeader)
 first=(); rest=()
 for id in "${only[@]}"; do
@@ -157,6 +167,10 @@ run_pass() {
 }
 status=0
 if [ ${#first[@]} -gt 0 ]; then run_pass FreshPermission "${first[@]}" || status=$?; fi
+if [ ${#first[@]} -gt 0 ] && [ ${#rest[@]} -gt 0 ]; then
+  step "install the app new again (the permission \"not determined\")"
+  install_new || exit 1
+fi
 if [ ${#rest[@]} -gt 0 ]; then run_pass AutomatedChecks "${rest[@]}" || status=$?; fi
 grep -E "Test Case .* (passed|failed)|error: " "$OUT/xcodebuild.log" | sed -E 's/^.*Test Case .-\[HarnessUITests\.AutomatedChecks (test[^]]*)\]. (passed|failed).*\(([0-9.]+) seconds\).*/\2  \1 (\3 s)/'
 step "done (the log and the result bundles are in $OUT)"

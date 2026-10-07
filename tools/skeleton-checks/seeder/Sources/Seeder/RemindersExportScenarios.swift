@@ -33,6 +33,15 @@ import Constants
 ///   plan is set: Breakfast 08:00, Lunch 13:00, Mid-afternoon 16:00 and
 ///   Evening meal 21:30. Today holds no entry. So today's reminders still
 ///   to come are the Evening meal at 21:30 and close the day at 21:45.
+/// - `stage2Morning`: as `stage2Evening`, but seeded in a fixed-offset zone
+///   where the local time at the seed is between 06:00 and 16:59 (10:xx when
+///   the Mac's zone allows it; `zoneForTheReminderCounts`). The seeder
+///   chooses the zone so that the seeded day's 21:30 is more than 4 hours
+///   ahead in the Mac's zone (in the UK, at any hour of a run), where the
+///   notification daemon reads the app's floating reminder times. So a
+///   test that reads the pending request of the Evening meal at 21:30 does
+///   not depend on the hour of the run. Today's reminders still to come
+///   include the Evening meal at 21:30 and close the day at 21:45.
 /// - `reminderSettings`: as `week1`, in the Mac's time zone, with a
 ///   reminder time, quiet hours and device settings that are not the
 ///   defaults (mm-t24.38): "Set today's plan time" 08:10, "Close the day
@@ -46,7 +55,7 @@ import Constants
 ///   taps "Start" on screen 4.
 @MainActor
 enum RemindersExportScenarios {
-    nonisolated static let names: Set<String> = ["stage1Morning", "stage1Evening", "stage1Paused", "stage2Evening", "reminderSettings", "unfinishedOnboarding"]
+    nonisolated static let names: Set<String> = ["stage1Morning", "stage1Evening", "stage1Paused", "stage2Evening", "stage2Morning", "reminderSettings", "unfinishedOnboarding"]
 
     /// Seeds `scenario` and stops the process when `scenario` is one of
     /// `names`. Returns for any other name. `main.swift` calls this in one
@@ -98,8 +107,10 @@ enum RemindersExportScenarios {
                 try store.pauseReminders(at: now.addingTimeInterval(-3600), changedAt: now.addingTimeInterval(-3600))
             }
             print("seeded \(scenario) at \(directory.path) in \(zone.identifier)")
-        case "stage2Evening":
-            let zone = zoneForTheReminderCounts(localHours: 17...19, preferring: 17, reminderHour: 21, minute: 30, at: now)
+        case "stage2Evening", "stage2Morning":
+            let zone = scenario == "stage2Evening"
+                ? zoneForTheReminderCounts(localHours: 17...19, preferring: 17, reminderHour: 21, minute: 30, at: now)
+                : zoneForTheReminderCounts(localHours: 6...16, preferring: 10, reminderHour: 21, minute: 30, at: now)
             try Data(zone.identifier.utf8).write(to: zoneFile)
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = zone
@@ -118,13 +129,14 @@ enum RemindersExportScenarios {
                 try store.add(time: time, what: "Porridge", feltLikeABinge: false, createdAt: time,
                               utcOffsetSeconds: zone.secondsFromGMT(for: time))
             }
-            // Today's plan, set this morning: Breakfast 08:00, Lunch 13:00,
+            // Today's plan, set at 05:00 local time (before the earliest
+            // local time of the seed, 06:00): Breakfast 08:00, Lunch 13:00,
             // Mid-afternoon 16:00 and Evening meal 21:30. No entry today.
             let plan = #"[{"slot":0,"time":"08:00"},{"slot":2,"time":"13:00"},{"slot":3,"time":"16:00"},{"slot":4,"time":"21:30"}]"#
             let constants = ProgrammeConstants.default
             try store.setDayPlan(dateKey: key(0), slotsJSON: plan, windowBeforeMinutes: constants.plannedMealWindowBeforeMinutes,
                                  windowAfterMinutes: constants.plannedMealWindowAfterMinutes,
-                                 setAt: dayStart(0).addingTimeInterval(3 * 3600), setBy: "device", changedAt: dayStart(0).addingTimeInterval(3 * 3600))
+                                 setAt: dayStart(0).addingTimeInterval(3600), setBy: "device", changedAt: dayStart(0).addingTimeInterval(3600))
             print("seeded \(scenario) at \(directory.path) in \(zone.identifier)")
         case "reminderSettings":
             let calendar = Calendar.current
@@ -160,10 +172,17 @@ enum RemindersExportScenarios {
     /// here). So of the fixed-offset zones where the local hour at `moment`
     /// is in `localHours`, this takes the one where the seeded day's
     /// `reminderHour`:`minute` is latest in the Mac's zone, and of those the
-    /// one nearest to `preferred`. For `6...16` and 21:45 that time is then
-    /// always more than 4 hours ahead in the Mac's zone. For `17...19` and
-    /// 21:30 no zone puts the seeded day after the Mac's day, so after
-    /// 21:30 in the Mac's zone that time is behind.
+    /// one nearest to `preferred`. For `6...16` and 21:30 or 21:45, that
+    /// time is then ahead in the Mac's zone by at least 5 hours 30 minutes
+    /// minus the Mac's offset from UTC: until 16:00 plus that offset, the
+    /// Mac's day still has that time ahead, and from then a zone east of
+    /// the Mac is on the next day. So in the UK (offset 0 or 1 hour) it is
+    /// always more than 4 hours ahead. Only in a Mac zone 6 or more hours
+    /// ahead of UTC can a run late in the day come too near; then
+    /// `requireTheSeededDaysTimeIsAheadForTheDaemon` stops the test with a
+    /// message. For `17...19` and 21:30 no zone puts the seeded day after
+    /// the Mac's day in the UK, so after 21:30 in the Mac's zone that time
+    /// is behind.
     nonisolated static func zoneForTheReminderCounts(localHours: ClosedRange<Int>, preferring preferred: Int, reminderHour: Int, minute: Int, at moment: Date) -> TimeZone {
         var candidates: [(zone: TimeZone, reminder: Date, distance: Int)] = []
         for offset in -12...14 {
