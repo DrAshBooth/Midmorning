@@ -318,6 +318,12 @@ extension AutomatedChecks {
     /// The confirmation shows "Everything is deleted.", and the next launch
     /// shows onboarding, because the record is gone. (The real system
     /// request stays a device check.)
+    /// mm-t41.15, comment of ruling r14-01 (mm-t41.26, commit 56bcf48),
+    /// part (2), the cover only: with a deletion that fails, "Delete
+    /// everything" after Face ID and the confirmation keep the cover, which
+    /// shows "Midmorning", "Unlock", "Delete everything" and "Could not
+    /// delete. Try again.", and no deleted screen; part (4): with the
+    /// deletion fixed, "Delete everything" again shows the deleted screen.
     func testDeleteEverythingFromTheCover() throws {
         try launchWithTheSeam("lock-week1", results: ["cancel"])
         assertTheLockedCover("at launch")
@@ -332,12 +338,26 @@ extension AutomatedChecks {
         XCTAssertTrue(app.alerts["Delete everything?"].waitForExistence(timeout: 8), "after a success, \"Delete everything?\" shows")
         tapDialogButton("Cancel")
         assertTheLockedCover("after \"Cancel\" in \"Delete everything?\"")
+        // Ruling r14-01: a deletion that fails keeps the cover, with the line.
+        makeTheDeletionFail()
+        scriptAppLock(["succeed"])
+        deleteEverythingButton.tap()
+        XCTAssertTrue(app.alerts["Delete everything?"].waitForExistence(timeout: 8))
+        tapDialogButton("Delete everything")
+        let failure = element(labelled: "Could not delete. Try again.")
+        XCTAssertTrue(failure.waitForExistence(timeout: 10), "after a failed deletion the cover shows \"Could not delete. Try again.\"")
+        assertTheLockedCover("after a failed deletion")
+        XCTAssertGreaterThan(failure.frame.minY, deleteEverythingButton.frame.maxY, "the line shows under the cover's controls")
+        XCTAssertFalse(element(labelBeginningWith: "Everything is deleted.").exists, "after a failed deletion no deleted screen shows")
+        // The deletion works again.
+        removeDeletionFault()
         scriptAppLock(["succeed"])
         deleteEverythingButton.tap()
         XCTAssertTrue(app.alerts["Delete everything?"].waitForExistence(timeout: 8))
         tapDialogButton("Delete everything")
         XCTAssertTrue(element(labelBeginningWith: "Everything is deleted.").waitForExistence(timeout: 10), "the deleted screen shows")
-        assertAppLockRequests(4, "each \"Delete everything\" makes one request")
+        XCTAssertFalse(failure.exists, "the line goes")
+        assertAppLockRequests(5, "each \"Delete everything\" makes one request")
         // The record is gone: the next launch shows onboarding.
         app.terminate()
         app.launch()
