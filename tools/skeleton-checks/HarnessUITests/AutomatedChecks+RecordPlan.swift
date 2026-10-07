@@ -82,6 +82,25 @@ extension AutomatedChecks {
         return TimeZone(identifier: "GMT")!
     }
 
+    /// The weekday and date of the calendar date `days` from today in
+    /// `zone`, as a day heading shows it.
+    func recordPlanDateText(days: Int, in zone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let day = calendar.date(byAdding: .day, value: days, to: Date())!
+        let parts = calendar.dateComponents([.year, .month, .day], from: day)
+        return recordPlanDayText(String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!))
+    }
+
+    /// "HH:mm" in `zone`, `minutes` from now.
+    func recordPlanClockNow(in zone: TimeZone, adding minutes: Int = 0) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_GB")
+        formatter.timeZone = zone
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: Date().addingTimeInterval(Double(minutes) * 60))
+    }
+
     func recordPlanElement(labelEndingWith suffix: String) -> XCUIElement {
         app.descendants(matching: .any).matching(NSPredicate(format: "label ENDSWITH %@", suffix)).firstMatch
     }
@@ -264,7 +283,7 @@ extension AutomatedChecks {
         try launchOnToday("fifteen")
         let addEntry = app.buttons["Add an entry"].firstMatch
         let permissionLine = app.buttons["Allow notifications to get reminders."].firstMatch
-        XCTAssertTrue(permissionLine.waitForExistence(timeout: 8), "with notification permission not determined, Today shows the permission line")
+        XCTAssertTrue(permissionLine.waitForExistence(timeout: 8), "with notification permission not determined, Today shows the permission line. If the app already asked for the permission on this simulator, run this check on a new simulator (DEVICE_NAME) or after xcrun simctl uninstall.")
         let firstEntry = recordPlanElement(labelEndingWith: ", Entry 1")
         XCTAssertTrue(firstEntry.waitForExistence(timeout: 5))
         XCTAssertGreaterThanOrEqual(permissionLine.frame.minY, addEntry.frame.maxY - 1, "the permission line is under \"Add an entry\"")
@@ -499,13 +518,7 @@ extension AutomatedChecks {
     /// in which the clock now shows that time, so the check needs no change
     /// of the clock.
     func testTheNightHeadingAndADayStartAt0600() throws {
-        func nightHeading(in zone: TimeZone) -> String {
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = zone
-            let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
-            let parts = calendar.dateComponents([.year, .month, .day], from: yesterday)
-            return recordPlanDayText(String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!))
-        }
+        func nightHeading(in zone: TimeZone) -> String { recordPlanDateText(days: -1, in: zone) }
         // The day start at 04:00: 02:00 to 02:59.
         let twoInTheMorning = recordPlanZone(localHour: [2, 1])
         app.launchEnvironment["TZ"] = twoInTheMorning.identifier
@@ -533,6 +546,85 @@ extension AutomatedChecks {
         XCTAssertTrue(app.buttons["Delete entry"].waitForExistence(timeout: 8), "the edit screen shows")
         XCTAssertTrue(app.otherElements["Time"].staticTexts[sixTitle].exists, "the edit screen shows the entry's day, \(sixTitle)")
         app.navigationBars.buttons["Cancel"].firstMatch.tap()
+    }
+
+    /// mm-t12b.1, comment of mm-t12b.5, the part at 01:00: between 00:00
+    /// and the day start, the wheel of the current segment keeps 23:00 on
+    /// the evening before and 00:30 after midnight, and does not jump back;
+    /// a save at 00:30 shows under the current day. The app runs in a zone
+    /// in which the clock now shows 01:00 to 02:59. The part at 07:30 (23:30
+    /// in the previous-day segment) is
+    /// `testASaveAt2330ExpandsTheCollapsedPreviousDay`, at the time of the
+    /// run. (That the wheel greys out the times after now stays a device
+    /// check: the accessibility hierarchy does not show it.)
+    func testTheWheelKeepsTimesOnBothSidesOfMidnight() throws {
+        let zone = recordPlanZone(localHour: [1, 2])
+        app.launchEnvironment["TZ"] = zone.identifier
+        try launchOnToday("week1")
+        let currentDay = recordPlanDateText(days: -1, in: zone)
+        let calendarToday = recordPlanDateText(days: 0, in: zone)
+        XCTAssertTrue(app.staticTexts["\(currentDay), night"].waitForExistence(timeout: 8), "Today shows the night of \(currentDay) (\(zone.identifier))")
+        openNewEntry()
+        let what = app.textViews["What"].firstMatch
+        what.tap()
+        what.typeText("Late tea")
+        let segments = app.segmentedControls.firstMatch.buttons
+        XCTAssertTrue(segments.element(boundBy: 1).waitForExistence(timeout: 5))
+        XCTAssertEqual(segments.element(boundBy: 1).label, currentDay, "the current segment is \(currentDay)")
+        XCTAssertTrue(segments.element(boundBy: 1).isSelected, "the current segment is selected")
+        let keyboardTop = app.keyboards.firstMatch.exists ? app.keyboards.firstMatch.frame.minY : app.frame.maxY
+        XCTAssertTrue(dragTo(app.pickerWheels.element(boundBy: 1), above: keyboardTop - 50), "the wheel is above the keyboard")
+        let time = app.otherElements["Time"].firstMatch
+        recordPlanTurnWheels(to: "23:00")
+        XCTAssertEqual(time.value as? String, "\(currentDay), 23:00", "the wheel keeps 23:00 on the evening of \(currentDay)")
+        recordPlanTurnWheels(to: "00:30")
+        XCTAssertEqual(time.value as? String, "\(calendarToday), 00:30", "the wheel keeps 00:30 after midnight")
+        XCTAssertTrue(segments.element(boundBy: 1).isSelected, "the current segment stays selected")
+        tapSaveInTheNavigationBar()
+        let row = element(labelled: "00:30, Late tea")
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "Today shows the entry at 00:30")
+        XCTAssertGreaterThan(row.frame.minY, app.staticTexts["\(currentDay), night"].firstMatch.frame.maxY, "the entry shows under the current day")
+    }
+
+    /// mm-t12b.1, comment of r13-16 (mm-t12b.22, commit b0cbb4b): an entry
+    /// saved in another zone (Asia/Tokyo, or America/New_York when Tokyo is
+    /// on another record day) keeps its time after the app opens in the
+    /// home zone (London on Ash's Mac) and an edit of its What. The entry
+    /// is at the time of the run, not at 08:00, so the test turns no wheel.
+    /// (A change of its time waits for mm-t12b.25.)
+    func testAnEntryFromAnotherZoneKeepsItsTimeAfterAnEdit() throws {
+        let home = TimeZone.current
+        let homeDay = recordPlanCurrentDayKey(in: home)
+        let away = try XCTUnwrap(["Asia/Tokyo", "America/New_York"].compactMap(TimeZone.init(identifier:)).first {
+            recordPlanCurrentDayKey(in: $0) == homeDay && abs($0.secondsFromGMT() - home.secondsFromGMT()) >= 3 * 3600
+        }, "a zone on the same record day, at least 3 hours from the home zone")
+        app.launchEnvironment["TZ"] = away.identifier
+        try launchOnToday("week1")
+        let opened = (-1...1).map { recordPlanClockNow(in: away, adding: $0) }
+        openNewEntry()
+        let what = app.textViews["What"].firstMatch
+        what.tap()
+        what.typeText("Rice")
+        tapSaveInTheNavigationBar()
+        let saved = recordPlanElement(labelEndingWith: ", Rice")
+        XCTAssertTrue(saved.waitForExistence(timeout: 8), "Today shows the entry")
+        let shown = String(saved.label.prefix(5))
+        XCTAssertTrue(opened.contains(shown), "the entry shows the time in \(away.identifier): \(shown)")
+        // The home zone.
+        app.launchEnvironment["TZ"] = home.identifier
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
+        XCTAssertFalse((-1...1).map { recordPlanClockNow(in: home, adding: $0) }.contains(shown), "the home zone shows another clock time")
+        let row = element(labelled: "\(shown), Rice")
+        XCTAssertTrue(row.waitForExistence(timeout: 8), "in the home zone, the row still shows \(shown)")
+        row.tap()
+        XCTAssertTrue(app.buttons["Delete entry"].waitForExistence(timeout: 8), "the edit screen shows")
+        what.tap()
+        dismissKeyboardTip()
+        what.typeText(" and peas")
+        tapSaveInTheNavigationBar()
+        XCTAssertTrue(element(labelled: "\(shown), Rice and peas").waitForExistence(timeout: 8), "after the edit, the row still shows \(shown)")
     }
 
     /// mm-t12b.1, comment of r16-03 (mm-t12b.28), item 3: "Delete entry"
