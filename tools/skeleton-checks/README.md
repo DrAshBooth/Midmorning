@@ -42,10 +42,12 @@ The first keyboard use shows an iOS tip; the tests dismiss it.
 
 Each run writes screenshots and `evidence.log` to `out/`.
 
-## Automated device checks (ruling r13-19)
+## Automated device checks (rulings r13-19 and r16-01)
 
 Ash ruled on 26 September 2026 (r13-19, mm-t43.30) that navigation, text
-and manifest checks move off the device-check beads into tests.
+and manifest checks move off the device-check beads into tests. Ash ruled
+on 7 October 2026 (r16-01, mm-t43.32) that a flow check is a navigation
+check, so flow checks also move into tests.
 
 - Text and manifest checks are package tests in
   `Packages/Tests/AutomatedDeviceChecksTests`. `./verify` runs them. A
@@ -53,29 +55,35 @@ and manifest checks move off the device-check beads into tests.
   bundle. When it also matches the source of an App file, that part is
   proved from the source text only: it shows that the screen calls the
   words, not where they show. A layout claim needs a UI test.
-- Navigation checks, and the text checks that need the screen, are UI
-  tests in `HarnessUITests/AutomatedChecks.swift` (35 checks). Each test
-  names its device-check bead. Run them with one command:
+- Navigation checks, flow checks, and the text checks that need the
+  screen, are UI tests in `HarnessUITests/AutomatedChecks.swift` (35
+  checks). Each test names its device-check bead. Run them with one command:
 
 ```bash
 tools/skeleton-checks/automated-checks.sh            # every check
 tools/skeleton-checks/automated-checks.sh testPrivacyNotice testDiagnosticsShowsTheEightCounts
 ```
 
-A new navigation, text or manifest check goes into one of these two
+A new navigation, text, manifest or flow check goes into one of these two
 places, not onto a device-check bead. A device-check bead keeps what needs a
 device or a person, for example: VoiceOver, Voice Control, the largest text
 size, contrast, biometrics, real notifications and calls, a change of the
 clock, backups, the network, crashes, Instruments, a third-party keyboard
 and the shame walk.
 
-Flow checks wait for decision r16-01 on the Midmorning Decisions page. A
-flow check does a sequence of actions and then looks at what the app shows
-or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
+A flow check does a sequence of actions and then looks at what the app
+shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
 items: mm-t12b.6, .7, .9, .10 and .12; mm-t13.11 and .13; mm-t21.28;
-mm-t22.24 ("saves nothing"); mm-t32.19, .20 and .24. The tests stay in the
-suite, but until Ash answers r16-01, those items stay device checks.
-"Point contrast" on mm-t22.16 also waits for r16-01.
+mm-t22.24 ("saves nothing"); mm-t32.19, .20 and .24. Each of these items
+has an "Automated by ... (r13-19, r16-01)" comment on its device-check bead.
+Ash can skip them under the same conditions as the other UI-test items
+(see "When Ash can skip a device check"). mm-t43.32 and mm-t43.33 (epic
+mm-t45) automate the other flow checks that the simulator can run. Until
+one of them adds the test for an item, that item stays on its device-check
+bead. A part of a flow that needs a device or a person stays a device
+check, for example the VoiceOver action of mm-t12b.7. "Point contrast" on
+mm-t22.16 stays a device check: it measures a colour in dark mode with
+Increase Contrast, and a colour needs a person's eye on a real screen.
 
 The script makes and boots its own simulator (`mm-automated-checks`), so it
 does not disturb a simulator that another session uses. It reads the
@@ -107,11 +115,12 @@ hierarchy in `out/automated/<test>.png` and `<test>.txt`.
 
 ### When Ash can skip a device check
 
-A bead comment that says "Automated by ... (r13-19)" moves that check to
-this suite. Ash can skip a UI-test item only after a dated run in which
-every check passes on a committed build. A package-test item needs only
-`./verify`. Write that run as a line in the table below: the date, the
-commit, the simulator runtime and the result. The script writes that line
+A bead comment that says "Automated by ... (r13-19)" or "Automated by ...
+(r13-19, r16-01)" moves that check to this suite. Ash can skip a UI-test
+item only after a dated run in which every check passes on a committed
+build. A package-test item needs only `./verify`. Write that run as a line
+in the table below: the date, the commit, the simulator runtime and the
+result. The script writes that line
 at its end. It also says loudly at the start and in that line when the
 working tree has changes that are not committed, or when only named checks
 ran: such a run does not count.
