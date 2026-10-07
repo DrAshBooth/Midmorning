@@ -6,7 +6,11 @@ import UIKit
 /// (onboarding and safeguarding), mm-t21.24 (programme) and mm-t32.17
 /// (weekly review), as UI tests. Each test names its device-check bead and
 /// the item it replaces. The seeded stores whose names begin with "or-"
-/// are in `seeder/Sources/Seeder/OnboardingReviewScenarios.swift`.
+/// are in `seeder/Sources/Seeder/OnboardingReviewScenarios.swift`. The
+/// call tests turn on the app's Debug-only call record
+/// (`MIDMORNING_CALL_RECORD=1` in the launch environment; the app writes
+/// each call to `tmp/CallRecord` in its container): see "The call record"
+/// below.
 ///
 /// The long forms (onboarding screen 2, the restart re-screen, the review)
 /// are lists that make a row only near the screen. The helpers below read
@@ -475,6 +479,14 @@ extension AutomatedChecks {
     /// "Regular eating" and the sentence "You can now plan when to eat. The
     /// app reminds you at each planned meal." with "Open" and "Close". (The
     /// Instruments part of mm-t21.35 stays a device check.)
+    ///
+    /// The "review" store is on the day stage 2 opens. Its entries have
+    /// times from eight record days ago to now, but the seeder writes each
+    /// one with a save moment (`createdAt`) about one hour before the
+    /// seeding. The programme counts a recorded day from the moment of its
+    /// first save (programme spec, "Stage 2 opens after five recorded
+    /// days"; `nthDistinctDayEntry` sorts by `savedAt`), so stage 2 opens
+    /// at the fifth save, on the current record day.
     func testTodayShowsTheCardRows() throws {
         try launchOnToday("or-secondday")
         assertCardRow(lines: ["Why write it down"], primary: "Read")
@@ -797,11 +809,13 @@ extension AutomatedChecks {
     // MARK: mm-t14.36 (comment of 15:46 on mm-t14.28)
 
     /// mm-t14.28, mm-t14.36 (mm-t43.32): in the support sheet, "Copy
-    /// number" beside 116 123 reads "Copied" for about two seconds and then
-    /// reads "Copy number" again. "Copied. It clears in a minute." shows
-    /// under that number, once, and stays until the sheet closes. (The
-    /// pasteboard itself and the largest text size of mm-t14.41 stay device
-    /// checks.)
+    /// number" beside 116 123 reads "Copied" for about two seconds (the
+    /// spec: "for two seconds") and then reads "Copy number" again.
+    /// "Copied. It clears in a minute." shows under that number, once, and
+    /// stays until the sheet closes: the test looks at it every 10 seconds
+    /// until 65 seconds after the tap, past the 60-second expiry of the
+    /// pasteboard, and then closes the sheet. (The pasteboard itself and
+    /// the largest text size of mm-t14.41 stay device checks.)
     func testCopyNumberShowsCopiedForAboutTwoSeconds() throws {
         try launchOnToday("week1")
         getSupport(on: "Today").tap()
@@ -811,28 +825,55 @@ extension AutomatedChecks {
             XCTFail("116 123 shows with \"Copy number\"")
             return
         }
+        // A snapshot shows the screen at one moment between the time just
+        // before it and the time just after it, so the test keeps both
+        // times. Each time is from just before the tap. The tap returns
+        // after the app is idle again, so the app changed the label before
+        // `tapped`. The list settles first, so that the tap does not wait
+        // long for an idle app before it touches the screen.
+        usleep(1_000_000)
         let start = Date()
+        func elapsed() -> TimeInterval { Date().timeIntervalSince(start) }
         tap(copy.frame)
-        var copiedAt: TimeInterval?
-        var backAt: TimeInterval?
-        while Date().timeIntervalSince(start) < 6 {
+        let tapped = elapsed()
+        var copiedFirstAfter: TimeInterval?
+        var copiedLastBefore: TimeInterval?
+        var backAfter: TimeInterval?
+        while elapsed() < 6 {
+            let before = elapsed()
             let seen = look()
-            let elapsed = Date().timeIntervalSince(start)
+            let after = elapsed()
             if control("Copied", besideRow: row, in: seen) != nil {
-                if copiedAt == nil { copiedAt = elapsed }
-            } else if copiedAt != nil, control("Copy number", besideRow: row, in: seen) != nil {
-                backAt = elapsed
+                if copiedFirstAfter == nil { copiedFirstAfter = after }
+                copiedLastBefore = before
+            } else if copiedLastBefore != nil, control("Copy number", besideRow: row, in: seen) != nil {
+                backAfter = after
                 break
             }
         }
-        XCTAssertNotNil(copiedAt, "the control reads \"Copied\"")
-        XCTAssertLessThan(copiedAt ?? 99, 1.2, "the control reads \"Copied\" at once")
-        XCTAssertNotNil(backAt, "the control reads \"Copy number\" again")
-        XCTAssertGreaterThanOrEqual(backAt ?? 0, 1.5, "\"Copied\" shows for about two seconds")
-        XCTAssertLessThanOrEqual(backAt ?? 99, 3.5, "\"Copied\" shows for about two seconds")
-        // The confirmation line, under that number, until the sheet closes.
-        for check in ["after the label changes back", "five seconds later"] {
-            if check == "five seconds later" { sleep(5) }
+        XCTAssertNotNil(copiedFirstAfter, "the control reads \"Copied\"")
+        XCTAssertLessThan(copiedFirstAfter ?? 99, 1.2, "the control reads \"Copied\" at once")
+        XCTAssertNotNil(backAfter, "the control reads \"Copy number\" again")
+        // "Copied" showed from a moment before `tapped` until a moment
+        // after `copiedLastBefore`, and "Copy number" showed again at a
+        // moment before `backAfter`. The tap itself takes about 0.4 s and
+        // the label changes at a moment inside it, so the two bounds are
+        // about 0.5 s apart: on 7 October 2026 they were 1.86 s to 2.42 s
+        // and 1.78 s to 2.28 s. The limits 1.7 s and 2.6 s leave room for a
+        // slower tap. A label that shows for less than 1.7 s, or for more
+        // than 2.6 s, always fails.
+        let atLeast = (copiedLastBefore ?? 0) - tapped
+        let atMost = backAfter ?? 99
+        print("mm-t14.36: \"Copied\" showed for \(String(format: "%.2f", atLeast)) s to \(String(format: "%.2f", atMost)) s (tap \(String(format: "%.2f", tapped)) s)")
+        XCTAssertGreaterThanOrEqual(atLeast, 1.7, "\"Copied\" shows for about two seconds, not less")
+        XCTAssertLessThanOrEqual(atMost, 2.6, "\"Copied\" shows for about two seconds, not more")
+        // The confirmation line, under that number, until the sheet closes:
+        // once after the label changes back, then every 10 seconds until 65
+        // seconds after the tap, past the 60-second pasteboard expiry.
+        let times: [TimeInterval?] = [nil] + stride(from: 15.0, through: 65.0, by: 10.0).map { $0 }
+        for time in times {
+            let check = time.map { "\(Int($0)) seconds after the tap" } ?? "after the label changes back"
+            if let time, time > elapsed() { usleep(UInt32((time - elapsed()) * 1_000_000)) }
             let seen = look()
             let lines = seen.filter { $0.type == .staticText && $0.label == Self.copiedLine }
             XCTAssertEqual(lines.count, 1, "\"\(Self.copiedLine)\" shows once, \(check)")
@@ -842,6 +883,7 @@ extension AutomatedChecks {
                 XCTAssertLessThan(shown.frame.minY, first(.staticText, "Any time, about anything.", in: seen)?.frame.minY ?? .infinity, "the line shows in the row of 116 123, \(check)")
             }
         }
+        XCTAssertGreaterThanOrEqual(elapsed(), 65, "the last look is 65 seconds after the tap or later")
         app.navigationBars["Get support"].buttons["Close"].tap()
         XCTAssertTrue(app.navigationBars["Get support"].waitForNonExistence(timeout: 5))
         getSupport(on: "Today").tap()
