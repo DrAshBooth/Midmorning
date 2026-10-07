@@ -111,6 +111,10 @@ The content test MUST match each entry as a whole word, case-insensitive. A word
 
 The full forbidden list applies to the cards, the opening sentences, the rule strings and the Today card strings. It also applies to the pattern templates, every question and the alternatives examples. The content test MUST check each of those families against the full list. The content test MUST check the strings with ids support.*, gp.*, exclusion.*, notrightnow.* and gpsuggestion.* against the short list only. The short list is "Fairburn", "Oxford", "CREDO", "CBT-E", "CBT", "binger", "bingeing", "binge episode", "you've got this", "well done", "great job" and "proud".
 
+The content test MUST skip four permitted sentences, and no other text. The permitted sentences are "It is not therapy.", "It is not therapy, and it does not replace your GP or anyone treating you.", "It uses ideas from CBT." and "Are you getting help from a clinic or a therapist for your eating at the moment?". `safeguarding` permits the first three in "What is a treatment claim". The second is line 3 of onboarding screen 1, and the `safeguarding` scenario "A negative statement" passes it. The fourth is the screening treatment question that `onboarding` states in "Screen 2: the screening questions".
+
+The content test MUST divide each card text and each bundle string into sentences. A sentence ends at a full stop, a question mark or an exclamation mark that a space or a line break follows. The last sentence ends at the end of the text. The content test MUST skip a sentence only when it is equal to a permitted sentence, character for character. The content test MUST NOT compare a sentence with a permitted sentence word by word. It MUST check each other sentence of that text against the list of its family. A phrase from a list MUST NOT match across a permitted sentence. The forbidden lists MUST NOT change. Ash ruled this on 7 October 2026 (r17-02).
+
 #### Scenario: A forbidden word
 - **WHEN** a card's body holds "This programme treats binge eating."
 - **THEN** the content test fails and names the card's id and "treats"
@@ -143,6 +147,34 @@ The full forbidden list applies to the cards, the opening sentences, the rule st
 - **WHEN** "maintenance.2" holds "your recovery"
 - **THEN** the content test fails and names "maintenance.2" and "recovery"
 
+#### Scenario: Line 1 of onboarding screen 1
+- **WHEN** the bundle holds "Midmorning is a 12-week self-help programme for people who binge eat. It uses ideas from CBT." as line 1 of onboarding screen 1
+- **THEN** the content test checks the first sentence against the full list, skips "It uses ideas from CBT." and passes the string
+
+#### Scenario: Line 3 of onboarding screen 1
+- **WHEN** the bundle holds "It is not therapy, and it does not replace your GP or anyone treating you." as line 3 of onboarding screen 1
+- **THEN** the content test passes the string
+
+#### Scenario: A card with a permitted sentence
+- **WHEN** a card's body holds "It is not therapy. It is a programme."
+- **THEN** the content test passes the card
+
+#### Scenario: A permitted sentence next to a forbidden word
+- **WHEN** a card's body holds "It is not therapy. Therapy is not the word."
+- **THEN** the content test skips the first sentence, checks the second, fails and names the card's id and "therapy"
+
+#### Scenario: The screening treatment question
+- **WHEN** the bundle holds the question "Are you getting help from a clinic or a therapist for your eating at the moment?"
+- **THEN** the content test passes the question
+
+#### Scenario: A permitted line with one change
+- **WHEN** the bundle holds "It is not therapy, and it does not replace your GP or anyone treating you" with no full stop
+- **THEN** the content test fails and names the string's id and "therapy"
+
+#### Scenario: A permitted word in another string
+- **WHEN** a card's body holds "These ideas come from CBT."
+- **THEN** the content test fails and names the card's id and "CBT"
+
 ### Requirement: The app bundles the cards
 
 Every card MUST ship inside the app bundle as data. The app MUST read the cards from the bundle. The app MUST NOT fetch a card from a network.
@@ -165,11 +197,11 @@ The app MUST NOT call a language model or any generative service to write, chang
 
 The content bundle MUST carry one content version, an integer that starts at 1. The bundle MUST carry one bundle hash. The bundle hash MUST be the SHA-256 of the canonical JSON of the bundle and the signed catalogue keys. Canonical JSON MUST sort keys, use no whitespace outside strings and use UTF-8. Every card MUST carry a stable id that never changes across versions. A change to the text of a bundle string or of a signed catalogue key MUST raise the content version.
 
-The signed catalogue keys are the keys of the string catalogue that hold record, safeguarding and reminder text. That is the text that the `record`, `safeguarding` and `reminders` capabilities own. The repository MUST hold `Packages/Content/Resources/signed-catalogue-keys.json`. That file MUST list the key prefixes of those three families. A catalogue key is signed when it starts with a prefix from that file. The canonical JSON MUST hold the en-GB text of each signed key, with its plural forms.
+The signed catalogue keys are the keys of the string catalogue that hold record, safeguarding, reminder, weigh-in guidance and plan soft-rule text. The `record`, `safeguarding` and `reminders` capabilities own the first three families. The weigh-in guidance is the text that tells the person about the weigh-in, and `weigh-in` and `onboarding` own it. Its prefixes are "weighIn.explanation.", "weighIn.refusal", "weighIn.belowRange" and "onboarding.weighIn.explanation". Each other key that holds weigh-in guidance MUST also match a prefix. The plan soft rules have the prefix "plan.softRules.", and `regular-eating-plan` owns them. Ash added these two families on 7 October 2026 (r17-03), because both give clinical guidance. The repository MUST hold `Packages/Content/Resources/signed-catalogue-keys.json`. That file MUST list the key prefixes of those five families. A catalogue key is signed when it starts with a prefix from that file. The canonical JSON MUST hold the en-GB text of each signed key, with its plural forms.
 
-The bundle hash, the content-lock tool and `scripts/content-signoff-list` MUST read the prefixes from that one file. They MUST NOT hold a second copy of the list. A catalogue key that holds reminder text MUST have the segment "reminders" in its name, for example "reminders.title.midday" or "settings.reminders.pausedLine". A segment is a part of the key that full stops separate. The content test MUST fail when a key with the segment "reminders" matches no prefix in the file. The test MUST name that key. When the team adds a record or safeguarding key, the review MUST check that a prefix in the file matches the key.
+The bundle hash, the content-lock tool and `scripts/content-signoff-list` MUST read the prefixes from that one file. They MUST NOT hold a second copy of the list. A catalogue key that holds reminder text MUST have the segment "reminders" in its name, for example "reminders.title.midday" or "settings.reminders.pausedLine". A segment is a part of the key that full stops separate. The content test MUST fail when a key with the segment "reminders" matches no prefix in the file. The test MUST name that key. The review MUST check each new record, safeguarding, weigh-in guidance or plan soft-rule key. A prefix in the file MUST match that key.
 
-A catalogue key that no prefix matches holds interface text, for example the label of a control that names no record, safeguarding or reminder content. The bundle hash, the content version and the sign-off file MUST NOT cover such a key. A prefix can also match some interface text, for example a switch label in the reminder settings. That text is then signed too. The clinical reviewer still reviews all interface text before release, as `product-rules` requires in "No AI at runtime". Ash ruled this on 26 September 2026 (r13-01).
+A catalogue key that no prefix matches holds interface text. An example is the label of a control that names no content from the five families above. The bundle hash, the content version and the sign-off file MUST NOT cover such a key. A prefix can also match some interface text, for example a switch label in the reminder settings. That text is then signed too. The clinical reviewer still reviews all interface text before release, as `product-rules` requires in "No AI at runtime". Ash ruled this on 26 September 2026 (r13-01).
 
 The repository MUST hold `Packages/Content/Resources/content-lock.json`. The lock MUST hold two fields, contentVersion and bundleHash. The content test MUST fail when the bundle's hash differs from the lock's and the bundle's version equals the lock's. A commit that raises the content version MUST update the lock in the same commit.
 
@@ -210,6 +242,14 @@ The app MUST know the content version it carries. When the app updates and the c
 #### Scenario: An update with new content
 - **WHEN** the person opens the app after an update that raised the content version from 1 to 2
 - **THEN** the app shows Today and no message about new content
+
+#### Scenario: A weigh-in explanation changes
+- **WHEN** the team changes the text of "weighIn.explanation.kg" and does not raise the content version
+- **THEN** the content test fails and reports that the bundle's hash differs from content-lock.json at the same version
+
+#### Scenario: The two new families in the sign-off list
+- **WHEN** the team runs scripts/content-signoff-list
+- **THEN** the list holds "weighIn.refusal", "onboarding.weighIn.explanation" and "plan.softRules.mealLine"
 
 ### Requirement: Clinical sign-off per content version
 
@@ -390,7 +430,7 @@ The content bundle MUST hold these families of reviewed strings, each string wit
 - Opening sentences: "opening.stage2" to "opening.stage7". Programme owns the text. "opening.stage2.remindersoff" is the line the stage 2 opening card adds when notification permission is denied: "Reminders are off, so the Home Screen widget shows your next planned time."
 - Rule strings: "rule.stage2" to "rule.stage7", and more ids that start with "rule.stage2." or "rule.stage3.". Programme owns the text. The stage 2 rule and the stage 3 rule each show two counts, so each comes from strings with one count each. The stage 2 rule is "rule.stage2", "Opens after %lld recorded days.", then "rule.stage2.count", "You have %lld.". The stage 3 rule is "rule.stage3", "Opens after %1$@, or %2$@ after your plan starts". The app fills it from "rule.stage3.days", "%lld days on your plan", and "rule.stage3.weeks", "%lld weeks". With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts".
 - Today card strings: "todaycard.plan", "Your plan isn't set yet. It takes about two minutes."; "todaycard.plan.setup", "Set it up"; "todaycard.focus", "If you use a Focus at work, let planned meal reminders through?"; "todaycard.focus.yes", "Yes"; "todaycard.read", "Read". Programme owns the text and when each card shows.
-- Pattern templates: "pattern.<name>". Problem-solving owns the text. A slot template reads "{n} of your {m} starred entries were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} starred entries were at {place}."
+- Pattern templates: "pattern.<name>", and the three count strings "pattern.count.group", "pattern.count.total" and "pattern.count.hours". Problem-solving owns the text. A slot template reads "{n} of your {m} were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} were at {place}."
 - The reintroduction question: "dieting.reintroduction", "{weekday}, {slot}: how did it go?". Dieting-module owns the text.
 - The worksheet steps: "worksheet.1" to "worksheet.6". Problem-solving owns the text. "worksheet.1" is "What is the problem, exactly?"
 - The check-in weeks line: "checkin.weeks", and more ids that start with "checkin.weeks.". Staying-on-track owns the text. The line reads "A check-in comes at 4, 8 and 12 weeks." with the default constants. It shows three counts, so it comes from strings with one count each. The app fills the three numbers from CHECK_IN_WEEKS.
@@ -405,15 +445,15 @@ The content bundle MUST hold these families of reviewed strings, each string wit
 - The exclusion page reasons: "exclusion.selfharm", "exclusion.age", "exclusion.weight", "exclusion.pregnancy" and "exclusion.treatment". Safeguarding owns the text.
 - The not-right-now pages: "notrightnow.selfharm" and "notrightnow.weight". Safeguarding owns the text. For the pregnancy and treatment reasons, the page shows "exclusion.pregnancy" and "exclusion.treatment". The bundle MUST NOT hold "notrightnow.pregnancy" or "notrightnow.treatment".
 - The GP suggestion pages: "gpsuggestion.<reason>". Safeguarding owns the text.
-- The other signed-off text that the Programme package shows: the screening questions and their answers, the onboarding text, the headings and fixed lines of the safeguarding pages, and the review questions, controls and summary sentences. Safeguarding, onboarding and weekly-review own this text. Each of these strings MUST have a bundle copy, or the app MUST read it from a signed catalogue key, as "Content versions" defines. The height and weight limit messages are signed catalogue keys. Decision mm-t11.47 sets where two parts of this text live. These are the lines of onboarding screen 1 that hold "CBT" or "therapy", and the screening question "Are you getting help from a clinic or a therapist for your eating at the moment?". Those strings wait for that decision. Until Ash rules, they need no bundle copy and no signed catalogue key.
+- The other signed-off text that the Programme package shows: the screening questions and their answers, the onboarding text, the headings and fixed lines of the safeguarding pages, and the review questions, controls and summary sentences. Safeguarding, onboarding and weekly-review own this text. Each of these strings MUST have a bundle copy, or the app MUST read it from a signed catalogue key, as "Content versions" defines. The height and weight limit messages are signed catalogue keys. The lines of onboarding screen 1 that hold "CBT" or "therapy", and the screening question "Are you getting help from a clinic or a therapist for your eating at the moment?", also have a bundle copy. "The forbidden list" states why the content test passes them. Ash ruled this on 7 October 2026 (r17-02).
 
 These strings MUST follow the same version, sign-off, tone and forbidden-list rules as the cards. Every string with a count MUST follow the catalogue rules below. Every string MUST hold at most one %lld placeholder.
 
-The Programme package also holds some of these strings as Swift constants, and the app can show that copy. For each such constant, the bundle MUST hold the same text under the string's id. The strings that wait for decision mm-t11.47 are the one exception. A test MUST compare each Swift constant with its bundle string, both filled with the same values. The test MUST fail when the two differ, and it MUST name the id. The sign-off, the tone rules, the forbidden list and the catalogue rules read the bundle copy. Text that the app reads from a signed catalogue key is not a Swift constant, and it needs no bundle copy. Ash ruled this on 26 September 2026 (r13-02).
+The Programme package also holds some of these strings as Swift constants, and the app can show that copy. For each such constant, the bundle MUST hold the same text under the string's id. This rule has no exception. A test MUST compare each Swift constant with its bundle string, both filled with the same values. The test MUST fail when the two differ, and it MUST name the id. The sign-off, the tone rules, the forbidden list and the catalogue rules read the bundle copy. Text that the app reads from a signed catalogue key is not a Swift constant, and it needs no bundle copy. Ash ruled this on 26 September 2026 (r13-02).
 
 Programme owns every fill: the gate value from ProgrammeConstants, the recorded-day count of the stage 2 rule, and the days and the weeks of the stage 3 rule. A rule string of one sentence MUST NOT end with a full stop. The two strings of the stage 2 rule are the exception: each is one sentence, and each ends with a full stop.
 
-A pattern template MUST hold only the placeholders {n}, {m}, {slot} and {hours}. The one exception is "pattern.place", which MUST hold {n}, {m} and {place}. The app MUST fill {hours} from MAX_AWAKE_GAP_HOURS. The reintroduction question MUST hold only {weekday} and {slot}.
+A pattern template MUST hold only the placeholders {n}, {m}, {slot} and {hours}. The one exception is "pattern.place", which MUST hold {n}, {m} and {place}. In a pattern template, {n}, {m} and {hours} stand for counts. A pattern template MUST NOT hold a %lld placeholder. The app MUST fill each count from a string with one %lld and plural forms, as "Catalogue rules" requires. The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld starred entries", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. The three count strings are not templates. Each of them MUST hold one %lld and no other placeholder. Ash ruled this on 7 October 2026 (r17-05). The reintroduction question MUST hold only {weekday} and {slot}.
 
 The app MUST fill {slot} with the slot label as the person typed it, and no other word. The app MUST fill {weekday} with the weekday name from the en_GB formatter. The app MUST fill {place} with the person's custom chip text and no other word. Problem-solving owns that fill.
 
@@ -476,7 +516,7 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 Every string in the content bundle and in every string catalogue MUST follow these rules. The content test MUST check each rule it can check by machine. The clinical reviewer MUST check the rest at sign-off.
 
 - Every string with a count MUST carry plural forms with the categories zero, one and other.
-- Every %lld placeholder is a count. A %@ placeholder is not a count, and it needs no plural forms.
+- Every %lld placeholder is a count. A %@ placeholder is not a count, and it needs no plural forms. In a pattern template, {n}, {m} and {hours} stand for counts, but the template itself holds no count. The app fills each of them from a string with one count, as "Every bundled string family has ids" states. Ash ruled this on 7 October 2026 (r17-05).
 - A string MUST hold at most one count. A text that shows two or more counts MUST come from strings with one count each. The app can show two sentences from two strings, joined by one space. The app can also fill each %@ placeholder of a string from a string with one count, as the meal line in `regular-eating-plan` does. Ash ruled this on 26 September 2026 (r13-12).
 - Every constant MUST enter a string through %lld, never as a literal number.
 - A string with more than one placeholder MUST use positional placeholders, %1$lld, %2$@ and so on.
