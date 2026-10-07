@@ -55,7 +55,7 @@ final class AppLockLocalStoreTests: XCTestCase {
         controller.setLockAfterSeconds(30)
         XCTAssertEqual(try store.localSettingValue(key: AppLockSettingsKeys.lockAfterSeconds), "30")
 
-        controller.confirmTurnOnFaceOrTouchOnly()
+        await controller.confirmTurnOnFaceOrTouchOnly()
         XCTAssertEqual(try store.localSettingValue(key: AppLockSettingsKeys.faceOrTouchOnly), "true")
         await controller.tapTurnOffFaceOrTouchOnly()
         XCTAssertEqual(try store.localSettingValue(key: AppLockSettingsKeys.faceOrTouchOnly), "false")
@@ -69,7 +69,7 @@ final class AppLockLocalStoreTests: XCTestCase {
             let store = try RecordStore(directory: directory)
             let controller = makeController(store: store)
             controller.setLockAfterSeconds(300)
-            controller.confirmTurnOnFaceOrTouchOnly()
+            await controller.confirmTurnOnFaceOrTouchOnly()
             await controller.tapTurnOffAppLock()
         }
 

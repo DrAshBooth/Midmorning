@@ -33,9 +33,11 @@ struct PrivacyAppLockControls: View {
             titleVisibility: .visible
         ) {
             Button("applock.faceOrTouchOnly.turnOn") {
-                // Ruling r13-06: each turn-on saves the current enrolment
-                // state hash.
-                controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: EnrolmentHash.current())
+                // Ruling r15-03: a biometrics-only system authentication
+                // request comes first. On a cancel or a failure the switch
+                // stays off. Ruling r13-06: a turn-on that succeeds saves
+                // the current enrolment state hash, read after the request.
+                Task { await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: EnrolmentHash.current()) }
             }
             Button("applock.cancel", role: .cancel) {}
         } message: {

@@ -230,23 +230,30 @@ public final class AppLockController: ObservableObject {
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.enabled)
     }
 
-    /// The "Face ID only"/"Touch ID only" warning's "Turn on": no new
-    /// authentication request, only the warning the person just read. The
-    /// person is past the lock already: the Privacy group shows only under
-    /// an unlocked app, and the control is disabled while the app lock is
-    /// off.
+    /// The "Face ID only"/"Touch ID only" warning's "Turn on". Ruling
+    /// r15-03 (mm-t15.21): first, the app makes a biometrics-only system
+    /// authentication request, which never offers the device passcode. Thus
+    /// the person proves that the biometric works before the app depends on
+    /// it. On a cancel or a failure, the setting stays off, the app saves
+    /// no value and no hash, and this returns `false`. A biometry lockout
+    /// also makes the request fail, so no old hash stays in use.
     ///
     /// Ruling r13-06 (mm-t15.20): each turn-on saves the current enrolment
     /// state hash, so an enrolment change made while the setting was off
     /// does not lock the person out later. This is not a reset: the kept
-    /// hash then compares as before. With no `currentEnrolmentHash` (the
-    /// device gave none), the kept hash stays as it is.
-    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: String? = nil) {
+    /// hash then compares as before. The app reads `currentEnrolmentHash`
+    /// only after the request succeeds. When the device gives no hash, the
+    /// kept hash stays as it is.
+    @discardableResult
+    public func confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: @autoclosure () -> String? = nil) async -> Bool {
+        let succeeded = await authenticator.authenticate(reason: BiometryLabels.unlockReason, policy: .biometricsOnly)
+        guard succeeded else { return false }
         state.faceOrTouchOnlyEnabled = true
         settings?.setAppLockSetting("true", forKey: AppLockSettingsKeys.faceOrTouchOnly)
-        if let currentEnrolmentHash {
-            settings?.setAppLockSetting(currentEnrolmentHash, forKey: AppLockSettingsKeys.enrolmentStateHash)
+        if let hash = currentEnrolmentHash() {
+            settings?.setAppLockSetting(hash, forKey: AppLockSettingsKeys.enrolmentStateHash)
         }
+        return true
     }
 
     /// Requirement: "Face ID only or Touch ID only" — "The app MUST make
