@@ -10,22 +10,25 @@ import Constants
 /// off.
 ///
 /// - `stage1Morning` and `stage1Evening`: week 1 of the programme (stage 1),
-///   seeded in a fixed-offset time zone (`Etc/GMT±N`) where the local time
-///   at the seed is 10:xx or 19:xx. The seeder writes the zone identifier to
-///   `<stores>/<scenario>.timezone`, and the test launches the app with
-///   `TZ` set to that zone. So a check of the time of day ("after 17:00",
-///   "the close-the-day reminder at 21:45 is still to come") does not
-///   depend on the hour of the run. The start day is the current record
-///   day, the person "won't be weighing", and the current record day holds
-///   one entry, "Toast and tea", at 05:00 local time. Today then has one
-///   reminder still to come: close the day at 21:45 (stage 1, no entry
-///   after 17:00). The midday reminder does not fire (an entry before
-///   midday), and stage 1 has no planned meal and no morning plan reminder.
+///   seeded in a fixed-offset time zone (`Etc/GMT±N`). The seeder writes the
+///   zone identifier to `<stores>/<scenario>.timezone`, and the test
+///   launches the app with `TZ` set to that zone. So the app's time of day
+///   ("after 17:00", "the close-the-day reminder at 21:45 is still to
+///   come") does not depend on the hour of the run. For `stage1Evening` the
+///   local time at the seed is 19:xx. For `stage1Morning` it is between
+///   06:00 and 16:59 (`zoneForTheReminderCounts`). The start day is the
+///   current record day, the person "won't be weighing", and the current
+///   record day holds one entry, "Toast and tea", at 05:00 local time.
+///   Today then has one reminder still to come: close the day at 21:45
+///   (stage 1, no entry after 17:00). The midday reminder does not fire (an
+///   entry before midday), and stage 1 has no planned meal and no morning
+///   plan reminder.
 /// - `stage1Paused`: as `stage1Morning`, and the reminders are paused
 ///   ("Reminders are paused." and "Turn reminders on" in Settings,
 ///   Reminders), so the scheduler schedules nothing.
 /// - `stage2Evening`: week 2, seeded in a fixed-offset zone where the local
-///   time at the seed is 19:xx. The start day is eight record days ago, and
+///   time at the seed is 17:xx (`zoneForTheReminderCounts`), so the tests
+///   have more than 4 hours before 21:30 local time. The start day is eight record days ago, and
 ///   each earlier record day holds one entry, so stage 2 is open. Today's
 ///   plan is set: Breakfast 08:00, Lunch 13:00, Mid-afternoon 16:00 and
 ///   Evening meal 21:30. Today holds no entry. So today's reminders still
@@ -73,7 +76,9 @@ enum RemindersExportScenarios {
 
         switch scenario {
         case "stage1Morning", "stage1Evening", "stage1Paused":
-            let zone = zoneWhereTheHourIs(scenario == "stage1Evening" ? 19 : 10, at: now)
+            let zone = scenario == "stage1Evening"
+                ? zoneWhereTheHourIs(19, at: now)
+                : zoneForTheReminderCounts(localHours: 6...16, preferring: 10, reminderHour: 21, minute: 45, at: now)
             try Data(zone.identifier.utf8).write(to: zoneFile)
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = zone
@@ -94,7 +99,7 @@ enum RemindersExportScenarios {
             }
             print("seeded \(scenario) at \(directory.path) in \(zone.identifier)")
         case "stage2Evening":
-            let zone = zoneWhereTheHourIs(19, at: now)
+            let zone = zoneForTheReminderCounts(localHours: 17...19, preferring: 17, reminderHour: 21, minute: 30, at: now)
             try Data(zone.identifier.utf8).write(to: zoneFile)
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = zone
@@ -146,6 +151,40 @@ enum RemindersExportScenarios {
         default:
             break
         }
+    }
+
+    /// The zone for a scenario whose tests count "Pending reminders". The
+    /// app gives each reminder a floating time (year, month, day, hour and
+    /// minute, with no zone), and the notification daemon reads that time
+    /// in the simulator's zone, which is the Mac's zone (`TimeZone.current`
+    /// here). So of the fixed-offset zones where the local hour at `moment`
+    /// is in `localHours`, this takes the one where the seeded day's
+    /// `reminderHour`:`minute` is latest in the Mac's zone, and of those the
+    /// one nearest to `preferred`. For `6...16` and 21:45 that time is then
+    /// always more than 4 hours ahead in the Mac's zone. For `17...19` and
+    /// 21:30 no zone puts the seeded day after the Mac's day, so after
+    /// 21:30 in the Mac's zone that time is behind.
+    nonisolated static func zoneForTheReminderCounts(localHours: ClosedRange<Int>, preferring preferred: Int, reminderHour: Int, minute: Int, at moment: Date) -> TimeZone {
+        var candidates: [(zone: TimeZone, reminder: Date, distance: Int)] = []
+        for offset in -12...14 {
+            let identifier = offset == 0 ? "Etc/GMT" : (offset > 0 ? "Etc/GMT-\(offset)" : "Etc/GMT+\(-offset)")
+            guard let zone = TimeZone(identifier: identifier) else { continue }
+            var local = Calendar(identifier: .gregorian)
+            local.timeZone = zone
+            let hour = local.component(.hour, from: moment)
+            guard localHours.contains(hour) else { continue }
+            var components = local.dateComponents([.year, .month, .day], from: moment)
+            components.hour = reminderHour
+            components.minute = minute
+            var mac = Calendar(identifier: .gregorian)
+            mac.timeZone = .current
+            guard let reminder = mac.date(from: components) else { continue }
+            candidates.append((zone, reminder, abs(hour - preferred)))
+        }
+        let best = candidates.max { a, b in
+            a.reminder != b.reminder ? a.reminder < b.reminder : a.distance > b.distance
+        }
+        return best?.zone ?? zoneWhereTheHourIs(preferred, at: moment)
     }
 
     /// A fixed-offset zone where the local hour at `moment` is `hour`.

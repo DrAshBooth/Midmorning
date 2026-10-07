@@ -11,20 +11,30 @@ import PDFKit
 /// The seeder scenarios are in `seeder/Sources/Seeder/RemindersExportScenarios.swift`.
 /// `stage1Morning`, `stage1Evening`, `stage1Paused` and `stage2Evening` are
 /// seeded in a fixed-offset zone; a test launches the app with `TZ` set to
-/// that zone, so a check of the time of day does not depend on the hour of
+/// that zone, so the app's own time of day does not depend on the hour of
 /// the run.
 ///
+/// The notification daemon is different: the app gives each reminder a
+/// floating time (year, month, day, hour and minute, with no zone), and the
+/// daemon reads that time in the simulator's zone, which is the Mac's zone.
+/// So a test that reads "Pending reminders" first makes sure that the
+/// seeded day's reminder time is still ahead in the Mac's zone
+/// (`requireTheSeededDaysTimeIsAheadForTheDaemon`). The seeder chooses the
+/// zones of `stage1Morning` and `stage1Paused` so that the seeded day's
+/// 21:45 is always more than 4 hours ahead in the Mac's zone. For
+/// `stage2Evening` no zone can do this after 21:30 in the Mac's zone, so
+/// `testZRemovingAPlannedMealCancelsOnlyItsReminder` must run before 21:25
+/// in the Mac's zone; later, it fails with a message that says so.
+///
 /// The notification permission: `automated-checks.sh` installs the app new
-/// for each run, so a run starts with the permission "not determined", and
-/// Today shows "Allow notifications to get reminders." in every test. An
-/// answer to the system request stays for the rest of the run. So the tests
-/// that answer it have names that begin with "testZ": XCTest runs the tests
-/// of a class in name order, and every other test then runs before them,
-/// with the permission line that it was written with.
-/// `testZFreshInstallAsksForNotificationsOnToday` needs the permission "not
-/// determined" and allows notifications. The other "testZ" tests read
-/// "Pending reminders", which needs that permission; each allows
-/// notifications itself when it runs alone.
+/// for each run, so a run starts with the permission "not determined". An
+/// answer to the system request stays until the next install, and tests in
+/// other files also answer it. So the script runs
+/// `testZFreshInstallAsksForNotificationsOnToday`, which needs "not
+/// determined", in a first pass of its own, before every other test
+/// (`FRESH_PERMISSION_TESTS` in the script). The other "testZ" tests read
+/// "Pending reminders", which needs the permission "allowed"; each allows
+/// notifications itself when Today asks, so their order does not matter.
 extension AutomatedChecks {
     private var runEnvironment: [String: String] { ProcessInfo.processInfo.environment }
 
@@ -47,6 +57,36 @@ extension AutomatedChecks {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
         return calendar.component(.hour, from: Date())
+    }
+
+    /// The seeded day's `hour`:`minute` of `scenario`, as the notification
+    /// daemon reads it: the app's floating reminder time, in the
+    /// simulator's zone (the Mac's zone). Fails when it is less than 5
+    /// minutes ahead: the daemon then holds no request for it, and a count
+    /// of "Pending reminders" cannot show the change. Not a fault of the
+    /// app; run the checks earlier in the day.
+    private func requireTheSeededDaysTimeIsAheadForTheDaemon(_ scenario: String, hour: Int, minute: Int, file: StaticString = #filePath, line: UInt = #line) throws {
+        var seeded = Calendar(identifier: .gregorian)
+        seeded.timeZone = try seededZone(scenario)
+        var components = seeded.dateComponents([.year, .month, .day], from: Date())
+        components.hour = hour
+        components.minute = minute
+        var mac = Calendar(identifier: .gregorian)
+        mac.timeZone = .current
+        let moment = try XCTUnwrap(mac.date(from: components), file: file, line: line)
+        let time = String(format: "%02d:%02d", hour, minute)
+        XCTAssertGreaterThan(moment.timeIntervalSinceNow, 5 * 60,
+                             "the seeded day's \(time) is more than 5 minutes ahead in the Mac's zone (\(mac.timeZone.identifier)), where the notification daemon reads the app's floating reminder times. This check must run before \(time) minus 5 minutes in the Mac's zone; run the checks again earlier in the day.",
+                             file: file, line: line)
+    }
+
+    /// The local time of the seeded zone of `scenario` now, in minutes
+    /// after midnight.
+    private func seededLocalMinutes(_ scenario: String) throws -> Int {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try seededZone(scenario)
+        let now = calendar.dateComponents([.hour, .minute], from: Date())
+        return (now.hour ?? 0) * 60 + (now.minute ?? 0)
     }
 
     /// The Record directory in the app's data container.
@@ -198,10 +238,12 @@ extension AutomatedChecks {
             field.tap()
             field.typeText(value)
         }
-        app.buttons["Continue"].firstMatch.tap()
-        if !app.navigationBars["Your start"].waitForExistence(timeout: 3),
-           app.navigationBars["A few questions first"].exists {
+        // The keyboard and its tip can take a tap on "Continue"; on 7
+        // October 2026 two taps did not open screen 3 once. So the test taps
+        // again, three times at most, while screen 2 stays.
+        for _ in 0..<3 where app.navigationBars["A few questions first"].exists {
             app.buttons["Continue"].firstMatch.tap()
+            if app.navigationBars["Your start"].waitForExistence(timeout: 3) { break }
         }
         assertScreen("Your start", file: file, line: line)
         // Screen 3.
@@ -326,7 +368,8 @@ extension AutomatedChecks {
     /// mm-t24.22, item 2 of the first comment (r13-19, r16-01): the
     /// schedule computes again after "Turn reminders on", a switch, a time
     /// change and a quiet hours change, by the Diagnostics count. The store
-    /// is in stage 1 at 10:xx local time, with the reminders paused. Paused:
+    /// is in stage 1 between 06:00 and 16:59 local time (10:xx when the
+    /// Mac's zone allows it), with the reminders paused. Paused:
     /// 0 pending. "Turn reminders on": more than 0 (P). "Close the day" off:
     /// fewer (S). On again: P. "Close the day time" 22:30, inside quiet
     /// hours: S again, because quiet hours drop every close-the-day
@@ -335,6 +378,7 @@ extension AutomatedChecks {
     /// device check.)
     func testZRemindersScreenChangesComputeTheScheduleAgain() throws {
         try launchOnTodayInTheSeededZone("stage1Paused")
+        try requireTheSeededDaysTimeIsAheadForTheDaemon("stage1Paused", hour: 21, minute: 45)
         allowNotificationsFromTodayIfAsked()
         XCTAssertEqual(pendingReminders(where: { $0 == 0 }), 0, "while the reminders are paused, nothing is pending")
         tapToolbar("Settings")
@@ -410,17 +454,28 @@ extension AutomatedChecks {
     /// mm-t24.22, comment of mm-t24.34 (r13-19, r16-01): in stage 1 before
     /// 17:00, Today shows only "Pause for today". After 17:00, "Close the
     /// day" shows beside it. The day heading menu has no "Close the day".
-    /// The two stores are seeded in zones where the local time is 10:xx and
-    /// 19:xx. (From stage 2, "after the last planned meal's time" needs a
-    /// seeded plan; it stays a device check.)
+    /// The two stores are seeded in zones where the local time is between
+    /// 06:00 and 16:59 (10:xx when the Mac's zone allows it) and 19:xx.
+    /// While the menu is open, the test counts each "Close the day" except
+    /// Today's own control, which it finds by its frame before the menu
+    /// opens. (From stage 2, "after the last planned meal's time" is
+    /// testCloseTheDayShowsAfterTheLastPlannedMealInStage2.)
     func testCloseTheDayShowsBesidePauseOnlyAfter17InStage1() throws {
-        func assertTheDayMenuHasNoCloseTheDay(besidePause: Int) {
+        /// `todaysControl`: the frame of Today's own "Close the day", or
+        /// `nil` when Today shows none.
+        func assertTheDayMenuHasNoCloseTheDay(todaysControl: CGRect?) {
             let menu = app.buttons["Day options"].firstMatch
             XCTAssertTrue(menu.waitForExistence(timeout: 5), "the current day heading shows its menu")
             menu.tap()
             XCTAssertTrue(app.buttons["Fasting today"].firstMatch.waitForExistence(timeout: 5), "the day menu opens")
-            let closeTheDay = app.buttons.matching(NSPredicate(format: "label == %@", "Close the day")).count
-            XCTAssertEqual(closeTheDay, besidePause, "the day heading menu has no \"Close the day\"")
+            let matches = app.buttons.matching(NSPredicate(format: "label == %@", "Close the day")).allElementsBoundByIndex
+            let notTodaysControl = matches.filter { match in
+                guard let control = todaysControl else { return true }
+                let frame = match.frame
+                return abs(frame.minX - control.minX) > 2 || abs(frame.minY - control.minY) > 2
+                    || abs(frame.width - control.width) > 2 || abs(frame.height - control.height) > 2
+            }
+            XCTAssertEqual(notTodaysControl.count, 0, "the day heading menu has no \"Close the day\": \(notTodaysControl.map(\.frame))")
             app.navigationBars["Today"].staticTexts.firstMatch.tap()
             XCTAssertTrue(app.buttons["Fasting today"].firstMatch.waitForNonExistence(timeout: 5), "the day menu closes")
         }
@@ -430,7 +485,7 @@ extension AutomatedChecks {
         let pause = app.buttons["Pause for today"].firstMatch
         XCTAssertTrue(pause.waitForExistence(timeout: 5), "Today shows \"Pause for today\"")
         XCTAssertFalse(app.buttons["Close the day"].exists, "before 17:00 in stage 1, Today shows only \"Pause for today\"")
-        assertTheDayMenuHasNoCloseTheDay(besidePause: 0)
+        assertTheDayMenuHasNoCloseTheDay(todaysControl: nil)
 
         let evening = try launchOnTodayInTheSeededZone("stage1Evening")
         XCTAssertTrue(evening >= 17 || evening < 4, "the stage1Evening zone is after 17:00 (local hour \(evening))")
@@ -440,12 +495,13 @@ extension AutomatedChecks {
         XCTAssertTrue(closeTheDay.waitForExistence(timeout: 5), "after 17:00 in stage 1, Today shows \"Close the day\"")
         XCTAssertEqual(closeTheDay.frame.midY, pause.frame.midY, accuracy: 4, "\"Close the day\" shows beside \"Pause for today\"")
         XCTAssertGreaterThan(closeTheDay.frame.minX, pause.frame.maxX, "\"Close the day\" shows beside \"Pause for today\"")
-        assertTheDayMenuHasNoCloseTheDay(besidePause: 1)
+        assertTheDayMenuHasNoCloseTheDay(todaysControl: closeTheDay.frame)
     }
 
     /// mm-t24.22, comment of mm-t24.33 (r13-19, r16-01): "Pending
     /// reminders" drops after "Pause for today". The store is in stage 1,
-    /// at 10:xx local time, with an entry at 05:00: today's only reminder
+    /// between 06:00 and 16:59 local time (10:xx when the Mac's zone allows
+    /// it), with an entry at 05:00: today's only reminder
     /// still to come is close the day at 21:45, so the count drops by one,
     /// and the other days keep theirs. A second tap ("Paused for today")
     /// gives the reminder back. Comment of mm-t24.23: the same check as
@@ -453,6 +509,7 @@ extension AutomatedChecks {
     /// the real reminders that do not fire stay a device check.
     func testZPauseForTodayCancelsOnlyTodaysReminders() throws {
         try launchOnTodayInTheSeededZone("stage1Morning")
+        try requireTheSeededDaysTimeIsAheadForTheDaemon("stage1Morning", hour: 21, minute: 45)
         allowNotificationsFromTodayIfAsked()
         guard let before = pendingReminders(where: { $0 > 1 }) else { return XCTFail("Diagnostics shows \"Pending reminders\"") }
         XCTAssertGreaterThan(before, 1, "before the pause, reminders are pending for today and the next days")
@@ -527,14 +584,16 @@ extension AutomatedChecks {
 
     /// mm-t24.22, comment of mm-t24.34, the stage 2 part (r13-19, r16-01):
     /// "From stage 2, it shows after the last planned meal's time." The
-    /// store is in stage 2 at 19:xx local time, with today's last planned
+    /// store is in stage 2 at 17:xx local time, with today's last planned
     /// meal at 21:30: after 17:00, Today still shows only "Pause for
     /// today". After the Evening meal leaves today's plan, the last planned
     /// meal is Mid-afternoon at 16:00, and "Close the day" shows beside
     /// "Pause for today".
     func testCloseTheDayShowsAfterTheLastPlannedMealInStage2() throws {
-        let hour = try launchOnTodayInTheSeededZone("stage2Evening")
-        XCTAssertTrue((17..<21).contains(hour), "the stage2Evening zone is after 17:00 and before 21:30 (local hour \(hour))")
+        try launchOnTodayInTheSeededZone("stage2Evening")
+        let local = try seededLocalMinutes("stage2Evening")
+        XCTAssertTrue((17 * 60)..<(21 * 60 + 25) ~= local,
+                      "the local time is after 17:00 and more than 5 minutes before 21:30 (now \(local / 60):\(local % 60)); seed the stores again")
         XCTAssertFalse(app.buttons["Getting started"].exists, "the seeded store is in stage 2")
         let pause = app.buttons["Pause for today"].firstMatch
         XCTAssertTrue(scrollTo(pause), "Today shows \"Pause for today\"")
@@ -550,16 +609,21 @@ extension AutomatedChecks {
 
     /// mm-t24.22, comment of mm-t24.23 and the lead's request ("a plan
     /// change cancels the right reminders"), by the Diagnostics count
-    /// (r13-19, r16-01). The store is in stage 2 at 19:xx local time, with
+    /// (r13-19, r16-01). The store is in stage 2 at 17:xx local time, with
     /// no entry today: today's reminders still to come are the Evening
-    /// meal at 21:30 and close the day at 21:45. After the Evening meal
+    /// meal at 21:30 and close the day at 21:45. The test must run before
+    /// 21:25 in the Mac's zone (see the comment at the top of this file).
+    /// After the Evening meal
     /// leaves today's plan, "Pending reminders" is one less: close the day
     /// stays, because Mid-afternoon (16:00) has no entry, and the other
     /// days keep theirs. (That the reminder does not fire at 21:30 needs a
     /// real notification; it stays a device check.)
     func testZRemovingAPlannedMealCancelsOnlyItsReminder() throws {
-        let hour = try launchOnTodayInTheSeededZone("stage2Evening")
-        XCTAssertTrue((17..<21).contains(hour), "the stage2Evening zone is before 21:30 (local hour \(hour))")
+        try launchOnTodayInTheSeededZone("stage2Evening")
+        let local = try seededLocalMinutes("stage2Evening")
+        XCTAssertTrue((17 * 60)..<(21 * 60 + 25) ~= local,
+                      "the local time is after 17:00 and more than 5 minutes before 21:30 (now \(local / 60):\(local % 60)); seed the stores again")
+        try requireTheSeededDaysTimeIsAheadForTheDaemon("stage2Evening", hour: 21, minute: 30)
         allowNotificationsFromTodayIfAsked()
         guard let before = pendingReminders(where: { $0 > 2 }) else { return XCTFail("Diagnostics shows \"Pending reminders\"") }
         XCTAssertGreaterThan(before, 2, "before the change, reminders are pending for today and the next days")
@@ -594,9 +658,15 @@ extension AutomatedChecks {
     func testAQueuedSkippedAppliesWhenTheAppOpens() throws {
         let zone = try seededZone("stage2Evening")
         try launchOnTodayInTheSeededZone("stage2Evening")
+        // A skipped planned meal's row reads exactly "Lunch, 13:00,
+        // Skipped" (`PlannedMealAccessibility`). Before 17:30 local time the
+        // missed planned meal prompt is on Lunch, and that row reads
+        // "Lunch, 13:00, Skipped, or not recorded yet?", so the test
+        // compares the whole label.
+        let skippedLabel = "Lunch, 13:00, Skipped"
         let lunch = element(labelBeginningWith: "Lunch, 13:00")
         XCTAssertTrue(scrollTo(lunch), "Today shows the Lunch row")
-        XCTAssertFalse(lunch.label.contains("Skipped"), "before the queue, Lunch is not skipped: \(lunch.label)")
+        XCTAssertNotEqual(lunch.label, skippedLabel, "before the queue, Lunch is not skipped")
         app.terminate()
         // The queue file, as the notification handler writes it.
         var calendar = Calendar(identifier: .gregorian)
@@ -613,8 +683,8 @@ extension AutomatedChecks {
         try Data(queue.utf8).write(to: queueURL)
         app.launch()
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
-        let skipped = element(labelBeginningWith: "Lunch, 13:00, Skipped")
-        XCTAssertTrue(skipped.waitForExistence(timeout: 8) || scrollTo(skipped), "after the app opens, Today shows Lunch skipped")
+        let skipped = element(labelled: skippedLabel)
+        XCTAssertTrue(skipped.waitForExistence(timeout: 8) || scrollTo(skipped), "after the app opens, Today shows Lunch skipped (\"\(skippedLabel)\")")
         app.swipeDown(); app.swipeDown()
         XCTAssertEqual(diagnosticsCount("Queue length"), 0, "Diagnostics \"Queue length\" reads 0")
         let left = (try? Data(contentsOf: queueURL)).map { String(decoding: $0, as: UTF8.self) } ?? ""
@@ -759,27 +829,30 @@ extension AutomatedChecks {
 
     /// mm-t42.14, comment of mm-t42.24, part 1 (r13-19, r16-01): make a
     /// PDF, and while the share sheet shows, force-quit the app; open the
-    /// app again: tmp/Export holds no PDF. (Part 2, "Delete everything"
-    /// straight from the cover, needs the app lock; it stays with the
-    /// app-lock checks.)
+    /// app again: the app's containers hold no PDF. (Part 2, "Delete
+    /// everything" straight from the cover, needs the app lock; it stays
+    /// with the app-lock checks.)
     func testTheNextLaunchRemovesAPDFLeftByAForceQuit() throws {
         try launchOnToday("week1")
         _ = makeAPDFFromSettings()
-        XCTAssertEqual(exportedPDFs().count, 1, "while the share sheet shows, tmp/Export holds the PDF")
+        assertTheOnePDFIsInTmpExport("while the share sheet shows")
         app.terminate()
-        XCTAssertEqual(exportedPDFs().count, 1, "the force-quit leaves the PDF in tmp/Export")
+        assertTheOnePDFIsInTmpExport("after the force-quit")
         app.launch()
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
-        XCTAssertEqual(exportedPDFs(), [], "after the next launch, tmp/Export holds no PDF")
+        XCTAssertEqual(pdfFilesInTheAppContainers(), [], "after the next launch, the app's data container and App Group container hold no PDF")
     }
 
     /// mm-t41.15, comment of r13-13 and r13-05, part (2) (r13-19, r16-01):
-    /// in safe mode, make a PDF export; it holds the entries. The test
-    /// reads the text of the PDF in tmp/Export while the share sheet shows:
-    /// it holds the seeded entry "Toast and tea". (How the PDF looks stays
-    /// with the person who checks the export.)
+    /// in safe mode, make a PDF export; it holds the entries. The store is
+    /// `review`, with entries on nine record days, all in the default
+    /// range of 28 days. The test reads the text of the PDF in tmp/Export
+    /// while the share sheet shows: it holds "Porridge" eight times (one
+    /// entry on each of the eight earlier days), "Soup" and "Pasta" (the
+    /// previous day), and "Toast and tea" and "Rice and beans" (today).
+    /// (How the PDF looks stays with the person who checks the export.)
     func testTheSafeModeExportHoldsTheEntries() throws {
-        try launch("week1", launchMarker: "2")
+        try launch("review", launchMarker: "2")
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20), "safe mode's Today shows")
         XCTAssertFalse(app.buttons["Add an entry"].exists, "safe mode's Today is not the full Today")
         app.buttons["Export"].firstMatch.tap()
@@ -790,26 +863,58 @@ extension AutomatedChecks {
         let sheet = app.otherElements["ActivityListView"].firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 15), "in safe mode, \"Make PDF\" shows the system share sheet")
         let text = exportedPDFText() ?? ""
-        XCTAssertTrue(text.contains("Toast and tea"), "the safe mode PDF holds the entry \"Toast and tea\": \(text.prefix(300))")
+        XCTAssertEqual(text.components(separatedBy: "Porridge").count - 1, 8,
+                       "the safe mode PDF holds the entry \"Porridge\" of each of the eight earlier days: \(text.prefix(600))")
+        for entry in ["Soup", "Pasta", "Toast and tea", "Rice and beans"] {
+            XCTAssertTrue(text.contains(entry), "the safe mode PDF holds the entry \"\(entry)\": \(text.prefix(600))")
+        }
         app.otherElements["PopoverDismissRegion"].firstMatch.tap()
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 10), "the share sheet closes")
     }
 
-    /// The PDF files under the app's `tmp/Export` folder.
-    private func exportedPDFs() -> [String] {
-        let folder = URL(fileURLWithPath: runEnvironment["APP_DATA"]!).appendingPathComponent("tmp/Export")
-        let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil)?.allObjects as? [URL] ?? []
-        return files.filter { $0.pathExtension == "pdf" }.map(\.lastPathComponent)
+    /// Every PDF file in the app's data container (tmp, Library and
+    /// Documents included) and in its App Group container, as a path from
+    /// the top of its container.
+    private func pdfFilesInTheAppContainers() -> [String] {
+        let roots = [URL(fileURLWithPath: runEnvironment["APP_DATA"]!), appGroupDirectory()].compactMap { $0 }
+        return roots.flatMap { root -> [String] in
+            let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)?.allObjects as? [URL] ?? []
+            let prefix = root.resolvingSymlinksInPath().path + "/"
+            return files.filter { $0.pathExtension.lowercased() == "pdf" }.map { file in
+                let path = file.resolvingSymlinksInPath().path
+                return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : path
+            }
+        }.sorted()
+    }
+
+    /// The app's containers hold one PDF, and it is in `tmp/Export`.
+    private func assertTheOnePDFIsInTmpExport(_ moment: String, file: StaticString = #filePath, line: UInt = #line) {
+        let pdfs = pdfFilesInTheAppContainers()
+        XCTAssertEqual(pdfs.count, 1, "\(moment), the app's containers hold one PDF: \(pdfs)", file: file, line: line)
+        XCTAssertTrue(pdfs.allSatisfy { $0.hasPrefix("tmp/Export/") }, "\(moment), the PDF is in tmp/Export: \(pdfs)", file: file, line: line)
+    }
+
+    /// The labels of the share sheet's actions, after a swipe up that shows
+    /// the whole list.
+    private func shareSheetActionLabels(_ sheet: XCUIElement) -> Set<String> {
+        let actions = sheet.cells.matching(identifier: "actionGroupCell")
+        var labels = Set(actions.allElementsBoundByIndex.map(\.label))
+        for _ in 0..<3 where !(labels.contains("Markup") && labels.contains("Print")) {
+            sheet.swipeUp()
+            labels.formUnion(actions.allElementsBoundByIndex.map(\.label))
+        }
+        return labels
     }
 
     /// mm-t42.14, comment of r13-14 (mm-t42.27) (r13-19): on the export
     /// screen, "Make PDF" shows the share sheet with its actions, "Save to
-    /// Files" among them, and no "Copy". Comment of mm-t41.24, the part
-    /// that the simulator can prove (r13-19, r16-01): a close of the share
-    /// sheet with no destination shows the export screen with no message,
-    /// and no PDF file stays in the app's container. (AirDrop is not on the
-    /// simulator, and the network watch needs a device or a proxy; both
-    /// stay device checks.)
+    /// Files", "Markup" and "Print" among them, and no "Copy". Comment of
+    /// mm-t41.24, the part that the simulator can prove (r13-19, r16-01): a
+    /// close of the share sheet with no destination shows the export screen
+    /// with no message, and no PDF file stays in the app's data container
+    /// (tmp, Library and Documents) or its App Group container. (AirDrop is
+    /// not on the simulator, and the network watch needs a device or a
+    /// proxy; both stay device checks.)
     func testTheExportShareSheetShowsNoCopy() throws {
         try launchOnToday("week1")
         tapToolbar("Settings")
@@ -825,12 +930,14 @@ extension AutomatedChecks {
         XCTAssertTrue(sheet.waitForExistence(timeout: 15), "\"Make PDF\" shows the system share sheet")
         let actions = sheet.cells.matching(identifier: "actionGroupCell")
         XCTAssertTrue(actions.firstMatch.waitForExistence(timeout: 10), "the share sheet shows its actions")
-        let labels = actions.allElementsBoundByIndex.map(\.label)
-        XCTAssertTrue(labels.contains("Save to Files"), "the share sheet offers \"Save to Files\": \(labels)")
-        XCTAssertFalse(labels.contains("Copy"), "the share sheet offers no \"Copy\": \(labels)")
+        let labels = shareSheetActionLabels(sheet)
+        for action in ["Save to Files", "Markup", "Print"] {
+            XCTAssertTrue(labels.contains(action), "the share sheet offers \"\(action)\": \(labels.sorted())")
+        }
+        XCTAssertFalse(labels.contains("Copy"), "the share sheet offers no \"Copy\": \(labels.sorted())")
         let copy = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Copy")).firstMatch
         XCTAssertFalse(copy.exists, "the share sheet shows no \"Copy\"")
-        XCTAssertEqual(exportedPDFs().count, 1, "while the share sheet shows, tmp/Export holds the one PDF")
+        assertTheOnePDFIsInTmpExport("while the share sheet shows")
         // Close the share sheet with no destination.
         app.otherElements["PopoverDismissRegion"].firstMatch.tap()
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 10), "the share sheet closes")
@@ -838,11 +945,11 @@ extension AutomatedChecks {
         XCTAssertTrue(makePDF.isHittable, "the export screen shows again")
         XCTAssertEqual(app.alerts.count, 0, "the close shows no message")
         XCTAssertFalse(element(labelled: "The PDF could not be made. Try again.").exists, "the close shows no message")
-        var left = exportedPDFs()
+        var left = pdfFilesInTheAppContainers()
         for _ in 0..<10 where !left.isEmpty {
             usleep(300_000)
-            left = exportedPDFs()
+            left = pdfFilesInTheAppContainers()
         }
-        XCTAssertEqual(left, [], "after the close, no PDF file stays in the app's container")
+        XCTAssertEqual(left, [], "after the close, no PDF file stays in the app's data container or its App Group container")
     }
 }
