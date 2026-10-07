@@ -69,7 +69,9 @@ onboarding.pleaseanswer
 onboarding.record.sentence1
 onboarding.record.sentence2
 onboarding.record.sentence3
+onboarding.screen1.line1
 onboarding.screen1.line2
+onboarding.screen1.line3
 onboarding.screen1.line5
 onboarding.screen1.line6
 onboarding.screen1.line7
@@ -171,6 +173,7 @@ screening.question.height
 screening.question.pregnancy
 screening.question.selfharm
 screening.question.selfharm.how
+screening.question.treatment
 screening.question.weight
 screening.weight.kilograms
 screening.weight.pounds

@@ -457,6 +457,10 @@
     "text": "Your weight"
   },
   {
+    "id": "screening.question.treatment",
+    "text": "Are you getting help from a clinic or a therapist for your eating at the moment?"
+  },
+  {
     "id": "screening.question.pregnancy",
     "text": "We ask everyone the same questions. Pregnancy changes what eating needs to look like, so: are you pregnant at the moment?"
   },
@@ -485,8 +489,16 @@
     "text": "What this is and isn't"
   },
   {
+    "id": "onboarding.screen1.line1",
+    "text": "Midmorning is a 12-week self-help programme for people who binge eat. It uses ideas from CBT."
+  },
+  {
     "id": "onboarding.screen1.line2",
     "text": "It is not a diet, and it is not for weight loss."
+  },
+  {
+    "id": "onboarding.screen1.line3",
+    "text": "It is not therapy, and it does not replace your GP or anyone treating you."
   },
   {
     "id": "onboarding.screen1.line5",
