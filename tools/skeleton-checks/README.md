@@ -56,8 +56,10 @@ check, so flow checks also move into tests.
   proved from the source text only: it shows that the screen calls the
   words, not where they show. A layout claim needs a UI test.
 - Navigation checks, flow checks, and the text checks that need the
-  screen, are UI tests in `HarnessUITests/AutomatedChecks.swift` (35
-  checks). Each test names its device-check bead. Run them with one command:
+  screen, are UI tests in `HarnessUITests/AutomatedChecks.swift` and its
+  extensions `AutomatedChecks+RecordPlan.swift`, `+OnboardingReview.swift`,
+  `+RemindersExport.swift` and `+AppLock.swift` (127 checks on 7 October
+  2026). Each test names its device-check bead. Run them with one command:
 
 ```bash
 tools/skeleton-checks/automated-checks.sh            # every check
@@ -90,21 +92,51 @@ does not disturb a simulator that another session uses. It reads the
 content version in `Packages/Content/Resources/manifest.json` and gives
 `testDraftShowsAboveTheCardTitle` the draft state to expect: a draft when
 that folder holds no `content-signoff-v<version>.json`. It builds and
-installs the app, builds the UI tests, and seeds three stores with
-`seeder` (`week1`, `review` and `corrupt`; `seeder/Sources/Seeder/AutomatedScenarios.swift`
-tells what each holds). Before each launch, a test copies one seeded store
-into the app's container. The app then opens on Today with the app lock off.
-The log and the result bundle go to `out/automated/`.
+uninstalls and installs the app (so each run starts with the notification
+permission not asked and a new data container), builds the UI tests, and
+seeds the stores with `seeder`. `AutomatedScenarios.swift` holds `week1`,
+`review` and `corrupt`; `RecordPlanScenarios.swift`,
+`OnboardingReviewScenarios.swift` (the `or-` stores),
+`RemindersExportScenarios.swift` and `AppLockScenarios.swift` (the `lock-`
+stores) hold the rest, and each file tells what its stores hold. Before each
+launch, a test copies one seeded store into the app's container. Some
+stores are seeded in a fixed-offset zone (`Etc/GMT±N`) and the test
+launches the app with `TZ` set to it, so a check that needs an evening or a
+night time does not depend on the hour of the run. The log and the result
+bundle go to `out/automated/`.
 
-When to run. Run the checks between 09:00 and 03:30 in the Mac's time
+Tools the tests use:
+
+- The app-lock test seam, `App/Midmorning/AppLock/AppLockTestSeam.swift`,
+  is in Debug builds only (`AppLockTestSeamSourceTests` in `./verify` proves
+  that a Release build holds none). A UI test turns it on with the launch
+  environment variable `MIDMORNING_APP_LOCK_SCRIPT`: each system
+  authentication request takes the next scripted result (succeed, fail,
+  cancel or no passcode), and the enrolment hash comes from the script. The
+  real Face ID prompt, the passcode fallback and a real enrolment change
+  stay device checks.
+- Simulated reminders. `push-relay.sh` sends each file that a test writes
+  to `out/automated/push` with `xcrun simctl push`. The script starts the
+  relay before the checks and stops it at the end.
+- Some tests read the store files with SQLite3, read an export PDF with
+  PDFKit, read a label hidden from VoiceOver with Vision text recognition,
+  or make the store files read-only so that a save fails.
+
+When to run. Start the checks between 09:00 and 02:45 in the Mac's time
 zone. The seeder puts no entry after now, and the gap band on the current
 record day needs 5 hours of that day; before 09:00 the seeder stops with an
-error. The run takes about 13 minutes, and it must end before 04:00, when
-the record day changes.
+error. A full run takes about 75 minutes (4536 s on 7 October 2026), and it
+must end before 04:00, when the record day changes.
 
-The UI tests are not part of `./verify`, for two reasons. First, the 35
-checks take about 13 minutes (794 s) on a warm simulator (26 September
-2026), and a warm `./verify` must stay under 240 s. Second, a simulator run needs a booted
+Known causes of a failure that a second run does not repeat: the keyboard
+tip of a new simulator, which has its own "Continue"; and, after a test
+allows notifications, a reminder banner of the Mac's own clock time over
+the app. Run the failed test alone by name before you look for an app
+bug.
+
+The UI tests are not part of `./verify`, for two reasons. First, the 127
+checks take about 75 minutes on a warm simulator (7 October 2026), and a
+warm `./verify` must stay under 240 s. Second, a simulator run needs a booted
 simulator of its own, and parallel worktrees share one simulator service.
 On 26 September 2026 that service stopped for about 20 minutes: every
 `simctl` call waited while four simulators stayed in "Shutting Down". The
@@ -155,3 +187,4 @@ on branch rulings2-record-review: each row reads its own answer, and
 | 7 October 2026 | 458b403 (rulings2-record-review), a branch build before the merge: the fixes of mm-t12b.27 and mm-t32.28 | iOS 27.0 (24A434) | 5 of 5 passed in 210 s: testGetSupportOnToday, testRecordStrings, testExportFromTheNotRightNowPage, testStepTwoLosesItsAnswerWhenStepOneChanges and testTheAnsweredSelfHarmItemStaysAnswered. This run does not count for gate mm-t43.31, because only the named checks ran, on a branch build. |
 | 7 October 2026 | 530265b (main) | iOS 27.0 (24A434) | 34 of 35 passed in 824 s. testOnboardingScreen3 failed: the keyboard tip took the tap on screen 2's "Continue"; the test passed alone, and 68dc58e fixes the test. |
 | 7 October 2026 | 68dc58e (main) | iOS 27.0 (24A434) | 35 of 35 passed in 798 s. |
+| 7 October 2026 | 237aeb7 (main), the merge of the five automation branches | iOS 27.0 (24A434) | 126 of 127 passed in 4536 s. testRecordStrings failed (the app showed Settings after a tap); it passed alone. This run does not count. |
