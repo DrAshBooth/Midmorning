@@ -13,7 +13,10 @@ import PDFKit
 /// the app ends first, or when the record is deleted while the print
 /// options show, the app must remove it: the next launch, Delete-all and
 /// "Delete from this device" remove each PDF in `tmp`
-/// (`Record.TemporaryPDFFiles`), not only `tmp/Export`.
+/// (`Record.TemporaryPDFFiles`), not only `tmp/Export`. A deletion also
+/// closes the print options (mm-t45.14), so iOS removes its copy then too;
+/// the two deletion tests put a second copy in `tmp/<UUID>/` that only the
+/// sweep of the deletion can remove (`putASecondCopyInTmp`).
 ///
 /// The tests use the stores `week1`, `lock-week1` and `lock-face-only`
 /// (`seeder/Sources/Seeder/AutomatedScenarios.swift` and
@@ -112,6 +115,26 @@ extension AutomatedChecks {
         return pdfs
     }
 
+    /// Puts a second copy of the print copy in a new folder in `tmp`
+    /// (`tmp/<UUID>/`, the form of the folder that Print makes), and answers
+    /// its path from the top of the data container. iOS removes its own
+    /// print copy when the print options close, and a deletion closes the
+    /// print options (mm-t45.14). So the print copy alone does not show that
+    /// the deletion removes each PDF in `tmp`. iOS does not know this second
+    /// copy, so only the sweep of the deletion (`LocalDeletion` with the
+    /// `temporaryDirectory` of `RealDeleteAllSeam`) can remove it. A build
+    /// without that `temporaryDirectory` passed the two deletion tests
+    /// before they put this copy, and failed both with it (7 October 2026).
+    private func putASecondCopyInTmp(of printCopy: String, file: StaticString = #filePath, line: UInt = #line) throws -> String {
+        let folder = "tmp/\(UUID().uuidString)"
+        let name = URL(fileURLWithPath: printCopy).lastPathComponent
+        try FileManager.default.createDirectory(at: printTmpAppData.appendingPathComponent(folder), withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: printTmpAppData.appendingPathComponent(printCopy), to: printTmpAppData.appendingPathComponent("\(folder)/\(name)"))
+        let path = "\(folder)/\(name)"
+        XCTAssertTrue(printTmpPDFs().contains(path), "the second copy is in \(folder)", file: file, line: line)
+        return path
+    }
+
     /// After a deletion while the print options show: the print options
     /// close, and only the deleted screen shows (the Print form of the
     /// share-sheet check of mm-t45.8: "only the deleted screen shows, with
@@ -148,27 +171,31 @@ extension AutomatedChecks {
     // MARK: mm-t45.11: Delete-all and "Delete from this device" while Print shows
 
     /// Bug mm-t45.11, Delete-all: with the app lock on ("Lock after" "At
-    /// once"), "Make PDF", then "Print". While the print options show, go
-    /// to the Home Screen and return: the cover shows, and the print copy
-    /// is still in `tmp/<UUID>/`. "Delete everything" on the cover, the
-    /// request (the test seam gives a success) and the confirmation: the
-    /// deleted screen shows, the print options close (only the deleted
-    /// screen shows), and the app's containers hold no PDF.
+    /// once"), "Make PDF", then "Print". While the print options show, the
+    /// test puts a second copy of the print copy in a new folder in `tmp`
+    /// (`putASecondCopyInTmp`), then goes to the Home Screen and returns:
+    /// the cover shows, and the print copy is still in `tmp/<UUID>/`.
+    /// "Delete everything" on the cover, the request (the test seam gives a
+    /// success) and the confirmation: the deleted screen shows, the print
+    /// options close (only the deleted screen shows), and the app's
+    /// containers hold no PDF, also not the second copy.
     func testDeleteEverythingFromTheCoverWhilePrintShowsLeavesNoPDF() throws {
         removeLeftoverPDFsAtTheEnd()
         try launchWithTheSeam("lock-week1", results: ["succeed"])
         assertNoCover(on: "Today", "after the request at launch succeeds")
         let whilePrintShows = printAndWaitForTheCopy(makeAPDFForPrint())
+        let secondCopy = try putASecondCopyInTmp(of: try XCTUnwrap(printCopies(in: whilePrintShows).first))
         scriptAppLock(["cancel", "succeed"])
         leaveTheApp(for: 2)
         XCTAssertTrue(deleteEverythingButton.waitForExistence(timeout: 20), "after the return, the cover shows \"Delete everything\"")
         XCTAssertTrue(unlockButton.exists, "after the return, the cover shows \"Unlock\"")
         assertAppLockRequests(2, "the return makes one request with no tap (cancel)")
-        XCTAssertEqual(printTmpPDFs(), whilePrintShows, "while the cover shows over the print options, the print copy and the app's PDF stay")
+        XCTAssertEqual(printTmpPDFs(), (whilePrintShows + [secondCopy]).sorted(), "while the cover shows over the print options, the print copy, the second copy and the app's PDF stay")
         deleteEverythingButton.tap()
         XCTAssertTrue(app.alerts["Delete everything?"].waitForExistence(timeout: 8), "after a success, \"Delete everything?\" shows")
         tapDialogButton("Delete everything")
         XCTAssertTrue(element(labelBeginningWith: "Everything is deleted.").waitForExistence(timeout: 10), "the deleted screen shows")
+        XCTAssertFalse(printTmpPDFs().contains(secondCopy), "\"Delete everything\" removes the second copy in tmp/<UUID>/, which only its sweep of tmp can remove")
         XCTAssertEqual(printTmpPDFs(), [], "after \"Delete everything\", the app's data container and App Group container hold no PDF")
         assertThePrintOptionsCloseAfterTheDeletion()
         sleep(3)
@@ -177,28 +204,32 @@ extension AutomatedChecks {
 
     /// Bug mm-t45.11, "Delete from this device": with the app lock on and
     /// "Face ID only" on, "Make PDF", then "Print". While the print options
-    /// show, an enrolment change (the test seam gives a new hash), then go
-    /// to the Home Screen and return: the cover shows "Delete from this
-    /// device", and the print copy is still in `tmp/<UUID>/`. "Delete from
-    /// this device" and its confirmation: the deleted screen shows, the
-    /// print options close (only the deleted screen shows), and the app's
-    /// containers hold no PDF. (A real change of the enrolled faces stays a
-    /// device check.)
+    /// show, the test puts a second copy of the print copy in a new folder
+    /// in `tmp` (`putASecondCopyInTmp`), then an enrolment change (the test
+    /// seam gives a new hash), then go to the Home Screen and return: the
+    /// cover shows "Delete from this device", and the print copy is still
+    /// in `tmp/<UUID>/`. "Delete from this device" and its confirmation:
+    /// the deleted screen shows, the print options close (only the deleted
+    /// screen shows), and the app's containers hold no PDF, also not the
+    /// second copy. (A real change of the enrolled faces stays a device
+    /// check.)
     func testDeleteFromThisDeviceWhilePrintShowsLeavesNoPDF() throws {
         removeLeftoverPDFsAtTheEnd()
         setSimulatedFaceID(enrolled: true)
         try launchWithTheSeam("lock-face-only", results: ["succeed"], enrolmentHash: "A")
         assertNoCover(on: "Today", "after the request at launch succeeds")
         let whilePrintShows = printAndWaitForTheCopy(makeAPDFForPrint())
+        let secondCopy = try putASecondCopyInTmp(of: try XCTUnwrap(printCopies(in: whilePrintShows).first))
         scriptAppLock([], enrolmentHash: "C")
         leaveTheApp(for: 2)
         XCTAssertTrue(deleteFromThisDeviceButton.waitForExistence(timeout: 20), "after an enrolment change, the cover shows \"Delete from this device\"")
         XCTAssertFalse(unlockButton.exists, "after an enrolment change, the cover shows no \"Unlock\"")
-        XCTAssertEqual(printTmpPDFs(), whilePrintShows, "while the cover shows over the print options, the print copy and the app's PDF stay")
+        XCTAssertEqual(printTmpPDFs(), (whilePrintShows + [secondCopy]).sorted(), "while the cover shows over the print options, the print copy, the second copy and the app's PDF stay")
         deleteFromThisDeviceButton.tap()
         XCTAssertTrue(app.alerts["Delete from this device?"].waitForExistence(timeout: 8), "\"Delete from this device?\" shows")
         tapDialogButton("Delete from this device")
         XCTAssertTrue(element(labelBeginningWith: "This device").waitForExistence(timeout: 10), "the deleted screen shows")
+        XCTAssertFalse(printTmpPDFs().contains(secondCopy), "\"Delete from this device\" removes the second copy in tmp/<UUID>/, which only its sweep of tmp can remove")
         XCTAssertEqual(printTmpPDFs(), [], "after \"Delete from this device\", the app's data container and App Group container hold no PDF")
         assertThePrintOptionsCloseAfterTheDeletion()
         sleep(3)

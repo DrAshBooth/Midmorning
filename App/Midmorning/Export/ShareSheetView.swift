@@ -158,8 +158,9 @@ struct ShareSheetView: UIViewControllerRepresentable {
         coordinator.begin(controller, onDismiss: onDismiss)
         // The presentation waits for the current view update to finish.
         // The view can leave the screen before then; the share sheet then
-        // does not show.
-        DispatchQueue.main.async { [weak coordinator] in
+        // does not show. This closure keeps the share sheet until it
+        // presents it; the completion of the presentation does not keep it.
+        DispatchQueue.main.async { [weak coordinator, controller] in
             guard let coordinator, coordinator.isShowing, coordinator.shareSheet === controller else { return }
             guard host.viewIfLoaded?.window != nil else {
                 controller.detach()
