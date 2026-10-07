@@ -1132,9 +1132,11 @@ extension AutomatedChecks {
     ///
     /// While the print options show, iOS keeps its own copy of the PDF in
     /// `tmp/<UUID>/`, and removes it when they close. When the app ends
-    /// first, that copy stays (bug mm-t45.11). So when this test fails
-    /// before "Cancel", it removes that copy, so that the export tests
-    /// after it do not fail because of it.
+    /// first, that copy stays until the next launch removes it (bug
+    /// mm-t45.11; `testTheNextLaunchRemovesThePrintCopyLeftByAForceQuit`
+    /// in `AutomatedChecks+PrintTmp.swift`). When this test fails before
+    /// "Cancel", it removes that copy, so that the export tests after it do
+    /// not fail because of it.
     func testPrintKeepsThePDFUntilItsOptionsClose() throws {
         addTeardownBlock { [self] in
             app.terminate()

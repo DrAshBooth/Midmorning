@@ -78,7 +78,10 @@ extension RealDeleteAllSeam {
                 directory: StoreLayout.storeDirectory(applicationSupportDirectory: applicationSupportDirectory),
                 appGroupDirectory: StoreLocation.appGroupDirectory(),
                 launchMarkerURL: StoreLayout.launchMarkerURL(applicationSupportDirectory: applicationSupportDirectory),
-                exportDirectory: ExportTemporaryFiles.directory(inTemporaryDirectory: FileManager.default.temporaryDirectory)
+                exportDirectory: ExportTemporaryFiles.directory(inTemporaryDirectory: FileManager.default.temporaryDirectory),
+                // Each other PDF in tmp: the copy that Print keeps while
+                // its options show (mm-t45.11).
+                temporaryDirectory: FileManager.default.temporaryDirectory
             )
         })
     }
