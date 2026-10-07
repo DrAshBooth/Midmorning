@@ -28,7 +28,11 @@ import UIKit
 /// the app lock on, the person taps "Delete everything" or "Delete from this
 /// device" on the cover while the share sheet is under it. The deleted
 /// screen then replaces the export screen, and the share sheet must not stay
-/// over it with the PDF of the deleted record (mm-t45.1, review).
+/// over it with the PDF of the deleted record (mm-t45.1, review). The same
+/// applies to the print options: Print removes the share sheet and shows
+/// its options, with a preview of the PDF, from the view controller that
+/// presented the share sheet. So that presentation closes too (mm-t45.14,
+/// found by `AutomatedChecks.testDeleteEverythingFromTheCoverWhilePrintShowsLeavesNoPDF`).
 ///
 /// The sheet does not offer Copy (r13-14, mm-t42.27). Copy would put the
 /// whole-record PDF on the general pasteboard with no expiry, and Universal
@@ -109,6 +113,10 @@ struct ShareSheetView: UIViewControllerRepresentable {
         /// The share sheet while it shows. UIKit keeps it while it is
         /// presented, so this reference does not.
         weak var shareSheet: ShareSheetController?
+        /// The view controller that presented the share sheet. A destination
+        /// that removes the share sheet, such as Print, shows its own screen
+        /// from it.
+        weak var presenter: UIViewController?
         var isShowing = false
         /// The `onDismiss` of the current presentation. It runs once.
         private var pendingDismiss: (() -> Void)?
@@ -122,6 +130,7 @@ struct ShareSheetView: UIViewControllerRepresentable {
         func finish() {
             isShowing = false
             shareSheet = nil
+            presenter = nil
             let onDismiss = pendingDismiss
             pendingDismiss = nil
             onDismiss?()
@@ -158,12 +167,16 @@ struct ShareSheetView: UIViewControllerRepresentable {
                 coordinator.finish()
                 return
             }
-            host.present(controller, animated: true)
+            host.present(controller, animated: true) { [weak coordinator, weak controller] in
+                guard let coordinator, coordinator.shareSheet === controller else { return }
+                coordinator.presenter = controller?.presentingViewController
+            }
         }
     }
 
     /// The view leaves the screen: the share sheet closes at once, with
-    /// everything it presented (Save to Files, Print, Markup), and
+    /// everything it presented (Save to Files, Markup), or the screen of
+    /// the destination that replaced it (the print options), and
     /// `onDismiss` deletes the file.
     static func dismantleUIViewController(_ host: UIViewController, coordinator: Coordinator) {
         guard coordinator.isShowing else { return }
@@ -171,9 +184,18 @@ struct ShareSheetView: UIViewControllerRepresentable {
         coordinator.isShowing = false
         if let shareSheet = coordinator.shareSheet {
             shareSheet.detach()
-            // A view controller presents one view controller at a time, so
-            // this closes the share sheet and nothing under it.
-            shareSheet.presentingViewController?.dismiss(animated: false)
+            if let presenter = shareSheet.presentingViewController {
+                // A view controller presents one view controller at a time,
+                // so this closes the share sheet and nothing under it.
+                presenter.dismiss(animated: false)
+            } else if let presenter = coordinator.presenter, presenter.presentedViewController != nil {
+                // The share sheet is gone, but its close has not come yet:
+                // a destination such as Print shows its own screen from the
+                // share sheet's presenter. That screen closes. (The guard
+                // matters: `dismiss` on a view controller that presents
+                // nothing closes that view controller itself.)
+                presenter.dismiss(animated: false)
+            }
         }
         // SwiftUI is in a view update here, and `onDismiss` can change the
         // state of the view that leaves.

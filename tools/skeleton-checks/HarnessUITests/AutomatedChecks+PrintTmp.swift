@@ -112,6 +112,20 @@ extension AutomatedChecks {
         return pdfs
     }
 
+    /// After a deletion while the print options show: the print options
+    /// close, and only the deleted screen shows (the Print form of the
+    /// share-sheet check of mm-t45.8: "only the deleted screen shows, with
+    /// no PDF preview"). Bug mm-t45.14: before its fix, the print options
+    /// ("Options", "Cancel" and a preview of the deleted record) stayed
+    /// over the deleted screen.
+    private func assertThePrintOptionsCloseAfterTheDeletion(file: StaticString = #filePath, line: UInt = #line) {
+        let printOptionsClosed = app.buttons["Cancel"].firstMatch.waitForNonExistence(timeout: 5)
+        XCTAssertTrue(printOptionsClosed, "after the deletion, the print options close: their \"Cancel\" is gone", file: file, line: line)
+        XCTAssertEqual(app.navigationBars.count, 0, "after the deletion, no navigation bar of the print options shows over the deleted screen", file: file, line: line)
+        XCTAssertTrue(app.buttons["Done"].firstMatch.isHittable, "after the deletion, the deleted screen is on top: its \"Done\" can take a tap", file: file, line: line)
+        if !printOptionsClosed { print("mm-t45.11 after the deletion: \(app.debugDescription)") }
+    }
+
     // MARK: mm-t45.11: the next launch
 
     /// Bug mm-t45.11, its acceptance: "Make PDF", then "Print". While the
@@ -138,7 +152,8 @@ extension AutomatedChecks {
     /// to the Home Screen and return: the cover shows, and the print copy
     /// is still in `tmp/<UUID>/`. "Delete everything" on the cover, the
     /// request (the test seam gives a success) and the confirmation: the
-    /// deleted screen shows, and the app's containers hold no PDF.
+    /// deleted screen shows, the print options close (only the deleted
+    /// screen shows), and the app's containers hold no PDF.
     func testDeleteEverythingFromTheCoverWhilePrintShowsLeavesNoPDF() throws {
         removeLeftoverPDFsAtTheEnd()
         try launchWithTheSeam("lock-week1", results: ["succeed"])
@@ -155,6 +170,7 @@ extension AutomatedChecks {
         tapDialogButton("Delete everything")
         XCTAssertTrue(element(labelBeginningWith: "Everything is deleted.").waitForExistence(timeout: 10), "the deleted screen shows")
         XCTAssertEqual(printTmpPDFs(), [], "after \"Delete everything\", the app's data container and App Group container hold no PDF")
+        assertThePrintOptionsCloseAfterTheDeletion()
         sleep(3)
         XCTAssertEqual(printTmpPDFs(), [], "3 s after \"Delete everything\", the app's containers still hold no PDF")
     }
@@ -164,9 +180,10 @@ extension AutomatedChecks {
     /// show, an enrolment change (the test seam gives a new hash), then go
     /// to the Home Screen and return: the cover shows "Delete from this
     /// device", and the print copy is still in `tmp/<UUID>/`. "Delete from
-    /// this device" and its confirmation: the deleted screen shows, and the
-    /// app's containers hold no PDF. (A real change of the enrolled faces
-    /// stays a device check.)
+    /// this device" and its confirmation: the deleted screen shows, the
+    /// print options close (only the deleted screen shows), and the app's
+    /// containers hold no PDF. (A real change of the enrolled faces stays a
+    /// device check.)
     func testDeleteFromThisDeviceWhilePrintShowsLeavesNoPDF() throws {
         removeLeftoverPDFsAtTheEnd()
         setSimulatedFaceID(enrolled: true)
@@ -183,6 +200,7 @@ extension AutomatedChecks {
         tapDialogButton("Delete from this device")
         XCTAssertTrue(element(labelBeginningWith: "This device").waitForExistence(timeout: 10), "the deleted screen shows")
         XCTAssertEqual(printTmpPDFs(), [], "after \"Delete from this device\", the app's data container and App Group container hold no PDF")
+        assertThePrintOptionsCloseAfterTheDeletion()
         sleep(3)
         XCTAssertEqual(printTmpPDFs(), [], "3 s after \"Delete from this device\", the app's containers still hold no PDF")
         assertAppLockRequests(1, "after an enrolment change the app makes no request")
@@ -196,9 +214,12 @@ extension AutomatedChecks {
     /// cover tap "Delete everything" at once (the request at launch is
     /// cancelled; the request of "Delete everything" succeeds), then
     /// confirm: the deleted screen shows, and `tmp` and the other parts of
-    /// the app's containers hold no PDF. (The launch sweep can remove the
-    /// PDF before the cover shows; the test proves the words of the check:
-    /// no PDF after the deletion.)
+    /// the app's containers hold no PDF. The launch sweep in `AppDelegate`
+    /// (`ExportTemporaryFiles.removeAll`, in `didFinishLaunching`) removes
+    /// the PDF before the cover shows, and the test asserts this at the
+    /// cover. So the test proves the words of the check (no PDF after the
+    /// deletion), but not that Delete-all removes `tmp/Export`:
+    /// `LocalDeletionTests` (in `./verify`) prove that part.
     func testDeleteEverythingStraightFromTheCoverAfterAForceQuit() throws {
         removeLeftoverPDFsAtTheEnd()
         try launchWithTheSeam("lock-week1", results: ["succeed"])
@@ -214,6 +235,7 @@ extension AutomatedChecks {
         XCTAssertTrue(deleteEverythingButton.waitForExistence(timeout: 20), "the app opens on the cover with \"Delete everything\"")
         XCTAssertEqual(app.navigationBars.count, 0, "no screen shows under the cover")
         assertAppLockRequests(2, "the launch makes one request with no tap (cancel)")
+        XCTAssertEqual(printTmpPDFs(), [], "at the cover, before the deletion, the launch sweep has removed the PDF from tmp/Export")
         deleteEverythingButton.tap()
         XCTAssertTrue(app.alerts["Delete everything?"].waitForExistence(timeout: 8), "after a success, \"Delete everything?\" shows")
         tapDialogButton("Delete everything")
@@ -223,22 +245,35 @@ extension AutomatedChecks {
 
     // MARK: mm-t42.14, comment of mm-t42.22, mm-t42.25 and mm-t42.26: the pages of a long export
 
+    /// One row of text on a page of the PDF, and the distance from the top
+    /// of the page to the top of its text, in points.
+    private struct TextRow {
+        let text: String
+        let top: CGFloat
+    }
+
     /// The rows of text on `page`, top to bottom. A row joins, left to
     /// right, each line of text at one height, so that the column headings
     /// and each entry are one row.
-    private func textRows(of page: PDFPage) -> [String] {
+    private func placedTextRows(of page: PDFPage) -> [TextRow] {
         guard let selection = page.selection(for: page.bounds(for: .mediaBox)) else { return [] }
-        var rows: [(y: CGFloat, parts: [(x: CGFloat, text: String)])] = []
+        let pageHeight = page.bounds(for: .mediaBox).height
+        var rows: [(y: CGFloat, top: CGFloat, parts: [(x: CGFloat, text: String)])] = []
         for line in selection.selectionsByLine() {
             guard let text = line.string?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { continue }
             let bounds = line.bounds(for: page)
             if let index = rows.firstIndex(where: { abs($0.y - bounds.midY) < 3 }) {
                 rows[index].parts.append((bounds.minX, text))
+                rows[index].top = min(rows[index].top, pageHeight - bounds.maxY)
             } else {
-                rows.append((bounds.midY, [(bounds.minX, text)]))
+                rows.append((bounds.midY, pageHeight - bounds.maxY, [(bounds.minX, text)]))
             }
         }
-        return rows.sorted { $0.y > $1.y }.map { $0.parts.sorted { $0.x < $1.x }.map(\.text).joined(separator: " ") }
+        return rows.sorted { $0.y > $1.y }.map { TextRow(text: $0.parts.sorted { $0.x < $1.x }.map(\.text).joined(separator: " "), top: $0.top) }
+    }
+
+    private func textRows(of page: PDFPage) -> [String] {
+        placedTextRows(of: page).map(\.text)
     }
 
     /// A day heading of the PDF, for example "Tuesday 22 September 2026".
@@ -320,18 +355,27 @@ extension AutomatedChecks {
     /// record days, one of them with 45 entries, two paused days, one
     /// "Didn't record" day and one weigh-in. On the export screen, turn on
     /// "Include weigh-ins" and tap "Make PDF". The test reads the PDF in
-    /// tmp/Export with PDFKit (the text of each page) and Core Graphics
-    /// (the tag tree):
+    /// tmp/Export with PDFKit (the text of each page and its place) and
+    /// Core Graphics (the tag tree):
     /// - "Weigh-ins" starts its own last page, which holds the weigh-in
     ///   row and nothing else, and no weight value prints under the record.
     /// - No page ends with a day heading, a "Paused" line or the column
-    ///   headings.
+    ///   headings. The store puts the heading group of the second day
+    ///   (heading, "Paused", column headings) near the foot of page 1: the
+    ///   free space under the last entry of page 1 holds the day heading,
+    ///   but not the group with its first entry. The test measures this in
+    ///   the PDF, so the rule of mm-t42.25 applies. A paginator that breaks
+    ///   only when a line does not fit ends page 1 with "Paused" here. Page
+    ///   1 ends with the last entry of the first day, and page 2 starts
+    ///   with the heading of the second day (not a repeated heading), then
+    ///   "Paused", the column headings and the first entry.
     /// - The long day continues on the next page, which repeats its
-    ///   heading. The tag tree holds one H1, one H2 for each day (seven),
-    ///   and no H2 for a repeated heading: on each page, the number of H2
-    ///   is the number of day headings less the repeated one. Each page
-    ///   holds one tagged list for each day with entries on that page, and
-    ///   one list item for each entry.
+    ///   heading. The tag tree holds one H1, the first tag of page 1, whose
+    ///   first text is "Record"; one H2 for each day (seven); and no H2 for
+    ///   a repeated heading: on each page, the number of H2 is the number
+    ///   of day headings less the repeated one. Each page holds one tagged
+    ///   list for each day with entries on that page, and one list item for
+    ///   each entry.
     /// - Bug mm-t45.13: each tag declares the language en-GB, and the
     ///   ActualText of each list item is the text of its entry row.
     /// (How the PDF looks, a screen reader on the PDF and the language in a
@@ -369,7 +413,8 @@ extension AutomatedChecks {
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 10), "the share sheet closes")
 
         let pdf = try XCTUnwrap(PDFDocument(url: copy), "PDFKit opens the PDF")
-        let pages = (0..<pdf.pageCount).compactMap { pdf.page(at: $0) }.map(textRows(of:))
+        let placedPages = (0..<pdf.pageCount).compactMap { pdf.page(at: $0) }.map(placedTextRows(of:))
+        let pages = placedPages.map { $0.map(\.text) }
         let summary = pages.enumerated().map { "page \($0.offset + 1): first \($0.element.first ?? "-") | last \($0.element.last ?? "-")" }.joined(separator: "; ")
         print("mm-t42.14 export pages: \(summary)")
         XCTAssertGreaterThanOrEqual(pages.count, 3, "the PDF has record pages and the weigh-in page: \(summary)")
@@ -393,6 +438,37 @@ extension AutomatedChecks {
             XCTAssertFalse(isDayHeading(last), "record page \(index + 1) does not end with a day heading: \(summary)")
             XCTAssertNotEqual(last, "Paused", "record page \(index + 1) does not end with \"Paused\": \(summary)")
             XCTAssertFalse(isColumnHeadings(last), "record page \(index + 1) does not end with the column headings: \(summary)")
+        }
+
+        // The rule applies at the foot of page 1. The store gives the first
+        // day 27 entries, so the free space under them holds the heading
+        // of the second day, but not its heading group with the first
+        // entry. A paginator that breaks only when a line does not fit puts
+        // that heading (and here its "Paused" line) at the foot of page 1.
+        let page1 = try XCTUnwrap(placedPages.first), page2 = try XCTUnwrap(placedPages.dropFirst().first)
+        XCTAssertEqual(page1.filter { isDayHeading($0.text) }.count, 1, "page 1 holds the heading of the first day only: \(page1.map(\.text))")
+        XCTAssertEqual(page1.filter { isEntryRow($0.text) }.count, 27, "page 1 holds the 27 entries of the first day: \(page1.map(\.text))")
+        XCTAssertTrue(isEntryRow(page1.last?.text ?? ""), "page 1 ends with the last entry of the first day: \(summary)")
+        XCTAssertGreaterThanOrEqual(page2.count, 5, "page 2 has rows: \(page2.map(\.text))")
+        if page1.count >= 2, page2.count >= 5 {
+            XCTAssertTrue(isDayHeading(page2[0].text) && !page1.contains { $0.text == page2[0].text },
+                          "page 2 starts with the heading of the second day, not a repeated heading: \(summary)")
+            XCTAssertEqual(page2[1].text, "Paused", "the \"Paused\" line of the second day follows its heading on page 2: \(page2.prefix(4).map(\.text))")
+            XCTAssertTrue(isColumnHeadings(page2[2].text), "the column headings follow \"Paused\" on page 2: \(page2.prefix(4).map(\.text))")
+            XCTAssertTrue(isEntryRow(page2[3].text), "the first entry of the second day follows its column headings on page 2: \(page2.prefix(4).map(\.text))")
+            // The heights, from the PDF: an entry line (the step between
+            // the last two entries of page 1), the day heading (from its
+            // top to the top of "Paused"), and the heading group with its
+            // first entry (from the top of the heading to the top of the
+            // second entry). The A4 page has 48 pt margins.
+            let pageBottom = pdf.page(at: 0)!.bounds(for: .mediaBox).height - 48
+            let entryHeight = page1[page1.count - 1].top - page1[page1.count - 2].top
+            let headingHeight = page2[1].top - page2[0].top
+            let groupHeight = page2[4].top - page2[0].top
+            let free = pageBottom - (page1[page1.count - 1].top + entryHeight)
+            print(String(format: "mm-t42.14 page 1 foot: %.1f pt free; day heading %.1f pt; heading group with its first entry %.1f pt; entry %.1f pt", free, headingHeight, groupHeight, entryHeight))
+            XCTAssertGreaterThanOrEqual(free, headingHeight, "the free space at the foot of page 1 holds the heading of the second day, so the keep-together rule decides this break: \(free) pt free")
+            XCTAssertLessThan(free, groupHeight, "the free space at the foot of page 1 does not hold the heading group of the second day with its first entry: \(free) pt free")
         }
 
         // The headings of each page. A page that continues a day starts
@@ -421,12 +497,16 @@ extension AutomatedChecks {
         }
         XCTAssertEqual(seen.count, 7, "the record pages show the seven day headings of the range: \(seen.sorted())")
         XCTAssertGreaterThanOrEqual(repeatedPerPage.reduce(0, +), 1, "the long day continues on the next page, which repeats its heading: \(summary)")
-        XCTAssertEqual(entriesPerPage.reduce(0, +), 84, "the record pages show the 84 entries: \(entriesPerPage)")
+        XCTAssertEqual(entriesPerPage.reduce(0, +), 108, "the record pages show the 108 entries: \(entriesPerPage)")
 
         // The tag tree.
         let tree = try XCTUnwrap(tagTree(of: copy), "Core Graphics reads the PDF")
         let all = flatten(tree.elements)
-        XCTAssertEqual(all.filter { $0.type == "H1" }.count, 1, "the tag tree holds one H1, \"Record\"")
+        let h1 = all.filter { $0.type == "H1" }
+        XCTAssertEqual(h1.count, 1, "the tag tree holds one H1")
+        XCTAssertEqual(h1.first?.page, 0, "the H1 is on page 1")
+        XCTAssertEqual(all.first { $0.page == 0 && ["H1", "H2", "L", "LI"].contains($0.type) }?.type, "H1", "the H1 is the first tag of page 1")
+        XCTAssertEqual(pages.first?.first, "Record", "the first text of page 1, which the H1 tags, is \"Record\"")
         let h2 = all.filter { $0.type == "H2" }
         XCTAssertEqual(h2.count, 7, "the tag tree holds one H2 for each of the seven days, and none for a repeated heading")
         for page in recordPages.indices {
