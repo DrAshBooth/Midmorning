@@ -14,6 +14,10 @@ import Programme
 /// focus, and the screen announces the message (r13-15, mm-t14.45). After "Yes" and then
 /// "No" to the self-harm item, the support line shows under the item and
 /// the support sheet's items follow inline, with Samaritans first.
+///
+/// Each inline picker hides its label, because the section header shows
+/// the question. So the question shows once, and VoiceOver reads each row
+/// as its own answer (mm-t32.28).
 struct ScreeningQuestionSections: View {
     @ObservedObject var answers: OnboardingAnswers
     let asksAge: Bool
@@ -88,6 +92,7 @@ struct ScreeningQuestionSections: View {
                 Text(CommonLabels.yes.string).tag(TreatmentAnswer?.some(.yes))
             }
             .pickerStyle(.inline)
+            .labelsHidden()
             message(for: .treatment)
         } header: { Text(Screen2Content.treatmentQuestion) }
         .accessibilityFocused(focusedField, equals: .treatment)
@@ -99,6 +104,7 @@ struct ScreeningQuestionSections: View {
                 Text(CommonLabels.doesNotApplyToMe).tag(PregnancyAnswer?.some(.doesNotApply))
             }
             .pickerStyle(.inline)
+            .labelsHidden()
             message(for: .pregnancy)
         } header: { Text(Screen2Content.pregnancyQuestion) }
         .accessibilityFocused(focusedField, equals: .pregnancy)
@@ -110,6 +116,7 @@ struct ScreeningQuestionSections: View {
                 Text(CommonLabels.ratherNotSay).tag(SelfHarmFirstAnswer?.some(.ratherNotSay))
             }
             .pickerStyle(.inline)
+            .labelsHidden()
             message(for: .selfHarmFirst)
         } header: { Text(ScreeningQuestionCatalog.questions[5]) }
         .accessibilityFocused(focusedField, equals: .selfHarmFirst)
@@ -126,6 +133,7 @@ struct ScreeningQuestionSections: View {
                     Text(CommonLabels.yes.string).tag(SelfHarmSecondAnswer?.some(.yes))
                 }
                 .pickerStyle(.inline)
+                .labelsHidden()
                 message(for: .selfHarmSecond)
                 if answers.selfHarmSecond == .no {
                     Text(SelfHarmItem.supportLine)

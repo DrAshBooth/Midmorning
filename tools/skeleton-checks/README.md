@@ -133,9 +133,11 @@ line.
 Two bugs change what the suite checks:
 
 - mm-t12b.27: on the iOS 27.0 simulator Today is blank while TodayView,
-  NewEntryView and EditEntryView apply `.privacySensitive()`. Every check
-  that starts on Today fails on the committed code until this bug is fixed.
-  The fix waits for decision r16-02.
+  NewEntryView and EditEntryView apply `.privacySensitive()`. Ash ruled on
+  7 October 2026 (r16-02): remove `.privacySensitive()` and
+  `.redacted(reason:)` from the three screens. Branch rulings2-record-review
+  removes them. The cover window hides every screen while the app is not
+  active, with the app lock on or off.
 - mm-t12b.28: on iOS 27, "Delete this entry?" shows no "Cancel".
   This occurs with a confirmation dialog, which shows as a popover with
   no "Cancel" from iOS 26. Ash ruled on 7 October 2026 (r16-03) that each
@@ -143,12 +145,11 @@ Two bugs change what the suite checks:
   Commit d9340d7 makes this change. `tapDialogButton` fails when no alert
   with a "Cancel" button shows.
 
-mm-t32.28 (each self-harm row at the review reads the question) does not
-change the result: `reviewSelfHarmRows` finds the rows by the question
-while the bug is open and by the answer after its fix. On 26 September
-2026 the review checks passed both with and without a local fix of
-mm-t32.28.
+mm-t32.28 (each self-harm row at the review reads the question) is fixed
+on branch rulings2-record-review: each row reads its own answer, and
+`reviewSelfHarmRows` finds the rows by the answer only.
 
 | Date | Commit | Runtime | Result |
 |------|--------|---------|--------|
 | 26 September 2026 | rulings-automation, not committed: the build removed the two modifiers of mm-t12b.27 | iOS 27.0 (24A434) | 35 of 35 passed in 794 s. This run does not count, because the build was not committed. |
+| 7 October 2026 | 458b403 (rulings2-record-review), a branch build before the merge: the fixes of mm-t12b.27 and mm-t32.28 | iOS 27.0 (24A434) | 5 of 5 passed in 210 s: testGetSupportOnToday, testRecordStrings, testExportFromTheNotRightNowPage, testStepTwoLosesItsAnswerWhenStepOneChanges and testTheAnsweredSelfHarmItemStaysAnswered. This run does not count for gate mm-t43.31, because only the named checks ran, on a branch build. |

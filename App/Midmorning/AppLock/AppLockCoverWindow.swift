@@ -101,9 +101,10 @@ private struct AppLockCoverWindowRoot: View {
         // app's own window out of sight behind the new-entry screen.
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
-            // While a kept draft waits for "Unlock", the new-entry
-            // presentation below draws the one cover.
-            if !controller.state.pendingRouteAwaitsUnlock {
+            // While a route waits, the new-entry presentation below draws
+            // the one cover: for a kept draft that waits for "Unlock", and
+            // while the app is not active.
+            if controller.state.pendingRoute == nil {
                 CoverView(controller: controller, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
             }
         }
@@ -138,8 +139,11 @@ private struct AppLockCoverWindowRoot: View {
                 // `AppLockCoverWindow.update` does not hide it. VoiceOver
                 // cannot reach its text or its controls while the cover
                 // shows.
-                .accessibilityHidden(controller.state.pendingRouteAwaitsUnlock)
-                if controller.state.pendingRouteAwaitsUnlock {
+                .accessibilityHidden(controller.state.coverMode != .none)
+                // The cover shows over the screen while a kept draft waits
+                // for "Unlock", and while the app is not active, so the App
+                // Switcher shows no typed text (ruling r16-02, mm-t12b.27).
+                if controller.state.coverMode != .none {
                     CoverView(controller: controller, onEverythingDeleted: onEverythingDeleted, onDeleteFromThisDevice: onDeleteFromThisDevice)
                         // App-lock spec, "Accessibility of the cover":
                         // VoiceOver stays on the cover's own controls.
@@ -157,7 +161,7 @@ private struct AppLockCoverWindowRoot: View {
             }
         }
         // A hosting controller in a window of its own does not follow the
-        // scene's phase, and the new-entry screen hides its text with it
+        // scene's phase, and the new-entry screen hides its star with it
         // while the app is inactive. The controller holds the same phase
         // that the app's own window sends it.
         .environment(\.scenePhase, Self.scenePhase(controller.state.scenePhase))

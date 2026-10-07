@@ -220,22 +220,28 @@ public final class RecordStore {
     /// from `deviceZone`, that zone's offset at the edited time; for an
     /// entry from another zone, the entry's own offset. So the edited time
     /// and the kept offset still give the kept record day key. The edit
-    /// screen passes no offset.
+    /// screen passes no offset. It passes `editZone`, the zone of its time
+    /// control, so the save uses the zone that the control showed (ruling
+    /// r15-02). Without `editZone`, the store computes the edit zone from
+    /// `deviceZone`.
     /// Throws `Failure.saveFailed` when `entryId` has no current version.
     @discardableResult
     public func update(
         entryId: UUID, time: Date, what: String, feltLikeABinge: Bool, whereText: String,
-        context: String, editedAt: Date, deviceZone: TimeZone = .current
+        context: String, editedAt: Date, editZone: TimeZone? = nil, deviceZone: TimeZone = .current
     ) throws -> RecordRow {
         guard let current = try winningVersion(entryId: entryId) else { throw Failure.saveFailed }
         let minute = Self.truncatedToMinute(time)
+        let zone = editZone ?? EntryOffset.editZone(
+            entryTime: current.time, entryOffsetSeconds: current.utcOffsetSeconds, deviceZone: deviceZone
+        )
         let version = ItemVersion(
             entryId: entryId,
             changedAt: editedAt,
             dayKey: current.dayKey,
             time: minute,
             utcOffsetSeconds: EntryOffset.forEdit(
-                entryTime: current.time, entryOffsetSeconds: current.utcOffsetSeconds, editedTime: minute, deviceZone: deviceZone
+                entryTime: current.time, entryOffsetSeconds: current.utcOffsetSeconds, editedTime: minute, editZone: zone
             ),
             what: what.trimmingCharacters(in: .whitespacesAndNewlines),
             feltLikeABinge: feltLikeABinge,

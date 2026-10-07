@@ -283,8 +283,10 @@ struct TodayView: View {
             }
             .accessibilityAction(.magicTap) { openNewEntry() }
         }
-        .privacySensitive()
-        .redacted(reason: scenePhase == .active ? [] : .privacy)
+        // Today has no privacy-sensitive modifier and no redaction (ruling
+        // r16-02, mm-t12b.27): on iOS 27 they made Today blank. The cover
+        // window (`AppLockCoverWindow`) hides Today and every screen on it
+        // while the app is not active, with the app lock on or off.
         // A tap on a reminder opens its own screen (reminders spec).
         .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
         .onChange(of: scenePhase) { _, phase in

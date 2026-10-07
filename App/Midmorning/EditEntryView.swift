@@ -28,9 +28,9 @@ struct EditEntryView: View {
     /// The entry's own record day, the one segment of the time control.
     private let ownDay: RecordTimeControl.Segment
     /// The entry's edit zone (`EntryOffset.editZone`), so the wheel shows
-    /// the time Today shows on the row. The store keeps the offset of the
-    /// same zone at the edited time (`EntryOffset.forEdit`), so Today then
-    /// shows the time that the wheel showed.
+    /// the time Today shows on the row. Save gives this zone to the store,
+    /// which keeps its offset at the edited time (`EntryOffset.forEdit`),
+    /// so Today then shows the time that the wheel showed (ruling r15-02).
     private let calendar: Calendar
     @State private var openedAt = Date()
 
@@ -103,8 +103,8 @@ struct EditEntryView: View {
                 Button("entry.cancel", role: .cancel) {}
             }
         }
-        .privacySensitive()
-        .redacted(reason: scenePhase == .active ? [] : .privacy)
+        // The cover window hides this screen while the app is not active
+        // (ruling r16-02, mm-t12b.27), so it has no redaction of its own.
         .onAppear {
             openedAt = Date()
             customPlaces = (try? store.customPlaces()) ?? []
@@ -163,7 +163,8 @@ struct EditEntryView: View {
             }
             let updated = try store.update(
                 entryId: entry.id, time: time, what: what, feltLikeABinge: feltLikeABinge,
-                whereText: place.whereText, context: context, editedAt: now
+                whereText: place.whereText, context: context, editedAt: now,
+                editZone: calendar.timeZone
             )
             pendingPlace = nil
             whereSelection = place.whereText.isEmpty ? nil : place.whereText
