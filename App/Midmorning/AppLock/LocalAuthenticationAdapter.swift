@@ -86,6 +86,11 @@ enum BiometryDetector {
 /// is the pure comparison a test already drives with fixed hashes.
 enum EnrolmentHash {
     static func current(context: LAContext = LAContext()) -> String? {
+        // A Debug build that a UI test launches with the seam on returns
+        // the script's hash (`AppLockTestSeam`).
+        #if DEBUG
+        if let script = AppLockTestSeam.currentScript() { return script.enrolmentHash }
+        #endif
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else { return nil }
         guard let domainState = context.evaluatedPolicyDomainState else { return nil }

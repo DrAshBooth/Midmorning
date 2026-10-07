@@ -30,10 +30,21 @@ enum AppLockControllerFactory {
         let settings = RecordStoreAppLockSettings(store: store)
         return AppLockController(
             state: AppLockLaunch.state(settings: settings, biometry: BiometryDetector.current()),
-            authenticator: LAContextAuthenticator(),
+            authenticator: authenticator(),
             deleteAllSeam: RealDeleteAllSeam.usingAppFileLocations(),
             settings: settings
         )
+    }
+
+    /// The system authentication request. A Debug build that a UI test
+    /// launches with `AppLockTestSeam.environmentKey` uses the scripted
+    /// request instead (`AppLockTestSeam`). A Release build compiles only
+    /// the real request.
+    private static func authenticator() -> AuthenticationPerforming {
+        #if DEBUG
+        if let scripted = ScriptedAuthenticator.fromLaunchEnvironment() { return scripted }
+        #endif
+        return LAContextAuthenticator()
     }
 
     /// Onboarding spec, "Screen 4: permissions": "Start" wrote the choice
