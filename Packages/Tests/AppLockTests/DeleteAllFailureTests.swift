@@ -9,6 +9,20 @@ private struct FailingDeleteAllSeam: DeleteAllPerforming {
     func deleteFromThisDevice() async throws { throw Failure() }
 }
 
+/// A seam whose first deletion fails and whose next deletions succeed.
+private actor FailsOnceDeleteAllSeam: DeleteAllPerforming {
+    struct Failure: Error {}
+    private var hasFailed = false
+    func deleteEverything() async throws { try failTheFirstTime() }
+    func deleteFromThisDevice() async throws { try failTheFirstTime() }
+    private func failTheFirstTime() throws {
+        guard hasFailed else {
+            hasFailed = true
+            throw Failure()
+        }
+    }
+}
+
 /// data-and-privacy spec, "Delete-all" and "Delete from this device"
 /// (mm-t41.20): the cover shows the deleted screen only when the deletion
 /// succeeded. `CoverView` shows it only when these calls return `true`.
@@ -36,9 +50,38 @@ final class DeleteAllFailureTests: XCTestCase {
 
         await controller.confirmDeleteEverything()
 
-        XCTAssertEqual(controller.deleteEverythingOutcome, .failed)
+        XCTAssertEqual(controller.coverDeletionOutcome, .failed)
         XCTAssertEqual(controller.state.coverMode, .locked, "the cover stays")
         XCTAssertEqual(DeleteAllOutcome.failureMessage.english, "Could not delete. Try again.")
+    }
+
+    /// Ruling r17-04 (mm-t41.27): after a failed "Delete from this device",
+    /// the cover shows the same line as after a failed "Delete everything",
+    /// under its controls. The cover stays, with no "Unlock".
+    func testAFailedDeleteFromThisDeviceShowsTheSameFailureLineOnTheCover() async {
+        let controller = controller(seam: FailingDeleteAllSeam())
+        controller.handle(.enrolmentChanged)
+
+        let deleted = await controller.confirmDeleteFromThisDevice()
+
+        XCTAssertFalse(deleted, "the deleted screen does not show")
+        XCTAssertEqual(controller.coverDeletionOutcome, .failed)
+        XCTAssertEqual(controller.state.coverMode, .lockedAfterEnrolmentChange, "the cover stays")
+    }
+
+    /// A second "Delete from this device" removes the line while it runs.
+    /// When it succeeds, the line does not show again.
+    func testASuccessfulRetryOfDeleteFromThisDeviceRemovesTheLine() async {
+        let seam = FailsOnceDeleteAllSeam()
+        let controller = controller(seam: seam)
+        controller.handle(.enrolmentChanged)
+        await controller.confirmDeleteFromThisDevice()
+        XCTAssertEqual(controller.coverDeletionOutcome, .failed)
+
+        let deleted = await controller.confirmDeleteFromThisDevice()
+
+        XCTAssertTrue(deleted)
+        XCTAssertEqual(controller.coverDeletionOutcome, .deleted)
     }
 
     /// A new deletion removes the line while it runs; a success shows the
@@ -48,7 +91,7 @@ final class DeleteAllFailureTests: XCTestCase {
 
         await controller.confirmDeleteEverything()
 
-        XCTAssertEqual(controller.deleteEverythingOutcome, .deleted)
+        XCTAssertEqual(controller.coverDeletionOutcome, .deleted)
     }
 
     /// "Unlock" takes the cover away, and the line with it: the next cover
@@ -59,7 +102,7 @@ final class DeleteAllFailureTests: XCTestCase {
 
         await controller.tapUnlock()
 
-        XCTAssertNil(controller.deleteEverythingOutcome)
+        XCTAssertNil(controller.coverDeletionOutcome)
     }
 
     /// The settings screen and the store-failure page call a deletion that

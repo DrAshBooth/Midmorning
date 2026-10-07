@@ -25,11 +25,12 @@ public final class AppLockController: ObservableObject {
     /// not set it: after that tap, only "Unlock" asks.
     public private(set) var authenticationRequestDue: Bool
 
-    /// The last "Delete everything" from the cover (ruling r14-01,
-    /// mm-t41.26). The cover shows "Could not delete. Try again." under its
+    /// The last deletion from the cover: "Delete everything" (ruling
+    /// r14-01, mm-t41.26) or "Delete from this device" (ruling r17-04,
+    /// mm-t41.27). The cover shows "Could not delete. Try again." under its
     /// controls while this is `.failed`. A new deletion or a successful
     /// authentication removes the line.
-    @Published public private(set) var deleteEverythingOutcome: DeleteAllOutcome?
+    @Published public private(set) var coverDeletionOutcome: DeleteAllOutcome?
 
     public init(
         state: AppLifecycleState,
@@ -61,7 +62,7 @@ public final class AppLockController: ObservableObject {
             }
         case .authenticationSucceeded:
             authenticationRequestDue = false
-            deleteEverythingOutcome = nil
+            coverDeletionOutcome = nil
         default:
             break
         }
@@ -167,27 +168,30 @@ public final class AppLockController: ObservableObject {
     /// screen follows the deletion).
     @discardableResult
     public func confirmDeleteEverything() async -> Bool {
-        deleteEverythingOutcome = nil
-        do {
-            try await deleteAllSeam.deleteEverything()
-            deleteEverythingOutcome = .deleted
-            return true
-        } catch {
-            deleteEverythingOutcome = .failed
-            return false
-        }
+        await runCoverDeletion { try await $0.deleteEverything() }
     }
 
     /// "Delete from this device" after an enrolment change makes no
     /// authentication request: the enrolment change is why the cover offers
     /// this control instead of "Unlock" in the first place. Returns whether
-    /// the deletion succeeded.
+    /// the deletion succeeded. Ruling r17-04 (mm-t41.27): after a failure,
+    /// the cover shows the same line as after a failed "Delete
+    /// everything", "Could not delete. Try again.", under its controls.
     @discardableResult
     public func confirmDeleteFromThisDevice() async -> Bool {
+        await runCoverDeletion { try await $0.deleteFromThisDevice() }
+    }
+
+    /// One deletion from the cover. The failure line goes while the
+    /// deletion runs. Then `coverDeletionOutcome` holds the result.
+    private func runCoverDeletion(_ deletion: (DeleteAllPerforming) async throws -> Void) async -> Bool {
+        coverDeletionOutcome = nil
         do {
-            try await deleteAllSeam.deleteFromThisDevice()
+            try await deletion(deleteAllSeam)
+            coverDeletionOutcome = .deleted
             return true
         } catch {
+            coverDeletionOutcome = .failed
             return false
         }
     }

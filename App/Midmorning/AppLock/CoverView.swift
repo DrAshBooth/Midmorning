@@ -80,8 +80,10 @@ struct CoverView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
                 // data-and-privacy spec, "Delete-all" (ruling r14-01): one
-                // line under the controls after a failed deletion.
-                if controller.deleteEverythingOutcome == .failed {
+                // line under the controls after a failed deletion. The
+                // same line after a failed "Delete from this device"
+                // (ruling r17-04, mm-t41.27).
+                if controller.coverDeletionOutcome == .failed {
                     Text(DeleteAllOutcome.failureMessage.string)
                         .foregroundStyle(.secondary)
                 }
