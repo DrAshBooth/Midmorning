@@ -61,11 +61,15 @@ struct ExportScreenView: View {
         .navigationTitle(ExportContent.screenTitle.string)
         .getSupport()
         .onAppear(perform: loadDefaultsIfNeeded)
-        .sheet(isPresented: $isShowingShareSheet, onDismiss: cleanUpTemporaryFile) {
-            if let pendingFileURL {
-                ShareSheetView(items: [pendingFileURL])
-            }
-        }
+        // The share sheet is presented modally, not inside a SwiftUI sheet
+        // (`ShareSheetView`); it deletes the file when it closes, also when
+        // this screen leaves while it shows. The closure keeps the file's
+        // URL, because the screen's state can be gone by then.
+        .background(
+            ShareSheetView(isPresented: $isShowingShareSheet, items: pendingFileURL.map { [$0] } ?? [], onDismiss: { [pendingFileURL] in
+                cleanUpTemporaryFile(pendingFileURL)
+            })
+        )
     }
 
     // MARK: Date bindings
@@ -129,9 +133,9 @@ struct ExportScreenView: View {
         }
     }
 
-    private func cleanUpTemporaryFile() {
-        guard let pendingFileURL else { return }
-        ExportComposer.deleteTemporaryFile(at: pendingFileURL)
-        self.pendingFileURL = nil
+    private func cleanUpTemporaryFile(_ fileURL: URL?) {
+        guard let fileURL else { return }
+        ExportComposer.deleteTemporaryFile(at: fileURL)
+        if pendingFileURL == fileURL { pendingFileURL = nil }
     }
 }
