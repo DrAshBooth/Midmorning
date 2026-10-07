@@ -22,10 +22,13 @@ public enum PendingRoute: Sendable, Equatable {
 /// screen the app shows while merely inactive, on or off; `.locked` and
 /// `.lockedAfterEnrolmentChange` are the cover with "Unlock" (or
 /// "Delete from this device") and "Delete everything". Requirement:
-/// "A new entry before authentication" — a pending route wins, so the
-/// new-entry screen shows with no cover at all. The one exception: after
-/// the request at Save does not succeed, the cover shows over that screen
-/// until "Unlock" succeeds (`pendingRouteAwaitsUnlock`, ruling r13-04).
+/// "A new entry before authentication" — a pending route wins while the
+/// app is active, so the new-entry screen shows with no cover at all. Two
+/// exceptions: after the request at Save does not succeed, the cover shows
+/// over that screen until "Unlock" succeeds (`pendingRouteAwaitsUnlock`,
+/// ruling r13-04); and while the app is not active, the cover shows over
+/// that screen as over every other screen, so the App Switcher shows no
+/// typed text (ruling r16-02, mm-t12b.27).
 public enum CoverMode: Sendable, Equatable {
     case none
     case privacyOnly
@@ -88,7 +91,7 @@ public struct AppLifecycleState: Sendable, Equatable {
     }
 
     public var coverMode: CoverMode {
-        if pendingRoute != nil, !pendingRouteAwaitsUnlock { return .none }
+        if pendingRoute != nil, !pendingRouteAwaitsUnlock, scenePhase == .active { return .none }
         if isLocked {
             // Requirement: "The lock control on Today" — "With the app lock
             // off, the lock control MUST still show the cover" as the plain

@@ -124,9 +124,11 @@ line.
 Two bugs change what the suite checks until they are fixed:
 
 - mm-t12b.27: on the iOS 27.0 simulator Today is blank while TodayView,
-  NewEntryView and EditEntryView apply `.privacySensitive()`. Every check
-  that starts on Today fails on the committed code until this bug is fixed.
-  The fix waits for decision r16-02.
+  NewEntryView and EditEntryView apply `.privacySensitive()`. Ash ruled on
+  7 October 2026 (r16-02): remove `.privacySensitive()` and
+  `.redacted(reason:)` from the three screens. Branch rulings2-record-review
+  removes them. The cover window hides every screen while the app is not
+  active, with the app lock on or off.
 - mm-t12b.28: on iOS 27, "Delete this entry?" shows no "Cancel".
   `tapDialogButton` taps outside the dialog to cancel. The fix of
   mm-t12b.28 makes the helper require the "Cancel" button. The fix waits

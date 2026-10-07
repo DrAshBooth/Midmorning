@@ -101,8 +101,8 @@ struct EditEntryView: View {
                 Button("entry.cancel", role: .cancel) {}
             }
         }
-        .privacySensitive()
-        .redacted(reason: scenePhase == .active ? [] : .privacy)
+        // The cover window hides this screen while the app is not active
+        // (ruling r16-02, mm-t12b.27), so it has no redaction of its own.
         .onAppear {
             openedAt = Date()
             customPlaces = (try? store.customPlaces()) ?? []

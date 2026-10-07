@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import Programme
+import AppLock
 
 /// weigh-in spec, "The weigh-in stays off Today, widgets and notifications"
 /// (mm-t22.10). "A widget" is `deferred: mm-t25.15` (`v1-programme
@@ -11,12 +12,11 @@ import XCTest
 ///   `WeighInRoute` navigation destination.
 /// - "App switcher": already covered, for every screen including this
 ///   change's own `WeighInScreenView` (pushed inside Today's own
-///   `NavigationStack`), by `TodayView.swift`'s existing
-///   `.privacySensitive()`/`.redacted(reason: scenePhase == .active ? [] :
-///   .privacy)` (record-full, 1.2b) and by `app-lock`'s own `CoverView`
-///   overlay, which shows `.privacyOnly` whenever `scenePhase != .active`
-///   regardless of the app lock setting. Neither needed new code from this
-///   change.
+///   `NavigationStack`), by `app-lock`'s cover window, which shows the
+///   cover whenever `scenePhase != .active`, with the app lock on or off.
+///   Ruling r16-02 (mm-t12b.27) removed Today's own `.privacySensitive()`
+///   and `.redacted(reason:)`, because on iOS 27 they made Today blank; the
+///   cover window is now the one layer that hides Today.
 final class WeighInStaysOffTodayTests: XCTestCase {
     func testTodayViewNamesNoWeighInFact() throws {
         let repoRoot = URL(fileURLWithPath: #filePath)
@@ -25,7 +25,10 @@ final class WeighInStaysOffTodayTests: XCTestCase {
         for forbidden in ["weightKg", "WeighInFact", "RollingAverage", "weighIn(dateKey", "weighIns()"] {
             XCTAssertFalse(text.contains(forbidden), "TodayView.swift reads \(forbidden); the weigh-in spec says Today MUST NOT show a weight value or the rolling average")
         }
-        XCTAssertTrue(text.contains(".redacted(reason:"), "the app switcher snapshot is already redacted while inactive")
+        XCTAssertFalse(text.contains(".privacySensitive()"), "ruling r16-02: on iOS 27 this modifier makes Today blank")
+        let inactive = AppLifecycle.reduce(.launch(appLockEnabled: false), event: .didBecomeInactive)
+        XCTAssertEqual(inactive.coverMode, .privacyOnly, "the app switcher snapshot shows the cover, also with the app lock off")
+        XCTAssertNotEqual(inactive.coverWindowMode, .hidden)
     }
 
     /// The weigh-in day reminder's own discreet text is the shared

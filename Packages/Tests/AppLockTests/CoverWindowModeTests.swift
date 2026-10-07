@@ -71,6 +71,46 @@ final class CoverWindowModeTests: XCTestCase {
         XCTAssertEqual(unlocked.coverWindowMode, .shownWithFocus)
     }
 
+    /// Ruling r16-02 (mm-t12b.27): the screens have no redaction of their
+    /// own, so the cover hides the new-entry screen of a pending route
+    /// while the app is not active, as it hides every other screen
+    /// ("The App Switcher MUST show the cover and nothing else"). With the
+    /// app lock on, the cover with "Unlock" and "Delete everything" shows;
+    /// with the app lock off, "Midmorning" only. When the app is active
+    /// again, the screen shows with no cover, and its text stays.
+    func testThePendingRouteScreenHasTheCoverWhileTheAppIsNotActive() {
+        var locked = AppLifecycleState.launch(appLockEnabled: true)
+        locked = AppLifecycle.reduce(locked, event: .pendingRouteRequested(.newEntry))
+        locked = AppLifecycle.reduce(locked, event: .didBecomeInactive)
+        XCTAssertEqual(locked.coverMode, .locked)
+        XCTAssertEqual(locked.coverWindowMode, .shownWithFocus, "the window that holds the screen still shows")
+        locked = AppLifecycle.reduce(locked, event: .didEnterBackground(now: 1_000))
+        XCTAssertEqual(locked.coverMode, .locked)
+        locked = AppLifecycle.reduce(locked, event: .didBecomeActive(now: 1_005))
+        XCTAssertEqual(locked.coverMode, .none, "the screen shows again with no cover")
+        XCTAssertEqual(locked.pendingRoute, .newEntry, "the screen and its text stay")
+
+        var unlocked = AppLifecycleState.launch(appLockEnabled: false)
+        unlocked = AppLifecycle.reduce(unlocked, event: .pendingRouteRequested(.newEntry))
+        unlocked = AppLifecycle.reduce(unlocked, event: .didBecomeInactive)
+        XCTAssertEqual(unlocked.coverMode, .privacyOnly)
+        unlocked = AppLifecycle.reduce(unlocked, event: .didBecomeActive(now: 5))
+        XCTAssertEqual(unlocked.coverMode, .none)
+    }
+
+    /// A kept draft that waits for "Unlock" keeps the locked cover, active
+    /// or not.
+    func testAKeptDraftKeepsTheCoverInEveryPhase() {
+        var state = AppLifecycleState.launch(appLockEnabled: true)
+        state = AppLifecycle.reduce(state, event: .pendingRouteRequested(.newEntry))
+        state = AppLifecycle.reduce(state, event: .pendingRouteSaveNotAuthenticated)
+        XCTAssertEqual(state.coverMode, .locked)
+        state = AppLifecycle.reduce(state, event: .didBecomeInactive)
+        XCTAssertEqual(state.coverMode, .locked)
+        state = AppLifecycle.reduce(state, event: .didBecomeActive(now: 5))
+        XCTAssertEqual(state.coverMode, .locked)
+    }
+
     /// When the route resolves, the locked cover is back in the same
     /// window, and the app's own window is still under it.
     func testTheCoverReturnsWhenTheRouteResolves() {
