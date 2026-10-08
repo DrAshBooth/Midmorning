@@ -107,6 +107,11 @@ struct TodayView: View {
                                     Spacer(minLength: 0)
                                 }
                                 .foregroundStyle(.primary)
+                                // A hit area of at least 44 points high
+                                // (product-rules spec, "Accessibility
+                                // everywhere"); it was 20 points.
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                             }
                             .accessibilityElement(children: .ignore)
                             .accessibilityLabel(note)
@@ -140,11 +145,14 @@ struct TodayView: View {
                     Section {
                         if ReminderPermissionText.todayLine(permission: notificationPermission, hasTappedDeniedLineOnce: hasTappedNotificationsDeniedLineOnce, anySwitchOn: anyReminderSwitchOn) != nil {
                             Button(action: tapNotificationsLine) {
-                                if notificationPermission == .notDetermined {
-                                    Text("today.reminders.notDetermined")
-                                } else {
-                                    Text("today.reminders.denied")
+                                Group {
+                                    if notificationPermission == .notDetermined {
+                                        Text("today.reminders.notDetermined")
+                                    } else {
+                                        Text("today.reminders.denied")
+                                    }
                                 }
+                                .minimumHitArea()
                             }
                             // Its own tap target: a tap on the line never
                             // reaches another control in the same row.
@@ -159,12 +167,16 @@ struct TodayView: View {
                             // day" sits beside "Pause for today" only after
                             // the gate time.
                             HStack {
-                                Button(currentSection.states.contains(.paused) ? "today.pauseForToday.on" : "today.pauseForToday") {
+                                Button {
                                     togglePause(currentSection)
+                                } label: {
+                                    Text(currentSection.states.contains(.paused) ? "today.pauseForToday.on" : "today.pauseForToday").minimumHitArea()
                                 }
                                 if closeTheDayShows(currentSection) {
                                     Spacer()
-                                    Button("closeTheDay.title") { isShowingCloseTheDay = true }
+                                    Button { isShowingCloseTheDay = true } label: {
+                                        Text("closeTheDay.title").minimumHitArea()
+                                    }
                                 }
                             }
                             .buttonStyle(.borderless)

@@ -33,9 +33,9 @@ struct TodayCardSlotView: View {
                 Text(line).font(.body)
             }
             HStack {
-                Button(primaryLabel, action: onPrimary)
+                Button(action: onPrimary) { Text(primaryLabel).minimumHitArea() }
                 Spacer()
-                Button("programme.card.close", action: onClose)
+                Button(action: onClose) { Text("programme.card.close").minimumHitArea() }
             }
             // Two controls in one List row: each needs its own tap target.
             .buttonStyle(.borderless)

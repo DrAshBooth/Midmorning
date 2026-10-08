@@ -44,7 +44,7 @@ final class ProgrammeScreenTextTests: XCTestCase {
             "Text(title)",
             "Text(line)",
             "case .stage1: return \"programme.card.read\"",
-            "Button(\"programme.card.close\", action: onClose)",
+            "Button(action: onClose) { Text(\"programme.card.close\").minimumHitArea() }",
         ])
         try ScreenText.assertScreen("TodayView.swift", shows: ["TodayCardSlotView(card: pendingCard"])
     }

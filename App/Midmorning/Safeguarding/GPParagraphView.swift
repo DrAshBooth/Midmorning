@@ -44,8 +44,8 @@ struct GPParagraphView: View {
                 }
                 .dynamicTypeSize(.large ... .accessibility5)
 
-            Button(isShowingCopiedLabel ? GPParagraphCopy.copiedLabel : GPParagraphCopy.copyLabel) {
-                copy()
+            Button { copy() } label: {
+                Text(isShowingCopiedLabel ? GPParagraphCopy.copiedLabel : GPParagraphCopy.copyLabel).minimumHitArea()
             }
             // In a List row, only a tap on "Copy" itself copies.
             .buttonStyle(.borderless)

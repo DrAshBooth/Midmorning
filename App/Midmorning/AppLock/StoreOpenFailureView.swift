@@ -28,8 +28,10 @@ struct StoreOpenFailureView: View {
                     .buttonStyle(.borderedProminent)
                 Button("today.getSupport") { isShowingSupportSheet = true }
                     .buttonStyle(.bordered)
-                Button("settings.privacy.deleteEverything", role: .destructive) {
+                Button(role: .destructive) {
                     isShowingDeleteConfirmation = true
+                } label: {
+                    Text("settings.privacy.deleteEverything").minimumHitArea()
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)

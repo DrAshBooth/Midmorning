@@ -19,6 +19,18 @@ public extension View {
         self.listStyle(.plain)
     }
 
+    /// A hit area of at least 44 by 44 points (product-rules spec,
+    /// "Accessibility everywhere": "Every control MUST have a hit area of at
+    /// least 44 by 44 points."). Put it on the label of a borderless or
+    /// plain button, so that the tap target and the accessibility frame get
+    /// the size too. A frame outside the button gives only the layout that
+    /// size. AutomatedChecks+Accessibility.swift (`smallControls`) checks
+    /// the size of each control on each audited screen.
+    func minimumHitArea() -> some View {
+        self.frame(minWidth: 44, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+    }
+
     /// The system sheet at the large detent, for a screen that asks the
     /// person for an answer (product-rules spec, "Appearance": "A screen
     /// that asks the person for an answer MUST open as a sheet").
@@ -110,6 +122,17 @@ struct PredictiveTextView: UIViewRepresentable {
             view.inputAccessoryView = context.coordinator.makeAccessoryToolbar()
         }
         return view
+    }
+
+    /// At least 44 points high (product-rules spec, "Accessibility
+    /// everywhere": "Every control MUST have a hit area of at least 44 by
+    /// 44 points"). A one-line text is 22 points high, so a tap just under
+    /// it missed the field (AutomatedChecks+Accessibility.swift,
+    /// `smallControls`). The field grows with its text as before.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
+        let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: max(44, ceil(fitted.height)))
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {

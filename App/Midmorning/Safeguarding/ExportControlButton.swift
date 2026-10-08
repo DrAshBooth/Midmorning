@@ -11,9 +11,13 @@ import Export
 struct ExportControlButton: View {
     let store: RecordStore
 
+    /// The link has a hit area of at least 44 by 44 points
+    /// (`minimumHitArea`); as plain text it was 20 points high.
     var body: some View {
-        NavigationLink(CommonLabels.exportControl.string) {
+        NavigationLink {
             ExportScreenView(store: store)
+        } label: {
+            Text(CommonLabels.exportControl.string).minimumHitArea()
         }
     }
 }
