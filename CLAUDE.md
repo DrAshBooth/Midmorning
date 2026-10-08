@@ -117,8 +117,8 @@ bead. A device check is for what needs a device or a person, for example
 real notifications or a change of the clock. An accessibility check is never a
 device check, because Ash does not test accessibility by hand (8 October 2026).
 This includes VoiceOver, Voice Control, the largest text size (AX5), contrast,
-Increase Contrast and Accessibility Inspector. The agent proves an
-accessibility check with an automated test (an accessibility audit or an
+Increase Contrast, Reduce Motion and Accessibility Inspector. The agent proves
+an accessibility check with an automated test (an accessibility audit or an
 accessibility-tree assertion), or not at all. The agent never lists it on the
 device-check bead. `openspec/changes/v1-programme/tasks.md` and
 `tools/skeleton-checks/README.md` hold the full rule. Pass

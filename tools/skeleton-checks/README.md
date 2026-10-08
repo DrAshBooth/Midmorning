@@ -76,13 +76,17 @@ An accessibility check is never a device check, because Ash does not test
 accessibility features by hand (8 October 2026, bd memory
 `ash-no-accessibility-device-checks`). So a device-check bead keeps no
 VoiceOver, Voice Control, largest text size (AX5), contrast, Increase
-Contrast or Accessibility Inspector check. An agent proves an accessibility
-check with an automated test: Xcode's accessibility audit
+Contrast, Reduce Motion or Accessibility Inspector check. An agent proves an
+accessibility check with an automated test: Xcode's accessibility audit
 (`performAccessibilityAudit`) in a UI test, or an assertion on the
 accessibility tree. If no automated test can prove a part, no person checks
-that part by hand. The app
-must still meet product-rules "Accessibility everywhere" and the
-accessibility requirement of each spec.
+that part by hand. The app must still meet product-rules "Accessibility
+everywhere" and the accessibility requirement of each spec.
+
+An automated test is not a device check. The specs let the team declare an
+accessibility label in App Store Connect only after a device check with a
+dated screenshot. So the team declares no accessibility label until Ash
+rules on this conflict (mm-t43.16).
 
 A flow check does a sequence of actions and then looks at what the app
 shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
