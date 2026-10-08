@@ -1,0 +1,1518 @@
+import XCTest
+import UIKit
+
+/// Ash, 8 October 2026: "I don't want to test the accessibility features."
+/// So no VoiceOver, Voice Control, largest-text-size, contrast or
+/// Accessibility Inspector check stays on a device-check bead (bd memory
+/// ash-no-accessibility-device-checks). The app must still obey
+/// product-rules "Accessibility everywhere" and the accessibility
+/// requirement of each spec. These tests prove what a UI test can prove:
+///
+/// - Xcode's accessibility audit (`performAccessibilityAudit`, iOS 17 and
+///   later) on each main screen, at the default text size and again at the
+///   largest accessibility text size (AX5). The audit looks for contrast,
+///   element detection, hit regions, element descriptions, Dynamic Type,
+///   clipped text and traits. Each audit also checks that each control has
+///   a label of its own (`unlabelledControls`).
+/// - The contrast audit in dark mode (`testAuditContrastInDarkMode`).
+/// - Checks of the accessibility tree for what the audit cannot see and the
+///   specs name: header traits, the labels and the reading order that the
+///   specs give, and the VoiceOver custom actions of rows and day headings.
+///
+/// Each issue goes one of three ways. An issue that `auditExclusions` takes
+/// is not a fault of the app: each entry tells why. An issue that
+/// `auditKnownDefects` takes is a fault that a bead holds: it shows as an
+/// expected failure. Every other issue fails the test, and the failure
+/// message lists each one (screen, text size, type, element, description).
+/// The log `accessibility-audit.log` in `OUT_DIR` holds every issue and the
+/// decision about it.
+///
+/// Run these tests by name with `tools/skeleton-checks/automated-checks.sh`
+/// (for example `testAuditOnboardingScreens`). The suite runs them with the
+/// other checks.
+extension AutomatedChecks {
+
+    // MARK: Text size
+
+    /// The two text sizes of each audit. The launch argument
+    /// `-UIPreferredContentSizeCategoryName` sets the size of the app only.
+    /// Its value is the raw value of the category: for AX5 that is
+    /// "UICTContentSizeCategoryAccessibilityXXXL". (The name
+    /// "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge" is not a
+    /// category: iOS ignores it and keeps the default size.)
+    enum AuditTextSize: String, CaseIterable {
+        case standard = "default text size"
+        case largest = "AX5"
+
+        var launchArguments: [String] {
+            switch self {
+            case .standard: return []
+            case .largest: return ["-UIPreferredContentSizeCategoryName", UIContentSizeCategory.accessibilityExtraExtraExtraLarge.rawValue]
+            }
+        }
+    }
+
+    /// Puts the seeded store `scenario` (or no store) into the app's
+    /// container and launches the app at the text size `size`. This is
+    /// `launch(_:launchMarker:)` with one more launch argument.
+    func auditLaunch(_ scenario: String?, size: AuditTextSize, launchMarker: String? = nil) throws {
+        app.terminate()
+        let environment = ProcessInfo.processInfo.environment
+        let fileManager = FileManager.default
+        let support = URL(fileURLWithPath: environment["APP_DATA"]!).appendingPathComponent("Library/Application Support")
+        let record = support.appendingPathComponent("Record")
+        let marker = support.appendingPathComponent("LaunchMarker")
+        try? fileManager.removeItem(at: record)
+        try? fileManager.removeItem(at: marker)
+        try fileManager.createDirectory(at: record, withIntermediateDirectories: true)
+        if let scenario {
+            let seeded = URL(fileURLWithPath: environment["STORES"]!).appendingPathComponent(scenario)
+            for file in try fileManager.contentsOfDirectory(at: seeded, includingPropertiesForKeys: nil) {
+                try fileManager.copyItem(at: file, to: record.appendingPathComponent(file.lastPathComponent))
+            }
+        }
+        if let launchMarker {
+            try Data(launchMarker.utf8).write(to: marker)
+        }
+        app.launchArguments = ["-AppleLanguages", "(en-GB)", "-AppleLocale", "en_GB"] + size.launchArguments
+        app.launch()
+    }
+
+    /// Launches with `scenario` at `size` and waits for Today.
+    func auditLaunchOnToday(_ scenario: String, size: AuditTextSize, file: StaticString = #filePath, line: UInt = #line) throws {
+        try auditLaunch(scenario, size: size)
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20), "Today shows after the launch (\(size.rawValue))", file: file, line: line)
+    }
+
+    /// `launchWithTheSeam` at the text size `size`: the app-lock test seam
+    /// answers each system authentication request with the next of
+    /// `results`.
+    func auditLaunchWithTheSeam(_ scenario: String, results: [String], size: AuditTextSize) throws {
+        app.terminate()
+        removeDeletionFault()
+        try? FileManager.default.removeItem(at: appLockLog)
+        try FileManager.default.createDirectory(at: appLockScript.deletingLastPathComponent(), withIntermediateDirectories: true)
+        scriptAppLock(results)
+        app.launchEnvironment["MIDMORNING_APP_LOCK_SCRIPT"] = appLockScript.path
+        try auditLaunch(scenario, size: size)
+    }
+
+    // MARK: The audit
+
+    /// One issue of an audit, as the log and the failure message show it.
+    struct AuditFinding {
+        let screen: String
+        let size: AuditTextSize
+        let dark: Bool
+        let type: XCUIAccessibilityAuditType
+        let compact: String
+        let detail: String
+        let elementType: XCUIElement.ElementType?
+        let label: String?
+        let identifier: String?
+        let frame: CGRect?
+        /// The element can take a tap (false for a disabled control).
+        var enabled = true
+        /// The element is content of a list or a scroll view, and a part of
+        /// it is under a bar (the navigation bar, the toolbar, the bar of the
+        /// confirming button or the keyboard), or off the screen.
+        var underABar = false
+        /// The element is an item of a navigation bar or of the bottom
+        /// toolbar (a title or a bar button).
+        var inABar = false
+        /// For a contrast issue: the contrast of the pixels inside the
+        /// element's frame in a screenshot (`measuredContrast`).
+        var measured: Double?
+
+        var typeName: String {
+            let names: [(XCUIAccessibilityAuditType, String)] = [
+                (.contrast, "contrast"), (.elementDetection, "elementDetection"), (.hitRegion, "hitRegion"),
+                (.sufficientElementDescription, "sufficientElementDescription"), (.dynamicType, "dynamicType"),
+                (.textClipped, "textClipped"), (.trait, "trait"),
+            ]
+            return names.first { type.contains($0.0) }?.1 ?? "label"
+        }
+
+        var text: String {
+            let element = elementType.map { "element \($0.rawValue) \"\(label ?? "")\" at \(frame.map { "\($0.integral)" } ?? "?")" } ?? "no element"
+            let ratio = measured.map { String(format: " (measured %.1f:1 in a screenshot)", $0) } ?? ""
+            return "\(screen) (\(size.rawValue)\(dark ? ", dark mode" : "")): \(typeName): \(compact): \(element): \(detail)\(ratio)"
+        }
+    }
+
+    /// An issue that is not a fault of the app, and why.
+    struct AuditExclusion {
+        let reason: String
+        let matches: (AuditFinding) -> Bool
+    }
+
+    /// The one-line text fields that hold a short value: a number of at
+    /// most three digits (the age, the height and the weight on onboarding
+    /// screen 2 and the re-screen, and the weight on the weigh-in screen),
+    /// or one word (the close-the-day screen). The name of each field shows
+    /// in full above it: the question, or the field's own label.
+    static let shortValueFields: Set<String> = [
+        "How old are you?", "Height in centimetres", "Height in feet", "Height in inches",
+        "Weight in kilograms", "Weight in stone", "Weight in pounds", "Weight", "Stone", "Pounds",
+        "One word for how today felt",
+    ]
+
+    /// The issues that the audits exclude. Each one is not a fault of the
+    /// app, and each entry tells why. No entry takes every issue of a type.
+    static let auditExclusions: [AuditExclusion] = [
+        AuditExclusion(reason: """
+            The audit gives no element for this issue (its element and its axElement are nil), so no test and no \
+            person can find the control. The log keeps it; the label check and the other audits cover the screen.
+            """) { $0.elementType == nil },
+        AuditExclusion(reason: """
+            The element is content that scrolls, and a part of it is under a bar or off the screen when the audit \
+            runs. The audit then measures the bar's material over the text, not the text on its own background. \
+            The next audit page scrolls the content clear of the bar and measures it again.
+            """) { $0.type.contains(.contrast) && $0.underABar },
+        AuditExclusion(reason: """
+            The element's own pixels contrast at 3:1 or more (`measuredContrast`, in a screenshot just after the \
+            audit). product-rules "Accessibility everywhere" sets 3:1. The audit uses other limits: it reports \
+            "Contrast nearly passed" from 3:1 to 4.5:1, and it can report "Contrast failed" on a row whose label is \
+            black on white when a system part of the row (a disclosure chevron, the track of a switch) is lighter. \
+            A contrast below 3:1 still fails the test.
+            """) { $0.type.contains(.contrast) && ($0.measured ?? 0) >= 3 },
+        AuditExclusion(reason: """
+            The control is disabled (for example "Save" on the weigh-in screen before a weight is typed). WCAG 2 \
+            (1.4.3) sets no contrast for the text of an inactive control, and product-rules sets none for it. The \
+            same control is measured again when it is active.
+            """) { $0.type.contains(.contrast) && !$0.enabled },
+        AuditExclusion(reason: """
+            A title or a button of the system navigation bar or toolbar. iOS sets the text size of a bar item: it \
+            does not grow it at the accessibility sizes, and it shows the item in the Large Content Viewer (touch \
+            and hold) at those sizes. iOS also shortens a title that has no room beside the bar buttons; the \
+            title's label keeps the full text, which VoiceOver reads.
+            """) { ($0.type.contains(.dynamicType) || $0.type.contains(.textClipped)) && $0.inABar },
+        AuditExclusion(reason: """
+            The label is an e-mail address: the contact address that the privacy notice must show (data-and-privacy, \
+            "The privacy notice"). The audit wants a label in words, but the address is the text on the screen, and \
+            VoiceOver reads it as an address.
+            """) { $0.type.contains(.sufficientElementDescription) && ($0.label ?? "").range(of: "^[^@ ]+@[^@ ]+\\.[a-z]+$", options: .regularExpression) != nil },
+        AuditExclusion(reason: """
+            A one-line system text field (a SwiftUI TextField). The audit reports each one at each text size, \
+            because a one-line field does not wrap. These fields hold a short value (a number of at most three \
+            digits, or one word), the field grows with the text size, and the name of the field shows in full above \
+            it.
+            """) { $0.type.contains(.textClipped) && $0.elementType == .textField && shortValueFields.contains($0.label ?? "") },
+    ]
+
+    /// A real fault of the app that a bead holds. The test reports each
+    /// issue that an entry matches as an expected failure
+    /// (`XCTExpectFailure`) that names the bead, so the result bundle shows
+    /// it and the suite still passes. Each entry names the screens and the
+    /// elements, so that a new fault does not hide under it. Remove the
+    /// entry when the bead closes.
+    struct AuditKnownDefect {
+        let bead: String
+        let reason: String
+        let matches: (AuditFinding) -> Bool
+    }
+
+    static let auditKnownDefects: [AuditKnownDefect] = [
+        AuditKnownDefect(bead: "mm-t12b.29", reason: """
+            The app does not use the AccentColor asset, so a bordered button shows the system blue on its own light \
+            tint, at 2.8:1: the Where chips on the new-entry and edit screens, and "Get support" on the store-open \
+            fault screen.
+            """) { finding in
+            let chips: Set<String> = ["Home", "Work", "Out", "Travelling", "Add a place"]
+            let onEntryScreen = finding.screen.hasPrefix("the new-entry screen") || finding.screen.hasPrefix("the edit screen")
+            let onFaultScreen = finding.screen.hasPrefix("the store-open fault screen")
+            return finding.type.contains(.contrast) && finding.elementType == .button && (finding.measured ?? 3) < 3
+                && ((onEntryScreen && chips.contains(finding.label ?? "")) || (onFaultScreen && finding.label == "Get support"))
+        },
+    ]
+
+    /// The findings of the current test that no exclusion took.
+    private static var auditFailures: [String] = []
+
+    /// A Dynamic Type issue at either text size, or a clipped-text issue at
+    /// the default size, with the screen of its element. The test decides
+    /// each one at the end, from the same element at the other size
+    /// (`auditAtEachTextSize`).
+    private static var auditScalingChecks: [(finding: AuditFinding, screen: String)] = []
+
+    /// The elements ("<screen>|<label>") with a clipped-text issue at AX5.
+    private static var auditClippedAtLargest: Set<String> = []
+
+    /// The tallest height of each label on each screen at each text size:
+    /// "<size>|<screen>" to label to height.
+    private static var auditHeights: [String: [String: CGFloat]] = [:]
+
+    /// Writes `line` to `accessibility-audit.log` in `OUT_DIR`.
+    func auditLog(_ line: String) {
+        guard let out = ProcessInfo.processInfo.environment["OUT_DIR"] else { return }
+        let url = URL(fileURLWithPath: out).appendingPathComponent("accessibility-audit.log")
+        let data = Data((line + "\n").utf8)
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            try? handle.close()
+        } else {
+            try? data.write(to: url)
+        }
+    }
+
+    /// Reads the screen in one snapshot. Keeps the height of each element
+    /// with a label in the tree for `screen` at `size`, and returns the
+    /// labels and places of the texts and controls on the screen, to see if
+    /// a scroll moved the content.
+    private func auditReadScreen(_ screen: String, size: AuditTextSize) -> [String] {
+        guard let snapshot = try? app.snapshot() else { return [] }
+        var labels: [String] = []
+        let window = app.windows.firstMatch.frame
+        let key = "\(size.rawValue)|\(screen)"
+        var heights = Self.auditHeights[key] ?? [:]
+        func walk(_ element: XCUIElementSnapshot) {
+            // The height of each element in the tree, on the screen or not:
+            // a list keeps the rows near the screen in the tree, and the
+            // audit itself can move the list past a row between two reads.
+            if !element.label.isEmpty, element.frame.height > 0 {
+                heights[element.label] = max(heights[element.label] ?? 0, element.frame.height)
+            }
+            if !element.label.isEmpty, element.frame.intersects(window),
+               [.staticText, .button, .textField, .textView, .switch].contains(element.elementType) {
+                labels.append("\(element.label)@\(Int(element.frame.minY))")
+            }
+            element.children.forEach(walk)
+        }
+        walk(snapshot)
+        Self.auditHeights[key] = heights
+        return labels
+    }
+
+    /// Scrolls the content up by `fraction` (70 percent) of the part of the
+    /// screen that is clear of the bars, with a slow drag from the left
+    /// margin, so that the drag never starts on a control or on a bar. The
+    /// part that stays lets an element that a bar covered on one page show
+    /// clear on the next, for the contrast audit. At AX5 the audit does not
+    /// measure contrast, so it scrolls 85 percent.
+    func auditScrollDown(fraction: CGFloat = 0.7) {
+        let clear = auditClearArea()
+        let window = app.windows.firstMatch.frame
+        let top = max(clear.top, window.minY) + 10
+        let bottom = min(clear.bottom, window.maxY) - 10
+        guard bottom - top > 60 else { return }
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let distance = (bottom - top) * fraction
+        origin.withOffset(CGVector(dx: 8, dy: bottom))
+            .press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: 8, dy: bottom - distance)), withVelocity: .slow, thenHoldForDuration: 0.1)
+    }
+
+    /// The contrast of the element in `frame` (points) in `image`, with the
+    /// luminance formula of WCAG 2. The test measures inside the frame,
+    /// clear of the rounded ends of a button and of the edges, so that the
+    /// background outside a button does not count. The background is the
+    /// median pixel (the fill of the row or of the button). The text is the
+    /// 0.5th percentile (dark text) or the 99.5th percentile (light text),
+    /// so that a few pixels at the edge of a glyph do not count. The result
+    /// is the higher of the two ratios. For example (8 October 2026): black
+    /// text on white 21:1, the secondary text 8A8A8E on white 3.4:1, a
+    /// section header 85858B on F2F2F7 3.3:1, white on the system blue
+    /// 3.5:1, and the system blue on its own light tint 2.8:1.
+    func measuredContrast(in frame: CGRect, of image: CGImage, scale: CGFloat) -> Double? {
+        let inner = frame.insetBy(dx: min(16, frame.width / 4), dy: frame.height * 0.2)
+        let rect = CGRect(x: inner.minX * scale, y: inner.minY * scale, width: inner.width * scale, height: inner.height * scale)
+            .integral.intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard !rect.isEmpty, let cropped = image.cropping(to: rect), let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+        let width = cropped.width, height = cropped.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn: Bool = pixels.withUnsafeMutableBytes { buffer in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                          space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(cropped, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard drawn, width * height > 0 else { return nil }
+        func channel(_ value: UInt8) -> Double {
+            let c = Double(value) / 255
+            return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        var luminance: [Double] = []
+        luminance.reserveCapacity(width * height)
+        for index in stride(from: 0, to: pixels.count, by: 4) {
+            luminance.append(0.2126 * channel(pixels[index]) + 0.7152 * channel(pixels[index + 1]) + 0.0722 * channel(pixels[index + 2]))
+        }
+        luminance.sort()
+        let last = Double(luminance.count - 1)
+        let dark = luminance[Int(last * 0.005)], background = luminance[luminance.count / 2], light = luminance[Int(last * 0.995)]
+        return max((background + 0.05) / (dark + 0.05), (light + 0.05) / (background + 0.05))
+    }
+
+    /// The part of the screen where content shows clear of every bar, and
+    /// the frames of the elements that are content of a list or a scroll
+    /// view, from one snapshot.
+    private func auditClearArea() -> (top: CGFloat, bottom: CGFloat, content: [(label: String, frame: CGRect)], barItems: [(label: String, frame: CGRect)]) {
+        let window = app.windows.firstMatch.frame
+        guard let snapshot = try? app.snapshot(), window.height > 0 else { return (0, .infinity, [], []) }
+        var top: CGFloat = 0
+        var bottom = window.maxY - 34
+        var content: [(label: String, frame: CGRect)] = []
+        var barItems: [(label: String, frame: CGRect)] = []
+        func walk(_ element: XCUIElementSnapshot, inContent: Bool, inBar: Bool) {
+            let frame = element.frame
+            switch element.elementType {
+            case .navigationBar where frame.minY < window.height / 2 && frame.intersects(window):
+                top = max(top, frame.maxY)
+            case .toolbar, .keyboard:
+                // A bar at the bottom. (iOS 27 also has a "Toolbar" element
+                // that covers the whole window: it is not a bar.)
+                if frame.height > 0, frame.height < window.height / 2, frame.minY > window.height / 3, frame.intersects(window) {
+                    bottom = min(bottom, frame.minY)
+                }
+            case .button where !inContent && frame.width >= window.width - 48 && frame.minY > window.height * 0.5:
+                // The full-width confirming button in a bar under the
+                // content: the bar starts 16 points above the button.
+                bottom = min(bottom, frame.minY - 16)
+            default:
+                break
+            }
+            if inContent, !element.label.isEmpty { content.append((element.label, frame)) }
+            if inBar, !element.label.isEmpty { barItems.append((element.label, frame)) }
+            let isContainer = [.scrollView, .collectionView, .table].contains(element.elementType)
+            // The items of iOS 27's floating toolbar are inside a "Toolbar"
+            // element that covers the whole window.
+            let isBar = element.elementType == .navigationBar || element.elementType == .toolbar
+            element.children.forEach { walk($0, inContent: inContent || isContainer, inBar: inBar || isBar) }
+        }
+        walk(snapshot, inContent: false, inBar: false)
+        return (top, bottom, content, barItems)
+    }
+
+    /// Runs the audit on the screen that shows, then scrolls down and runs
+    /// it again on each page with new content, until the content stops or
+    /// `pages` audits ran. An issue that two audits find shows once. Each
+    /// audit also runs the label check (`unlabelledControls`).
+    ///
+    /// The audit itself can move the content: at AX5 it put a scroll view
+    /// back at its top, and it left a list some rows back (8 October 2026,
+    /// iOS 27.0 simulator). So the test does not count on the place: it
+    /// drags until the screen shows a label that no audit page showed, or
+    /// until a drag no longer moves the content (the end).
+    func audit(_ screen: String, size: AuditTextSize, dark: Bool = false, types: XCUIAccessibilityAuditType = .all, pages: Int = 1,
+               file: StaticString = #filePath, line: UInt = #line) {
+        var seen = Set<String>()
+        func labels(_ view: [String]) -> Set<String> {
+            Set(view.map { String($0[..<($0.lastIndex(of: "@") ?? $0.endIndex)]) })
+        }
+        var shownLabels = labels(auditReadScreen(screen, size: size))
+        let fraction: CGFloat = size == .largest ? 0.85 : 0.7
+        var drags = 0
+        let maxDrags = max(pages, 1) * 4
+        for page in 0..<max(pages, 1) {
+            if page > 0 {
+                var before = auditReadScreen(screen, size: size)
+                var newContent = false
+                var stillDrags = 0
+                while drags < maxDrags {
+                    auditScrollDown(fraction: fraction)
+                    drags += 1
+                    // The list can still move for a moment after the drag.
+                    usleep(600_000)
+                    let now = auditReadScreen(screen, size: size)
+                    if now == before {
+                        // A list can stop at the end of the rows that it has
+                        // laid out, and move on at the next drag or swipe.
+                        // So the test tries a second drag, then a swipe,
+                        // before it takes the end.
+                        stillDrags += 1
+                        if stillDrags == 2 { app.swipeUp(); usleep(800_000) }
+                        if stillDrags < 3 { continue }
+                        auditLog("  (\(screen), \(size.rawValue): drag \(drags) did not move the content: the end)")
+                        break
+                    }
+                    stillDrags = 0
+                    if !labels(now).isSubset(of: shownLabels) {
+                        shownLabels.formUnion(labels(now))
+                        newContent = true
+                        break
+                    }
+                    before = now
+                }
+                if !newContent {
+                    if drags >= maxDrags { auditLog("  (\(screen), \(size.rawValue): \(drags) drags and no new content)") }
+                    break
+                }
+            }
+            let name = page == 0 ? screen : "\(screen), page \(page + 1)"
+            var findings: [AuditFinding] = []
+            do {
+                try app.performAccessibilityAudit(for: types) { issue in
+                    let element = issue.element
+                    findings.append(AuditFinding(
+                        screen: name, size: size, dark: dark, type: issue.auditType, compact: issue.compactDescription,
+                        detail: issue.detailedDescription, elementType: element?.elementType, label: element?.label,
+                        identifier: element?.identifier, frame: element?.frame, enabled: element?.isEnabled ?? true))
+                    // The test reports each issue itself, below, so that one
+                    // failure lists every issue with its element. This return
+                    // value only stops the audit's own report.
+                    return true
+                }
+            } catch {
+                Self.auditFailures.append("\(name) (\(size.rawValue)): the audit did not run: \(error)")
+                continue
+            }
+            let clear = auditClearArea()
+            if findings.contains(where: { $0.type.contains(.contrast) && $0.frame != nil }),
+               let image = XCUIScreen.main.screenshot().image.cgImage {
+                let scale = CGFloat(image.width) / max(app.windows.firstMatch.frame.width, 1)
+                for index in findings.indices where findings[index].type.contains(.contrast) {
+                    if let frame = findings[index].frame {
+                        findings[index].measured = measuredContrast(in: frame, of: image, scale: scale)
+                    }
+                }
+            }
+            for index in findings.indices {
+                guard let frame = findings[index].frame, let label = findings[index].label else { continue }
+                let isContent = clear.content.contains { $0.label == label && $0.frame.integral == frame.integral }
+                let isClear = frame.minY >= clear.top - 1 && frame.maxY <= clear.bottom + 1
+                findings[index].underABar = isContent && !isClear
+                findings[index].inABar = clear.barItems.contains { $0.label == label && $0.frame.integral == frame.integral }
+            }
+            if !dark { findings += unlabelledControls(on: name, size: size) }
+            auditLog("AUDIT \(name) (\(size.rawValue)\(dark ? ", dark" : "")): \(findings.count) issues")
+            var failed = false
+            for finding in findings {
+                let key = "\(finding.type.rawValue)|\(finding.compact)|\(finding.label ?? "-")|\(finding.detail)"
+                guard seen.insert(key).inserted else { continue }
+                if let exclusion = Self.auditExclusions.first(where: { $0.matches(finding) }) {
+                    auditLog("  excluded: \(finding.text) [\(exclusion.reason)]")
+                } else if let defect = Self.auditKnownDefects.first(where: { $0.matches(finding) }) {
+                    auditLog("  known fault \(defect.bead): \(finding.text)")
+                    // An expected failure still stops a test that has
+                    // `continueAfterFailure` false, so the test goes on
+                    // through this one record.
+                    let stops = continueAfterFailure
+                    continueAfterFailure = true
+                    XCTExpectFailure("\(defect.bead): \(defect.reason)") {
+                        XCTFail(finding.text)
+                    }
+                    continueAfterFailure = stops
+                } else if !dark, finding.type.contains(.dynamicType) || (size == .standard && finding.type.contains(.textClipped)),
+                          let label = finding.label, !label.isEmpty, (finding.frame?.height ?? 0) > 0 {
+                    // Decided at the end of the test, from the same element
+                    // at the other text size (`auditAtEachTextSize`).
+                    auditLog("  to compare: \(finding.text)")
+                    Self.auditScalingChecks.append((finding, screen))
+                } else {
+                    auditLog("  ISSUE: \(finding.text)")
+                    Self.auditFailures.append(finding.text)
+                    failed = true
+                }
+                if size == .largest, finding.type.contains(.textClipped), let label = finding.label {
+                    Self.auditClippedAtLargest.insert("\(screen)|\(label)")
+                }
+            }
+            if failed || ProcessInfo.processInfo.environment["AUDIT_SHOTS"] == "1" {
+                // The screen of each audit with an issue. The result bundle
+                // keeps it when the test fails.
+                let image = XCUIScreen.main.screenshot()
+                let shot = XCTAttachment(screenshot: image)
+                shot.name = "\(name) (\(size.rawValue)\(dark ? ", dark" : ""))"
+                add(shot)
+                if let out = ProcessInfo.processInfo.environment["AUDIT_SHOTS_DIR"] {
+                    let file = (shot.name ?? "audit").replacingOccurrences(of: "/", with: "-") + ".png"
+                    try? image.pngRepresentation.write(to: URL(fileURLWithPath: out).appendingPathComponent(file))
+                }
+            }
+        }
+    }
+
+    /// product-rules "Accessibility everywhere": "Every control MUST have a
+    /// VoiceOver label." The audit does not report a text field that has a
+    /// placeholder and no label, but VoiceOver reads no name for it when it
+    /// holds a value. So each control that VoiceOver stops on, outside the
+    /// keyboard, must have a label of its own. A segmented control and a
+    /// compact date picker are containers: VoiceOver stops on each segment
+    /// and on the picker's button, and each of those must have a label. A
+    /// SwiftUI toggle holds an inner switch with no label; VoiceOver stops
+    /// on the toggle, which must have a label. A wheel of a system date
+    /// picker has no label of its own (VoiceOver reads its value); the
+    /// record's time control hides its wheels and is one element, "Time".
+    /// A SwiftUI menu ("Day options") shows as two buttons with the same
+    /// frame: the menu with its label, and the system button inside it with
+    /// none. The label of the menu names that control.
+    func unlabelledControls(on screen: String, size: AuditTextSize) -> [AuditFinding] {
+        guard let snapshot = try? app.snapshot() else { return [] }
+        let controls: Set<XCUIElement.ElementType> = [
+            .button, .switch, .toggle, .textField, .secureTextField, .textView, .slider, .stepper,
+            .link, .menuButton, .searchField,
+        ]
+        let window = app.windows.firstMatch.frame
+        var labelledFrames: [CGRect] = []
+        func collect(_ element: XCUIElementSnapshot) {
+            if controls.contains(element.elementType), !element.label.isEmpty { labelledFrames.append(element.frame.integral) }
+            element.children.forEach(collect)
+        }
+        collect(snapshot)
+        var found: [AuditFinding] = []
+        func walk(_ element: XCUIElementSnapshot, inLabelledSwitch: Bool) {
+            if element.elementType == .keyboard { return }
+            let isInnerSwitch = element.elementType == .switch && inLabelledSwitch
+            if controls.contains(element.elementType), !isInnerSwitch, element.label.isEmpty, element.frame.width > 0,
+               element.frame.intersects(window), !labelledFrames.contains(element.frame.integral) {
+                found.append(AuditFinding(
+                    screen: screen, size: size, dark: false, type: [], compact: "Control with no label",
+                    detail: "the control has no accessibility label (placeholder \"\(element.placeholderValue ?? "")\", value \"\(element.value as? String ?? "")\")",
+                    elementType: element.elementType, label: element.label, identifier: element.identifier, frame: element.frame))
+            }
+            let labelledSwitch = inLabelledSwitch || (element.elementType == .switch && !element.label.isEmpty)
+            element.children.forEach { walk($0, inLabelledSwitch: labelledSwitch) }
+        }
+        walk(snapshot, inLabelledSwitch: false)
+        return found
+    }
+
+    /// Runs `body` at each text size, then fails once with every issue that
+    /// no exclusion took.
+    ///
+    /// Dynamic Type and clipped-text issues are decided here. The audit
+    /// reports "Dynamic Type font sizes are partially unsupported" on
+    /// SwiftUI text that does scale (for example a row in a Form), at both
+    /// sizes. So the test finds the same element (the same label on the
+    /// same screen) at the default size and at AX5. If it is at least 1.5
+    /// times as tall at AX5, its text scales with Dynamic Type. A clipped-
+    /// text issue at the default size ("may be clipped at larger Dynamic
+    /// Type sizes") is decided by the AX5 audit of the same element: the
+    /// issue fails the test if that audit also reports clipped text, or if
+    /// the AX5 walk did not see the element. A clipped-text issue at AX5
+    /// always fails the test.
+    func auditAtEachTextSize(_ sizes: [AuditTextSize] = AuditTextSize.allCases, file: StaticString = #filePath, line: UInt = #line,
+                             _ body: (AuditTextSize) throws -> Void) rethrows {
+        Self.auditFailures = []
+        Self.auditScalingChecks = []
+        Self.auditClippedAtLargest = []
+        Self.auditHeights = [:]
+        auditLog("TEST \(name)")
+        for size in sizes {
+            try body(size)
+        }
+        for (finding, screen) in Self.auditScalingChecks {
+            let label = finding.label ?? ""
+            let standard = Self.auditHeights["\(AuditTextSize.standard.rawValue)|\(screen)"]?[label]
+            let largest = Self.auditHeights["\(AuditTextSize.largest.rawValue)|\(screen)"]?[label]
+            let heights = "\(standard.map { "\(Int($0))" } ?? "no") points high at the default size and \(largest.map { "\(Int($0))" } ?? "no") points high at AX5"
+            var verdict: String?
+            if finding.type.contains(.dynamicType) {
+                if let standard, let largest, largest >= standard * 1.5 {
+                    verdict = "the element is \(heights), so its text scales with Dynamic Type"
+                }
+            } else if largest != nil, !Self.auditClippedAtLargest.contains("\(screen)|\(label)") {
+                verdict = "the AX5 audit of the same element (\(heights)) reports no clipped text"
+            }
+            if let verdict {
+                auditLog("  excluded: \(finding.text) [\(verdict)]")
+            } else {
+                auditLog("  ISSUE: \(finding.text) (the element is \(heights))")
+                Self.auditFailures.append("\(finding.text) (the element is \(heights))")
+            }
+        }
+        let failures = Self.auditFailures
+        Self.auditFailures = []
+        Self.auditScalingChecks = []
+        XCTAssertEqual(failures.count, 0, "the accessibility audit found \(failures.count) issues:\n" + failures.joined(separator: "\n"), file: file, line: line)
+    }
+
+    // MARK: Helpers for the walks
+
+    /// Answers `question` with `choice` on a long form (onboarding screen 2,
+    /// the re-screen, the review). At AX5 a question can be taller than the
+    /// space between the bars, so this finds the answer row under the
+    /// question and shows only the row.
+    func auditAnswer(_ question: String, _ choice: String, bar: String?, file: StaticString = #filePath, line: UInt = #line) {
+        guard let row = reveal(bar: bar, maxDrags: 30, { self.answerRow(choice, under: question, in: $0) }) else {
+            XCTFail("\"\(question)\" shows \"\(choice)\"", file: file, line: line)
+            return
+        }
+        tap(row.frame)
+    }
+
+    /// Onboarding screen 2 with answers that exclude nothing, or with the
+    /// age and weight given. The questions first, so that the keyboard
+    /// does not hide them.
+    func auditCompleteScreen2(age: String = "30", weight: String = "65", file: StaticString = #filePath, line: UInt = #line) {
+        for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] {
+            auditAnswer(question, "No", bar: "Continue", file: file, line: line)
+        }
+        fill("How old are you?", age, file: file, line: line)
+        fill("Height in centimetres", "170", file: file, line: line)
+        fill("Weight in kilograms", weight, file: file, line: line)
+        tapConfirm(file: file, line: line)
+        dismissKeyboardTipBesideAFullWidthControl()
+    }
+
+    /// Opens Settings from Today.
+    func auditOpenSettings(file: StaticString = #filePath, line: UInt = #line) {
+        tapToolbar("Settings")
+        assertScreen("Settings", file: file, line: line)
+    }
+
+    /// Taps the button `label` after a scroll to it, and waits for the
+    /// screen `title`.
+    func auditOpen(_ label: String, screen title: String, file: StaticString = #filePath, line: UInt = #line) {
+        let button = app.buttons[label].firstMatch
+        XCTAssertTrue(scrollTo(button, maxSwipes: 20), "\"\(label)\" shows", file: file, line: line)
+        button.tap()
+        assertScreen(title, file: file, line: line)
+    }
+
+    /// Taps the row `label` on a long form and checks that it is then
+    /// selected. At AX5 a tap just after a drag can miss, so it tries again.
+    func auditChoose(_ label: String, bar: String? = "Continue", file: StaticString = #filePath, line: UInt = #line) {
+        for _ in 0..<3 {
+            guard let row = reveal(bar: bar, maxDrags: 30, { self.first(.button, label, in: $0) }) else { break }
+            tap(row.frame)
+            usleep(500_000)
+            if first(.button, label, in: look())?.isSelected == true { return }
+        }
+        XCTFail("the screen shows \"\(label)\", and a tap selects it", file: file, line: line)
+    }
+
+    // MARK: The audits of each screen
+
+    /// The most audits on one screen: the first view and each page with new
+    /// content. At AX5 a screen is much longer.
+    func auditPages(_ size: AuditTextSize, standard: Int = 4, largest: Int = 10) -> Int {
+        size == .standard ? standard : largest
+    }
+
+    /// The audit types at `size`. At AX5 the contrast audit is left out: the
+    /// colours do not change with the text size, so the contrast audit runs
+    /// at the default size, and again in dark mode
+    /// (`testAuditContrastInDarkMode`).
+    func auditTypes(_ size: AuditTextSize) -> XCUIAccessibilityAuditType {
+        size == .standard ? .all : XCUIAccessibilityAuditType.all.subtracting(.contrast)
+    }
+
+    /// Today: the current day with two entries and the gap band between
+    /// them, the "Weekly review" line, and the previous day, collapsed
+    /// (`review`).
+    func testAuditTodayWithEntriesAndAGapBand() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("review", size: size)
+            audit("Today with entries and a gap band", size: size, types: auditTypes(size), pages: auditPages(size))
+        }
+    }
+
+    /// Today with a planned meal: the Lunch row with its matched entry
+    /// (`planMatched`), and the Lunch row with the missed planned meal
+    /// prompt, "Skipped" and "Add it" (`planMissed`). Then "Close the day"
+    /// and its screen (`or-plan`), the plan card (`or-plancard`), the stage
+    /// 1 card (`or-secondday`) and the pinned note (`or-pinned`). The
+    /// stage 2 opening card is on Today in `review`
+    /// (`testAuditTodayWithEntriesAndAGapBand`).
+    func testAuditTodayWithPlannedMealsCardsAndTheNote() throws {
+        try auditAtEachTextSize { size in
+            for (scenario, screen) in [("planMatched", "Today with a matched planned meal"),
+                                       ("planMissed", "Today with the missed planned meal prompt"),
+                                       ("or-plan", "Today with \"Close the day\""),
+                                       ("or-plancard", "Today with the plan card"),
+                                       ("or-secondday", "Today with the stage 1 card"),
+                                       ("or-pinned", "Today with the pinned note")] {
+                try auditLaunchOnToday(scenario, size: size)
+                if scenario == "or-pinned" {
+                    // weekly-review spec, "Accessibility of the review": the
+                    // pinned note is one element whose label is its text.
+                    XCTAssertTrue(scrollTo(element(labelled: "Eat breakfast"), maxSwipes: 6), "the pinned note is one element with the label \"Eat breakfast\" (\(size.rawValue))")
+                    for _ in 0..<6 { app.swipeDown() }
+                }
+                audit(screen, size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
+                if scenario == "or-plan" {
+                    // The close-the-day screen (reminders, mm-t24.22 item 7).
+                    let closeTheDay = app.buttons["Close the day"].firstMatch
+                    XCTAssertTrue(scrollTo(closeTheDay, maxSwipes: 12), "Today shows \"Close the day\"")
+                    closeTheDay.tap()
+                    XCTAssertTrue(app.navigationBars["Close the day"].waitForExistence(timeout: 8), "the close-the-day screen shows")
+                    audit("the close-the-day screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 10))
+                }
+            }
+        }
+    }
+
+    /// The new-entry screen from "Add an entry", and the edit screen from a
+    /// tap on the "Toast and tea" row (`review`).
+    func testAuditNewEntryAndEditScreens() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("review", size: size)
+            let add = app.buttons["Add an entry"].firstMatch
+            XCTAssertTrue(add.waitForExistence(timeout: 8))
+            add.tap()
+            XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
+            dismissKeyboardTip()
+            audit("the new-entry screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
+            app.navigationBars.buttons["Cancel"].firstMatch.tap()
+            XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForNonExistence(timeout: 8))
+            if size == .largest {
+                // A new-entry screen from the top, for the chips.
+                add.tap()
+                XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
+                assertTheWhereChipsWrap()
+                app.navigationBars.buttons["Cancel"].firstMatch.tap()
+                XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForNonExistence(timeout: 8))
+            }
+            let row = element(labelContaining: "Toast and tea")
+            XCTAssertTrue(scrollTo(row, maxSwipes: 12), "Today shows \"Toast and tea\"")
+            row.tap()
+            XCTAssertTrue(app.buttons["Delete entry"].firstMatch.waitForExistence(timeout: 8) || app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 2), "the edit screen shows")
+            dismissKeyboardTip()
+            audit("the edit screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
+        }
+    }
+
+    /// "Earlier days" and one earlier day (`review`).
+    func testAuditEarlierDays() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("review", size: size)
+            tapDayMenu("Earlier days")
+            assertScreen("Earlier days")
+            audit("Earlier days", size: size, types: auditTypes(size), pages: auditPages(size))
+            app.cells.firstMatch.tap()
+            XCTAssertTrue(app.buttons["Previous day"].waitForExistence(timeout: 8), "one earlier day shows")
+            audit("one earlier day", size: size, types: auditTypes(size), pages: auditPages(size, standard: 2, largest: 6))
+        }
+    }
+
+    /// The plan builder at "Today's plan" with the Lunch slot planned
+    /// (`planMatched`).
+    func testAuditPlanBuilder() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("planMatched", size: size)
+            tapDayMenu("Today's plan")
+            assertScreen("Today's plan")
+            audit("the plan builder", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+        }
+    }
+
+    /// Settings with each group (Record, Weigh-in, Privacy, About), the
+    /// Reminders group's screen, the privacy notice and Diagnostics
+    /// (`week1`).
+    func testAuditSettingsScreens() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("week1", size: size)
+            auditOpenSettings()
+            if size == .standard { assertEachSwitchHasALabelAndAState(on: "Settings") }
+            audit("Settings", size: size, types: auditTypes(size), pages: auditPages(size, standard: 6, largest: 16))
+            try auditLaunchOnToday("week1", size: size)
+            auditOpenSettings()
+            auditOpen("Reminders", screen: "Reminders")
+            audit("the Reminders group", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+            goBack()
+            assertScreen("Settings")
+            auditOpen("Privacy", screen: "Privacy notice")
+            audit("the privacy notice", size: size, types: auditTypes(size), pages: auditPages(size, standard: 6, largest: 16))
+            goBack()
+            assertScreen("Settings")
+            auditOpen("Diagnostics", screen: "Diagnostics")
+            audit("Diagnostics", size: size, types: auditTypes(size), pages: auditPages(size))
+        }
+    }
+
+    /// settings spec, "Accessibility of the settings screen": "Every control
+    /// on the settings screen MUST have a VoiceOver label ... Every switch
+    /// MUST read its state." VoiceOver reads a switch's label, "switch", and
+    /// its value, "on" or "off". So each switch has a label and the value
+    /// "1" or "0". The test scrolls through the screen and goes back to the
+    /// top.
+    func assertEachSwitchHasALabelAndAState(on screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        var seen: [String: String] = [:]
+        for scroll in 0..<8 {
+            if scroll > 0 { auditScrollDown() }
+            for item in look() where item.type == .switch && item.frame.width > 0 && !item.label.isEmpty {
+                seen[item.label] = item.value ?? ""
+            }
+        }
+        XCTAssertFalse(seen.isEmpty, "\(screen) shows switches", file: file, line: line)
+        for (label, value) in seen {
+            XCTAssertTrue(["0", "1"].contains(value), "on \(screen), the switch \"\(label)\" reads its state (\"\(value)\")", file: file, line: line)
+        }
+        for _ in 0..<8 { app.swipeDown() }
+    }
+
+    /// The Programme screen, the stage screen "Getting started" and the
+    /// card screen "Why write it down" (`week1`).
+    func testAuditProgrammeStageAndCardScreens() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("week1", size: size)
+            tapToolbar("Programme")
+            assertScreen("Programme")
+            audit("Programme", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+            try auditLaunchOnToday("week1", size: size)
+            tapToolbar("Programme")
+            assertScreen("Programme")
+            let stage = element(labelBeginningWith: "Getting started")
+            XCTAssertTrue(scrollTo(stage, maxSwipes: 12))
+            stage.tap()
+            assertScreen("Getting started")
+            audit("the stage screen", size: size, types: auditTypes(size), pages: auditPages(size))
+            // The audit scrolled down; the stage screen opens again at its top.
+            goBack()
+            assertScreen("Programme")
+            XCTAssertTrue(scrollTo(stage, maxSwipes: 12))
+            stage.tap()
+            assertScreen("Getting started")
+            auditOpen("Why write it down", screen: "Why write it down")
+            audit("the card screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+        }
+    }
+
+    /// The weigh-in screen on the weigh-in day with the message for a weight
+    /// below the range (`week1`, 5 kg, which saves nothing), on a day that
+    /// is not the weigh-in day, where it shows the refusal text
+    /// (`or-weighin`), and with no weigh-in day, where it shows "Choose a
+    /// weigh-in day" (`review`).
+    func testAuditWeighInScreen() throws {
+        try auditAtEachTextSize { size in
+            for (scenario, screen) in [("week1", "the weigh-in screen on the weigh-in day"),
+                                       ("or-weighin", "the weigh-in screen on a day that is not the weigh-in day"),
+                                       ("review", "the weigh-in screen with no weigh-in day")] {
+                try auditLaunchOnToday(scenario, size: size)
+                tapToolbar("Programme")
+                assertScreen("Programme")
+                let stage = element(labelBeginningWith: "Getting started")
+                XCTAssertTrue(scrollTo(stage, maxSwipes: 12))
+                stage.tap()
+                assertScreen("Getting started")
+                auditOpen("Weigh-in", screen: "Weigh-in")
+                if scenario == "week1" {
+                    let weight = app.textFields["Weight"].firstMatch
+                    XCTAssertTrue(weight.waitForExistence(timeout: 5), "the weigh-in screen shows the weight input")
+                    weight.tap()
+                    dismissKeyboardTip()
+                    weight.typeText("5")
+                    let save = app.buttons["Save"].firstMatch
+                    XCTAssertTrue(scrollTo(save, maxSwipes: 8))
+                    save.tap()
+                    XCTAssertTrue(element(labelBeginningWith: "That number is outside the range").waitForExistence(timeout: 5), "5 kg shows the message for a weight outside the range")
+                }
+                audit(screen, size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+            }
+        }
+    }
+
+    /// The "Reviews" list, the weekly review, the GP suggestion page and
+    /// the not-right-now page (`review`).
+    func testAuditWeeklyReviewAndItsPages() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("review", size: size)
+            tapToolbar("Reviews")
+            assertScreen("Reviews")
+            audit("the Reviews list", size: size, types: auditTypes(size), pages: auditPages(size, standard: 2, largest: 6))
+            goBack()
+            assertScreen("Today")
+            openTheDueReview()
+            // weekly-review spec, "Accessibility of the review": each summary
+            // sentence is one element whose label is the sentence.
+            let summary = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@ AND label ENDSWITH %@", "Days with an entry: ", ".")).firstMatch
+            XCTAssertTrue(summary.waitForExistence(timeout: 5), "the first summary sentence is one element, \"Days with an entry: <n>.\" (\(size.rawValue))")
+            audit("the weekly review", size: size, types: auditTypes(size), pages: auditPages(size, standard: 8, largest: 24))
+            try auditLaunchOnToday("review", size: size)
+            openTheDueReview()
+            tapGettingWorse()
+            XCTAssertTrue(element(labelled: "It might help to see your GP").waitForExistence(timeout: 8), "the GP suggestion page shows")
+            audit("the GP suggestion page", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+            try auditLaunchOnToday("review", size: size)
+            openTheDueReview()
+            auditAnswer(Self.selfHarmQuestion, "Yes", bar: "Done")
+            auditAnswer(Self.selfHarmStep2Question, "Yes", bar: "Done")
+            XCTAssertTrue(element(labelled: "This may not be right for you now").waitForExistence(timeout: 8), "the not-right-now page shows")
+            audit("the not-right-now page", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+        }
+    }
+
+    /// The export screen from Settings (`week1`).
+    func testAuditExportScreen() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("week1", size: size)
+            auditOpenSettings()
+            auditOpen("Export", screen: "Export")
+            audit("the export screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 10))
+        }
+    }
+
+    /// The support sheet from Today (`week1`).
+    func testAuditSupportSheet() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("week1", size: size)
+            getSupport(on: "Today").tap()
+            assertScreen("Get support")
+            audit("the support sheet", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+            if size == .largest {
+                app.navigationBars["Get support"].buttons["Close"].tap()
+                XCTAssertTrue(app.navigationBars["Get support"].waitForNonExistence(timeout: 5))
+                getSupport(on: "Today").tap()
+                assertScreen("Get support")
+                assertEachNumberAboveItsControls(on: "the support sheet")
+            }
+        }
+    }
+
+    /// Onboarding screens 1 to 4 (no store).
+    func testAuditOnboardingScreens() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunch(nil, size: size)
+            let firstContinue = app.buttons["Continue"].firstMatch
+            XCTAssertTrue(firstContinue.waitForExistence(timeout: 20), "onboarding screen 1 shows")
+            if size == .largest { assertContinueBelowTheLastLineOfScreen1() }
+            audit("onboarding screen 1", size: size, types: auditTypes(size), pages: auditPages(size, standard: 2, largest: 10))
+            XCTAssertTrue(scrollTo(firstContinue, maxSwipes: 20))
+            firstContinue.tap()
+            assertScreen("A few questions first")
+            audit("onboarding screen 2", size: size, types: auditTypes(size), pages: auditPages(size, standard: 6, largest: 20))
+            try auditLaunch(nil, size: size)
+            XCTAssertTrue(firstContinue.waitForExistence(timeout: 20))
+            XCTAssertTrue(scrollTo(firstContinue, maxSwipes: 20))
+            firstContinue.tap()
+            assertScreen("A few questions first")
+            auditCompleteScreen2()
+            assertScreen("Your start")
+            // onboarding spec, "VoiceOver on the example": the example row
+            // is one element, "13:05, Toast and tea" (mm-t14.8).
+            let example = element(labelled: "13:05, Toast and tea")
+            XCTAssertTrue(scrollTo(example, maxSwipes: 12), "screen 3 shows the example row as one element, \"13:05, Toast and tea\" (\(size.rawValue))")
+            audit("onboarding screen 3", size: size, types: auditTypes(size), pages: auditPages(size, standard: 5, largest: 20))
+            auditChoose("I won't be weighing")
+            tapConfirm()
+            assertScreen("Permissions")
+            audit("onboarding screen 4", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 12))
+        }
+    }
+
+    /// The exclusion page (age 17) and the caution sheet (170 cm and 54
+    /// kg) from onboarding screen 2 (no store).
+    func testAuditExclusionPageAndCautionSheet() throws {
+        try auditAtEachTextSize { size in
+            for (age, weight, screen, heading) in [("17", "65", "the exclusion page", "Not right now"),
+                                                   ("30", "54", "the caution sheet", "Your height and weight put you close")] {
+                try auditLaunch(nil, size: size)
+                let firstContinue = app.buttons["Continue"].firstMatch
+                XCTAssertTrue(firstContinue.waitForExistence(timeout: 20))
+                XCTAssertTrue(scrollTo(firstContinue, maxSwipes: 20))
+                firstContinue.tap()
+                assertScreen("A few questions first")
+                auditCompleteScreen2(age: age, weight: weight)
+                XCTAssertTrue(element(labelBeginningWith: heading).waitForExistence(timeout: 8), "\(screen) shows")
+                audit(screen, size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+            }
+        }
+    }
+
+    /// The restart re-screen from "Start week 1 again" (`week1`).
+    func testAuditRestartRescreen() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchOnToday("week1", size: size)
+            tapToolbar("Programme")
+            assertScreen("Programme")
+            auditOpen("Start week 1 again", screen: "A few questions first")
+            audit("the restart re-screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 6, largest: 20))
+        }
+    }
+
+    /// The app-lock cover at launch (`lock-week1`; the seam cancels the
+    /// request), safe mode (the third launch in a row that stopped before
+    /// Today, `week1`), and the store-open fault screen (`corrupt`).
+    func testAuditCoverSafeModeAndStoreFault() throws {
+        try auditAtEachTextSize { size in
+            try auditLaunchWithTheSeam("lock-week1", results: ["cancel"], size: size)
+            XCTAssertTrue(unlockButton.waitForExistence(timeout: 20), "the cover shows \"Unlock\"")
+            assertAppLockRequests(1, "the launch makes one request")
+            audit("the app-lock cover", size: size, types: auditTypes(size), pages: auditPages(size, standard: 1, largest: 3))
+            try auditLaunch("week1", size: size, launchMarker: "2")
+            XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20), "safe mode's Today shows")
+            XCTAssertFalse(app.buttons["Add an entry"].exists, "safe mode's Today is not the full Today")
+            audit("safe mode", size: size, types: auditTypes(size), pages: auditPages(size, standard: 2, largest: 6))
+            try auditLaunch("corrupt", size: size)
+            XCTAssertTrue(element(labelled: "Midmorning cannot open your record on this device.").waitForExistence(timeout: 20), "the store-open fault screen shows")
+            audit("the store-open fault screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 2, largest: 6))
+        }
+    }
+
+    // MARK: The accessibility tree: header traits
+
+    /// `UIAccessibilityTraits.header`.
+    static let headerTrait: UInt64 = 1 << 16
+
+    /// One element of a snapshot with its accessibility traits. XCTest has
+    /// no public API for the traits. The snapshot class (`XCElementSnapshot`)
+    /// holds them in its property `traits`, with the bits of
+    /// `UIAccessibilityTraits`, so the test reads that property.
+    struct TraitedElement {
+        let type: XCUIElement.ElementType
+        let label: String
+        let frame: CGRect
+        let traits: UInt64
+        var isHeader: Bool { traits & AutomatedChecks.headerTrait != 0 }
+    }
+
+    /// Every element on the screen with its traits, from one snapshot.
+    func traitedElements(file: StaticString = #filePath, line: UInt = #line) -> [TraitedElement] {
+        guard let root = try? app.snapshot() else {
+            XCTFail("a snapshot of the screen failed", file: file, line: line)
+            return []
+        }
+        guard (root as AnyObject).responds(to: NSSelectorFromString("traits")) else {
+            XCTFail("this XCTest gives no traits on a snapshot; the header checks need them", file: file, line: line)
+            return []
+        }
+        var all: [TraitedElement] = []
+        func walk(_ element: XCUIElementSnapshot) {
+            let traits = ((element as AnyObject).value(forKey: "traits") as? NSNumber)?.uint64Value ?? 0
+            all.append(TraitedElement(type: element.elementType, label: element.label, frame: element.frame, traits: traits))
+            element.children.forEach(walk)
+        }
+        walk(root)
+        return all
+    }
+
+    /// Asserts that an element whose label is `label` (or begins with it,
+    /// when `prefix` is true) shows and carries the header trait, so that
+    /// VoiceOver reads it as a heading and its rotor stops on it. It
+    /// scrolls down to find the element.
+    func assertHeading(_ label: String, prefix: Bool = false, on screen: String, maxScrolls: Int = 6, file: StaticString = #filePath, line: UInt = #line) {
+        func matches(_ element: TraitedElement) -> Bool {
+            prefix ? element.label.hasPrefix(label) : element.label == label
+        }
+        var found: [TraitedElement] = []
+        for scroll in 0...maxScrolls {
+            if scroll > 0 { auditScrollDown() }
+            found = traitedElements(file: file, line: line).filter { matches($0) && $0.frame.width > 0 }
+            if !found.isEmpty { break }
+        }
+        XCTAssertFalse(found.isEmpty, "\(screen) shows \"\(label)\"", file: file, line: line)
+        guard !found.isEmpty else { return }
+        XCTAssertTrue(found.contains { $0.isHeader }, "on \(screen), \"\(label)\" is a heading for VoiceOver (header trait): \(found.map { "\($0.type.rawValue) \"\($0.label)\" traits \(String($0.traits, radix: 16))" })", file: file, line: line)
+    }
+
+    /// record spec, "The Today stack": "Each day heading MUST carry the
+    /// header trait." programme spec, "The stage screen": "The title and
+    /// 'Tools' MUST be headings for VoiceOver." content spec, "The card
+    /// screen and the card list": "The title MUST be a heading for
+    /// VoiceOver. 'One thing to do' MUST be a heading for VoiceOver."
+    /// weigh-in spec, "Accessibility of the weigh-in": "With no weigh-in
+    /// day, 'Choose a weigh-in day' MUST be a heading. Each weekday choice
+    /// MUST have the weekday's name as its label."
+    func testHeadingsOnTodayTheStageTheCardAndTheWeighIn() throws {
+        try launchOnToday("review")
+        let currentDay = recordPlanDayText(recordPlanCurrentDayKey())
+        let previousDay = recordPlanDayText(recordPlanAdding(-1, to: recordPlanCurrentDayKey()))
+        assertHeading(currentDay, prefix: true, on: "Today (the current day heading)")
+        assertHeading(previousDay, prefix: true, on: "Today (the previous day heading)")
+
+        tapToolbar("Programme")
+        assertScreen("Programme")
+        let stage = element(labelBeginningWith: "Getting started")
+        XCTAssertTrue(scrollTo(stage))
+        stage.tap()
+        assertScreen("Getting started")
+        assertHeading("Getting started", on: "the stage screen (its title)")
+        assertHeading("Tools", on: "the stage screen")
+        // programme spec, "VoiceOver on the stage screen": the title, then
+        // "Opened in week 1", then the card titles, then "Tools", then
+        // "Weigh-in". The tree holds the elements in the order that
+        // VoiceOver reads them.
+        for _ in 0..<4 { app.swipeDown() }
+        let order = traitedElements().filter { $0.type == .staticText || $0.type == .button }.map(\.label)
+        let wanted = ["Getting started", "Opened in week 1", "Why write it down", "Tools", "Weigh-in"]
+        let places = wanted.map { label in order.firstIndex { $0 == label } }
+        XCTAssertFalse(places.contains(nil), "the stage screen shows \(wanted): \(order)")
+        let found = places.compactMap { $0 }
+        XCTAssertEqual(found, found.sorted(), "the stage screen reads \(wanted) in that order: \(order)")
+
+        // The weigh-in screen with no weigh-in day: the review store holds
+        // "I won't be weighing".
+        auditOpen("Weigh-in", screen: "Weigh-in")
+        assertHeading("Choose a weigh-in day", on: "the weigh-in screen with no weigh-in day")
+        // The weekday choices, Monday first and Sunday last, in the order
+        // of the tree (the order in which VoiceOver reads them).
+        let weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        XCTAssertTrue(scrollTo(app.buttons["Sunday"].firstMatch), "the weigh-in screen offers \"Sunday\"")
+        let shown = traitedElements().filter { $0.type == .button && weekdays.contains($0.label) }.map(\.label)
+        XCTAssertEqual(shown, weekdays, "each weekday choice has the weekday's name as its label, Monday first and Sunday last")
+        goBack()
+        assertScreen("Getting started")
+
+        let card = app.buttons["Why write it down"].firstMatch
+        XCTAssertTrue(scrollTo(card))
+        card.tap()
+        assertScreen("Why write it down")
+        // The card title in the content (the navigation bar holds a second
+        // copy, which is a heading of its own).
+        let titleInContent = traitedElements().filter { $0.label == "Why write it down" && $0.type == .staticText && $0.frame.minY > app.navigationBars.firstMatch.frame.maxY - 1 }
+        XCTAssertFalse(titleInContent.isEmpty, "the card screen shows its title in the content")
+        XCTAssertTrue(titleInContent.allSatisfy(\.isHeader), "the card title is a heading for VoiceOver")
+        assertHeading("One thing to do", on: "the card screen")
+    }
+
+    /// The four safeguarding pages (mm-t14.38 to mm-t14.40, the heading
+    /// rotor): each page heading, and "What to do instead" or "Talk to your
+    /// GP", is a heading for VoiceOver. The weekly review: the self-harm
+    /// question is the header of its section (mm-t32.28). Onboarding screen
+    /// 2: each question with answer rows is the header of its section.
+    func testSafeguardingPageAndQuestionHeadings() throws {
+        try launchOnToday("review")
+        openTheDueReview()
+        assertHeading(Self.selfHarmQuestion, on: "the weekly review (the self-harm question)", maxScrolls: 20)
+        tapGettingWorse()
+        XCTAssertTrue(element(labelled: "It might help to see your GP").waitForExistence(timeout: 8), "the GP suggestion page shows")
+        assertHeading("It might help to see your GP", on: "the GP suggestion page")
+        assertHeading("Talk to your GP", on: "the GP suggestion page")
+
+        try launchOnToday("review")
+        openTheDueReview()
+        auditAnswer(Self.selfHarmQuestion, "Yes", bar: "Done")
+        auditAnswer(Self.selfHarmStep2Question, "Yes", bar: "Done")
+        XCTAssertTrue(element(labelled: "This may not be right for you now").waitForExistence(timeout: 8), "the not-right-now page shows")
+        assertHeading("This may not be right for you now", on: "the not-right-now page")
+        assertHeading("Talk to your GP", on: "the not-right-now page")
+
+        try openScreen2()
+        for question in [Self.treatmentQuestion, Self.pregnancyQuestion, Self.selfHarmQuestion] {
+            assertHeading(question, on: "onboarding screen 2", maxScrolls: 10)
+        }
+        auditCompleteScreen2(age: "17")
+        XCTAssertTrue(element(labelled: "Not right now").waitForExistence(timeout: 8), "the exclusion page shows")
+        assertHeading("Not right now", on: "the exclusion page")
+        assertHeading("What to do instead", on: "the exclusion page")
+
+        try openScreen2()
+        auditCompleteScreen2(weight: "54")
+        XCTAssertTrue(element(labelBeginningWith: "Your height and weight put you close").waitForExistence(timeout: 8), "the caution sheet shows")
+        assertHeading("Talk to your GP", on: "the caution sheet")
+    }
+
+    // MARK: Layout at the largest text size
+
+    /// record spec, "Where chips" (decision 92): at AX5 the chips wrap onto
+    /// more lines in a flow layout, each chip shows its full width on the
+    /// screen, and the Where control does not scroll to the side.
+    func assertTheWhereChipsWrap(file: StaticString = #filePath, line: UInt = #line) {
+        let window = app.windows.firstMatch.frame
+        let labels = ["Home", "Work", "Out", "Travelling", "Add a place"]
+        // "Add a place" comes last, so all the chips show when it shows.
+        XCTAssertTrue(auditReveal(app.buttons["Add a place"].firstMatch), "at AX5 the new-entry screen shows the chip \"Add a place\"", file: file, line: line)
+        let chips = look().filter { $0.type == .button && labels.contains($0.label) }
+        XCTAssertEqual(Set(chips.map(\.label)), Set(labels), "at AX5 the new-entry screen shows the chips \(labels)", file: file, line: line)
+        for chip in chips {
+            XCTAssertGreaterThanOrEqual(chip.frame.minX, window.minX - 1, "at AX5 the chip \"\(chip.label)\" starts on the screen", file: file, line: line)
+            XCTAssertLessThanOrEqual(chip.frame.maxX, window.maxX + 1, "at AX5 the chip \"\(chip.label)\" ends on the screen: the chips do not scroll to the side", file: file, line: line)
+        }
+        let lines = Set(chips.map { Int($0.frame.minY.rounded()) })
+        XCTAssertGreaterThan(lines.count, 1, "at AX5 the chips wrap onto more than one line", file: file, line: line)
+        XCTAssertEqual(app.scrollViews.matching(NSPredicate(format: "label == %@", "Where")).count, 0, "the Where control is not a scroll view", file: file, line: line)
+    }
+
+    /// Scrolls down with the audit's own drag (`auditScrollDown`) until
+    /// `element` can take a tap in the part of the screen that is clear of
+    /// the bars and the keyboard.
+    @discardableResult
+    func auditReveal(_ element: XCUIElement, maxScrolls: Int = 12) -> Bool {
+        for scroll in 0...maxScrolls {
+            if scroll > 0 { auditScrollDown() }
+            if element.exists, element.isHittable {
+                let clear = auditClearArea()
+                if element.frame.minY >= clear.top - 1, element.frame.maxY <= clear.bottom + 1 { return true }
+            }
+        }
+        return false
+    }
+
+    /// onboarding spec, "Largest text size" (mm-t14.3): at AX5 "Continue"
+    /// on "What this is and isn't" stays below the last line, and the
+    /// person scrolls to reach it.
+    func assertContinueBelowTheLastLineOfScreen1(file: StaticString = #filePath, line: UInt = #line) {
+        let window = app.windows.firstMatch.frame
+        let continueButton = app.buttons["Continue"].firstMatch
+        XCTAssertGreaterThan(continueButton.frame.minY, window.maxY, "at AX5 \"Continue\" is not on the screen before a scroll", file: file, line: line)
+        let lastLine = element(labelled: "If you need a person, Get support is on every screen.")
+        XCTAssertTrue(scrollTo(continueButton, maxSwipes: 20), "a scroll reaches \"Continue\"", file: file, line: line)
+        XCTAssertTrue(lastLine.exists, "screen 1 shows its last line", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(continueButton.frame.minY, lastLine.frame.maxY, "at AX5 \"Continue\" shows below the last line", file: file, line: line)
+        app.swipeDown(); app.swipeDown(); app.swipeDown(); app.swipeDown(); app.swipeDown()
+    }
+
+    /// safeguarding spec, "Largest text size" for the numbers (mm-t14.41):
+    /// at AX5 each number shows above its "Call" and "Copy number"
+    /// controls, not beside them. The test scrolls through the sheet and
+    /// looks at each number and each control that shows together.
+    func assertEachNumberAboveItsControls(on screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        let number = try? NSRegularExpression(pattern: "^[0-9][0-9 ]{2,}$")
+        var numbersSeen = Set<String>()
+        var last: [String] = []
+        for _ in 0..<20 {
+            let seen = look()
+            let window = app.windows.firstMatch.frame
+            let numbers = seen.filter { item in
+                item.type == .staticText && item.frame.intersects(window)
+                    && number?.firstMatch(in: item.label, range: NSRange(item.label.startIndex..., in: item.label)) != nil
+            }
+            let controls = seen.filter { $0.type == .button && ["Call", "Copy number"].contains($0.label) && $0.frame.intersects(window) }
+            for shown in numbers {
+                numbersSeen.insert(shown.label)
+                for control in controls {
+                    let sameLine = control.frame.minY < shown.frame.maxY - 1 && control.frame.maxY > shown.frame.minY + 1
+                    XCTAssertFalse(sameLine, "on \(screen) at AX5, \"\(control.label)\" shows beside \(shown.label), not under it", file: file, line: line)
+                }
+            }
+            let now = seen.filter { $0.type == .staticText }.map { "\($0.label)@\(Int($0.frame.minY))" }
+            if now == last { break }
+            last = now
+            auditScrollDown()
+        }
+        XCTAssertGreaterThanOrEqual(numbersSeen.count, 3, "on \(screen) at AX5 the test saw the numbers: \(numbersSeen.sorted())", file: file, line: line)
+    }
+
+    // MARK: Labels the specs name
+
+    /// weigh-in spec, "Accessibility of the weigh-in": the weight input's
+    /// label is "Weight", the unit control's label is "Unit", the weigh-in
+    /// day control's label is "Weigh-in day", and the chart is one element
+    /// with the label "Rolling average" (`week1`: the weigh-in day, and a
+    /// weigh-in a week ago).
+    func testWeighInLabelsAndTheChart() throws {
+        try launchOnToday("week1")
+        tapToolbar("Programme")
+        assertScreen("Programme")
+        let stage = element(labelBeginningWith: "Getting started")
+        XCTAssertTrue(scrollTo(stage))
+        stage.tap()
+        assertScreen("Getting started")
+        auditOpen("Weigh-in", screen: "Weigh-in")
+        XCTAssertTrue(app.textFields["Weight"].firstMatch.waitForExistence(timeout: 5), "the weight input's label is \"Weight\"")
+        let unit = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Unit")).firstMatch
+        XCTAssertTrue(scrollTo(unit), "the unit control's label is \"Unit\"")
+        XCTAssertTrue(app.buttons["Save"].firstMatch.exists || scrollTo(app.buttons["Save"].firstMatch), "the weigh-in screen shows \"Save\"")
+        let day = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Weigh-in day")).firstMatch
+        XCTAssertTrue(scrollTo(day), "the weigh-in day control's label is \"Weigh-in day\"")
+        app.swipeDown(); app.swipeDown(); app.swipeDown()
+        let chart = element(labelled: "Rolling average")
+        XCTAssertTrue(scrollTo(chart), "the chart is one element with the label \"Rolling average\"")
+        XCTAssertEqual(app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Rolling average")).count, 1,
+                       "one element has the label \"Rolling average\"")
+    }
+
+    // MARK: Contrast in dark mode
+
+    /// product-rules "Accessibility everywhere": "That contrast MUST hold in
+    /// light mode, in dark mode and with Increase Contrast on." The other
+    /// audits run in light mode. This test runs the contrast audit in dark
+    /// mode on the main screens, at the default text size (the strict case
+    /// for contrast). A UI test cannot turn on Increase Contrast.
+    ///
+    /// The test sets dark mode with `XCUIDevice.appearance` and puts light
+    /// mode back at the end. On the iOS 27.0 simulator a new simulator did
+    /// not change its appearance until its first restart (8 October 2026).
+    /// The test proves from a screenshot that dark mode took effect, and
+    /// fails if it did not.
+    func testAuditContrastInDarkMode() throws {
+        XCUIDevice.shared.appearance = .dark
+        addTeardownBlock { XCUIDevice.shared.appearance = .light }
+        try auditAtEachTextSize([.standard]) { size in
+            try auditLaunchOnToday("review", size: size)
+            assertDarkMode()
+            audit("Today with entries and a gap band", size: size, dark: true, types: .contrast, pages: 3)
+            try auditLaunchOnToday("planMissed", size: size)
+            audit("Today with the missed planned meal prompt", size: size, dark: true, types: .contrast, pages: 2)
+            try auditLaunchOnToday("review", size: size)
+            app.buttons["Add an entry"].firstMatch.tap()
+            XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
+            dismissKeyboardTip()
+            audit("the new-entry screen", size: size, dark: true, types: .contrast, pages: 2)
+            try auditLaunchOnToday("planMatched", size: size)
+            tapDayMenu("Today's plan")
+            assertScreen("Today's plan")
+            audit("the plan builder", size: size, dark: true, types: .contrast, pages: 3)
+            try auditLaunchOnToday("week1", size: size)
+            auditOpenSettings()
+            audit("Settings", size: size, dark: true, types: .contrast, pages: 5)
+            try auditLaunchOnToday("week1", size: size)
+            tapToolbar("Programme")
+            assertScreen("Programme")
+            audit("Programme", size: size, dark: true, types: .contrast, pages: 3)
+            let stage = element(labelBeginningWith: "Getting started")
+            XCTAssertTrue(scrollTo(stage))
+            stage.tap()
+            assertScreen("Getting started")
+            auditOpen("Why write it down", screen: "Why write it down")
+            audit("the card screen", size: size, dark: true, types: .contrast, pages: 3)
+            goBack()
+            assertScreen("Getting started")
+            auditOpen("Weigh-in", screen: "Weigh-in")
+            audit("the weigh-in screen", size: size, dark: true, types: .contrast, pages: 3)
+            try auditLaunchOnToday("review", size: size)
+            openTheDueReview()
+            audit("the weekly review", size: size, dark: true, types: .contrast, pages: 6)
+            try auditLaunchOnToday("review", size: size)
+            openTheDueReview()
+            tapGettingWorse()
+            XCTAssertTrue(element(labelled: "It might help to see your GP").waitForExistence(timeout: 8), "the GP suggestion page shows")
+            audit("the GP suggestion page", size: size, dark: true, types: .contrast, pages: 3)
+            try auditLaunchOnToday("week1", size: size)
+            getSupport(on: "Today").tap()
+            assertScreen("Get support")
+            audit("the support sheet", size: size, dark: true, types: .contrast, pages: 3)
+            try auditLaunch(nil, size: size)
+            XCTAssertTrue(app.buttons["Continue"].firstMatch.waitForExistence(timeout: 20), "onboarding screen 1 shows")
+            audit("onboarding screen 1", size: size, dark: true, types: .contrast, pages: 2)
+            try auditLaunchWithTheSeam("lock-week1", results: ["cancel"], size: size)
+            XCTAssertTrue(unlockButton.waitForExistence(timeout: 20), "the cover shows \"Unlock\"")
+            assertAppLockRequests(1, "the launch makes one request")
+            audit("the app-lock cover", size: size, dark: true, types: .contrast)
+        }
+    }
+
+    /// Fails unless the screen shows dark mode: the corner of the window
+    /// under the status bar is near black.
+    func assertDarkMode(file: StaticString = #filePath, line: UInt = #line) {
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else {
+            XCTFail("no screenshot", file: file, line: line)
+            return
+        }
+        let window = app.windows.firstMatch.frame
+        let scale = CGFloat(image.width) / max(window.width, 1)
+        let corner = colour(at: CGPoint(x: 4, y: 4), in: image, scale: scale)
+        XCTAssertLessThan(corner.reduce(0, +), 0.6, """
+            dark mode took effect (the colour at the top corner is \(corner)). On the iOS 27.0 simulator a new simulator \
+            changes its appearance only after its first restart: restart it (xcrun simctl shutdown, then boot) and run again
+            """, file: file, line: line)
+    }
+
+    // MARK: The accessibility tree: VoiceOver custom actions
+
+    /// The names of the VoiceOver custom actions of the element in
+    /// `snapshot`, in the order that the actions rotor lists them. XCTest
+    /// has no public API for them. Its accessibility client
+    /// (`XCUIDevice.accessibilityInterface`, class `XCAXClient_iOS`) reads
+    /// the attribute "XC_kAXXCAttributeCustomActions" of the element's
+    /// accessibility element (8 October 2026, Xcode 27.0). Returns nil when
+    /// this XCTest has no such client, so that the test fails with a clear
+    /// message and does not stop.
+    func customActionNames(of snapshot: XCUIElementSnapshot) -> [String]? {
+        let device = XCUIDevice.shared as NSObject
+        guard device.responds(to: NSSelectorFromString("accessibilityInterface")),
+              let client = device.value(forKey: "accessibilityInterface") as? NSObject,
+              (snapshot as AnyObject).responds(to: NSSelectorFromString("accessibilityElement")),
+              let element = (snapshot as AnyObject).value(forKey: "accessibilityElement") as? NSObject else { return nil }
+        let selector = NSSelectorFromString("attributesForElement:attributes:error:")
+        guard client.responds(to: selector) else { return nil }
+        typealias Attributes = @convention(c) (NSObject, Selector, NSObject, NSArray, UnsafeMutablePointer<NSError?>?) -> NSDictionary?
+        let attributes = unsafeBitCast(client.method(for: selector), to: Attributes.self)
+        let key = "XC_kAXXCAttributeCustomActions"
+        var error: NSError?
+        guard let result = attributes(client, selector, element, [key], &error) else { return nil }
+        let actions = result[key] as? [[String: Any]] ?? []
+        return actions.compactMap { $0["CustomActionName"] as? String }
+    }
+
+    /// The first element on the screen that `matches` finds, in one
+    /// snapshot. It scrolls down to find it.
+    func snapshotElement(_ description: String, maxScrolls: Int = 6, file: StaticString = #filePath, line: UInt = #line,
+                         matching matches: (XCUIElementSnapshot) -> Bool) -> XCUIElementSnapshot? {
+        for scroll in 0...maxScrolls {
+            if scroll > 0 { auditScrollDown() }
+            guard let root = try? app.snapshot() else { continue }
+            var found: XCUIElementSnapshot?
+            func walk(_ element: XCUIElementSnapshot) {
+                guard found == nil else { return }
+                if matches(element), element.frame.width > 0 { found = element; return }
+                element.children.forEach(walk)
+            }
+            walk(root)
+            if let found { return found }
+        }
+        XCTFail("the screen shows \(description)", file: file, line: line)
+        return nil
+    }
+
+    /// Asserts that the element that `matches` finds offers the VoiceOver
+    /// custom actions `expected` and no other, in any order. The attribute
+    /// lists SwiftUI's actions last to first, and the spec names no order.
+    /// On the iOS 27.0 simulator it lists the swipe action "Delete" of a
+    /// list row two times, with the same identifier, with or without a
+    /// second `accessibilityAction` of that name (8 October 2026). So the
+    /// test compares the names, not their count.
+    func assertCustomActions(_ expected: [String], on description: String, maxScrolls: Int = 6, file: StaticString = #filePath, line: UInt = #line,
+                             matching matches: @escaping (XCUIElementSnapshot) -> Bool) {
+        guard let element = snapshotElement(description, maxScrolls: maxScrolls, file: file, line: line, matching: matches) else { return }
+        guard let names = customActionNames(of: element) else {
+            XCTFail("this XCTest cannot read the custom actions of \(description)", file: file, line: line)
+            return
+        }
+        XCTAssertEqual(Set(names), Set(expected), "\(description) (\"\(element.label)\") offers the VoiceOver actions \(expected), and only these: \(names)", file: file, line: line)
+    }
+
+    /// The day heading whose label begins with `day`: a heading for
+    /// VoiceOver with its menu inside it.
+    func dayHeading(_ day: String) -> (XCUIElementSnapshot) -> Bool {
+        { element in
+            element.label.hasPrefix(day)
+                && (((element as AnyObject).value(forKey: "traits") as? NSNumber)?.uint64Value ?? 0) & AutomatedChecks.headerTrait != 0
+        }
+    }
+
+    /// The first heading under the navigation bar: on Today and on an
+    /// earlier day, the day heading.
+    func headingInTheContent() -> (XCUIElementSnapshot) -> Bool {
+        let barBottom = app.navigationBars.firstMatch.frame.maxY
+        return { element in
+            (((element as AnyObject).value(forKey: "traits") as? NSNumber)?.uint64Value ?? 0) & AutomatedChecks.headerTrait != 0
+                && element.elementType != .navigationBar && element.frame.minY >= barBottom - 1 && !element.label.isEmpty
+        }
+    }
+
+    /// record spec, "The Today stack": the day heading offers "Fasting
+    /// today", "Didn't record" and "Earlier days" (when the menu offers it)
+    /// as custom actions, and from stage 2 "Today's plan". "Accessibility
+    /// of the additions": the collapse action reads "Collapse day" when the
+    /// day is expanded and "Expand day" when it is collapsed, and only a
+    /// day with an entry offers it; each entry row offers "Delete".
+    /// regular-eating-plan spec, "Accessibility of the plan": a planned meal
+    /// row with the missed planned meal prompt offers "Skipped" and "Add
+    /// it". A planned meal row with a matched entry offers "Delete", as an
+    /// entry row does (mm-t12b.7).
+    func testVoiceOverCustomActionsOnTodayAndAnEarlierDay() throws {
+        // Stage 2, entries today and on earlier days (`review`).
+        try launchOnToday("review")
+        let today = recordPlanCurrentDayKey()
+        // The heading combines its menu button, so VoiceOver also offers
+        // the menu, "Day options", as an action.
+        assertCustomActions(["Collapse day", "Fasting today", "Didn't record", "Earlier days", "Today's plan", "Day options"],
+                            on: "the current day heading", matching: dayHeading(recordPlanDayText(today)))
+        assertCustomActions(["Delete"], on: "the entry row \"Toast and tea\"") { $0.label.contains("Toast and tea") && $0.elementType != .staticText }
+        let previous = snapshotElement("the previous day heading", matching: dayHeading(recordPlanDayText(recordPlanAdding(-1, to: today))))
+        if let previous {
+            let names = customActionNames(of: previous) ?? []
+            XCTAssertTrue(names.contains("Expand day"), "the collapsed previous day offers \"Expand day\": \(names)")
+            XCTAssertFalse(names.contains("Collapse day"), "the collapsed previous day offers no \"Collapse day\": \(names)")
+        }
+
+        // An earlier day: the heading offers no control that creates an
+        // entry (mm-t12b.10), and its entry row offers "Delete".
+        try launchOnToday("review")
+        tapDayMenu("Earlier days")
+        assertScreen("Earlier days")
+        app.cells.firstMatch.tap()
+        XCTAssertTrue(app.buttons["Previous day"].waitForExistence(timeout: 8), "one earlier day shows")
+        assertCustomActions(["Collapse day", "Fasting today", "Didn't record", "Day options"], on: "the earlier day's heading", matching: headingInTheContent())
+        assertCustomActions(["Delete"], on: "the entry row \"Porridge\"") { $0.label.contains("Porridge") && $0.elementType != .staticText }
+
+        // Stage 1, no entry today (`dayStart6`): no "Collapse day", no
+        // "Today's plan" and no "Earlier days".
+        try launchOnToday("dayStart6")
+        assertCustomActions(["Fasting today", "Didn't record", "Day options"], on: "the heading of an empty day in stage 1", matching: headingInTheContent())
+
+        // The missed planned meal prompt (`planMissed`) and a matched
+        // planned meal (`planMatched`).
+        let lunch = try recordPlanFacts("planMissed")["lunch"]!
+        try launchOnToday("planMissed")
+        assertCustomActions(["Skipped", "Add it"], on: "the Lunch row with the missed planned meal prompt") {
+            $0.label == "Lunch, \(lunch), Skipped, or not recorded yet?"
+        }
+        let matched = try recordPlanFacts("planMatched")
+        try launchOnToday("planMatched")
+        assertCustomActions(["Delete"], on: "the Lunch row with its matched entry") {
+            $0.label == "Lunch, \(matched["lunch"]!), \(matched["entry"]!), Toast and tea, Home, Row with my sister"
+        }
+    }
+}
