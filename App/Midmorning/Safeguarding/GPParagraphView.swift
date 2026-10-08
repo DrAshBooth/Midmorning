@@ -15,20 +15,34 @@ struct GPParagraphView: View {
 
     private var bundledText: String { GPParagraph.text(for: variant) }
 
+    /// The text in the editor: the person's edit, or the bundled text.
+    private var shownText: String { edited ?? bundledText }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextEditor(text: Binding(
-                get: { edited ?? bundledText },
-                set: { edited = $0 }
-            ))
             // The editor grows with its text, so the whole paragraph shows at
-            // every text size. With a fixed height it stayed 110 points high
-            // at the largest text size and showed only the first lines
-            // (AutomatedChecks.testAuditWeeklyReviewAndItsPages).
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(minHeight: 110)
-            .dynamicTypeSize(.large ... .accessibility5)
-            .accessibilityLabel(CommonLabels.gpParagraphAccessibilityLabel.string)
+            // every text size. A hidden copy of the text, with the editor's
+            // own insets (8 points above and below, 5 at each side), sets the
+            // height, and the editor fills it. With only a fixed height the
+            // editor stayed 110 points high and showed the first lines at the
+            // largest text size; with `fixedSize` it showed no text at all on
+            // the iOS 27.0 simulator (AutomatedChecks
+            // .testAuditExclusionPageAndCautionSheet).
+            Text(verbatim: shownText)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 5)
+                .padding(.bottom, 4)
+                .frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
+                .opacity(0)
+                .accessibilityHidden(true)
+                .overlay {
+                    TextEditor(text: Binding(
+                        get: { shownText },
+                        set: { edited = $0 }
+                    ))
+                    .accessibilityLabel(CommonLabels.gpParagraphAccessibilityLabel.string)
+                }
+                .dynamicTypeSize(.large ... .accessibility5)
 
             Button(isShowingCopiedLabel ? GPParagraphCopy.copiedLabel : GPParagraphCopy.copyLabel) {
                 copy()
