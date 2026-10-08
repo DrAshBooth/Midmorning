@@ -38,8 +38,11 @@ struct WeighInChartView: View {
             AxisMarks(values: .stride(by: .month))
         }
         .frame(height: 180)
-        .accessibilityLabel(WeighInContent.rollingAverageAccessibilityLabel.string)
+        // One element first, then its label: in the other order the label
+        // went to the chart inside, and the one element that VoiceOver
+        // reads had no label (AutomatedChecks.testAuditWeighInScreen).
         .accessibilityElement(children: .ignore)
+        .accessibilityLabel(WeighInContent.rollingAverageAccessibilityLabel.string)
     }
 
     /// The value the chart plots: kilograms directly, or the nearest whole

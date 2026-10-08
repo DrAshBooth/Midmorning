@@ -21,6 +21,11 @@ struct GPParagraphView: View {
                 get: { edited ?? bundledText },
                 set: { edited = $0 }
             ))
+            // The editor grows with its text, so the whole paragraph shows at
+            // every text size. With a fixed height it stayed 110 points high
+            // at the largest text size and showed only the first lines
+            // (AutomatedChecks.testAuditWeeklyReviewAndItsPages).
+            .fixedSize(horizontal: false, vertical: true)
             .frame(minHeight: 110)
             .dynamicTypeSize(.large ... .accessibility5)
             .accessibilityLabel(CommonLabels.gpParagraphAccessibilityLabel.string)
