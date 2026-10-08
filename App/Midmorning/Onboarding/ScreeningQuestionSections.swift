@@ -29,6 +29,10 @@ struct ScreeningQuestionSections: View {
             Section {
                 TextField(Screen2Content.ageQuestion, text: $answers.ageText)
                     .keyboardType(.numberPad)
+                    // product-rules "Accessibility everywhere": a label of
+                    // its own. The placeholder alone gives VoiceOver no name
+                    // for the field once it holds a value.
+                    .accessibilityLabel(Text(Screen2Content.ageQuestion))
                 message(for: .age)
             } header: { Text(Screen2Content.ageQuestion) }
             .accessibilityFocused(focusedField, equals: .age)
