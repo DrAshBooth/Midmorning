@@ -519,6 +519,39 @@ extension AutomatedChecks {
                 }
             }
         }
+        if size == .largest, !dark { auditFindMissingHeights(on: screen) }
+    }
+
+    /// The default-size audit of `screen` flagged some elements for the
+    /// Dynamic Type check, and the AX5 walk must see each of them. When the
+    /// audit moved the list, the walk can miss a row. So this scrolls back
+    /// up with short, slow drags until the walk has seen each one, or until
+    /// the content no longer moves (the top). A short drag at the top of a
+    /// sheet springs back; it does not close the sheet.
+    func auditFindMissingHeights(on screen: String) {
+        let key = "\(AuditTextSize.largest.rawValue)|\(screen)"
+        func missing() -> Set<String> {
+            Set(Self.auditScalingChecks.filter { $0.screen == screen }.compactMap(\.finding.label))
+                .filter { Self.auditHeights[key]?[$0] == nil }
+        }
+        guard !missing().isEmpty else { return }
+        var before = auditReadScreen(screen, size: .largest)
+        for _ in 0..<20 {
+            guard !missing().isEmpty else { return }
+            let clear = auditClearArea()
+            let window = app.windows.firstMatch.frame
+            let top = max(clear.top, window.minY) + 10
+            let bottom = min(clear.bottom, window.maxY) - 10
+            guard bottom - top > 60 else { return }
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            origin.withOffset(CGVector(dx: 8, dy: top))
+                .press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: 8, dy: top + (bottom - top) * 0.3)), withVelocity: .slow, thenHoldForDuration: 0.1)
+            usleep(800_000)
+            let now = auditReadScreen(screen, size: .largest)
+            if now == before { break }
+            before = now
+        }
+        if !missing().isEmpty { auditLog("  (\(screen), AX5: the walk did not see \(missing().sorted()))") }
     }
 
     /// product-rules "Accessibility everywhere": "Every control MUST have a
