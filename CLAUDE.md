@@ -114,8 +114,13 @@ with `--reason` naming the commit. List each pending device check in the epic's
 device-check bead (label `device-check`); Ash does the checks. A navigation,
 text, manifest or flow check goes into those tests, not onto the device-check
 bead. A device check is for what needs a device or a person, for example
-VoiceOver, the largest text size, contrast, real notifications or a change of
-the clock. `openspec/changes/v1-programme/tasks.md` and
+real notifications or a change of the clock. An accessibility check is never a
+device check, because Ash does not test accessibility by hand (8 October 2026).
+This includes VoiceOver, Voice Control, the largest text size (AX5), contrast,
+Increase Contrast and Accessibility Inspector. The agent proves an
+accessibility check with an automated test (an accessibility audit or an
+accessibility-tree assertion), or not at all. The agent never lists it on the
+device-check bead. `openspec/changes/v1-programme/tasks.md` and
 `tools/skeleton-checks/README.md` hold the full rule. Pass
 `--type change` to `openspec validate` and `openspec show` for a build
 change, because a build change can share its name with a main spec. The

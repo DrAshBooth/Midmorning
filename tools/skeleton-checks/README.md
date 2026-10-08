@@ -68,10 +68,21 @@ tools/skeleton-checks/automated-checks.sh testPrivacyNotice testDiagnosticsShows
 
 A new navigation, text, manifest or flow check goes into one of these two
 places, not onto a device-check bead. A device-check bead keeps what needs a
-device or a person, for example: VoiceOver, Voice Control, the largest text
-size, contrast, biometrics, real notifications and calls, a change of the
-clock, backups, the network, crashes, Instruments, a third-party keyboard
-and the shame walk.
+device or a person, for example: biometrics, real notifications and calls, a
+change of the clock, backups, the network, crashes, Instruments, a
+third-party keyboard and the shame walk.
+
+An accessibility check is never a device check, because Ash does not test
+accessibility features by hand (8 October 2026, bd memory
+`ash-no-accessibility-device-checks`). So a device-check bead keeps no
+VoiceOver, Voice Control, largest text size (AX5), contrast, Increase
+Contrast or Accessibility Inspector check. An agent proves an accessibility
+check with an automated test: Xcode's accessibility audit
+(`performAccessibilityAudit`) in a UI test, or an assertion on the
+accessibility tree. If no automated test can prove a part, no person checks
+that part by hand. The app
+must still meet product-rules "Accessibility everywhere" and the
+accessibility requirement of each spec.
 
 A flow check does a sequence of actions and then looks at what the app
 shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
@@ -83,9 +94,12 @@ Ash can skip them under the same conditions as the other UI-test items
 mm-t45) automate the other flow checks that the simulator can run. Until
 one of them adds the test for an item, that item stays on its device-check
 bead. A part of a flow that needs a device or a person stays a device
-check, for example the VoiceOver action of mm-t12b.7. "Point contrast" on
-mm-t22.16 stays a device check: it measures a colour in dark mode with
-Increase Contrast, and a colour needs a person's eye on a real screen.
+check, for example the real weekly review reminder of mm-t32.21. An
+accessibility part of a flow is not a device check, for example the
+VoiceOver action of mm-t12b.7. "Point contrast" on mm-t22.16 measures a
+colour in dark mode with Increase Contrast. Ruling r16-01 kept it as a
+device check. It is a contrast check, so it left the device-check list on
+8 October 2026.
 
 The script makes and boots its own simulator (`mm-automated-checks`), so it
 does not disturb a simulator that another session uses. It reads the
