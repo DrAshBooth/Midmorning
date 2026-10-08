@@ -13,9 +13,13 @@ import UIKit
 ///   largest accessibility text size (AX5). The audit looks for contrast,
 ///   element detection, hit regions, element descriptions, Dynamic Type,
 ///   clipped text and traits. Each audit also checks that each control has
-///   a label of its own (`unlabelledControls`).
+///   a label of its own (`unlabelledControls`), and that each control has a
+///   hit area of at least 44 by 44 points (`smallControls`): the audit's
+///   own hit-region check reported nothing.
 /// - The contrast audit in dark mode on the same screens
-///   (`testAuditContrastInDarkMode` and the two tests after it).
+///   (`testAuditContrastInDarkMode` and the two tests after it). A UI test
+///   cannot turn on Increase Contrast: mm-t45.19 holds the question of a
+///   pass of the script with Increase Contrast on.
 /// - Checks of the accessibility tree for what the audit cannot see and the
 ///   specs name: header traits, the labels and the reading order that the
 ///   specs give, and the VoiceOver custom actions of rows and day headings.
@@ -32,11 +36,15 @@ import UIKit
 /// tells why. An issue that `auditKnownDefects` takes is a fault that a bead
 /// holds: it shows as an expected failure. Every other issue fails the
 /// test, and the failure message lists each one (screen, text size, type,
-/// element, description). An issue with no element fails the test unless
-/// an entry for its screen, its type and its description takes it, and the
-/// test keeps the screen of each one in `OUT_DIR/audit-shots`. The log
-/// `accessibility-audit.log` in `OUT_DIR` holds every issue and the
-/// decision about it.
+/// element, description). An issue with no frame fails the test unless an
+/// entry for its type and its description takes it, and each entry takes
+/// at most a pinned count of them on one page of each screen. The test
+/// keeps the screen of each issue with no element in `OUT_DIR/audit-shots`.
+/// A contrast issue of an element that a bar covers in part stays open
+/// until a later page shows the element clear of the bars, and fails the
+/// test when no page does. The log `accessibility-audit.log` in `OUT_DIR`
+/// holds every issue and the decision about it: one line for each issue
+/// that the audit gives.
 ///
 /// Run these tests by name with `tools/skeleton-checks/automated-checks.sh`
 /// (for example `testAuditOnboardingScreens`). The suite runs them with the
@@ -125,8 +133,9 @@ extension AutomatedChecks {
         /// The element can take a tap (false for a disabled control).
         var enabled = true
         /// The element is content of a list or a scroll view, and a part of
-        /// it is under a bar (the navigation bar, the toolbar, the bar of the
-        /// confirming button or the keyboard), or off the screen.
+        /// it is under a bar (the navigation bar, a pinned section header,
+        /// the toolbar, the bar of the confirming button or the keyboard),
+        /// or off the screen.
         var underABar = false
         /// The element is an item of a navigation bar or of the bottom
         /// toolbar (a title or a bar button).
@@ -150,11 +159,15 @@ extension AutomatedChecks {
         /// For an issue with no element: the labels of the items of the
         /// bottom toolbar on the page ("Programme", "Reviews", "Settings").
         var toolbarItems: [String] = []
+        /// For a hit-area issue (`smallControls`): the system control that
+        /// holds the element (a segmented control, a date picker, a
+        /// switch), or nil.
+        var container: XCUIElement.ElementType?
 
         /// The issue has a place on the screen to measure and to compare.
         var hasFrame: Bool { frame.map { !$0.isNull && !$0.isInfinite && $0.width > 0 && $0.height > 0 } ?? false }
 
-        var typeName: String { AutomatedChecks.auditTypeName(type) }
+        var typeName: String { compact == AutomatedChecks.hitAreaCompact ? "hit area" : AutomatedChecks.auditTypeName(type) }
 
         var text: String {
             let element = elementType.map { "element \($0.rawValue) \"\(label ?? "")\" at \(frame.map { "\($0.integral)" } ?? "?")" }
@@ -164,6 +177,9 @@ extension AutomatedChecks {
             let under = elementType == nil ? " (content text under a bar: \(textUnderBars.isEmpty ? "none" : textUnderBars.joined(separator: " | ")); the issue's fields: \(fields.isEmpty ? "none" : fields))" : ""
             return "\(screen) (\(size.rawValue)\(dark ? ", dark mode" : "")): \(typeName): \(compact): \(element): \(detail)\(ratio)\(under)"
         }
+
+        /// A short name of the issue for the log line of a second sighting.
+        var shortText: String { "\(typeName): \(compact): \"\(label ?? "")\"" }
     }
 
     static func auditTypeName(_ type: XCUIAccessibilityAuditType) -> String {
@@ -173,6 +189,13 @@ extension AutomatedChecks {
             (.textClipped, "textClipped"), (.trait, "trait"),
         ]
         return names.first { type.contains($0.0) }?.1 ?? "label"
+    }
+
+    /// The key of a screen at a text size, in light or dark mode, for the
+    /// pinned counts (`AuditElementlessExclusion.pins`): "the support sheet
+    /// (default text size)".
+    static func auditPinKey(_ screen: String, size: AuditTextSize, dark: Bool) -> String {
+        "\(screen) (\(size.rawValue)\(dark ? ", dark" : ""))"
     }
 
     /// An issue that is not a fault of the app, and why.
@@ -192,16 +215,16 @@ extension AutomatedChecks {
         "One word for how today felt",
     ]
 
+    /// The description of a hit-area issue (`smallControls`).
+    static let hitAreaCompact = "Hit area under 44 by 44 points"
+
     /// The issues that the audits exclude. Each one is not a fault of the
     /// app, and each entry tells why. No entry takes every issue of a type.
-    /// An issue with no element is not in this list: only an entry of
-    /// `auditElementlessExclusions` can take it.
+    /// An issue with no frame is not in this list: only an entry of
+    /// `auditElementlessExclusions` can take it. A contrast issue of an
+    /// element under a bar is not in this list either: `auditPage` keeps it
+    /// open until an audit page shows the element clear of the bars.
     static let auditExclusions: [AuditExclusion] = [
-        AuditExclusion(reason: """
-            The element is content that scrolls, and a part of it is under a bar or off the screen when the audit \
-            runs. The audit then measures the bar's material over the text, not the text on its own background. \
-            The next audit page scrolls the content clear of the bar and measures it again.
-            """) { $0.type.contains(.contrast) && $0.hasFrame && $0.underABar },
         AuditExclusion(reason: """
             Each text and each image inside the element's frame contrasts at 3:1 or more with the fill behind it. \
             The test measures each of them in a screenshot just after the audit (`measuredContrast`) and takes the \
@@ -211,7 +234,7 @@ extension AutomatedChecks {
             audit uses other limits: it reports "Contrast nearly passed" from 3:1 to 4.5:1, and it can report \
             "Contrast failed" on a row whose label is black on white when a system part of the row (a disclosure \
             chevron, the track of a switch) is lighter. A part below 3:1 still fails the test.
-            """) { $0.type.contains(.contrast) && $0.hasFrame && ($0.measured ?? 0) >= 3 },
+            """) { $0.type.contains(.contrast) && $0.hasFrame && !$0.underABar && ($0.measured ?? 0) >= 3 },
         AuditExclusion(reason: """
             The control is disabled (for example "Save" on the weigh-in screen before a weight is typed). WCAG 2 \
             (1.4.3) sets no contrast for the text of an inactive control, and product-rules sets none for it. The \
@@ -240,26 +263,54 @@ extension AutomatedChecks {
             digits, or one word), the field grows with the text size, and the name of the field shows in full above \
             it.
             """) { $0.type.contains(.textClipped) && $0.elementType == .textField && shortValueFields.contains($0.label ?? "") },
-    ]
+    ] + auditHitAreaExclusions
 
-    /// An issue with no element that a person looked at (8 October 2026,
-    /// iOS 27.0 simulator) and found is not a fault of the app: on the
-    /// named screens, of the named type, with the named description. Each
-    /// entry also needs its own evidence on the page (`evidence`), so that a
-    /// new issue of the same kind on the same screen does not hide under it.
-    /// Every other issue with no element fails the test, and the test keeps
-    /// the screen of each one (`audit-shots` in `OUT_DIR`) so that a person
-    /// can look at it.
+    /// The reason of a contrast issue whose element a bar covered in part
+    /// on this page, when an earlier audit page showed the same element
+    /// clear of the bars.
+    static let underABarShownReason = """
+        The element is content that scrolls, and a part of it is under a bar or off the screen when the audit runs. \
+        The audit then measures the bar's material over the text, not the text on its own background. An earlier \
+        audit page showed the same element clear of the bars, and the audit checked it there.
+        """
+
+    /// The reason of a contrast issue that stays open: a bar covered a part
+    /// of its element, and no audit page showed the element clear yet.
+    static let underABarPendingReason = """
+        The element is content that scrolls, and a part of it is under a bar or off the screen when the audit runs, \
+        so the audit measured the bar's material over the text. The issue stays open until an audit page shows the \
+        element clear of the bars. If no page of the walk does, the issue fails the test at the end of the walk.
+        """
+
+    /// An issue with no frame that a person looked at (8 October 2026,
+    /// iOS 27.0 simulator) and found is not a fault of the app: of the
+    /// named type, with the named description, on a page of a screen that
+    /// `pins` names. Each entry also needs its own evidence on the page
+    /// (`evidence`).
+    ///
+    /// `pins` gives, for each screen at each text size
+    /// (`auditPinKey`), the most issues that the entry takes on one audit
+    /// page: the highest count in the full runs of 8 and 9 October 2026
+    /// (before and after the review fixes; the walks of the runs stopped
+    /// on different pages). A page
+    /// with more of them fails the test, with each issue past the count.
+    /// So a new issue of the same kind on the same screen does not hide
+    /// under the entry. Raise a count only after a person looked at the
+    /// screen of that page (`audit-shots` in `OUT_DIR`).
+    ///
+    /// An issue whose accessibility element gives a label and a frame
+    /// (`viaAX`) is not for these entries: the frame-based checks decide it
+    /// (the measured contrast, and the Dynamic Type comparison).
     struct AuditElementlessExclusion {
-        let screens: [String]
         let types: [XCUIAccessibilityAuditType]
         let compact: [String]
+        let pins: [String: Int]
         let reason: String
         let evidence: (AuditFinding) -> Bool
 
-        func matches(_ finding: AuditFinding) -> Bool {
-            finding.elementType == nil
-                && screens.contains { finding.screen == $0 || finding.screen.hasPrefix($0 + ", ") }
+        func matches(_ finding: AuditFinding, pinKey: String) -> Bool {
+            finding.elementType == nil && !finding.hasFrame
+                && pins[pinKey] != nil
                 && types.contains { finding.type.contains($0) }
                 && compact.contains(finding.compact)
                 && evidence(finding)
@@ -274,38 +325,59 @@ extension AutomatedChecks {
     static let barCopyReason = """
         The audit read the blurred or faded copy of the content under a bar (the scroll-edge effect of the \
         navigation bar and of the bar of the confirming button from iOS 26, or the glass of the keyboard) as text \
-        with no element. That copy is not text of the app: the same text shows clear on another audit page, where \
-        the audit checks its element. The test takes this entry only when a content text was under a bar as the \
-        audit started (the log names it). A person looked at the screens on 8 October 2026: for example "Friday" \
-        blurred under "Your start" on onboarding screen 3 at AX5, and "a binge" under the keyboard on the \
-        new-entry screen at AX5.
+        with no element and no frame. That copy is not text of the app: the same text shows clear on another \
+        audit page, where the audit checks its element. The test takes this entry only when a content text was \
+        under a bar as the audit started (the log names it), and only up to the pinned count of the page. A \
+        person looked at the screens on 8 October 2026: for example "Friday" blurred under "Your start" on \
+        onboarding screen 3 at AX5.
         """
 
     static let auditElementlessExclusions: [AuditElementlessExclusion] = [
         AuditElementlessExclusion(
-            screens: ["Programme", "Settings", "Today with entries and a gap band", "onboarding screen 2", "onboarding screen 3",
-                      "onboarding screen 4", "the close-the-day screen", "the exclusion page", "the export screen", "the privacy notice",
-                      "the restart re-screen", "the support sheet", "the weekly review", "the weigh-in screen with no weigh-in day"],
-            types: [.contrast], compact: ["Contrast nearly passed"], reason: """
+            types: [.contrast], compact: ["Contrast nearly passed"],
+            pins: [
+                "Programme (default text size)": 7, "Settings (default text size)": 5,
+                "Today with entries and a gap band (default text size)": 1, "onboarding screen 2 (default text size)": 6,
+                "onboarding screen 3 (default text size)": 2, "onboarding screen 4 (default text size)": 3,
+                "the close-the-day screen (default text size)": 2, "the exclusion page (default text size)": 8,
+                "the export screen (default text size)": 2, "the privacy notice (default text size)": 5,
+                "the restart re-screen (default text size)": 5, "the support sheet (default text size)": 12,
+                "the weekly review (default text size)": 1, "the weigh-in screen with no weigh-in day (default text size)": 7,
+            ],
+            reason: """
                 The audit itself measured this text at 3:1 or more: "Contrast nearly passed" says that the text passes \
                 at a larger font size, and WCAG 2 sets 3:1 for large text (4.5:1 for other text). product-rules sets \
-                3:1 (mm-t45.17 holds the decision on primary text). The audit gives no element, so the test cannot \
-                measure the text itself. (On the exclusion page and the support sheet these are the "Call" and "Copy \
-                number" controls of the numbers, blue on white, 3.5:1 in a screenshot.)
+                3:1 (mm-t45.17 holds the decision on primary text). The audit gives no element and no frame, so the \
+                test cannot measure the text itself, and the pinned count of the page limits the entry. (On the \
+                exclusion page and the support sheet these are the "Call" and "Copy number" controls of the numbers, \
+                blue on white, 3.5:1 in a screenshot.)
                 """) { _ in true },
         AuditElementlessExclusion(
-            screens: ["onboarding screen 2", "onboarding screen 3", "the exclusion page", "the new-entry screen", "the edit screen",
-                      "the support sheet", "the restart re-screen", "Settings", "the Reminders group", "the privacy notice",
-                      "Today with entries and a gap band", "Today with the stage 1 card", "Today with \"Close the day\"",
-                      "Today with the missed planned meal prompt", "the weekly review", "the weigh-in screen on the weigh-in day",
-                      "the weigh-in screen with no weigh-in day", "the not-right-now page"],
             types: [.elementDetection, .dynamicType, .textClipped],
             compact: ["Potentially inaccessible text", "Dynamic Type font sizes are unsupported", "Dynamic Type font sizes are partially unsupported",
                       "Text clipped"],
+            pins: [
+                "Settings (default text size)": 1, "Today with entries and a gap band (default text size)": 1,
+                "Today with entries and a gap band (AX5)": 4, "Today with the stage 1 card (AX5)": 4,
+                // At AX5 on Today: the faded copy of the rows under the
+                // pinned day heading and "Add an entry".
+                "Today with the missed planned meal prompt (AX5)": 8, "Today with \"Close the day\" (AX5)": 4,
+                "Today with the plan card (AX5)": 2,
+                "onboarding screen 3 (default text size)": 1, "onboarding screen 3 (AX5)": 5,
+                "the Reminders group (AX5)": 2, "the edit screen (AX5)": 1, "the new-entry screen (AX5)": 1,
+                "the not-right-now page (AX5)": 1, "the privacy notice (default text size)": 1, "the privacy notice (AX5)": 1,
+                "the restart re-screen (AX5)": 1, "the support sheet (default text size)": 7, "the support sheet (AX5)": 2,
+                "the weekly review (default text size)": 2, "the weekly review (AX5)": 1,
+                "the weigh-in screen on the weigh-in day (AX5)": 2, "the weigh-in screen with no weigh-in day (AX5)": 2,
+            ],
             reason: barCopyReason) { !$0.textUnderBars.isEmpty },
         AuditElementlessExclusion(
-            screens: ["Today with entries and a gap band", "Today with \"Close the day\"", "Today with the plan card", "Today with the pinned note"],
-            types: [.dynamicType], compact: ["Dynamic Type font sizes are partially unsupported"], reason: """
+            types: [.dynamicType], compact: ["Dynamic Type font sizes are partially unsupported"],
+            pins: [
+                "Today with entries and a gap band (default text size)": 1, "Today with \"Close the day\" (default text size)": 1,
+                "Today with the plan card (default text size)": 1, "Today with the pinned note (default text size)": 1,
+            ],
+            reason: """
                 The items of Today's bottom toolbar ("Programme", "Reviews", "Settings"). iOS sets the text size of a bar \
                 item: it does not grow it at the accessibility sizes, and it shows the item in the Large Content Viewer \
                 (touch and hold). At AX5 the audit gives this issue with an element for "Programme" and "Reviews", and the \
@@ -319,11 +391,15 @@ extension AutomatedChecks {
     /// issue that an entry matches as an expected failure
     /// (`XCTExpectFailure`) that names the bead, so the result bundle shows
     /// it and the suite still passes. Each entry names the screens and the
-    /// elements, so that a new fault does not hide under it. Remove the
-    /// entry when the bead closes.
+    /// elements, so that a new fault does not hide under it. An entry for
+    /// issues with no frame also pins the most issues that it takes on one
+    /// audit page of each screen (`pins`, as in
+    /// `AuditElementlessExclusion`): an issue past the count fails the
+    /// test. Remove the entry when the bead closes.
     struct AuditKnownDefect {
         let bead: String
         let reason: String
+        var pins: [String: Int]? = nil
         let matches: (AuditFinding) -> Bool
     }
 
@@ -332,14 +408,19 @@ extension AutomatedChecks {
             The audit reports "Contrast failed" with no element and no frame on these screens, so the test cannot \
             measure it or say what it is. A person looked at the screens (8 October 2026): the placeholders of the \
             text fields (1.7:1), the disclosure chevrons of Settings, and the faded copy of the content under the bars \
-            are the likely parts. The bead holds the work to find each one.
-            """) { finding in
-            let screens = ["onboarding screen 2", "onboarding screen 3", "onboarding screen 4", "the restart re-screen", "Settings",
-                           "the Reminders group", "the privacy notice", "the support sheet", "the weekly review",
-                           "Today with entries and a gap band", "Today with \"Close the day\"", "Today with the plan card",
-                           "Today with the pinned note"]
-            return finding.elementType == nil && !finding.hasFrame && finding.type.contains(.contrast) && finding.compact == "Contrast failed"
-                && screens.contains { finding.screen == $0 || finding.screen.hasPrefix($0 + ", ") }
+            are the likely parts. On four states of Today no content text was under a bar and no screen has a \
+            placeholder or a chevron, so these causes do not tell what the audit measured there. The bead holds the \
+            work to find each one. The pinned count of each page limits the entry.
+            """, pins: [
+                "onboarding screen 2 (default text size)": 3, "onboarding screen 3 (default text size)": 3,
+                "onboarding screen 4 (default text size)": 1, "the restart re-screen (default text size)": 2,
+                "Settings (default text size)": 2, "the Reminders group (default text size)": 2,
+                "the privacy notice (default text size)": 1, "the support sheet (default text size)": 4,
+                "the weekly review (default text size)": 2, "Today with entries and a gap band (default text size)": 1,
+                "Today with \"Close the day\" (default text size)": 1, "Today with the plan card (default text size)": 1,
+                "Today with the pinned note (default text size)": 1,
+            ]) { finding in
+            finding.elementType == nil && !finding.hasFrame && finding.type.contains(.contrast) && finding.compact == "Contrast failed"
         },
         AuditKnownDefect(bead: "mm-t12b.29", reason: """
             The app does not use the AccentColor asset, so a bordered button shows the system blue on its own light \
@@ -352,7 +433,7 @@ extension AutomatedChecks {
             return finding.type.contains(.contrast) && finding.elementType == .button && (finding.measured ?? 3) < 3
                 && ((onEntryScreen && chips.contains(finding.label ?? "")) || (onFaultScreen && finding.label == "Get support"))
         },
-    ]
+    ] + auditHitAreaKnownDefects
 
     /// The findings of the current test that no exclusion took.
     private static var auditFailures: [String] = []
@@ -393,19 +474,20 @@ extension AutomatedChecks {
     }
 
     /// The labels of the content items in `items` that show clear of the
-    /// bars: the middle of each is between the navigation bar and the bar
-    /// at the bottom (the toolbar, the bar of the confirming button or the
-    /// keyboard). An item under a bar is in the window, but the person
-    /// cannot see it, and the walk must not take it as audited: on
-    /// onboarding screen 3 at AX5 the "Quiet hours" rows were under the
-    /// bar of "Continue" on page 3, so the walk took them as shown, and no
-    /// audit page showed them (8 October 2026).
+    /// bars: the middle of each is between the navigation bar (or the
+    /// pinned section header under it) and the bar at the bottom (the
+    /// toolbar, the bar of the confirming button or the keyboard), or the
+    /// item is a part of the pinned section header. An item under a bar is
+    /// in the window, but the person cannot see it, and the walk must not
+    /// take it as audited: on onboarding screen 3 at AX5 the "Quiet hours"
+    /// rows were under the bar of "Continue" on page 3, so the walk took
+    /// them as shown, and no audit page showed them (8 October 2026).
     /// A screen with no list and no scroll view (the app-lock cover) uses
     /// all its items.
     func auditLabels(_ items: [AuditItem]) -> Set<String> {
         let clear = auditClearArea()
         let content = items.filter(\.inContent)
-        return Set((content.isEmpty ? items : content).filter { $0.frame.midY >= clear.top && $0.frame.midY <= clear.bottom }.map(\.label))
+        return Set((content.isEmpty ? items : content).filter { clear.showsMiddle(of: $0.label, $0.frame) }.map(\.label))
     }
 
     /// Reads the screen in one snapshot. Keeps the height of each element
@@ -551,17 +633,99 @@ extension AutomatedChecks {
         return (measured.map(\.1).min(), measured.map { String(format: "%@ %.1f:1", $0.0, $0.1) })
     }
 
+    /// The part of the screen where content shows clear of every bar, from
+    /// one snapshot (`auditClearArea`).
+    struct AuditClearArea {
+        /// The bottom of the navigation bar, or of the pinned section header
+        /// under it.
+        var top: CGFloat
+        /// The top of the bar at the bottom (the items of the toolbar, the
+        /// bar of the confirming button, or the keyboard), and at most 34
+        /// points above the bottom of the window, over the home indicator.
+        var bottom: CGFloat
+        /// The top of the bar at the bottom, or the bottom of the window
+        /// when the screen has no bar there. The home indicator puts no
+        /// material over the content, so a text above this line and inside
+        /// the window shows on its own background.
+        var barBottom: CGFloat
+        /// The elements that are content of a list or a scroll view.
+        var content: [(label: String, frame: CGRect)]
+        /// The items of the navigation bar and of the toolbar.
+        var barItems: [(label: String, frame: CGRect)]
+        /// The parts of the section header that is pinned under the
+        /// navigation bar, for example Today's current day heading and "Add
+        /// an entry". The rows scroll under it, as they do under a bar.
+        var pinnedItems: [(label: String, frame: CGRect)]
+
+        /// The element is a part of the pinned section header.
+        func inPinnedHeader(_ label: String, _ frame: CGRect) -> Bool {
+            pinnedItems.contains { $0.label == label && $0.frame.integral == frame.integral }
+        }
+
+        /// The element shows whole and clear of every bar: between `top` and
+        /// `bottom`, or as a part of the pinned section header.
+        func isClear(_ label: String, _ frame: CGRect) -> Bool {
+            (frame.minY >= top - 1 && frame.maxY <= bottom + 1) || inPinnedHeader(label, frame)
+        }
+
+        /// The element shows whole and no bar covers a part of it: between
+        /// `top` and `barBottom`, or as a part of the pinned section header.
+        /// The contrast audit measures such an element on its own
+        /// background.
+        func isClearOfBars(_ label: String, _ frame: CGRect) -> Bool {
+            (frame.minY >= top - 1 && frame.maxY <= barBottom + 1) || inPinnedHeader(label, frame)
+        }
+
+        /// The middle of the element is clear of every bar.
+        func showsMiddle(of label: String, _ frame: CGRect) -> Bool {
+            (frame.midY >= top && frame.midY <= bottom) || inPinnedHeader(label, frame)
+        }
+    }
+
     /// The part of the screen where content shows clear of every bar, and
     /// the frames of the elements that are content of a list or a scroll
     /// view, from one snapshot.
-    private func auditClearArea() -> (top: CGFloat, bottom: CGFloat, content: [(label: String, frame: CGRect)], barItems: [(label: String, frame: CGRect)]) {
+    ///
+    /// The bars: the navigation bar at the top; at the bottom the toolbar,
+    /// the keyboard, the bar of the full-width confirming button, and the
+    /// floating items of iOS 27's bottom toolbar (Today's "Programme" and
+    /// "Settings"). A section header of a list that is pinned under the
+    /// navigation bar also covers the rows that scroll under it: at AX5 on
+    /// Today, the current day heading and "Add an entry" cover about 40
+    /// percent of the screen, and a row under them did not show on any
+    /// audit page (8 October 2026). The pinned header is a direct child of
+    /// the list, its top meets the navigation bar, and it holds a heading
+    /// (an element with the header trait).
+    func auditClearArea() -> AuditClearArea {
         let window = app.windows.firstMatch.frame
-        guard let snapshot = try? app.snapshot(), window.height > 0 else { return (0, .infinity, [], []) }
+        guard let snapshot = try? app.snapshot(), window.height > 0 else {
+            return AuditClearArea(top: 0, bottom: .infinity, barBottom: .infinity, content: [], barItems: [], pinnedItems: [])
+        }
         var top: CGFloat = 0
-        var bottom = window.maxY - 34
+        var barBottom = window.maxY
         var content: [(label: String, frame: CGRect)] = []
         var barItems: [(label: String, frame: CGRect)] = []
-        func walk(_ element: XCUIElementSnapshot, inContent: Bool, inBar: Bool) {
+        // Each direct child of a list or a scroll view that holds a heading,
+        // with its labelled parts: a section header that can be pinned.
+        var headers: [(frame: CGRect, items: [(label: String, frame: CGRect)])] = []
+        // XCTest gives the traits of a snapshot only in a private property
+        // (`traitedElements`).
+        let hasTraits = (snapshot as AnyObject).responds(to: NSSelectorFromString("traits"))
+        func traits(_ element: XCUIElementSnapshot) -> UInt64 {
+            guard hasTraits else { return 0 }
+            return ((element as AnyObject).value(forKey: "traits") as? NSNumber)?.uint64Value ?? 0
+        }
+        func parts(of element: XCUIElementSnapshot) -> (heading: Bool, items: [(label: String, frame: CGRect)]) {
+            var heading = traits(element) & Self.headerTrait != 0
+            var items: [(label: String, frame: CGRect)] = element.label.isEmpty ? [] : [(element.label, element.frame)]
+            for child in element.children {
+                let found = parts(of: child)
+                heading = heading || found.heading
+                items += found.items
+            }
+            return (heading, items)
+        }
+        func walk(_ element: XCUIElementSnapshot, inContent: Bool, inBar: Bool, inToolbar: Bool) {
             let frame = element.frame
             switch element.elementType {
             case .navigationBar where frame.minY < window.height / 2 && frame.intersects(window):
@@ -570,37 +734,58 @@ extension AutomatedChecks {
                 // A bar at the bottom. (iOS 27 also has a "Toolbar" element
                 // that covers the whole window: it is not a bar.)
                 if frame.height > 0, frame.height < window.height / 2, frame.minY > window.height / 3, frame.intersects(window) {
-                    bottom = min(bottom, frame.minY)
+                    barBottom = min(barBottom, frame.minY)
                 }
             case .button where !inContent && frame.width >= window.width - 48 && frame.minY > window.height * 0.5:
                 // The full-width confirming button in a bar under the
                 // content: the bar starts 16 points above the button.
-                bottom = min(bottom, frame.minY - 16)
+                barBottom = min(barBottom, frame.minY - 16)
             default:
-                break
+                // An item of iOS 27's floating bottom toolbar (inside the
+                // "Toolbar" element that covers the whole window), or its
+                // glass: the content under it is not clear.
+                if inToolbar, frame.height >= 20, frame.height <= 100, frame.minY > window.height * 0.75, frame.intersects(window) {
+                    barBottom = min(barBottom, frame.minY)
+                }
             }
             if inContent, !element.label.isEmpty, !Self.isScrollBar(element.label) { content.append((element.label, frame)) }
             if inBar, !element.label.isEmpty { barItems.append((element.label, frame)) }
             let isContainer = [.scrollView, .collectionView, .table].contains(element.elementType)
+            // Only a list pins a section header (a plain scroll view does not).
+            if [.collectionView, .table].contains(element.elementType) {
+                for child in element.children where child.frame.width >= window.width * 0.9 && child.frame.height >= 20 {
+                    let found = parts(of: child)
+                    if found.heading { headers.append((child.frame, found.items)) }
+                }
+            }
             // The items of iOS 27's floating toolbar are inside a "Toolbar"
             // element that covers the whole window.
             let isBar = element.elementType == .navigationBar || element.elementType == .toolbar
-            element.children.forEach { walk($0, inContent: inContent || isContainer, inBar: inBar || isBar) }
+            element.children.forEach {
+                walk($0, inContent: inContent || isContainer, inBar: inBar || isBar, inToolbar: inToolbar || element.elementType == .toolbar)
+            }
         }
-        walk(snapshot, inContent: false, inBar: false)
-        return (top, bottom, content, barItems)
+        walk(snapshot, inContent: false, inBar: false, inToolbar: false)
+        let bottom = min(barBottom, window.maxY - 34)
+        var pinnedItems: [(label: String, frame: CGRect)] = []
+        // A header whose top meets the navigation bar, and that leaves room
+        // for the content under it.
+        if top > 0, let pinned = headers.first(where: { abs($0.frame.minY - top) <= 2 && $0.frame.maxY < top + (bottom - top) * 0.7 }) {
+            top = pinned.frame.maxY
+            pinnedItems = pinned.items
+        }
+        return AuditClearArea(top: top, bottom: bottom, barBottom: barBottom, content: content, barItems: barItems, pinnedItems: pinnedItems)
     }
 
-    /// The content texts that are under the navigation bar or under the
-    /// bar at the bottom (a part of each is in the bar's area of the
-    /// screen). From iOS 26, a bar blurs the content under it (the
-    /// scroll-edge effect), and the audit can read that blurred copy as
-    /// text with no element.
-    private func auditTextUnderBars(_ clear: (top: CGFloat, bottom: CGFloat, content: [(label: String, frame: CGRect)], barItems: [(label: String, frame: CGRect)])) -> [String] {
+    /// The content texts that are under the navigation bar (or the pinned
+    /// section header) or under the bar at the bottom (a part of each is
+    /// in the bar's area of the screen). From iOS 26, a bar blurs the
+    /// content under it (the scroll-edge effect), and the audit can read
+    /// that blurred copy as text with no element.
+    private func auditTextUnderBars(_ clear: AuditClearArea) -> [String] {
         let window = app.windows.firstMatch.frame
         return clear.content.filter { item in
-            item.frame.height > 0 && item.frame.intersects(window)
-                && (item.frame.minY < clear.top - 1 || item.frame.maxY > clear.bottom + 1)
+            item.frame.height > 0 && item.frame.intersects(window) && !clear.isClear(item.label, item.frame)
         }.map { "\($0.label.prefix(50))@\(Int($0.frame.minY))-\(Int($0.frame.maxY))" }
     }
 
@@ -711,11 +896,43 @@ extension AutomatedChecks {
         case pageCap
     }
 
+    /// What the walk of one screen keeps from page to page (`audit`).
+    struct AuditWalk {
+        /// The keys of the issues with a final decision
+        /// ("<type>|<compact>|<label>|<detail>"). When a later page finds
+        /// the same issue again, the log gives it a line "again" and the
+        /// test does not decide it again.
+        var decided = Set<String>()
+        /// The contrast issues of elements that a bar covered in part as
+        /// the audit ran, by element (`auditElementKey`), while no audit
+        /// page has shown the element clear of the bars. At the end of the
+        /// walk each issue that is still here fails the test: no audit
+        /// measured the element on its own background.
+        var underABar: [String: AuditFinding] = [:]
+        /// The elements (`auditElementKey`) that a contrast audit page
+        /// showed clear of the bars.
+        var shownClear = Set<String>()
+        /// The labels of the content that showed, in whole or in part, in
+        /// the clear part of the screen as an audit page started.
+        var auditedLabels = Set<String>()
+    }
+
+    /// The key of an element from page to page: its label, its left edge,
+    /// its width and its height. The top of the element changes with each
+    /// scroll. Two controls with the same label, place and size (the
+    /// "Call" control of each number on the support sheet) have one key:
+    /// they have the same text, colours and size, so a measure of one is a
+    /// measure of the other.
+    static func auditElementKey(_ label: String, _ frame: CGRect) -> String {
+        "\(label)|\(Int(frame.minX.rounded()))|\(Int(frame.width.rounded()))|\(Int(frame.height.rounded()))"
+    }
+
     /// Runs the audit on the screen that shows, then scrolls down and runs
     /// it again on each page with new content, until the content stops or
-    /// `pages` audits ran. An issue with an element that two audits find
-    /// shows once. Each audit also runs the label check
-    /// (`unlabelledControls`).
+    /// `pages` audits ran. An issue that two audits find gets its decision
+    /// once; the log gives each later copy a line "again". Each audit also
+    /// runs the label check (`unlabelledControls`) and the hit-area check
+    /// (`smallControls`).
     ///
     /// The audit itself can move the content: at AX5 it put a scroll view
     /// back at its top, and it left a list some rows back (8 October 2026,
@@ -731,9 +948,14 @@ extension AutomatedChecks {
     /// that page, and walks back up until it meets content that an audit
     /// page showed. A walk that ran its `pages` audits and did not reach
     /// `last` fails the test: raise `pages`.
+    ///
+    /// A contrast issue of an element that a bar covers in part stays open
+    /// until a later page shows the element clear of the bars
+    /// (`AuditWalk.underABar`). At the end of the walk, each issue that
+    /// is still open fails the test.
     func audit(_ screen: String, size: AuditTextSize, dark: Bool = false, types: XCUIAccessibilityAuditType = .all, pages: Int = 1,
                last: String? = nil, lastIsPrefix: Bool = false, file: StaticString = #filePath, line: UInt = #line) {
-        var seen = Set<String>()
+        var walk = AuditWalk()
         var view = auditReadScreen(screen, size: size)
         var shownLabels = auditLabels(view)
         var stopView = shownLabels
@@ -752,8 +974,7 @@ extension AutomatedChecks {
             // the bars (`auditLabels`). The last element can be of any type
             // (a combined control is "other"), so this looks at the whole tree.
             if look().contains(where: { item in
-                (lastIsPrefix ? item.label.hasPrefix(last) : item.label == last)
-                    && item.frame.midY >= clear.top && item.frame.midY <= clear.bottom
+                (lastIsPrefix ? item.label.hasPrefix(last) : item.label == last) && clear.showsMiddle(of: item.label, item.frame)
             }) { lastShown = true }
         }
         var end = AuditWalkEnd.pageCap
@@ -802,7 +1023,7 @@ extension AutomatedChecks {
             }
             noteLast(view)
             let name = page == 0 ? screen : "\(screen), page \(page + 1)"
-            auditPage(name, screen: screen, size: size, dark: dark, types: types, seen: &seen)
+            auditPage(name, screen: screen, size: size, dark: dark, types: types, walk: &walk)
             audited += 1
         }
         if let last, !lastShown {
@@ -814,7 +1035,7 @@ extension AutomatedChecks {
                 auditLog("  (\(screen), \(size.rawValue): the walk stopped before the last element \"\(last)\"; the test scrolls to it)")
             }
             auditReachTheEnd(screen, size: size, dark: dark, types: types, last: last, lastIsPrefix: lastIsPrefix,
-                             stopView: stopView, shown: shownLabels, seen: &seen)
+                             stopView: stopView, shown: shownLabels, walk: &walk)
         } else if last == nil, let furthest, furthest.page < furthest.of {
             // No last element named: the scroll status of the content
             // tells that content is still below the last audit page.
@@ -822,6 +1043,15 @@ extension AutomatedChecks {
                 (end == .pageCap ? "ran its \(pages) audits" : "stopped") +
                 " at page \(furthest.page) of \(furthest.of) of the content: " + (end == .pageCap ? "raise `pages`" : "name the screen's last element (`last`)")
             auditLog("  WALK: \(message)")
+            Self.auditFailures.append(message)
+        }
+        if size == .largest {
+            auditSweepBack(screen, size: size, dark: dark, types: types, maxDrags: max(pages, 1) * 5, walk: &walk)
+        }
+        // The contrast issues that stayed under a bar on every page.
+        for (_, finding) in walk.underABar.sorted(by: { $0.key < $1.key }) {
+            let message = "\(finding.text): no audit page showed the element clear of the bars, so no audit measured its contrast on its own background"
+            auditLog("  ISSUE: \(message)")
             Self.auditFailures.append(message)
         }
         let position = furthest.map { "; the furthest audit page was page \($0.page) of \($0.of)" } ?? ""
@@ -839,7 +1069,7 @@ extension AutomatedChecks {
     /// the content back at its top, so each step starts again from the
     /// end. Fails the test when no scroll shows `last`.
     func auditReachTheEnd(_ screen: String, size: AuditTextSize, dark: Bool, types: XCUIAccessibilityAuditType, last: String, lastIsPrefix: Bool,
-                          stopView: Set<String>, shown shownBefore: Set<String>, seen: inout Set<String>) {
+                          stopView: Set<String>, shown shownBefore: Set<String>, walk: inout AuditWalk) {
         let predicate = lastIsPrefix ? NSPredicate(format: "label BEGINSWITH %@", last) : NSPredicate(format: "label == %@", last)
         let target = app.descendants(matching: .any).matching(predicate).firstMatch
         func goToTheEnd() -> Bool {
@@ -857,7 +1087,7 @@ extension AutomatedChecks {
         }
         var shown = shownBefore
         shown.formUnion(auditLabels(auditReadScreen(screen, size: size)))
-        auditPage("\(screen), the end", screen: screen, size: size, dark: dark, types: types, seen: &seen)
+        auditPage("\(screen), the end", screen: screen, size: size, dark: dark, types: types, walk: &walk)
         let fraction: CGFloat = size == .largest ? 0.85 : 0.7
         var previous: [AuditItem] = []
         for step in 1...10 {
@@ -872,23 +1102,106 @@ extension AutomatedChecks {
             let content = auditLabels(now)
             let common = content.intersection(stopView)
             if !content.isSubset(of: shown) {
-                auditPage("\(screen), the end, back \(step)", screen: screen, size: size, dark: dark, types: types, seen: &seen)
+                auditPage("\(screen), the end, back \(step)", screen: screen, size: size, dark: dark, types: types, walk: &walk)
                 shown.formUnion(content)
             }
             if common.count >= 2 || common.contains(where: { $0.count > 20 }) { break }
         }
     }
 
+    /// At AX5 the audit itself can move a list, forward as well as back.
+    /// On the support sheet it moved the list past "Opening hours are on
+    /// Beat's website." and "Beat webchat" two times, so no audit page
+    /// showed them (8 October 2026). So after the walk this goes back up
+    /// from where the walk ended, with short, slow drags, and audits each
+    /// page that shows a label that no audit page showed, not even in part
+    /// (`AuditWalk.auditedLabels`) ("<screen>, back <n>"), until the
+    /// content stops (the top). A short drag at the top of a sheet springs
+    /// back; it does not close the sheet.
+    func auditSweepBack(_ screen: String, size: AuditTextSize, dark: Bool, types: XCUIAccessibilityAuditType,
+                        maxDrags: Int, walk: inout AuditWalk) {
+        var before = auditReadScreen(screen, size: size)
+        var audited = 0
+        for _ in 0..<maxDrags {
+            auditScrollDown(fraction: -0.3)
+            usleep(600_000)
+            let now = auditReadScreen(screen, size: size)
+            if now == before { break } // the top
+            before = now
+            let missed = auditLabels(now).subtracting(walk.auditedLabels)
+            if !missed.isEmpty {
+                audited += 1
+                auditLog("  (\(screen), \(size.rawValue): no audit page showed \(missed.sorted().prefix(3)); the test audits this page)")
+                auditPage("\(screen), back \(audited)", screen: screen, size: size, dark: dark, types: types, walk: &walk)
+                // The audit can move the content again.
+                before = auditReadScreen(screen, size: size)
+            }
+        }
+    }
+
+    /// The decision about one issue (`auditDecide`).
+    enum AuditDecision {
+        case excluded(String)
+        case knownFault(AuditKnownDefect)
+        case compare
+        case issue(String)
+    }
+
+    /// Decides one issue: an exclusion, a known fault, a check at the end
+    /// of the test (`compare`), or a failure. `taken` counts, on this
+    /// page, the issues that each pinned entry took, and an entry takes
+    /// no more than its pinned count (`AuditElementlessExclusion.pins`).
+    func auditDecide(_ finding: AuditFinding, pinKey: String, size: AuditTextSize, dark: Bool, taken: inout [String: Int]) -> AuditDecision {
+        if let exclusion = Self.auditExclusions.first(where: { $0.matches(finding) }) {
+            return .excluded(exclusion.reason)
+        }
+        var overCount: [String] = []
+        for (index, exclusion) in Self.auditElementlessExclusions.enumerated() where exclusion.matches(finding, pinKey: pinKey) {
+            let key = "elementless \(index)"
+            let pin = exclusion.pins[pinKey] ?? 0
+            if taken[key, default: 0] < pin {
+                taken[key, default: 0] += 1
+                return .excluded(exclusion.reason)
+            }
+            overCount.append("entry \(index + 1) of auditElementlessExclusions takes at most \(pin) on one page of \(pinKey)")
+        }
+        for defect in Self.auditKnownDefects where defect.matches(finding) {
+            guard let pins = defect.pins else { return .knownFault(defect) }
+            guard let pin = pins[pinKey] else { continue }
+            let key = "defect \(defect.bead)"
+            if taken[key, default: 0] < pin {
+                taken[key, default: 0] += 1
+                return .knownFault(defect)
+            }
+            overCount.append("\(defect.bead) takes at most \(pin) on one page of \(pinKey)")
+        }
+        if !dark, finding.hasFrame,
+           finding.type.contains(.dynamicType) || (size == .standard && finding.type.contains(.textClipped)),
+           let label = finding.label, !label.isEmpty, (finding.frame?.height ?? 0) > 0 {
+            return .compare
+        }
+        return .issue(overCount.isEmpty ? finding.text : "\(finding.text) (more of these on the page than the pinned count: \(overCount.joined(separator: "; ")))")
+    }
+
     /// Runs the audit once on the page that shows (`name`), and decides
     /// each issue: an exclusion, a known fault, a check at the end of the
-    /// test, or a failure. Each issue with no element keeps the page's
-    /// screenshot in `OUT_DIR/audit-shots` and in the result bundle.
-    func auditPage(_ name: String, screen: String, size: AuditTextSize, dark: Bool, types: XCUIAccessibilityAuditType, seen: inout Set<String>) {
+    /// test, or a failure. A contrast issue of an element that a bar
+    /// covers in part stays open in `walk` (`AuditWalk.underABar`). Each
+    /// issue with no element keeps the page's screenshot in
+    /// `OUT_DIR/audit-shots` and in the result bundle. Each issue gets one
+    /// line in the log.
+    func auditPage(_ name: String, screen: String, size: AuditTextSize, dark: Bool, types: XCUIAccessibilityAuditType, walk: inout AuditWalk) {
         // The screen as the audit starts. The audit can move the content
         // (at AX5 it put a scroll view back at its top), so the texts under
-        // the bars come from this look, not from the look after the audit.
+        // the bars, and the elements clear of the bars, come from this
+        // look, not from the look after the audit.
         let screenBefore = XCUIScreen.main.screenshot()
-        let underBars = auditTextUnderBars(auditClearArea())
+        let clearBefore = auditClearArea()
+        let underBars = auditTextUnderBars(clearBefore)
+        for item in clearBefore.content where item.frame.maxY > clearBefore.top && item.frame.minY < clearBefore.bottom {
+            walk.auditedLabels.insert(item.label)
+        }
+        walk.auditedLabels.formUnion(clearBefore.pinnedItems.map(\.label))
         var findings: [AuditFinding] = []
         do {
             try app.performAccessibilityAudit(for: types) { issue in
@@ -935,13 +1248,17 @@ extension AutomatedChecks {
             // if it is under a bar; it is content when it is not a bar item.
             let isContent = clear.content.contains { $0.label == label && $0.frame.integral == frame.integral }
                 || (findings[index].viaAX && !clear.barItems.contains { $0.frame.integral == frame.integral })
-            let isClear = frame.minY >= clear.top - 1 && frame.maxY <= clear.bottom + 1
-            findings[index].underABar = isContent && !isClear
+            findings[index].underABar = isContent && (!clear.isClearOfBars(label, frame) || !frame.intersects(window) || frame.maxY > window.maxY + 1)
             findings[index].inABar = clear.barItems.contains { $0.label == label && $0.frame.integral == frame.integral }
         }
-        if !dark { findings += unlabelledControls(on: name, size: size) }
+        if !dark {
+            findings += unlabelledControls(on: name, size: size)
+            findings += smallControls(on: name, size: size)
+        }
         let elementless = findings.filter { $0.elementType == nil }.count
         auditLog("AUDIT \(name) (\(size.rawValue)\(dark ? ", dark" : "")): \(findings.count) issues\(elementless > 0 ? ", \(elementless) with no element" : "")")
+        let pinKey = Self.auditPinKey(screen, size: size, dark: dark)
+        var taken: [String: Int] = [:]
         var failed = false
         var elementlessIndex = 0
         for finding in findings {
@@ -952,12 +1269,32 @@ extension AutomatedChecks {
                 elementlessIndex += 1
                 key += "|\(name)|\(elementlessIndex)"
             }
-            guard seen.insert(key).inserted else { continue }
-            if let exclusion = Self.auditExclusions.first(where: { $0.matches(finding) }) {
-                auditLog("  excluded: \(finding.text) [\(exclusion.reason)]")
-            } else if let exclusion = Self.auditElementlessExclusions.first(where: { $0.matches(finding) }) {
-                auditLog("  excluded: \(finding.text) [\(exclusion.reason)]")
-            } else if let defect = Self.auditKnownDefects.first(where: { $0.matches(finding) }) {
+            if size == .largest, finding.type.contains(.textClipped), let label = finding.label {
+                Self.auditClippedAtLargest.insert("\(screen)|\(label)")
+            }
+            guard !walk.decided.contains(key) else {
+                auditLog("  again: \(finding.shortText) (decided on an earlier page)")
+                continue
+            }
+            // A contrast issue of an element that a bar covers in part: the
+            // audit measured the bar over the text. It waits for a page that
+            // shows the element clear.
+            if finding.type.contains(.contrast), finding.underABar, let label = finding.label, let frame = finding.frame {
+                let element = Self.auditElementKey(label, frame)
+                if walk.shownClear.contains(element) {
+                    auditLog("  excluded: \(finding.text) [\(Self.underABarShownReason)]")
+                    walk.decided.insert(key)
+                } else {
+                    if walk.underABar[element] == nil { walk.underABar[element] = finding }
+                    auditLog("  open: \(finding.text) [\(Self.underABarPendingReason)]")
+                }
+                continue
+            }
+            walk.decided.insert(key)
+            switch auditDecide(finding, pinKey: pinKey, size: size, dark: dark, taken: &taken) {
+            case .excluded(let reason):
+                auditLog("  excluded: \(finding.text) [\(reason)]")
+            case .knownFault(let defect):
                 auditLog("  known fault \(defect.bead): \(finding.text)")
                 // An expected failure still stops a test that has
                 // `continueAfterFailure` false, so the test goes on
@@ -968,20 +1305,32 @@ extension AutomatedChecks {
                     XCTFail(finding.text)
                 }
                 continueAfterFailure = stops
-            } else if !dark, finding.hasFrame,
-                      finding.type.contains(.dynamicType) || (size == .standard && finding.type.contains(.textClipped)),
-                      let label = finding.label, !label.isEmpty, (finding.frame?.height ?? 0) > 0 {
+            case .compare:
                 // Decided at the end of the test, from the same element
                 // at the other text size (`auditAtEachTextSize`).
                 auditLog("  to compare: \(finding.text)")
                 Self.auditScalingChecks.append((finding, screen))
-            } else {
-                auditLog("  ISSUE: \(finding.text)")
-                Self.auditFailures.append(finding.text)
+            case .issue(let text):
+                auditLog("  ISSUE: \(text)")
+                Self.auditFailures.append(text)
                 failed = true
             }
-            if size == .largest, finding.type.contains(.textClipped), let label = finding.label {
-                Self.auditClippedAtLargest.insert("\(screen)|\(label)")
+        }
+        // The contrast audit checked each element that showed clear of the
+        // bars as it started. Such an element closes its open issue from an
+        // earlier page: the audit flagged it here (and the test decided
+        // that issue above), or found nothing wrong with it.
+        if types.contains(.contrast) {
+            let flaggedUnderABar = Set(findings.filter { $0.type.contains(.contrast) && $0.underABar }.compactMap { finding in
+                finding.label.flatMap { label in finding.frame.map { Self.auditElementKey(label, $0) } }
+            })
+            for item in clearBefore.content where item.frame.height > 0 && item.frame.maxY <= window.maxY + 1 && clearBefore.isClearOfBars(item.label, item.frame) {
+                let element = Self.auditElementKey(item.label, item.frame)
+                guard !flaggedUnderABar.contains(element) else { continue }
+                walk.shownClear.insert(element)
+                if let open = walk.underABar.removeValue(forKey: element) {
+                    auditLog("  closed: \(open.shortText) of \(open.screen): \"\(item.label)\" shows clear of the bars on \(name), and the contrast audit checked it there")
+                }
             }
         }
         let environment = ProcessInfo.processInfo.environment
@@ -1041,6 +1390,22 @@ extension AutomatedChecks {
         if !missing().isEmpty { auditLog("  (\(screen), AX5: the walk did not see \(missing().sorted()))") }
     }
 
+    /// The height of a button at the default text size when the 44-point
+    /// minimum of its hit area (`minimumHitArea`) sets it: the label alone,
+    /// or the label in a list row (44 points and the row's insets, 31
+    /// points: "Beat webchat" on the support sheet, the notification line
+    /// on Today, 8 October 2026).
+    static let minimumHitAreaHeights: [CGFloat] = [44, 75]
+
+    /// Two frames of the same control: each edge within one point. The
+    /// frames of a SwiftUI menu and of the system button inside it can
+    /// differ by a fraction of a point ("Day options" at y 675.99 and the
+    /// button inside it at y 676.0, 8 October 2026), so `integral` gives
+    /// them different frames.
+    static func sameFrame(_ a: CGRect, _ b: CGRect) -> Bool {
+        abs(a.minX - b.minX) <= 1 && abs(a.minY - b.minY) <= 1 && abs(a.width - b.width) <= 1 && abs(a.height - b.height) <= 1
+    }
+
     /// product-rules "Accessibility everywhere": "Every control MUST have a
     /// VoiceOver label." The audit does not report a text field that has a
     /// placeholder and no label, but VoiceOver reads no name for it when it
@@ -1068,7 +1433,7 @@ extension AutomatedChecks {
         var bottomBarFrames: [CGRect] = []
         func collect(_ element: XCUIElementSnapshot) {
             if controls.contains(element.elementType), !element.label.isEmpty {
-                labelledFrames.append(element.frame.integral)
+                labelledFrames.append(element.frame)
                 if element.elementType == .button, element.frame.minY >= window.maxY - 120 { bottomBarFrames.append(element.frame) }
             }
             element.children.forEach(collect)
@@ -1079,7 +1444,7 @@ extension AutomatedChecks {
             if element.elementType == .keyboard { return }
             let isInnerSwitch = element.elementType == .switch && inLabelledSwitch
             if controls.contains(element.elementType), !isInnerSwitch, element.label.isEmpty, element.frame.width > 0,
-               element.frame.intersects(window), !labelledFrames.contains(element.frame.integral) {
+               element.frame.intersects(window), !labelledFrames.contains(where: { Self.sameFrame($0, element.frame) }) {
                 // The test takes only a button in the bottom 120 points, in
                 // one row with the labelled items of the toolbar.
                 let inTheToolbarRow = element.frame.minY >= window.maxY - 120
@@ -1106,6 +1471,153 @@ extension AutomatedChecks {
         return found
     }
 
+    /// product-rules "Accessibility everywhere": "Every control MUST have a
+    /// hit area of at least 44 by 44 points." The audit's hit-region check
+    /// reported nothing on any screen (8 October 2026), so this check
+    /// measures each control itself. Each enabled control on the page that
+    /// VoiceOver stops on, outside the navigation bar, the toolbar and the
+    /// keyboard, must have a frame of at least 44 by 44 points. The frame
+    /// of a SwiftUI button is its tap target: a frame on the button's label
+    /// gives both the size (`minimumHitArea` in Appearance.swift). The
+    /// system bars are left out: iOS sets the size of a bar item. A control
+    /// with no label inside a labelled control of the same frame (the
+    /// system button inside a SwiftUI menu) is the same control. Each issue
+    /// goes through the same decisions as an audit issue:
+    /// `auditHitAreaExclusions` takes a system control whose size iOS sets,
+    /// with its reason, and `auditHitAreaKnownDefects` takes a fault that a
+    /// bead holds.
+    func smallControls(on screen: String, size: AuditTextSize) -> [AuditFinding] {
+        guard let snapshot = try? app.snapshot() else { return [] }
+        let controls: Set<XCUIElement.ElementType> = [
+            .button, .switch, .toggle, .textField, .secureTextField, .textView, .slider, .stepper,
+            .link, .menuButton, .popUpButton, .searchField,
+        ]
+        // The system controls that hold other controls (`AuditFinding.container`).
+        let systemContainers: Set<XCUIElement.ElementType> = [.segmentedControl, .datePicker, .picker, .pickerWheel, .switch, .stepper]
+        let window = app.windows.firstMatch.frame
+        var labelledFrames: [CGRect] = []
+        func collect(_ element: XCUIElementSnapshot) {
+            if controls.contains(element.elementType), !element.label.isEmpty { labelledFrames.append(element.frame) }
+            element.children.forEach(collect)
+        }
+        collect(snapshot)
+        // XCTest cuts the frame of an element at the edge of its scroll view
+        // ("When are the hardest times of day?" at 338 by 10 points, at the
+        // top of a page of the weekly review). So a control in a list or a
+        // scroll view counts only when it shows whole, clear of the bars; a
+        // later page shows the rest. A control outside them does not scroll.
+        let clear = auditClearArea()
+        var found: [AuditFinding] = []
+        func walk(_ element: XCUIElementSnapshot, container: XCUIElement.ElementType?, inContent: Bool) {
+            let type = element.elementType
+            if [.navigationBar, .toolbar, .keyboard, .statusBar].contains(type) { return }
+            let frame = element.frame
+            let sameAsLabelled = element.label.isEmpty && labelledFrames.contains { Self.sameFrame($0, frame) }
+            let whole = inContent ? clear.isClear(element.label, frame) && frame.minY >= window.minY && frame.maxY <= window.maxY
+                : frame.minY >= window.minY && frame.maxY <= window.maxY
+            if controls.contains(type), !sameAsLabelled, element.isEnabled, frame.width > 0, frame.height > 0, whole,
+               frame.width < 43.5 || frame.height < 43.5 {
+                found.append(AuditFinding(
+                    screen: screen, size: size, dark: false, type: [], compact: Self.hitAreaCompact,
+                    detail: String(format: "the control is %.1f by %.1f points%@", frame.width, frame.height,
+                                   container.map { " (inside a system \(Self.elementTypeName($0)))" } ?? ""),
+                    elementType: type, label: element.label, identifier: element.identifier, frame: frame, container: container))
+            }
+            let next = systemContainers.contains(type) ? type : container
+            let isContainer = [.scrollView, .collectionView, .table].contains(type)
+            element.children.forEach { walk($0, container: next, inContent: inContent || isContainer) }
+        }
+        walk(snapshot, container: nil, inContent: false)
+        return found
+    }
+
+    /// A name for the element types that hold other controls.
+    static func elementTypeName(_ type: XCUIElement.ElementType) -> String {
+        switch type {
+        case .segmentedControl: return "segmented control"
+        case .datePicker: return "date picker"
+        case .picker: return "picker"
+        case .pickerWheel: return "picker wheel"
+        case .switch: return "switch"
+        case .stepper: return "stepper"
+        default: return "element \(type.rawValue)"
+        }
+    }
+
+    /// The hit-area issues of system controls whose size iOS sets, and why
+    /// each one is not a fault of the app (`smallControls`).
+    static let auditHitAreaExclusions: [AuditExclusion] = [
+        AuditExclusion(reason: """
+            A system switch (a SwiftUI Toggle). The tap target of a toggle is its switch, and iOS sets the size of \
+            the switch: 63 by 28 points on the iOS 27.0 simulator, at every text size. SwiftUI gives no way to make \
+            it larger. The toggle element around the switch holds its label, and VoiceOver and Voice Control use \
+            that element; at the accessibility text sizes it is as high as its label.
+            """) { $0.compact == hitAreaCompact && ($0.elementType == .switch || $0.container == .switch) },
+        AuditExclusion(reason: """
+            A segment of a system segmented control (a SwiftUI Picker with the segmented style: the day segments of \
+            the record's time control, the unit controls). iOS sets the height of a segmented control, 32 points on \
+            the iOS 27.0 simulator, and SwiftUI gives no way to change it. Each segment is as wide as its share of \
+            the row.
+            """) { $0.compact == hitAreaCompact && $0.container == .segmentedControl },
+        AuditExclusion(reason: """
+            A part of a system date picker (the compact button that opens the picker, or a wheel). iOS sets the size \
+            of these parts, and SwiftUI gives no way to change it.
+            """) { $0.compact == hitAreaCompact && ($0.container == .datePicker || $0.container == .pickerWheel || $0.container == .picker) },
+    ]
+
+    /// The hit-area issues that a bead holds (`smallControls`).
+    static let auditHitAreaKnownDefects: [AuditKnownDefect] = [
+        AuditKnownDefect(bead: "mm-t45.20", reason: """
+            A button with the system bordered or bordered-prominent style at the regular control size is 34.3 \
+            points high at the default text size. A 44-point label makes the fill around it larger too, so the change \
+            needs a design decision. The entry names each such button on its screen.
+            """) { finding in
+            guard finding.compact == hitAreaCompact, finding.elementType == .button, let frame = finding.frame,
+                  frame.height >= 30, frame.height < 43.5, frame.width >= 43.5 else { return false }
+            let label = finding.label ?? ""
+            func on(_ screens: String...) -> Bool { screens.contains { finding.screen == $0 || finding.screen.hasPrefix($0 + ", ") } }
+            if on("the new-entry screen", "the edit screen") { return ["Home", "Work", "Out", "Travelling", "Add a place"].contains(label) }
+            if finding.screen.hasPrefix("Today") { return label == "Add an entry" }
+            if on("the plan builder") { return label == "Save" }
+            if on("the app-lock cover") { return ["Unlock", "Delete from this device"].contains(label) }
+            if on("the store-open fault screen") { return ["Try again", "Get support"].contains(label) }
+            // The full-width confirming button of a form or a page
+            // (FullWidthConfirmButton.swift).
+            return ["Continue", "Done", "Start"].contains(label) && frame.width >= 300
+        },
+        AuditKnownDefect(bead: "mm-t45.21", reason: """
+            A system control in a Form row is less high than 44 points at the default text size: a one-line text \
+            field (SwiftUI TextField) is 22 points high, and a menu picker (SwiftUI Picker with the menu style) is \
+            34.3 points high. The row around it is higher, but the control's own frame is its tap target. A taller \
+            control makes each form row taller, so the change needs a design decision. The entry names each such \
+            control on its screen.
+            """) { finding in
+            guard finding.compact == hitAreaCompact, let frame = finding.frame, frame.width >= 300, frame.height < 43.5 else { return false }
+            let label = finding.label ?? ""
+            func on(_ screens: String...) -> Bool { screens.contains { finding.screen == $0 || finding.screen.hasPrefix($0 + ", ") } }
+            if finding.elementType == .textField, frame.height >= 20 {
+                if on("onboarding screen 2", "the restart re-screen") {
+                    return ["How old are you?", "Height in centimetres", "Height in feet", "Height in inches",
+                            "Weight in kilograms", "Weight in stone", "Weight in pounds"].contains(label)
+                }
+                if on("the weigh-in screen on the weigh-in day") { return ["Weight", "Stone", "Pounds"].contains(label) }
+                if on("the close-the-day screen") { return label == "One word for how today felt" }
+                // Each question of the weekly review ends with a question mark.
+                if on("the weekly review") { return label.hasSuffix("?") }
+                return false
+            }
+            if finding.elementType == .button, frame.height >= 30 {
+                let pickers: [String]
+                if on("Settings") { pickers = ["Day starts at", "Weigh-in day", "Unit", "Lock after"] }
+                else if on("the Reminders group") { pickers = ["Remind me again in"] }
+                else if on("the weigh-in screen on the weigh-in day", "the weigh-in screen on a day that is not the weigh-in day") { pickers = ["Weigh-in day", "Unit"] }
+                else { pickers = [] }
+                return pickers.contains { label.hasPrefix($0 + ", ") }
+            }
+            return false
+        },
+    ]
+
     /// Runs `body` at each text size, then fails once with every issue that
     /// no exclusion took.
     ///
@@ -1114,7 +1626,10 @@ extension AutomatedChecks {
     /// SwiftUI text that does scale (for example a row in a Form), at both
     /// sizes. So the test finds the same element (the same label on the
     /// same screen) at the default size and at AX5. If it is at least 1.5
-    /// times as tall at AX5, its text scales with Dynamic Type. A clipped-
+    /// times as tall at AX5, its text scales with Dynamic Type. A button
+    /// whose default height is the 44-point minimum of its hit area
+    /// (`minimumHitAreaHeights`) must be at least 10 points taller at AX5:
+    /// its frame grows only when its text is higher than 44 points. A clipped-
     /// text issue at the default size ("may be clipped at larger Dynamic
     /// Type sizes") is decided by the AX5 audit of the same element: the
     /// issue fails the test if that audit also reports clipped text, or if
@@ -1139,6 +1654,13 @@ extension AutomatedChecks {
             if finding.type.contains(.dynamicType) {
                 if let standard, let largest, largest >= standard * 1.5 {
                     verdict = "the element is \(heights), so its text scales with Dynamic Type"
+                } else if let standard, let largest, finding.elementType == .button,
+                          Self.minimumHitAreaHeights.contains(where: { abs(standard - $0) <= 1.5 }), largest >= standard + 10 {
+                    verdict = """
+                        the element is \(heights). At the default size its height is the 44-point minimum of its hit area \
+                        (minimumHitArea), not the height of its text (about 22 points). The frame grows only when the text \
+                        is higher than 44 points, so its text is more than twice as high at AX5
+                        """
                 }
             } else if largest != nil, !Self.auditClippedAtLargest.contains("\(screen)|\(label)") {
                 verdict = "the AX5 audit of the same element (\(heights)) reports no clipped text"
@@ -1209,6 +1731,41 @@ extension AutomatedChecks {
             if first(.button, label, in: look())?.isSelected == true { return }
         }
         XCTFail("the screen shows \"\(label)\", and a tap selects it", file: file, line: line)
+    }
+
+    /// The new-entry and edit screens put the keyboard up in "What" as they
+    /// open. The keyboard then covers the end of the form ("Delete entry",
+    /// the Context section) on every page, and the contrast audit cannot
+    /// measure it (8 October 2026). A tap outside the field does not take
+    /// the keyboard down. So this opens "Add a place" and types Return in
+    /// its empty field: the field closes with no place added
+    /// (`WhereChipsView.commitNewPlace`), and the keyboard goes down. Then
+    /// it goes back to the top of the screen.
+    func auditHideTheKeyboard(on screen: String, size: AuditTextSize, file: StaticString = #filePath, line: UInt = #line) {
+        guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else { return }
+        let addAPlace = app.buttons["Add a place"].firstMatch
+        XCTAssertTrue(auditReveal(addAPlace), "\(screen) shows \"Add a place\" (\(size.rawValue))", file: file, line: line)
+        addAPlace.tap()
+        let field = app.textViews["Add a place"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5), "\"Add a place\" opens a field (\(size.rawValue))", file: file, line: line)
+        field.typeText("\n")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5), "on \(screen) the keyboard goes down after Return in an empty \"Add a place\" (\(size.rawValue))", file: file, line: line)
+        XCTAssertTrue(addAPlace.waitForExistence(timeout: 3), "the field closed with no place added, and \"Add a place\" shows again", file: file, line: line)
+        auditScrollToTheTop(screen, size: size)
+    }
+
+    /// Short, slow drags down until the content stops: the top of the
+    /// screen. A short drag at the top of a sheet springs back; it does
+    /// not close the sheet.
+    func auditScrollToTheTop(_ screen: String, size: AuditTextSize) {
+        var before = auditReadScreen(screen, size: size)
+        for _ in 0..<20 {
+            auditScrollDown(fraction: -0.3)
+            usleep(600_000)
+            let now = auditReadScreen(screen, size: size)
+            if now == before { return }
+            before = now
+        }
     }
 
     // MARK: The audits of each screen
@@ -1282,6 +1839,7 @@ extension AutomatedChecks {
             add.tap()
             XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
             dismissKeyboardTip()
+            auditHideTheKeyboard(on: "the new-entry screen", size: size)
             audit("the new-entry screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
             app.navigationBars.buttons["Cancel"].firstMatch.tap()
             XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForNonExistence(timeout: 8))
@@ -1298,6 +1856,7 @@ extension AutomatedChecks {
             row.tap()
             XCTAssertTrue(app.buttons["Delete entry"].firstMatch.waitForExistence(timeout: 8) || app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 2), "the edit screen shows")
             dismissKeyboardTip()
+            auditHideTheKeyboard(on: "the edit screen", size: size)
             audit("the edit screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
         }
     }
@@ -1547,6 +2106,13 @@ extension AutomatedChecks {
     /// audit passed. So Vision reads the text that the screen draws in the
     /// editor's frame, and the first words of the editor's value must be in
     /// it.
+    ///
+    /// The editor gets its height from a hidden copy of the text
+    /// (GPParagraphView.swift). If the line heights of the editor and of
+    /// that copy are not the same, the last lines scroll inside the editor,
+    /// and the first words still show. So the test then drags the page
+    /// until the bottom of the editor shows clear of the bars, and the
+    /// paragraph's last words must be in the text that Vision reads there.
     func assertTheGPParagraphShowsItsText(on screen: String, size: AuditTextSize, file: StaticString = #filePath, line: UInt = #line) {
         let editor = app.textViews["The GP paragraph"].firstMatch
         XCTAssertTrue(editor.waitForExistence(timeout: 5), "\(screen) shows the GP paragraph (\(size.rawValue))", file: file, line: line)
@@ -1585,6 +2151,36 @@ extension AutomatedChecks {
         let normalise: (String) -> String = { $0.replacingOccurrences(of: "\u{2019}", with: "'").lowercased() }
         XCTAssertTrue(normalise(drawn).contains(normalise(wanted)),
                       "on \(screen) (\(size.rawValue)) the GP paragraph's editor draws its text: Vision read \"\(drawn.prefix(160))\" in \(visible.integral), and the text begins \"\(wanted)\"",
+                      file: file, line: line)
+
+        // The end of the paragraph: drag until the bottom of the editor
+        // shows clear of the bars, with room above it for the last lines.
+        for _ in 0..<20 {
+            let bottom = editor.frame.maxY
+            let clear = auditClearArea()
+            if bottom.isFinite, bottom <= clear.bottom - 4, bottom >= clear.top + 120 { break }
+            if bottom.isFinite, bottom < clear.top + 120 {
+                auditScrollDown(fraction: -0.25)
+            } else {
+                auditScrollDown(fraction: 0.3)
+            }
+            usleep(600_000)
+        }
+        let clear = auditClearArea()
+        let band = CGRect(x: window.minX, y: clear.top, width: window.width, height: max(0, clear.bottom - clear.top))
+        let end = editor.frame.intersection(band)
+        let endWords = value.split(separator: " ").suffix(3).joined(separator: " ")
+        // Vision gives the lines in no fixed order: top to bottom here.
+        let drawnEnd = end.isEmpty ? "" : recordPlanDrawnText(in: end).sorted { ($0.frame.minY, $0.frame.minX) < ($1.frame.minY, $1.frame.minX) }.map(\.text).joined(separator: " ")
+        let plainWords: (String) -> String = { text in
+            normalise(text).unicodeScalars.map { CharacterSet.letters.contains($0) || CharacterSet.decimalDigits.contains($0) || $0 == "'" ? String($0) : " " }
+                .joined().split(separator: " ").joined(separator: " ")
+        }
+        XCTAssertTrue(editor.frame.maxY <= clear.bottom - 4 && !end.isEmpty,
+                      "on \(screen) (\(size.rawValue)) the bottom of the GP paragraph's editor shows clear of the bars (the editor at \(editor.frame.integral), the clear part from \(Int(clear.top)) to \(Int(clear.bottom)))",
+                      file: file, line: line)
+        XCTAssertTrue(plainWords(drawnEnd).contains(plainWords(endWords)),
+                      "on \(screen) (\(size.rawValue)) the GP paragraph's editor shows the end of the paragraph: Vision read \"\(drawnEnd.suffix(160))\" in \(end.integral), and the text ends \"\(endWords)\"",
                       file: file, line: line)
     }
 
@@ -1799,10 +2395,7 @@ extension AutomatedChecks {
     func auditReveal(_ element: XCUIElement, maxScrolls: Int = 12) -> Bool {
         for scroll in 0...maxScrolls {
             if scroll > 0 { auditScrollDown() }
-            if element.exists, element.isHittable {
-                let clear = auditClearArea()
-                if element.frame.minY >= clear.top - 1, element.frame.maxY <= clear.bottom + 1 { return true }
-            }
+            if element.exists, element.isHittable, auditClearArea().isClear(element.label, element.frame) { return true }
         }
         return false
     }
@@ -1887,7 +2480,9 @@ extension AutomatedChecks {
     /// light mode, in dark mode and with Increase Contrast on." The other
     /// audits run in light mode. This test runs the contrast audit in dark
     /// mode on the main screens, at the default text size (the strict case
-    /// for contrast). A UI test cannot turn on Increase Contrast.
+    /// for contrast). A UI test cannot turn on Increase Contrast from inside
+    /// XCTest; the simulator can (`xcrun simctl ui <udid> increase_contrast
+    /// enabled`), and mm-t45.19 asks Ash for a pass of the script with it.
     ///
     /// The test sets dark mode with `XCUIDevice.appearance` and puts light
     /// mode back at the end. On the iOS 27.0 simulator a new simulator did
@@ -1907,6 +2502,7 @@ extension AutomatedChecks {
             app.buttons["Add an entry"].firstMatch.tap()
             XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
             dismissKeyboardTip()
+            auditHideTheKeyboard(on: "the new-entry screen", size: size)
             audit("the new-entry screen", size: size, dark: true, types: .contrast, pages: 3)
             try auditLaunchOnToday("planMatched", size: size)
             tapDayMenu("Today's plan")
@@ -1980,6 +2576,7 @@ extension AutomatedChecks {
             row.tap()
             XCTAssertTrue(app.buttons["Delete entry"].firstMatch.waitForExistence(timeout: 8) || app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 2), "the edit screen shows")
             dismissKeyboardTip()
+            auditHideTheKeyboard(on: "the edit screen", size: size)
             audit("the edit screen", size: size, dark: true, types: .contrast, pages: 3)
             try auditLaunchOnToday("or-plan", size: size)
             let closeTheDay = app.buttons["Close the day"].firstMatch
