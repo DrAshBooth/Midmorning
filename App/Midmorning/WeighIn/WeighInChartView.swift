@@ -1,13 +1,14 @@
 import SwiftUI
 import Charts
+import Accessibility
 import Programme
 
 /// The rolling-average chart (weigh-in spec, "The chart"). A line through
 /// the rolling averages, one point per weigh-in, in the secondary text
 /// colour so the line (primary text colour) stays the one thing that reads
-/// as a trend. Swift Charts builds its own accessible representation and
-/// audio graph from the marks; VoiceOver walk and the audio graph are a
-/// device check (mm-t22.14).
+/// as a trend. For VoiceOver the chart is one element, "Rolling average",
+/// with its own chart descriptor for the audio graph
+/// (`WeighInChartDescriptor`, mm-t45.16).
 struct WeighInChartView: View {
     let points: [RollingAveragePoint]
     let unit: WeightUnit
@@ -43,15 +44,32 @@ struct WeighInChartView: View {
         // reads had no label (AutomatedChecks.testAuditWeighInScreen).
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(WeighInContent.rollingAverageAccessibilityLabel.string)
+        // weigh-in spec, "Accessibility of the weigh-in": the system audio
+        // graph. The one element gets its own descriptor, after
+        // `.accessibilityElement(children: .ignore)`, so the audio graph
+        // does not depend on the descriptor that Swift Charts makes for the
+        // chart inside (mm-t45.16).
+        .accessibilityChartDescriptor(AudioGraph(points: points, unit: unit, calendar: calendar))
     }
 
     /// The value the chart plots: kilograms directly, or the nearest whole
     /// pound total when the unit is stone and pounds — the chart's axis
     /// then reads in the person's unit either way.
     private func displayValue(_ kg: Double) -> Double {
-        switch unit {
-        case .kg: return kg
-        case .stLb: return (kg / 0.453592).rounded()
+        WeighInChartDescriptor.plottedValue(kg, unit: unit)
+    }
+
+    /// The chart descriptor of the one element (`WeighInChartDescriptor`).
+    private struct AudioGraph: AXChartDescriptorRepresentable {
+        let points: [RollingAveragePoint]
+        let unit: WeightUnit
+        let calendar: Calendar
+
+        func makeChartDescriptor() -> AXChartDescriptor {
+            WeighInChartDescriptor.make(
+                points: points, unit: unit, calendar: calendar,
+                title: WeighInContent.rollingAverageAccessibilityLabel.string,
+                dateAxisTitle: WeighInContent.chartDateLabel.string)
         }
     }
 

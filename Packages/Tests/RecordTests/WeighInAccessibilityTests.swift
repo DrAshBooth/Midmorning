@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import Accessibility
 @testable import Programme
 
 /// weigh-in spec, "Accessibility of the weigh-in" (mm-t22.14). Per
@@ -11,13 +12,13 @@ import XCTest
 ///
 /// Proved here: the four VoiceOver labels' exact text, the chart's label,
 /// that `WeighInScreenView.swift` marks the heading and gives every custom
-/// control a label. `WeighInGate`'s own tests already prove a weekday tap
-/// sets the day and that the input accepts a save with no other sense
-/// needed. Device checks (the epic's device-check bead): the real VoiceOver
-/// reading order and the audio graph ("VoiceOver on the weigh-in day",
-/// "VoiceOver on the chart", "VoiceOver with no weigh-in day"), the largest
-/// accessibility text size with no truncation, and Voice Control's "Show
-/// names"/"Tap Save".
+/// control a label, and the chart descriptor that the chart's one element
+/// gives for the audio graph (mm-t45.16). `WeighInGate`'s own tests already
+/// prove a weekday tap sets the day and that the input accepts a save with
+/// no other sense needed. The UI tests in
+/// `tools/skeleton-checks/HarnessUITests/AutomatedChecks+Accessibility.swift`
+/// prove the labels, the heading and the text sizes on the screen. Ash does
+/// no accessibility check on a device (8 October 2026).
 final class WeighInAccessibilityTests: XCTestCase {
     func testTheFourVoiceOverLabels() {
         XCTAssertEqual(WeighInContent.weightLabel.english, "Weight")
@@ -82,6 +83,63 @@ final class WeighInAccessibilityTests: XCTestCase {
         XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.poundsAccessibilityLabel.string)"))
         XCTAssertTrue(text.contains(".accessibilityLabel(Screen3Content.weighInDayHeading.string)"))
         XCTAssertTrue(text.contains(".accessibilityLabel(WeighInContent.unitLabel.string)"))
+    }
+
+    /// Scenario "VoiceOver on the chart" (mm-t45.16): "VoiceOver reads
+    /// 'Rolling average' and offers the audio graph". The chart's one
+    /// element gives its own chart descriptor: one series, "Rolling
+    /// average", with one data point for each weigh-in, and the values and
+    /// the dates read as the screen shows them.
+    func testTheChartDescriptorHoldsTheLine() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/London")!
+        let points = [
+            RollingAveragePoint(dayKey: "2026-09-28", weightKg: 66.8, averageKg: 66.8),
+            RollingAveragePoint(dayKey: "2026-10-05", weightKg: 66.2, averageKg: 66.5),
+            RollingAveragePoint(dayKey: "2026-10-12", weightKg: 67.1, averageKg: 66.7),
+        ]
+        let descriptor = WeighInChartDescriptor.make(points: points, unit: .kg, calendar: calendar, title: "Rolling average", dateAxisTitle: "Date")
+        XCTAssertEqual(descriptor.title, "Rolling average")
+        XCTAssertEqual(descriptor.series.count, 1, "one series: the line")
+        XCTAssertEqual(descriptor.series.first?.name, "Rolling average")
+        XCTAssertEqual(descriptor.series.first?.isContinuous, true, "the series is a line")
+        XCTAssertEqual(descriptor.series.first?.dataPoints.map { $0.yValue?.__number }, [66.8, 66.5, 66.7], "one point for each weigh-in, at its rolling average")
+        let xAxis = descriptor.xAxis as? AXNumericDataAxisDescriptor
+        let yAxis = descriptor.yAxis as? AXNumericDataAxisDescriptor
+        XCTAssertEqual(xAxis?.title, "Date")
+        XCTAssertEqual(yAxis?.title, "Rolling average")
+        // The values of a data point are refined for Swift (`__number`).
+        let firstX = descriptor.series.first?.dataPoints.first?.xValue.__number ?? 0
+        XCTAssertEqual(xAxis?.valueDescriptionProvider(firstX), "28 September 2026", "the date in en_GB")
+        XCTAssertEqual(yAxis?.valueDescriptionProvider(66.5), "66.5 kg", "the value in the person's unit")
+    }
+
+    /// With "st lb" the chart plots whole pounds, and the audio graph reads
+    /// stone and pounds, as the screen does.
+    func testTheChartDescriptorReadsStoneAndPounds() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/London")!
+        let points = [RollingAveragePoint(dayKey: "2026-09-28", weightKg: 66.8, averageKg: 66.8)]
+        let descriptor = WeighInChartDescriptor.make(points: points, unit: .stLb, calendar: calendar, title: "Rolling average", dateAxisTitle: "Date")
+        let pounds = (66.8 / BMI.kgPerPound).rounded()
+        XCTAssertEqual(descriptor.series.first?.dataPoints.map { $0.yValue?.__number }, [pounds], "one point, in whole pounds")
+        let yAxis = descriptor.yAxis as? AXNumericDataAxisDescriptor
+        XCTAssertEqual(yAxis?.valueDescriptionProvider(pounds), WeighInWeight.display(kg: 66.8, unit: .stLb), "the value reads as the screen shows it")
+        XCTAssertLessThan(yAxis?.range.lowerBound ?? 0, yAxis?.range.upperBound ?? 0, "one point still gives the axis a range")
+    }
+
+    /// Structural (mm-t45.16): the chart view gives its one element the
+    /// descriptor, after `.accessibilityElement(children: .ignore)`, so the
+    /// audio graph does not depend on the descriptor that Swift Charts
+    /// makes for the chart inside.
+    func testTheChartsOneElementHasTheDescriptor() throws {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let text = try String(contentsOf: repoRoot.appendingPathComponent("App/Midmorning/WeighIn/WeighInChartView.swift"), encoding: .utf8)
+        let element = try XCTUnwrap(text.range(of: ".accessibilityElement(children: .ignore)"), "the chart is one element")
+        let descriptor = try XCTUnwrap(text.range(of: ".accessibilityChartDescriptor("), "the one element has a chart descriptor")
+        XCTAssertLessThan(element.lowerBound, descriptor.lowerBound, "the descriptor comes after .accessibilityElement(children: .ignore)")
+        XCTAssertTrue(text.contains("WeighInChartDescriptor.make("), "the descriptor is WeighInChartDescriptor's")
     }
 
     /// Every text style on the screen is a system style (`Form`/`Section`/
