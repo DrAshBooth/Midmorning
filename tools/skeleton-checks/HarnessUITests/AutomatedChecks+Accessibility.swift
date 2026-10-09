@@ -363,7 +363,7 @@ extension AutomatedChecks {
                 // pinned day heading and "Add an entry".
                 "Today with the missed planned meal prompt (AX5)": 8, "Today with \"Close the day\" (AX5)": 4,
                 "Today with the plan card (AX5)": 2,
-                "onboarding screen 3 (default text size)": 1, "onboarding screen 3 (AX5)": 5,
+                "onboarding screen 3 (default text size)": 1, "onboarding screen 3 (AX5)": 6,
                 "the Reminders group (AX5)": 2, "the edit screen (AX5)": 1, "the new-entry screen (AX5)": 1,
                 "the not-right-now page (AX5)": 1, "the privacy notice (default text size)": 1, "the privacy notice (AX5)": 1,
                 "the restart re-screen (AX5)": 1, "the support sheet (default text size)": 7, "the support sheet (AX5)": 2,
@@ -1985,6 +1985,9 @@ extension AutomatedChecks {
                     XCTAssertTrue(scrollTo(save, maxSwipes: 8))
                     save.tap()
                     XCTAssertTrue(element(labelBeginningWith: "That number is outside the range").waitForExistence(timeout: 5), "5 kg shows the message for a weight outside the range")
+                    // The walk goes down from the page that shows, so it
+                    // starts at the top, above "Save".
+                    auditScrollToTheTop(screen, size: size)
                 }
                 audit(screen, size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
             }
@@ -2071,6 +2074,11 @@ extension AutomatedChecks {
             // is one element, "13:05, Toast and tea" (mm-t14.8).
             let example = element(labelled: "13:05, Toast and tea")
             XCTAssertTrue(scrollTo(example, maxSwipes: 12), "screen 3 shows the example row as one element, \"13:05, Toast and tea\" (\(size.rawValue))")
+            // The walk goes down from the page that shows, so it starts at
+            // the top: at AX5 the scroll to the example passed the text above
+            // it, and no audit page of the walk showed that text (9 October
+            // 2026).
+            auditScrollToTheTop("onboarding screen 3", size: size)
             audit("onboarding screen 3", size: size, types: auditTypes(size), pages: auditPages(size, standard: 5, largest: 20), last: "End")
             auditChoose("I won't be weighing")
             tapConfirm()
