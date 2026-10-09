@@ -26,8 +26,10 @@ import XCTest
 /// "apns-collapse-id" in the payload. The package test
 /// `ReminderTapRouteTests` gives the far reminder's route, Today.
 ///
-/// Each test starts the taps on Today. A tap while another screen is on
-/// Today's stack (for example "Programme") is bug mm-t45.12.
+/// Each test starts the taps on Today. The taps while another screen is on
+/// Today's stack (for example "Programme"), or while the new-entry sheet
+/// holds a draft, are in `AutomatedChecks+RouteFromAnyScreen.swift` (ruling
+/// r20-01, mm-t45.12).
 ///
 /// "From the background": the test launches the app, goes to the Home
 /// Screen and taps the banner there. "From a cold launch": the test stops

@@ -40,6 +40,12 @@ struct WeighInRoute: Hashable {}
 struct ReviewsListRoute: Hashable {}
 struct WeeklyReviewRoute: Hashable { let week: Int; var runStartDay: String? = nil }
 
+/// The settings screen (settings spec, "One screen, one tap from Today").
+/// A value in Today's navigation path, as every other screen on Today's
+/// stack, so a reminder tap that empties the path also closes Settings
+/// (ruling r20-01, mm-t45.12).
+struct SettingsRoute: Hashable {}
+
 struct TodayView: View {
     let store: RecordStore
 
@@ -54,6 +60,10 @@ struct TodayView: View {
     @State private var previousSection: DaySection?
     @State private var earlierDaysAvailable = false
     @State private var showingNewEntry = false
+    /// The new-entry sheet is on screen: set when it appears, cleared when
+    /// its dismissal has ended. A reminder route waits while it is set
+    /// (ruling r20-01, mm-t45.12; `opensReminderRoutes`).
+    @State private var newEntrySheetShows = false
     @State private var newEntryInitialTime: Date?
     @State private var editingEntry: RecordRow?
     @State private var scrollTarget: String?
@@ -231,9 +241,7 @@ struct TodayView: View {
                         if index > 0 { Spacer() }
                         switch item {
                         case .settings:
-                            NavigationLink("today.settings") {
-                                SettingsView(store: store)
-                            }
+                            Button("today.settings") { navigationPath.append(SettingsRoute()) }
                         case .programme:
                             Button("today.programme") { navigationPath.append(ProgrammeRoute.screen) }
                         case .reviews:
@@ -255,6 +263,7 @@ struct TodayView: View {
                     scrollTarget = scrollId(forSaved: saved)
                     addEntryFocused = true
                 }
+                .onAppear { newEntrySheetShows = true }
             }
             .sheet(item: $planBuilderMode) { mode in
                 PlanBuilderView(store: store, mode: mode) { reload() }
@@ -284,6 +293,9 @@ struct TodayView: View {
             .navigationDestination(for: ProgrammeRoute.self) { _ in
                 ProgrammeScreenView(store: store)
             }
+            .navigationDestination(for: SettingsRoute.self) { _ in
+                SettingsView(store: store)
+            }
             .navigationDestination(for: Stage.self) { stage in
                 StageScreenView(store: store, stage: stage)
             }
@@ -305,8 +317,9 @@ struct TodayView: View {
         // r16-02, mm-t12b.27): on iOS 27 they made Today blank. The cover
         // window (`AppLockCoverWindow`) hides Today and every screen on it
         // while the app is not active, with the app lock on or off.
-        // A tap on a reminder opens its own screen (reminders spec).
-        .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
+        // A tap on a reminder goes back to Today, then opens its own screen
+        // (reminders spec; ruling r20-01, mm-t45.12).
+        .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, newEntrySheetShows: newEntrySheetShows, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }
@@ -481,9 +494,12 @@ struct TodayView: View {
     /// After Save or Cancel, VoiceOver focus returns to "Add an entry"
     /// (record spec, "The Today stack"), and the next new entry opens at
     /// the current time again, not at an earlier "Add it" planned time.
+    /// A reminder route that waited for the sheet opens now
+    /// (`newEntrySheetShows`, ruling r20-01).
     private func newEntryDismissed() {
         newEntryInitialTime = nil
         addEntryFocused = true
+        newEntrySheetShows = false
     }
 
     private func reload() {

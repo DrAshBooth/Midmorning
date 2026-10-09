@@ -27,14 +27,22 @@ final class ReminderRouteInbox: ObservableObject {
 }
 
 extension View {
-    /// Opens the route in `ReminderRouteInbox` on Today. The weigh-in
-    /// screen and the weekly review go onto Today's own navigation stack, so
-    /// "Back" returns to Today. Every other route opens the sheet Today
-    /// already uses for the same screen.
+    /// Opens the route in `ReminderRouteInbox` on Today. Every route but
+    /// "Add" first empties Today's navigation path, so no screen that was
+    /// on Today's stack (for example "Programme" or "Settings") stays
+    /// (ruling r20-01, mm-t45.12). The weigh-in screen and the weekly review
+    /// then go onto Today's own navigation stack, so "Back" returns to
+    /// Today. Every other route opens the sheet Today already uses for the
+    /// same screen, or only shows Today.
+    ///
+    /// While Today's new-entry sheet shows (`newEntrySheetShows`), the
+    /// route waits: the sheet and its draft stay, and the route opens after
+    /// the sheet closes (ruling r20-01).
     func opensReminderRoutes(
         store: RecordStore,
         navigationPath: Binding<NavigationPath>,
         showingNewEntry: Binding<Bool>,
+        newEntrySheetShows: Bool,
         newEntryInitialTime: Binding<Date?>,
         isShowingCloseTheDay: Binding<Bool>,
         planBuilderMode: Binding<PlanBuilderMode?>
@@ -43,6 +51,7 @@ extension View {
             store: store,
             navigationPath: navigationPath,
             showingNewEntry: showingNewEntry,
+            newEntrySheetShows: newEntrySheetShows,
             newEntryInitialTime: newEntryInitialTime,
             isShowingCloseTheDay: isShowingCloseTheDay,
             planBuilderMode: planBuilderMode
@@ -54,6 +63,11 @@ private struct ReminderRouteOpening: ViewModifier {
     let store: RecordStore
     @Binding var navigationPath: NavigationPath
     @Binding var showingNewEntry: Bool
+    /// `true` from the moment the new-entry sheet appears until its
+    /// dismissal has ended (TodayView's `onDismiss`). So a route that waits
+    /// for the sheet opens after the sheet has gone, not during the
+    /// animation, when a second sheet cannot show yet.
+    let newEntrySheetShows: Bool
     @Binding var newEntryInitialTime: Date?
     @Binding var isShowingCloseTheDay: Bool
     @Binding var planBuilderMode: PlanBuilderMode?
@@ -65,6 +79,7 @@ private struct ReminderRouteOpening: ViewModifier {
             .onAppear(perform: openPendingRoute)
             .onChange(of: routes.pending) { _, _ in openPendingRoute() }
             .onChange(of: appLockController.state) { _, _ in openPendingRoute() }
+            .onChange(of: newEntrySheetShows) { _, _ in openPendingRoute() }
     }
 
     private func openPendingRoute() {
@@ -79,7 +94,13 @@ private struct ReminderRouteOpening: ViewModifier {
         // Every other route waits until no cover shows (app-lock spec, "The
         // cover"), so no screen with record content opens above it.
         guard appLockController.state.opensAReminderRoute else { return }
+        // Ruling r20-01 (mm-t45.12): an open new-entry sheet and its draft
+        // stay. The route waits until that sheet closes.
+        guard !newEntrySheetShows else { return }
         _ = routes.take()
+        // Ruling r20-01 (mm-t45.12): go back to Today first. The route's own
+        // screen then opens on Today, and "Back" from it shows Today.
+        navigationPath = NavigationPath()
         let now = Date()
         let currentDayKey = RecordDay.key(containing: now, calendar: .current, schedule: (try? store.dayStartSchedule()) ?? .standard)
         switch route {
