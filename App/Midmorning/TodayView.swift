@@ -60,10 +60,11 @@ struct TodayView: View {
     @State private var previousSection: DaySection?
     @State private var earlierDaysAvailable = false
     @State private var showingNewEntry = false
-    /// The new-entry sheet is on screen: set when it appears, cleared when
-    /// its dismissal has ended. A reminder route waits while it is set
-    /// (ruling r20-01, mm-t45.12; `opensReminderRoutes`).
-    @State private var newEntrySheetShows = false
+    /// The sheet of Today that is on screen: set when it appears, cleared
+    /// when its dismissal has ended. A reminder route waits while it is
+    /// set, and an empty new-entry sheet closes first (ruling r20-01,
+    /// mm-t45.12; `opensReminderRoutes`, `TodayRouteGate`).
+    @State private var sheetOnScreen: TodayRouteGate.TodaySheet?
     @State private var newEntryInitialTime: Date?
     @State private var editingEntry: RecordRow?
     @State private var scrollTarget: String?
@@ -263,25 +264,28 @@ struct TodayView: View {
                     scrollTarget = scrollId(forSaved: saved)
                     addEntryFocused = true
                 }
-                .onAppear { newEntrySheetShows = true }
+                .onAppear { sheetOnScreen = .newEntry }
             }
-            .sheet(item: $planBuilderMode) { mode in
+            .sheet(item: $planBuilderMode, onDismiss: { sheetOnScreen = nil }) { mode in
                 PlanBuilderView(store: store, mode: mode) { reload() }
+                    .onAppear { sheetOnScreen = .planBuilder }
             }
-            .sheet(item: $editingEntry) { entry in
+            .sheet(item: $editingEntry, onDismiss: { sheetOnScreen = nil }) { entry in
                 EditEntryView(store: store, entry: entry) { _ in
                     reload()
                 } onDelete: {
                     reload()
                 }
+                .onAppear { sheetOnScreen = .editEntry }
             }
             .deleteEntryConfirmation($pendingDelete) { entry in
                 try? store.delete(entryId: entry.id, deletedAt: Date())
                 reload()
             }
-            .sheet(isPresented: $isShowingCloseTheDay) {
+            .sheet(isPresented: $isShowingCloseTheDay, onDismiss: { sheetOnScreen = nil }) {
                 if let currentSection {
                     CloseTheDayView(store: store, dateKey: currentSection.id) { reload() }
+                        .onAppear { sheetOnScreen = .closeTheDay }
                 }
             }
             .navigationDestination(for: EarlierDaysRoute.self) { _ in
@@ -319,7 +323,7 @@ struct TodayView: View {
         // while the app is not active, with the app lock on or off.
         // A tap on a reminder goes back to Today, then opens its own screen
         // (reminders spec; ruling r20-01, mm-t45.12).
-        .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, newEntrySheetShows: newEntrySheetShows, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
+        .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, sheetOnScreen: sheetOnScreen, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }
@@ -495,11 +499,11 @@ struct TodayView: View {
     /// (record spec, "The Today stack"), and the next new entry opens at
     /// the current time again, not at an earlier "Add it" planned time.
     /// A reminder route that waited for the sheet opens now
-    /// (`newEntrySheetShows`, ruling r20-01).
+    /// (`sheetOnScreen`, ruling r20-01).
     private func newEntryDismissed() {
         newEntryInitialTime = nil
         addEntryFocused = true
-        newEntrySheetShows = false
+        sheetOnScreen = nil
     }
 
     private func reload() {

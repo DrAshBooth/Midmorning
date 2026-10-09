@@ -9,8 +9,16 @@ import XCTest
 ///
 /// These tests start each tap while another screen is on Today's stack
 /// ("Programme", "Getting started", "Settings" and the privacy notice,
-/// "Reviews"), or while the new-entry sheet holds a draft. The taps that
-/// start on Today are in `AutomatedChecks+ReminderTaps.swift`.
+/// "Reviews"), while the new-entry sheet holds a draft or no draft, while
+/// the close-the-day screen shows, or while a safeguarding page shows. The
+/// taps that start on Today are in `AutomatedChecks+ReminderTaps.swift`.
+///
+/// Two cases are not in the ruling, and the app keeps the person's screen
+/// until Ash decides them (`TodayRouteGate`; mm-t45.12, label human). A
+/// safeguarding page stays until "Done": the not-right-now page and the GP
+/// suggestion page each have one control, "Done", and do not show again
+/// (safeguarding spec). A sheet of Today (the close-the-day screen, "Today's
+/// plan", the edit screen) stays, and the route opens after it closes.
 ///
 /// The reminders are simulated notifications, as in
 /// `AutomatedChecks+ReminderTaps.swift`: the test writes the payload into
@@ -152,6 +160,29 @@ extension AutomatedChecks {
         }
     }
 
+    /// The safeguarding page `heading` shows its "Done".
+    private func safeguardingPageDone(_ heading: String) -> XCUIElement {
+        app.scrollViews.containing(NSPredicate(format: "label == %@", heading)).firstMatch.buttons["Done"].firstMatch
+    }
+
+    /// After a tap while the safeguarding page `heading` shows: the page
+    /// stays, with its "Done".
+    private func assertThePageStays(_ heading: String, _ message: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(element(labelled: heading).waitForExistence(timeout: 15), "\(message): the page \"\(heading)\" still shows", file: file, line: line)
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertTrue(element(labelled: heading).exists, "\(message): the page stays with no \"Done\"", file: file, line: line)
+        XCTAssertTrue(safeguardingPageDone(heading).exists, "\(message): the page still shows its \"Done\"", file: file, line: line)
+    }
+
+    /// Taps "Done" on the safeguarding page `heading`, and waits until the
+    /// page closes.
+    private func tapDoneOnTheSafeguardingPage(_ heading: String, file: StaticString = #filePath, line: UInt = #line) {
+        let done = safeguardingPageDone(heading)
+        XCTAssertTrue(scrollTo(done), "the page \"\(heading)\" shows \"Done\"", file: file, line: line)
+        done.tap()
+        XCTAssertTrue(element(labelled: heading).waitForNonExistence(timeout: 8), "\"Done\" closes the page \"\(heading)\"", file: file, line: line)
+    }
+
     // MARK: mm-t45.12: a tap while another screen is on Today's stack
 
     /// Ruling r20-01 (mm-t45.12), the steps of the bug: seeded store
@@ -245,7 +276,11 @@ extension AutomatedChecks {
     /// under it. Cancel: the weigh-in screen opens on Today, and Back goes
     /// to Today. (2) With "Bread" in What, tap a planned meal reminder: the
     /// sheet stays with "Bread". Save: Today shows the entry "Bread", and
-    /// only Today shows.
+    /// only Today shows. (3) The scenario "A tap over a new entry with a
+    /// draft" of the reminders spec: with "Toast and" in What, tap the
+    /// weigh-in day reminder: the sheet stays with "Toast and". Save: the
+    /// weigh-in screen shows on Today's stack, and Back shows Today with
+    /// the entry "Toast and".
     func testReminderTapWaitsForTheNewEntrySheetWithADraft() throws {
         try launchOnToday("week1")
         allowNotificationsFromToday()
@@ -266,5 +301,172 @@ extension AutomatedChecks {
         XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForNonExistence(timeout: 8), "(2) Save closes the new-entry sheet")
         assertOnlyTodayShowsAfterTheRoute("(2) the route after the sheet closes")
         XCTAssertEqual(todayRows(what: "Bread"), 1, "(2) Today shows the saved entry \"Bread\"")
+        // (3)
+        let toast = openANewEntryDraft("Toast and")
+        tapARouteReminder(userInfo: routeTapUserInfo("weighInDay"), "(3) the weigh-in day reminder over the draft \"Toast and\"")
+        assertTheDraftStays(toast, holds: "Toast and", waiting: "Weigh-in", "(3) the weigh-in day reminder over the draft \"Toast and\"")
+        tapSaveInTheNavigationBar()
+        XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForNonExistence(timeout: 8), "(3) Save closes the new-entry sheet")
+        XCTAssertTrue(app.textFields["Weight"].firstMatch.waitForExistence(timeout: 15), "(3) after the save, the weigh-in screen opens with the weight input")
+        assertTheRouteOpensOnToday("Weigh-in", before: nil, "(3) the route after the save")
+        XCTAssertEqual(todayRows(what: "Toast and"), 1, "(3) Today shows the saved entry \"Toast and\"")
+    }
+
+    /// Ruling r20-01 (mm-t45.12): the route waits only for a new-entry
+    /// sheet with a draft. A sheet with no draft closes, and the route
+    /// opens. Seeded store `week1`. (1) With the new-entry sheet empty, tap
+    /// the weigh-in day reminder: the sheet closes, the weigh-in screen
+    /// opens on Today, and Back goes to Today. (2) With the new-entry sheet
+    /// empty, tap the midday reminder: the new-entry screen is already the
+    /// reminder's screen, so it stays; Cancel shows only Today. (3) With
+    /// only the star on, tap the weigh-in day reminder: the star is a draft
+    /// (`NewEntryDraft`), so the sheet stays; Cancel opens the weigh-in
+    /// screen.
+    func testReminderTapClosesAnEmptyNewEntrySheet() throws {
+        try launchOnToday("week1")
+        allowNotificationsFromToday()
+        let binge = app.switches["felt like a binge"].firstMatch
+        // (1)
+        openNewEntry()
+        tapARouteReminder(userInfo: routeTapUserInfo("weighInDay"), "(1) the weigh-in day reminder over an empty new-entry sheet")
+        XCTAssertTrue(binge.waitForNonExistence(timeout: 15), "(1) the empty new-entry sheet closes")
+        XCTAssertTrue(app.textFields["Weight"].firstMatch.waitForExistence(timeout: 15), "(1) the weigh-in screen opens with the weight input")
+        assertTheRouteOpensOnToday("Weigh-in", before: nil, "(1) the weigh-in day reminder over an empty new-entry sheet")
+        // (2)
+        openNewEntry()
+        tapARouteReminder(userInfo: routeTapUserInfo("midday"), "(2) the midday reminder over an empty new-entry sheet")
+        XCTAssertTrue(binge.waitForExistence(timeout: 15), "(2) the new-entry screen shows")
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertTrue(binge.exists, "(2) the new-entry screen stays")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(binge.waitForNonExistence(timeout: 8), "(2) Cancel closes the new-entry screen")
+        assertOnlyTodayShowsAfterTheRoute("(2) after Cancel")
+        // (3)
+        openNewEntry()
+        binge.tap()
+        XCTAssertEqual(binge.value as? String, "1", "(3) the star is on")
+        tapARouteReminder(userInfo: routeTapUserInfo("weighInDay"), "(3) the weigh-in day reminder over the star")
+        XCTAssertTrue(binge.waitForExistence(timeout: 15), "(3) the new-entry sheet still shows")
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertTrue(binge.exists, "(3) the new-entry sheet stays")
+        XCTAssertEqual(binge.value as? String, "1", "(3) the star stays on")
+        XCTAssertFalse(app.navigationBars["Weigh-in"].exists, "(3) the weigh-in screen does not open under the sheet")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(binge.waitForNonExistence(timeout: 8), "(3) Cancel closes the new-entry sheet")
+        XCTAssertTrue(app.textFields["Weight"].firstMatch.waitForExistence(timeout: 15), "(3) after the sheet closes, the weigh-in screen opens")
+        assertTheRouteOpensOnToday("Weigh-in", before: nil, "(3) the route after the sheet closes")
+    }
+
+    // MARK: mm-t45.12: a tap while the close-the-day screen shows
+
+    /// Ruling r20-01 (mm-t45.12) and the review of 9 October 2026: the
+    /// close-the-day screen has its own new-entry sheet. Seeded store
+    /// `week1`. (1) The close-the-day reminder opens the close-the-day
+    /// screen. "Add an entry" there, and "Tea" in What. Tap the weigh-in
+    /// day reminder: the new-entry sheet stays with "Tea". Save: the
+    /// close-the-day screen shows, and the weigh-in screen does not open
+    /// under it. "Done": the weigh-in screen opens on Today, and Back shows
+    /// Today with the entry "Tea". (2) The close-the-day reminder while the
+    /// close-the-day screen shows: that screen stays. "Done" shows only
+    /// Today.
+    func testReminderTapWaitsForTheCloseTheDayScreen() throws {
+        try launchOnToday("week1")
+        allowNotificationsFromToday()
+        let closeTheDay = app.navigationBars["Close the day"]
+        // (1)
+        tapARouteReminder(userInfo: routeTapUserInfo("closeTheDay"), "(1) the close-the-day reminder")
+        XCTAssertTrue(closeTheDay.waitForExistence(timeout: 20), "(1) the close-the-day screen opens")
+        let adds = app.buttons.matching(NSPredicate(format: "label == %@", "Add an entry")).allElementsBoundByIndex.filter(\.isHittable)
+        XCTAssertFalse(adds.isEmpty, "(1) the close-the-day screen shows \"Add an entry\"")
+        adds.last?.tap()
+        XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "(1) the new-entry screen shows over the close-the-day screen")
+        dismissKeyboardTip()
+        let field = app.textViews["What"].firstMatch
+        field.tap()
+        field.typeText("Tea")
+        XCTAssertEqual(field.value as? String, "Tea", "(1) the new-entry sheet holds the draft \"Tea\"")
+        tapARouteReminder(userInfo: routeTapUserInfo("weighInDay"), "(1) the weigh-in day reminder over the draft \"Tea\"")
+        assertTheDraftStays(field, holds: "Tea", waiting: "Weigh-in", "(1) the weigh-in day reminder over the draft \"Tea\"")
+        tapSaveInTheNavigationBar()
+        XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForNonExistence(timeout: 8), "(1) Save closes the new-entry sheet")
+        XCTAssertTrue(closeTheDay.waitForExistence(timeout: 5), "(1) after the save, the close-the-day screen shows")
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertTrue(closeTheDay.exists, "(1) the close-the-day screen stays")
+        XCTAssertFalse(app.navigationBars["Weigh-in"].exists, "(1) the weigh-in screen does not open under the close-the-day screen")
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 5), "(1) the close-the-day screen shows \"Done\"")
+        done.tap()
+        XCTAssertTrue(closeTheDay.waitForNonExistence(timeout: 8), "(1) \"Done\" closes the close-the-day screen")
+        XCTAssertTrue(app.textFields["Weight"].firstMatch.waitForExistence(timeout: 15), "(1) after the close-the-day screen closes, the weigh-in screen opens")
+        assertTheRouteOpensOnToday("Weigh-in", before: nil, "(1) the route after the close-the-day screen closes")
+        XCTAssertEqual(todayRows(what: "Tea"), 1, "(1) Today shows the saved entry \"Tea\"")
+        // (2)
+        tapARouteReminder(userInfo: routeTapUserInfo("closeTheDay"), "(2) the close-the-day reminder")
+        XCTAssertTrue(closeTheDay.waitForExistence(timeout: 20), "(2) the close-the-day screen opens")
+        tapARouteReminder(userInfo: routeTapUserInfo("closeTheDay"), "(2) the close-the-day reminder again")
+        XCTAssertTrue(closeTheDay.waitForExistence(timeout: 15), "(2) the close-the-day screen still shows")
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertTrue(closeTheDay.exists, "(2) the close-the-day screen stays")
+        XCTAssertTrue(done.waitForExistence(timeout: 5), "(2) the close-the-day screen shows \"Done\"")
+        done.tap()
+        XCTAssertTrue(closeTheDay.waitForNonExistence(timeout: 8), "(2) \"Done\" closes the close-the-day screen")
+        assertOnlyTodayShowsAfterTheRoute("(2) after \"Done\"")
+    }
+
+    // MARK: mm-t45.12: a tap while a safeguarding page shows
+
+    /// The review of 9 October 2026 (blocker on mm-t45.12): an empty
+    /// navigation path removes the screen under a safeguarding page, and
+    /// SwiftUI then closes the page with no "Done". The safeguarding spec
+    /// gives each page one control, "Done", and the app does not show the
+    /// page again until a rule fires again. So the route waits until "Done"
+    /// (`TodayRouteGate`; Ash decides this case, mm-t45.12, label human).
+    /// Seeded store `or-deterioration`: week 6, the review of week 5 due,
+    /// and the deterioration rule fires at that review.
+    /// (1) The weekly review reminder opens the review with the GP
+    /// suggestion page. Tap a planned meal reminder: the page stays. "Done":
+    /// only Today shows. (2) The review from Today, and "I'm getting worse":
+    /// the GP suggestion page. Tap the midday reminder: the page stays.
+    /// "Done": the new-entry screen opens over Today. (3) The review from
+    /// Today, and "Yes" to both steps of the self-harm item: the
+    /// not-right-now page with Samaritans. Tap the weigh-in day reminder:
+    /// the page stays. "Done": the weigh-in screen opens on Today, and Back
+    /// goes to Today.
+    func testReminderTapWaitsForASafeguardingPage() throws {
+        let gpPage = "It might help to see your GP"
+        let notRightNow = "This may not be right for you now"
+        try launchOnToday("or-deterioration")
+        allowNotificationsFromToday()
+        // (1)
+        tapARouteReminder(userInfo: routeTapUserInfo("weeklyReview"), "(1) the weekly review reminder")
+        XCTAssertTrue(element(labelled: gpPage).waitForExistence(timeout: 20), "(1) the review opens with the GP suggestion page")
+        tapARouteReminder(category: "plannedMeal", userInfo: routeTapPlannedMealUserInfo, "(1) a planned meal reminder over the GP suggestion page")
+        assertThePageStays(gpPage, "(1) a planned meal reminder over the GP suggestion page")
+        tapDoneOnTheSafeguardingPage(gpPage)
+        assertOnlyTodayShowsAfterTheRoute("(1) the route after \"Done\" on the GP suggestion page")
+        // (2)
+        openTheDueReview()
+        XCTAssertFalse(element(labelled: gpPage).waitForExistence(timeout: 3), "(2) the deterioration rule does not show the page again")
+        tapGettingWorse()
+        XCTAssertTrue(element(labelled: gpPage).waitForExistence(timeout: 8), "(2) \"I'm getting worse\" shows the GP suggestion page")
+        tapARouteReminder(userInfo: routeTapUserInfo("midday"), "(2) the midday reminder over the GP suggestion page")
+        assertThePageStays(gpPage, "(2) the midday reminder over the GP suggestion page")
+        XCTAssertFalse(app.switches["felt like a binge"].exists, "(2) the new-entry screen does not open over the page")
+        tapDoneOnTheSafeguardingPage(gpPage)
+        XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 15), "(2) after \"Done\", the new-entry screen opens")
+        dismissKeyboardTip()
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        assertOnlyTodayShowsAfterTheRoute("(2) after Cancel on the new-entry screen")
+        // (3)
+        openTheDueReview()
+        answer(Self.selfHarmQuestion, "Yes", bar: "Done")
+        answer(Self.selfHarmStep2Question, "Yes", bar: "Done", verify: false)
+        XCTAssertTrue(element(labelled: notRightNow).waitForExistence(timeout: 8), "(3) the not-right-now page shows")
+        XCTAssertTrue(element(labelContaining: "Samaritans are there any time, on 116 123.").exists, "(3) the page gives the self-harm reason with Samaritans")
+        tapARouteReminder(userInfo: routeTapUserInfo("weighInDay"), "(3) the weigh-in day reminder over the not-right-now page")
+        assertThePageStays(notRightNow, "(3) the weigh-in day reminder over the not-right-now page")
+        XCTAssertTrue(element(labelContaining: "Samaritans are there any time, on 116 123.").exists, "(3) the page still gives Samaritans")
+        tapDoneOnTheSafeguardingPage(notRightNow)
+        assertTheRouteOpensOnToday("Weigh-in", before: "Weekly review", "(3) the route after \"Done\" on the not-right-now page")
     }
 }

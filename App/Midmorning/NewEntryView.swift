@@ -84,6 +84,10 @@ struct NewEntryView: View {
                 }
             }
         }
+        // Ruling r20-01 (mm-t45.12): while the screen holds a draft, a
+        // reminder tap waits until the screen closes. With no draft, Today
+        // closes the screen and opens the reminder's screen.
+        .holdsReminderRoutes(NewEntryDraft.holdsADraft(what: what, context: context, whereSelection: whereSelection, pendingPlace: pendingPlace, feltLikeABinge: feltLikeABinge))
         // The cover window hides this screen while the app is not active
         // (ruling r16-02, mm-t12b.27), so it has no redaction of its own.
         .onAppear {

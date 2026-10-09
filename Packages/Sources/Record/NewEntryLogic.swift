@@ -41,6 +41,22 @@ public enum WhereSelection {
     }
 }
 
+/// A draft on the new-entry screen (ruling r20-01, mm-t45.12; reminders
+/// spec, "A tap on a reminder opens its screen from Today": "When the
+/// new-entry screen shows unsaved text"). The screen holds a draft when
+/// What, Context or "Add a place" holds text that is not only spaces, when
+/// a Where chip is selected, or when the star is on. While the screen holds
+/// a draft, a reminder tap waits until the screen closes. A screen with no
+/// draft closes, and the reminder's screen opens.
+public enum NewEntryDraft {
+    /// `pendingPlace` is `nil` when "Add a place" is closed.
+    public static func holdsADraft(what: String, context: String, whereSelection: String?, pendingPlace: String?, feltLikeABinge: Bool) -> Bool {
+        let texts = [what, context, pendingPlace ?? ""]
+        if texts.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { return true }
+        return whereSelection != nil || feltLikeABinge
+    }
+}
+
 /// Resolves the new-entry and edit screens' time wheel against the selected
 /// segment's own calendar date (record spec, "The new-entry screen's
 /// controls"): a time before the day start sits on the calendar date after
