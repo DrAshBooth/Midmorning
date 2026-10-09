@@ -345,8 +345,8 @@ extension AutomatedChecks {
                 "Programme (default text size)": 7, "Settings (default text size)": 5,
                 "Today with entries and a gap band (default text size)": 1, "onboarding screen 2 (default text size)": 6,
                 "onboarding screen 3 (default text size)": 2, "onboarding screen 4 (default text size)": 3,
-                "the close-the-day screen (default text size)": 2, "the privacy notice (default text size)": 5,
-                "the restart re-screen (default text size)": 5,
+                "the close-the-day screen (default text size)": 2, "the export screen (default text size)": 1,
+                "the privacy notice (default text size)": 5, "the restart re-screen (default text size)": 5,
                 "the weekly review (default text size)": 1, "the weigh-in screen with no weigh-in day (default text size)": 7,
             ],
             reason: """
@@ -357,9 +357,12 @@ extension AutomatedChecks {
                 come from the runs of 8 and 9 October 2026, before the app used its AccentColor asset (ruling r21-02, \
                 mm-t12b.29). Then the text controls were the system blue on white, 3.5:1: on the exclusion page and \
                 the support sheet these were the "Call" and "Copy number" controls of the numbers. With the accent \
-                colour 1F4E79 on white (8.7:1), the run of 9 October 2026 on branch rulings3-colour-link gave no such \
-                issue on the exclusion page, the support sheet and the export screen, so these screens have no pin \
-                now. No run with the accent colour has audited the other screens of the list yet.
+                colour 1F4E79 on white (8.7:1), the runs of 9 October 2026 on branch rulings3-colour-link gave no such \
+                issue on the exclusion page and the support sheet, so these screens have no pin now. The export screen \
+                gave none in two runs and 1 in a third run (12:10, commit 4ffbc47): its pin is 1, down from 2. Its \
+                text controls are now the accent colour, so the likely part is the footer text in the secondary \
+                colour, about 3.4:1 on white. This is not proved. No run with the accent colour has audited the other \
+                screens of the list yet.
                 """) { _ in true },
         AuditElementlessExclusion(
             types: [.elementDetection, .dynamicType, .textClipped],
