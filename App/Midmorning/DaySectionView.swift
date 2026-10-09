@@ -13,8 +13,12 @@ struct DaySectionActions {
     var askToDelete: (RecordRow) -> Void
     var setExpanded: (Bool) -> Void
     var toggleState: (DayStateKind, Bool) -> Void
-    var addPlannedMeal: (Date) -> Void
-    var skipPlannedMeal: (Int) -> Void
+    /// "Add it" and "Skipped" on the missed planned meal prompt. Only Today
+    /// gives them. The prompt shows only before the record day ends, so an
+    /// earlier day shows no prompt and gives neither (ruling r19-03,
+    /// mm-t23.25).
+    var addPlannedMeal: ((Date) -> Void)? = nil
+    var skipPlannedMeal: ((Int) -> Void)? = nil
     var openEarlierDays: (() -> Void)? = nil
     var openPlanBuilder: ((PlanBuilderMode) -> Void)? = nil
 }

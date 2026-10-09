@@ -10,8 +10,10 @@ import Constants
 struct PlannedMealRowView: View {
     let row: PlanRowModel
     let dateKey: String
-    let onAddIt: (Date) -> Void
-    let onSkip: (Int) -> Void
+    /// "Add it" and "Skipped" on the missed planned meal prompt. `nil` on an
+    /// earlier day, which shows no prompt (ruling r19-03, mm-t23.25).
+    let onAddIt: ((Date) -> Void)?
+    let onSkip: ((Int) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -32,7 +34,9 @@ struct PlannedMealRowView: View {
             if let prompt = row.prompt {
                 Text(MissedMealPrompt.line(for: prompt, timeText: clockTimeText).string)
                     .font(.body)
-                promptButtons
+                if let onSkip, let onAddIt {
+                    promptButtons(onSkip: onSkip, onAddIt: onAddIt)
+                }
             }
         }
         .padding(.vertical, 4)
@@ -76,7 +80,7 @@ struct PlannedMealRowView: View {
     /// missed planned meal gets one prompt"). The height is on the label,
     /// so the tap target and the accessibility frame have it too; a frame
     /// outside the button gave only the layout that height.
-    private var promptButtons: some View {
+    private func promptButtons(onSkip: @escaping (Int) -> Void, onAddIt: @escaping (Date) -> Void) -> some View {
         HStack(spacing: 8) {
             Button { onSkip(row.slotIndex) } label: {
                 Text("plan.skipped").frame(minHeight: 44).contentShape(Rectangle())
@@ -96,8 +100,8 @@ struct PlannedMealRowView: View {
 
 private extension View {
     @ViewBuilder
-    func accessibilityCustomActions(for row: PlanRowModel, onAddIt: @escaping (Date) -> Void, onSkip: @escaping (Int) -> Void) -> some View {
-        if row.prompt != nil {
+    func accessibilityCustomActions(for row: PlanRowModel, onAddIt: ((Date) -> Void)?, onSkip: ((Int) -> Void)?) -> some View {
+        if row.prompt != nil, let onAddIt, let onSkip {
             self
                 .accessibilityAction(named: Text("plan.skipped")) { onSkip(row.slotIndex) }
                 .accessibilityAction(named: Text("plan.addIt")) { onAddIt(row.sortTime) }

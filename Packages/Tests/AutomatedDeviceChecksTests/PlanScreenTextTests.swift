@@ -60,6 +60,20 @@ final class PlanScreenTextTests: XCTestCase {
         try ScreenText.assertScreen("PlannedMealRowView.swift", shows: ["Text(MissedMealPrompt.line(for: prompt, timeText: clockTimeText).string)"])
     }
 
+    /// Ruling r19-03 (mm-t23.25): an earlier day shows no "Skipped". The
+    /// prompt hides when the record day ends (`MissedMealPromptTests
+    /// .testUnansweredAtTheEndOfTheDayHidesThePrompt`), and the earlier-day
+    /// screen gives no "Skipped" or "Add it" action to its rows. Today
+    /// still gives both.
+    func testAnEarlierDayGivesNoSkippedAction() throws {
+        let earlierDay = try ScreenText.source("EarlierDaysListView.swift")
+        for absent in ["skipPlannedMeal", "setPlannedMealSkipped", "addPlannedMeal"] {
+            XCTAssertFalse(earlierDay.contains(absent), "EarlierDaysListView.swift holds \(absent)")
+        }
+        try ScreenText.assertScreen("TodayView.swift", shows: ["skipPlannedMeal: { slotIndex in", "store.setPlannedMealSkipped(dateKey: section.id"])
+        try ScreenText.assertScreen("PlannedMealRowView.swift", shows: ["if let onSkip, let onAddIt {"])
+    }
+
     /// "'Mid-afternoon at 16:00 still happens.' as the next line".
     func testTodayShowsTheNextPlannedMealLine() throws {
         let line = NextPlannedMeal.line(for: PlanMealFact(label: "Mid-afternoon", time: "16:00", kind: .snack))

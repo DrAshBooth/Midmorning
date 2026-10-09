@@ -129,8 +129,11 @@ struct EarlierDayDetailView: View {
     }
 
     /// An earlier day offers no "Earlier days", no "Close the day", no plan
-    /// builder and no control that creates an entry. "Add it" shows only
-    /// before a record day ends, so it never shows on an earlier day.
+    /// builder and no control that creates an entry. The missed planned
+    /// meal prompt, with "Skipped" and "Add it", shows only before a record
+    /// day ends, so an earlier day shows no "Skipped" and gives no prompt
+    /// action (regular-eating-plan spec, "A missed planned meal gets one
+    /// prompt"; ruling r19-03, mm-t23.25).
     private func actions(for section: DaySection) -> DaySectionActions {
         DaySectionActions(
             edit: { editingEntry = $0 },
@@ -141,11 +144,6 @@ struct EarlierDayDetailView: View {
             },
             toggleState: { kind, on in
                 try? store.setDayState(kind, on: on, dateKey: section.id, changedAt: Date())
-                load()
-            },
-            addPlannedMeal: { _ in },
-            skipPlannedMeal: { slotIndex in
-                try? store.setPlannedMealSkipped(dateKey: section.id, slotIndex: slotIndex, changedAt: Date())
                 load()
             }
         )
