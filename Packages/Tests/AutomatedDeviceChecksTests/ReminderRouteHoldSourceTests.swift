@@ -54,4 +54,15 @@ final class ReminderRouteHoldSourceTests: XCTestCase {
         XCTAssertTrue(source.contains(".sheet(isPresented: $showingNewEntry, onDismiss: newEntryDismissed)"), "the new-entry sheet clears it in newEntryDismissed")
         XCTAssertTrue(source.contains("private func newEntryDismissed() { newEntryInitialTime = nil addEntryFocused = true sheetOnScreen = nil }"), "newEntryDismissed clears sheetOnScreen")
     }
+
+    /// The gate learns when a sheet of Today is closing, from the sheet's
+    /// own presentation value (`TodayRouteGate`, `sheetIsClosing`). So the
+    /// midday reminder over a new-entry draft has one result after "Save".
+    func testTheGateLearnsWhenASheetOfTodayIsClosing() throws {
+        let source = try ScreenText.source("Reminders/ReminderRouteOpening.swift")
+        XCTAssertTrue(source.contains("sheetOnScreen: sheetOnScreen, sheetIsClosing: sheetIsClosing, routeScreenShows:"), "ReminderRouteOpening passes sheetIsClosing to the gate")
+        for value in ["case .newEntry: return !showingNewEntry", "case .closeTheDay: return !isShowingCloseTheDay", "case .planBuilder: return planBuilderMode == nil"] {
+            XCTAssertTrue(source.contains(value), "sheetIsClosing reads \(value)")
+        }
+    }
 }

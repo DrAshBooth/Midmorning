@@ -7,8 +7,8 @@ import XCTest
 /// tools/skeleton-checks/HarnessUITests/AutomatedChecks+RouteFromAnyScreen.swift
 /// do the same cases on the simulator.
 final class TodayRouteGateTests: XCTestCase {
-    private func step(held: Bool = false, _ sheet: TodayRouteGate.TodaySheet? = nil, routeScreenShows: Bool = false) -> TodayRouteGate.Step {
-        TodayRouteGate.step(held: held, sheetOnScreen: sheet, routeScreenShows: routeScreenShows)
+    private func step(held: Bool = false, _ sheet: TodayRouteGate.TodaySheet? = nil, closing: Bool = false, routeScreenShows: Bool = false) -> TodayRouteGate.Step {
+        TodayRouteGate.step(held: held, sheetOnScreen: sheet, sheetIsClosing: closing, routeScreenShows: routeScreenShows)
     }
 
     /// With no sheet and no hold, the route opens: Today empties its
@@ -48,5 +48,21 @@ final class TodayRouteGateTests: XCTestCase {
         XCTAssertEqual(step(.closeTheDay, routeScreenShows: true), .keep)
         XCTAssertEqual(step(.planBuilder, routeScreenShows: true), .keep)
         XCTAssertEqual(step(.newEntry, routeScreenShows: true), .keep)
+    }
+
+    /// A sheet that is closing makes the route wait until its dismissal
+    /// ends, also when it is the route's own screen. The midday reminder
+    /// over a new-entry draft: after "Save", the hold ends and the sheet
+    /// closes, in either order. Each order gives `.wait` until both end,
+    /// and then `.open`, so a second new-entry screen opens (the reminders
+    /// spec: the reminder's screen opens after the new-entry screen
+    /// closes; mm-t45.23, question 2, is open).
+    func testAClosingSheetMakesTheRouteWaitUntilItsDismissalEnds() {
+        XCTAssertEqual(step(.newEntry, closing: true, routeScreenShows: true), .wait, "the hold ended first")
+        XCTAssertEqual(step(held: true), .wait, "the dismissal ended first")
+        XCTAssertEqual(step(), .open, "both ended")
+        XCTAssertEqual(step(.newEntry, closing: true), .wait, "an empty new-entry sheet that is closing")
+        XCTAssertEqual(step(.closeTheDay, closing: true, routeScreenShows: true), .wait)
+        XCTAssertEqual(step(.planBuilder, closing: true, routeScreenShows: true), .wait)
     }
 }

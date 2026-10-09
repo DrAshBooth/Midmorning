@@ -43,8 +43,8 @@ struct GPSuggestionPageView: View {
         // safeguarding spec: the page has one control, "Done", and the app
         // does not show it again until a rule fires again. A reminder tap
         // that emptied Today's navigation path would close the page with no
-        // "Done". So a reminder route waits until "Done" (mm-t45.12, label
-        // human: Ash decides this case).
+        // "Done". So a reminder route waits until "Done". This is an
+        // interim build: Ash decides this case on mm-t45.23 (label human).
         .holdsReminderRoutes()
     }
 }

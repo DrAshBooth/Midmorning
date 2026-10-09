@@ -153,10 +153,12 @@ private struct ReminderRouteOpening: ViewModifier {
         let currentDayKey = RecordDay.key(containing: now, calendar: .current, schedule: (try? store.dayStartSchedule()) ?? .standard)
         // Ruling r20-01 (mm-t45.12): a new-entry screen with a draft stays,
         // and the route waits until it closes. A safeguarding page stays
-        // until "Done" (mm-t45.12, label human: Ash decides this case).
+        // until "Done": an interim build, and Ash decides this case on
+        // mm-t45.23 (label human).
         switch TodayRouteGate.step(
             held: !routes.holds.isEmpty,
             sheetOnScreen: sheetOnScreen,
+            sheetIsClosing: sheetIsClosing,
             routeScreenShows: routeScreenShows(route, currentDayKey: currentDayKey)
         ) {
         case .wait:
@@ -202,6 +204,20 @@ private struct ReminderRouteOpening: ViewModifier {
             if let week = WeeklyReviewModel.load(store: store, now: now, calendar: .current).latestDueWeek {
                 navigationPath.append(WeeklyReviewRoute(week: week))
             }
+        }
+    }
+
+    /// The dismissal of `sheetOnScreen` started and did not end yet: the
+    /// sheet's presentation value is already off. The bindings give the
+    /// value at this moment, also before Today's body runs again. The edit
+    /// screen's value is not here: the route waits for that sheet in each
+    /// case (`TodayRouteGate`), so its dismissal changes no step.
+    private var sheetIsClosing: Bool {
+        switch sheetOnScreen {
+        case .newEntry: return !showingNewEntry
+        case .closeTheDay: return !isShowingCloseTheDay
+        case .planBuilder: return planBuilderMode == nil
+        case .editEntry, nil: return false
         }
     }
 

@@ -15,13 +15,23 @@ import Foundation
 ///   not-right-now page", "The GP suggestion page"). An empty navigation
 ///   path removes the screen under the page, and SwiftUI then closes the
 ///   page with no "Done". So the route waits until "Done". The ruling does
-///   not name this case. Ash decides it (mm-t45.12, label human).
+///   not name this case. It is an interim build: Ash decides this case on
+///   mm-t45.23 (question 1, label human).
 ///
 /// A sheet of Today stays over Today's navigation stack. A route that
 /// opens under the sheet does not show, and a second sheet cannot show
 /// over it. So the route waits while such a sheet shows, except in two
 /// cases. A new-entry sheet with no draft closes first. A sheet that is
 /// already the route's own screen stays, and the route changes nothing.
+/// Ash decides these sheet cases on mm-t45.23 (question 2) and mm-t45.25.
+///
+/// A sheet that is closing is not the route's own screen any more. So the
+/// route waits until the dismissal ends, and then opens. This gives one
+/// result when the midday reminder waits for a new-entry draft: after
+/// "Save", a second new-entry screen opens, as the reminders spec says
+/// ("open the screen of the reminder only after the new-entry screen
+/// closes"). Without this rule, the result changed with the order of the
+/// end of the hold and the end of the dismissal.
 public enum TodayRouteGate {
     /// A sheet that Today shows over its navigation stack.
     public enum TodaySheet: Sendable, Equatable {
@@ -49,10 +59,13 @@ public enum TodayRouteGate {
     ///     shows.
     ///   - sheetOnScreen: The sheet of Today that shows, from its appearance
     ///     until its dismissal ends.
+    ///   - sheetIsClosing: The dismissal of `sheetOnScreen` started and did
+    ///     not end yet: its presentation value is already off.
     ///   - routeScreenShows: `sheetOnScreen` is the route's own screen.
-    public static func step(held: Bool, sheetOnScreen: TodaySheet?, routeScreenShows: Bool) -> Step {
+    public static func step(held: Bool, sheetOnScreen: TodaySheet?, sheetIsClosing: Bool, routeScreenShows: Bool) -> Step {
         if held { return .wait }
         guard let sheetOnScreen else { return .open }
+        if sheetIsClosing { return .wait }
         if routeScreenShows { return .keep }
         return sheetOnScreen == .newEntry ? .closeTheNewEntrySheet : .wait
     }

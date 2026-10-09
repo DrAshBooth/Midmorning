@@ -48,6 +48,10 @@ public enum WhereSelection {
 /// a Where chip is selected, or when the star is on. While the screen holds
 /// a draft, a reminder tap waits until the screen closes. A screen with no
 /// draft closes, and the reminder's screen opens.
+///
+/// The spec says "unsaved text". A Where chip and the star are not text,
+/// but the ruling says "with a draft", and they are the person's work. Ash
+/// decides if they stay in the draft on mm-t45.23 (question 2).
 public enum NewEntryDraft {
     /// `pendingPlace` is `nil` when "Add a place" is closed.
     public static func holdsADraft(what: String, context: String, whereSelection: String?, pendingPlace: String?, feltLikeABinge: Bool) -> Bool {

@@ -13,12 +13,15 @@ import XCTest
 /// the close-the-day screen shows, or while a safeguarding page shows. The
 /// taps that start on Today are in `AutomatedChecks+ReminderTaps.swift`.
 ///
-/// Two cases are not in the ruling, and the app keeps the person's screen
-/// until Ash decides them (`TodayRouteGate`; mm-t45.12, label human). A
-/// safeguarding page stays until "Done": the not-right-now page and the GP
-/// suggestion page each have one control, "Done", and do not show again
-/// (safeguarding spec). A sheet of Today (the close-the-day screen, "Today's
-/// plan", the edit screen) stays, and the route opens after it closes.
+/// Some cases are not in the ruling. The app keeps the person's screen in
+/// an interim build until Ash decides them on mm-t45.23 (label human) and
+/// mm-t45.25 (`TodayRouteGate`). A safeguarding page stays until "Done":
+/// the not-right-now page and the GP suggestion page each have one control,
+/// "Done", and do not show again (safeguarding spec). A sheet of Today (the
+/// close-the-day screen, "Today's plan", the edit screen) stays, and the
+/// route opens after it closes. The midday reminder over a new-entry draft
+/// opens a second new-entry screen after "Save", as the reminders spec says
+/// now (mm-t45.23, question 2).
 ///
 /// The reminders are simulated notifications, as in
 /// `AutomatedChecks+ReminderTaps.swift`: the test writes the payload into
@@ -280,7 +283,12 @@ extension AutomatedChecks {
     /// draft" of the reminders spec: with "Toast and" in What, tap the
     /// weigh-in day reminder: the sheet stays with "Toast and". Save: the
     /// weigh-in screen shows on Today's stack, and Back shows Today with
-    /// the entry "Toast and".
+    /// the entry "Toast and". (4) With "Jam" in What, tap the midday
+    /// reminder: the sheet stays with "Jam". Save: the sheet closes, and
+    /// then the midday reminder's own screen opens, a new-entry screen with
+    /// no text (the reminders spec opens the reminder's screen "only after
+    /// the new-entry screen closes"; mm-t45.23, question 2, is open). It
+    /// stays. Cancel: only Today shows, with the entry "Jam".
     func testReminderTapWaitsForTheNewEntrySheetWithADraft() throws {
         try launchOnToday("week1")
         allowNotificationsFromToday()
@@ -310,6 +318,36 @@ extension AutomatedChecks {
         XCTAssertTrue(app.textFields["Weight"].firstMatch.waitForExistence(timeout: 15), "(3) after the save, the weigh-in screen opens with the weight input")
         assertTheRouteOpensOnToday("Weigh-in", before: nil, "(3) the route after the save")
         XCTAssertEqual(todayRows(what: "Toast and"), 1, "(3) Today shows the saved entry \"Toast and\"")
+        // (4)
+        let jam = openANewEntryDraft("Jam")
+        tapARouteReminder(userInfo: routeTapUserInfo("midday"), "(4) the midday reminder over the draft \"Jam\"")
+        assertTheDraftStays(jam, holds: "Jam", waiting: nil, "(4) the midday reminder over the draft \"Jam\"")
+        tapSaveInTheNavigationBar()
+        XCTAssertTrue(waitForAnEmptyNewEntryScreen(timeout: 20), "(4) after the save, a new-entry screen with no text opens: \(String(describing: app.textViews["What"].firstMatch.value))")
+        dismissKeyboardTip()
+        Thread.sleep(forTimeInterval: 3)
+        let binge = app.switches["felt like a binge"].firstMatch
+        XCTAssertTrue(binge.exists, "(4) the second new-entry screen stays")
+        XCTAssertEqual((app.textViews["What"].firstMatch.value as? String) ?? "", "", "(4) the second new-entry screen has no text")
+        app.navigationBars.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(binge.waitForNonExistence(timeout: 8), "(4) Cancel closes the second new-entry screen")
+        assertOnlyTodayShowsAfterTheRoute("(4) after Cancel on the second new-entry screen")
+        XCTAssertEqual(todayRows(what: "Jam"), 1, "(4) Today shows the saved entry \"Jam\"")
+    }
+
+    /// Waits until a new-entry screen shows with no text in What: the
+    /// screen that the midday reminder opens. The new-entry screen keeps
+    /// its text while it closes after "Save", so this is a new screen.
+    private func waitForAnEmptyNewEntryScreen(timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            let what = app.textViews["What"].firstMatch
+            if app.switches["felt like a binge"].firstMatch.exists, what.exists, ((what.value as? String) ?? "").isEmpty {
+                return true
+            }
+            Thread.sleep(forTimeInterval: 0.5)
+        } while Date() < deadline
+        return false
     }
 
     /// Ruling r20-01 (mm-t45.12): the route waits only for a new-entry
@@ -420,7 +458,8 @@ extension AutomatedChecks {
     /// SwiftUI then closes the page with no "Done". The safeguarding spec
     /// gives each page one control, "Done", and the app does not show the
     /// page again until a rule fires again. So the route waits until "Done"
-    /// (`TodayRouteGate`; Ash decides this case, mm-t45.12, label human).
+    /// (`TodayRouteGate`; an interim build: Ash decides this case on
+    /// mm-t45.23, label human).
     /// Seeded store `or-deterioration`: week 6, the review of week 5 due,
     /// and the deterioration rule fires at that review.
     /// (1) The weekly review reminder opens the review with the GP
