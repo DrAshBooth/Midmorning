@@ -99,6 +99,14 @@ checks ran, so this run does not count". Those words do not apply to that
 run: its line counts for a declaration when every audit passed on a
 working tree with no change that is not committed.
 
+Known defects and a declaration. The audits change each finding that
+matches an entry of `auditKnownDefects`
+(`AutomatedChecks+Accessibility.swift`) into an expected failure that names
+a bead, and XCTest then reports that test as passed. Ash has not ruled if
+such a run counts for a label that the known defect touches (the question
+is on mm-t43.16). Until Ash rules, a run in which an audit gave an expected
+failure from `auditKnownDefects` does not count for a declaration.
+
 A flow check does a sequence of actions and then looks at what the app
 shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
 items: mm-t12b.6, .7, .9, .10 and .12; mm-t13.11 and .13; mm-t21.28;

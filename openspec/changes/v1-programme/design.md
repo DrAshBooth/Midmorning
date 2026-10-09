@@ -183,7 +183,7 @@ LocalAuthentication gates a cover over the window on launch and after the "Lock 
 
 The PDF uses a PDF context from Core Graphics with tagged-PDF marks (`CGPDFTagType`). "Record" is H1, each day heading is H2, each day's entries are one list with one item per entry, and the language is en-GB. The export sets text at 11 pt body, 14 pt day heading and 18 pt title, independent of Dynamic Type. It flows as one column and repeats the day heading when a day continues on the next page. Creator is empty; the system writes Producer. No password.
 
-The team tests the en-GB language tag before the export change commits to it. Rejected: `ImageRenderer` over SwiftUI rows. The layout follows the device's text size, and the output has no structure.
+Each tag declares the language en-GB. Core Graphics has no key for the language of the whole document, so the document catalog holds no language. Ash ruled on 9 October 2026 that the language on each tag is the declaration of the PDF's language (r20-02, export "Accessibility of the export"). Rejected: `ImageRenderer` over SwiftUI rows. The layout follows the device's text size, and the output has no structure.
 
 ### Widgets read the snapshot; intents open the app
 
