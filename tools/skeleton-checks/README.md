@@ -83,10 +83,36 @@ accessibility tree. If no automated test can prove a part, no person checks
 that part by hand. The app must still meet product-rules "Accessibility
 everywhere" and the accessibility requirement of each spec.
 
-An automated test is not a device check. The specs let the team declare an
-accessibility label in App Store Connect only after a device check with a
-dated screenshot. So the team declares no accessibility label until Ash
-rules on this conflict (mm-t43.16).
+Accessibility labels in App Store Connect. Ash ruled on 9 October 2026
+(r21-01, mm-t43.16) that a passing run of the accessibility audits on the
+commit of the build is sufficient to declare an accessibility label. The
+audits are the tests that
+`tools/skeleton-checks/automated-checks.sh --audits` runs. In a passing
+run, every audit passes, and the working tree has no change that is not
+committed. Write that run as a dated line in the
+table below, with its commit. A declaration needs no device check and no
+screenshot. Safeguarding "Regulatory release gates", data-and-privacy
+"Release gates and the App Store submission" and onboarding "Four screens,
+once, in order" state this rule. Until mm-t45.22 changes the script, the
+line of a run with `--audits` and no test name ends with "only the named
+checks ran, so this run does not count". Those words do not apply to that
+run: its line counts for a declaration when every audit passed on a
+working tree with no change that is not committed.
+
+Known defects and a declaration. The audits change each finding that
+matches an entry of `auditKnownDefects`
+(`AutomatedChecks+Accessibility.swift`) into an expected failure that names
+a bead, and XCTest then reports that test as passed. Ash has not ruled if
+such a run counts for a label that the known defect touches (the question
+is on mm-t43.16). Until Ash rules, a run in which an audit gave an expected
+failure from `auditKnownDefects` does not count for a declaration. On 9
+October 2026, `auditKnownDefects` holds open entries for mm-t45.18
+(contrast with no element) and for mm-t45.20 and mm-t45.21 (hit areas, in
+`auditHitAreaKnownDefects`). These entries take findings on screens that
+each run audits, for example the onboarding screens, Today and Settings.
+So no run counts at this time, and the team declares no accessibility
+label. This stays true until Ash rules on mm-t43.16, or until each of these
+beads closes and an agent removes its entry.
 
 A flow check does a sequence of actions and then looks at what the app
 shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
@@ -148,7 +174,9 @@ accessibility tree. Ash does not test accessibility by hand (8 October
 2026), so these tests are the evidence for it. They take about 90 minutes,
 so a run without names leaves them out; run them with
 `tools/skeleton-checks/automated-checks.sh --audits`. The counted run of
-gate mm-t43.31 is the run without names. A new simulator changes to dark
+gate mm-t43.31 is the run without names. A passing run with `--audits` on
+the commit of a build is the evidence for an accessibility label of that
+build in App Store Connect (r21-01). A new simulator changes to dark
 mode only after it restarts once; the dark-mode test says so when it
 fails.
 

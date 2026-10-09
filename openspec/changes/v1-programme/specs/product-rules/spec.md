@@ -140,7 +140,7 @@ Every screen MUST use the system text styles and the system semantic colours. Th
 
 The app MUST define one accent colour, in the AccentColor asset. The asset MUST hold a light value, a dark value and an Increase Contrast value. Each value MUST contrast with the row background at 3:1 or more. The team changes the accent colour in that one asset only.
 
-Every control MUST use the accent colour as its tint. The app MUST NOT use the accent colour on anything that is not a control. The star control on the new-entry screen is an exception. Its tint is the system grey, as `record` states. System alerts, confirmation dialogs and swipe actions MUST also keep their system colours.
+Every control MUST use the accent colour as its tint. The app MUST NOT use the accent colour on anything that is not a control. The star control on the new-entry screen is an exception. Its tint is the system grey, as `record` states. System alerts, confirmation dialogs and swipe actions MUST also keep their system colours. The text of a filled button MUST use the system background colour (`systemBackground`). This system semantic colour is white in light mode, and black or near-black in dark mode. So the text of a filled button is not a custom colour. It MUST contrast with the accent colour at 3:1 or more in light mode, in dark mode and with Increase Contrast. Ash ruled on 9 October 2026 that a filled button has near-black text in dark mode (r21-02).
 
 These MUST use the primary text colour and MUST NOT use the accent colour:
 
@@ -166,6 +166,10 @@ Every text field MUST fill the width of its row. Its label MUST sit above it. It
 #### Scenario: The star control in dark mode
 - **WHEN** the device is in dark mode and the person turns the star on in the new-entry screen
 - **THEN** the switch uses the system grey, its knob shows, and no other colour on the screen changes
+
+#### Scenario: A filled button in dark mode
+- **WHEN** the device is in dark mode and onboarding screen 1 shows "Continue"
+- **THEN** "Continue" shows its text in the system background colour, black, on the dark value of the accent colour, at 3:1 or more
 
 #### Scenario: Where chips at the largest text size
 - **WHEN** the text size is the largest accessibility size (AX5) and the new-entry screen shows all thirteen Where chips

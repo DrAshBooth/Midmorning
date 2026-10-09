@@ -212,7 +212,7 @@ The team MUST submit the app from the company's organisation account. One legal 
 
 The app MUST NOT request the Declared Age Range entitlement in V1. The typed age is the gate. The app MUST be on the UK storefront only.
 
-The README MUST hold the clinical reviewer's dated sign-off of the screening thresholds. Those are 18.5, 19.0, Rules A to C and the deterioration rule. The same sign-off MUST cover the self-harm item's wording and routing. The team MUST invite testers by email only, never through a public link. Test Information MUST hold the privacy notice URL, the contact email, the onboarding walk and the crash-log line. The team MUST declare only the accessibility labels whose device checks have a dated screenshot.
+The README MUST hold the clinical reviewer's dated sign-off of the screening thresholds. Those are 18.5, 19.0, Rules A to C and the deterioration rule. The same sign-off MUST cover the self-harm item's wording and routing. The team MUST invite testers by email only, never through a public link. Test Information MUST hold the privacy notice URL, the contact email, the onboarding walk and the crash-log line. The team MUST declare an accessibility label only after a passing run of the accessibility audits (`tools/skeleton-checks/automated-checks.sh --audits`) on the commit of the build, as `safeguarding` states in "Regulatory release gates". Ash ruled this on 9 October 2026 (r21-01).
 
 The Info.plist MUST hold the `NSFaceIDUsageDescription` the app-lock capability states. The app MUST declare the fetch and remote-notification background modes and one `BGTaskScheduler` identifier. The review notes MUST state the purpose of each of the three.
 
@@ -244,7 +244,7 @@ The category MUST stay Lifestyle. The review notes MUST carry the justification 
 
 #### Scenario: Accessibility labels declared
 - **WHEN** the team fills the accessibility section in App Store Connect
-- **THEN** every declared label has a device check with a dated screenshot in the README
+- **THEN** the table in `tools/skeleton-checks/README.md` holds a dated line for a passing run of `tools/skeleton-checks/automated-checks.sh --audits` on the commit of that build
 
 #### Scenario: Background modes in the review notes
 - **WHEN** App Review reads the review notes

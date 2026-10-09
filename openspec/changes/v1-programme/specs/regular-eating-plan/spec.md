@@ -510,7 +510,7 @@ Plan data MUST NOT leave the device except to the person's own iCloud private da
 
 Each planned meal row on Today MUST be one accessibility element. The row's label MUST hold the slot label, then the planned time. It MUST then hold the matched entry's label when an entry matches. When no entry matches and the answer is "Skipped", it MUST hold "Skipped" instead.
 
-When the row shows the missed planned meal prompt, the label MUST hold the prompt text after the time. A comma and a space MUST separate the parts. The prompt's buttons MUST also be VoiceOver custom actions on the row: "Skipped" and "Add it", or "Skipped" and "That was it".
+When the row shows the missed planned meal prompt, the label MUST hold the prompt text after the time. When the row shows the next-planned-meal line, the label MUST end with that line, after the other parts. A comma and a space MUST separate the parts. The prompt's buttons MUST also be VoiceOver custom actions on the row: "Skipped" and "Add it", or "Skipped" and "That was it". Ash ruled on 9 October 2026 that the label ends with the next-planned-meal line (r19-02).
 
 Every control in the plan builder MUST have a VoiceOver label. The slot buttons, the time controls and the "Remove %@" controls MUST carry the labels the builder requirement names. The rename controls MUST carry the labels the rename requirement names. Text in the plan builder and on planned meal rows MUST use system text styles. Text in the plan builder and on planned meal rows MUST scale with Dynamic Type. A planned meal's state MUST NOT depend on colour alone.
 
@@ -529,6 +529,10 @@ Every control in the plan builder MUST have a VoiceOver label. The slot buttons,
 #### Scenario: Label of a planned meal with the prompt
 - **WHEN** VoiceOver reads the Lunch row while it shows "Skipped, or not recorded yet?"
 - **THEN** it reads "Lunch, 13:00, Skipped, or not recorded yet?" and offers the custom actions "Skipped" and "Add it"
+
+#### Scenario: Label of a planned meal with the next-planned-meal line
+- **WHEN** VoiceOver reads the Mid-afternoon row while it shows "Mid-afternoon at 16:00 still happens."
+- **THEN** it reads "Mid-afternoon, 16:00, Mid-afternoon at 16:00 still happens."
 
 #### Scenario: Labels in the builder
 - **WHEN** VoiceOver reads a builder day with Lunch at 13:00 and no Breakfast

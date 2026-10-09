@@ -280,7 +280,7 @@ With "Face ID only" or "Touch ID only" off, a failed biometric MUST make the sys
 
 ### Requirement: Face ID only or Touch ID only
 
-The Privacy group of the settings screen MUST show "Face ID only" on a device with Face ID enrolled. It MUST show "Touch ID only" on a device with Touch ID enrolled. Both strings come from the label function. The setting is off by default and is the `face-or-touch-only` value in `Local.store`. The settings capability owns the group. The control MUST be disabled when no biometric is enrolled or the app lock is off.
+The Privacy group of the settings screen MUST show "Face ID only" on a device with Face ID enrolled. It MUST show "Touch ID only" on a device with Touch ID enrolled. Both strings come from the label function. The setting is off by default and is the `face-or-touch-only` value in `Local.store`. The settings capability owns the group. When no biometric is enrolled, the Privacy group MUST NOT show a "Face ID only" or "Touch ID only" control. Ash ruled this on 9 October 2026 (r19-04). The control MUST be disabled when the app lock is off.
 
 Before it turns on, the app MUST show a warning with "Turn on" and "Cancel". The warning reads "If Face ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on." on a Face ID device. On a Touch ID device it reads "If Touch ID stops working, you can delete this device's copy. A copy in iCloud stays if sync is on." "Cancel" MUST leave it off. The app MUST make the system authentication request before it turns the setting off.
 
@@ -332,7 +332,7 @@ When the person taps "Turn on" in the warning, the app MUST make a system authen
 
 #### Scenario: No biometric enrolled
 - **WHEN** the device has a passcode and no biometric enrolled
-- **THEN** the setting is off and disabled
+- **THEN** the Privacy group shows no "Face ID only" or "Touch ID only" control
 
 ### Requirement: Delete from this device after an enrolment change
 

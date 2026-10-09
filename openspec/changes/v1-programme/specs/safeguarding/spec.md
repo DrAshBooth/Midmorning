@@ -124,7 +124,7 @@ The change's README MUST hold the clinical reviewer's dated sign-off of the scre
 
 The team MUST answer the age rating questionnaire truthfully. The team MUST raise the minimum age to 18+. The app MUST NOT request the Declared Age Range entitlement in V1. The typed age is the gate.
 
-The team MUST declare an accessibility label in App Store Connect only after a device check of that label. The check MUST have a dated screenshot in the README. The team MUST NOT declare a label from a simulator check alone.
+The team MUST declare an accessibility label in App Store Connect only after a passing run of the accessibility audits on the commit of the build. The accessibility audits are the tests that `tools/skeleton-checks/automated-checks.sh --audits` runs. In a passing run, every audit passes, and the working tree has no change that is not committed. The table in `tools/skeleton-checks/README.md` MUST hold a dated line for that run, with its commit. A declaration needs no device check and no screenshot. Ash ruled this on 9 October 2026 (r21-01).
 
 A cohort runs while any person outside the team has a TestFlight build. During a cohort the team MUST ship a new build at least every 45 days. The team MUST NOT let a tester's build reach 75 days. The change's README MUST hold a dated line per build with its expiry. A build MUST NOT raise the minimum iOS version during a running cohort. The tester invitation MUST state the expiry rule and the exit: export, then "Delete everything".
 
@@ -170,8 +170,8 @@ The team MUST invite every tester by email. The team MUST NOT create a public Te
 - **WHEN** a reviewer reads the age rating questionnaire and the entitlements
 - **THEN** the minimum age is 18+ and no Declared Age Range entitlement is present
 
-#### Scenario: Accessibility label without a screenshot
-- **WHEN** a device check of VoiceOver has no dated screenshot in the README
+#### Scenario: Accessibility label without a passing audit run
+- **WHEN** the table in `tools/skeleton-checks/README.md` holds no dated line for a passing run of `tools/skeleton-checks/automated-checks.sh --audits` on the commit of the build
 - **THEN** the team does not declare the VoiceOver label in App Store Connect
 
 #### Scenario: Testers by email
