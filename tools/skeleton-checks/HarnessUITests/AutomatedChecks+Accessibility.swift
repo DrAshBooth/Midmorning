@@ -218,6 +218,12 @@ extension AutomatedChecks {
     /// The description of a hit-area issue (`smallControls`).
     static let hitAreaCompact = "Hit area under 44 by 44 points"
 
+    /// The description of a contrast issue that the test measures in a
+    /// screenshot of a system calendar
+    /// (`assertTheSelectedDayOfTheCalendarContrasts`). The audit never gives
+    /// this description, so an entry that names it takes no audit issue.
+    static let calendarDayCompact = "Selected day of a system calendar under 3:1"
+
     /// The issues that the audits exclude. Each one is not a fault of the
     /// app, and each entry tells why. No entry takes every issue of a type.
     /// An issue with no frame is not in this list: only an entry of
@@ -372,6 +378,7 @@ extension AutomatedChecks {
                 // blurred under the status bar, and the first line under the
                 // glass of "Get support" (audit-shots, 9 October 2026, on
                 // main 9d10cd2 and on branch rulings3-colour-link: 3 issues).
+                // Ruling r21-02 did not cause them; mm-t45.28 holds this pin.
                 "the exclusion page (default text size)": 3,
                 "the not-right-now page (AX5)": 1, "the privacy notice (default text size)": 1, "the privacy notice (AX5)": 1,
                 "the restart re-screen (AX5)": 1, "the support sheet (default text size)": 7, "the support sheet (AX5)": 2,
@@ -429,6 +436,16 @@ extension AutomatedChecks {
                 "Today with the pinned note (default text size)": 1,
             ]) { finding in
             finding.elementType == nil && !finding.hasFrame && finding.type.contains(.contrast) && finding.compact == "Contrast failed"
+        },
+        AuditKnownDefect(bead: "mm-t12b.30", reason: """
+            In dark mode, the system calendar of "To" on the export screen shows the numeral of the selected current \
+            day in white on the dark accent value 7CB4E6: about 2.2:1 in a screenshot (9 October 2026). The system \
+            calendar draws the numeral, and the app cannot set its colour. The bead holds the options for Ash. The \
+            entry takes only this measurement of the test (`assertTheSelectedDayOfTheCalendarContrasts`), only in \
+            dark mode, and only from 2:1 up, so a lower value fails the test.
+            """) { finding in
+            finding.compact == calendarDayCompact && finding.dark && finding.screen == "the export screen"
+                && (finding.label ?? "").hasPrefix("Today, ") && (finding.measured ?? 0) >= 2
         },
     ] + auditHitAreaKnownDefects
 
@@ -2073,7 +2090,7 @@ extension AutomatedChecks {
             auditOpenSettings()
             auditOpen("Export", screen: "Export")
             audit("the export screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 10))
-            if size == .standard { assertTheSelectedDayOfTheCalendarContrasts(dark: false) }
+            if size == .standard { assertTheSelectedDayOfTheCalendarContrasts(size: size, dark: false) }
         }
     }
 
@@ -2084,10 +2101,13 @@ extension AutomatedChecks {
     /// October 2026, iOS 27.0 simulator). The audit pages do not open the
     /// calendar, so the test measures that day in a screenshot, as
     /// `assertTheKeyboardSaveContrasts` does: 3:1 or more (ruling r21-02,
-    /// mm-t12b.29). White on the dark value 7CB4E6 is about 2.2:1: in dark
-    /// mode that is an expected failure that names mm-t12b.30, while that
-    /// bead waits for a decision. Then the test closes the calendar.
-    func assertTheSelectedDayOfTheCalendarContrasts(dark: Bool, file: StaticString = #filePath, line: UInt = #line) {
+    /// mm-t12b.29). A value under 3:1 is an issue (`calendarDayCompact`)
+    /// that goes through `auditKnownDefects`, as an audit issue does. White
+    /// on the dark value 7CB4E6 is about 2.2:1: in dark mode the entry for
+    /// mm-t12b.30 takes it while that bead waits for a decision, so it is an
+    /// expected failure from `auditKnownDefects` and the log line says
+    /// "known fault mm-t12b.30". Then the test closes the calendar.
+    func assertTheSelectedDayOfTheCalendarContrasts(size: AuditTextSize, dark: Bool, file: StaticString = #filePath, line: UInt = #line) {
         let to = app.datePickers["To"].firstMatch
         XCTAssertTrue(to.waitForExistence(timeout: 5), "the export screen shows \"To\"", file: file, line: line)
         to.tap()
@@ -2103,15 +2123,25 @@ extension AutomatedChecks {
         let mode = dark ? ", dark" : ""
         let text = String(format: "the export screen\(mode): the selected current day \"\(day.label)\" of the calendar of \"To\" measured %.1f:1", ratio)
         auditLog("  (\(text))")
-        if dark && ratio < 3 {
-            let stops = continueAfterFailure
-            continueAfterFailure = true
-            XCTExpectFailure("mm-t12b.30: the system calendar shows the numeral of the selected current day in white on the dark accent value") {
-                XCTFail("\(text), under 3:1", file: file, line: line)
+        if ratio < 3 {
+            let finding = AuditFinding(
+                screen: "the export screen", size: size, dark: dark, type: .contrast, compact: Self.calendarDayCompact,
+                detail: "the numeral of the selected day contrasts with its fill at less than 3:1",
+                elementType: day.elementType, label: day.label, identifier: day.identifier, frame: day.frame, measured: ratio)
+            if let defect = Self.auditKnownDefects.first(where: { $0.pins == nil && $0.matches(finding) }) {
+                auditLog("  known fault \(defect.bead): \(finding.text)")
+                // As in `auditPage`: an expected failure still stops a test
+                // that has `continueAfterFailure` false.
+                let stops = continueAfterFailure
+                continueAfterFailure = true
+                XCTExpectFailure("\(defect.bead): \(defect.reason)") {
+                    XCTFail(finding.text, file: file, line: line)
+                }
+                continueAfterFailure = stops
+            } else {
+                auditLog("  ISSUE: \(finding.text)")
+                XCTFail("\(text): the numeral contrasts with its fill at less than 3:1", file: file, line: line)
             }
-            continueAfterFailure = stops
-        } else {
-            XCTAssertGreaterThanOrEqual(ratio, 3, "\(text): the numeral contrasts with its fill at 3:1 or more", file: file, line: line)
         }
         let dismiss = app.buttons["PopoverDismissRegion"].firstMatch
         if dismiss.exists { dismiss.tap() } else { to.tap() }
@@ -2714,7 +2744,7 @@ extension AutomatedChecks {
             auditOpenSettings()
             auditOpen("Export", screen: "Export")
             audit("the export screen", size: size, dark: true, types: .contrast, pages: 3)
-            assertTheSelectedDayOfTheCalendarContrasts(dark: true)
+            assertTheSelectedDayOfTheCalendarContrasts(size: size, dark: true)
             try auditLaunchOnToday("week1", size: size)
             tapToolbar("Programme")
             assertScreen("Programme")
