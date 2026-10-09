@@ -2833,18 +2833,27 @@ extension AutomatedChecks {
     }
 
     /// Fails unless the screen shows dark mode: the corner of the window
-    /// under the status bar is near black.
+    /// under the status bar is near black. It looks again each second, for
+    /// at most 5 seconds, so that a slow change of the appearance does not
+    /// fail the test. automated-checks.sh restarts a simulator once when it
+    /// does not change to dark mode (a new iOS 27.0 simulator).
     func assertDarkMode(file: StaticString = #filePath, line: UInt = #line) {
-        guard let image = XCUIScreen.main.screenshot().image.cgImage else {
-            XCTFail("no screenshot", file: file, line: line)
-            return
+        var corner: [CGFloat] = []
+        for attempt in 0..<6 {
+            if attempt > 0 { sleep(1) }
+            guard let image = XCUIScreen.main.screenshot().image.cgImage else {
+                XCTFail("no screenshot", file: file, line: line)
+                return
+            }
+            let window = app.windows.firstMatch.frame
+            let scale = CGFloat(image.width) / max(window.width, 1)
+            corner = colour(at: CGPoint(x: 4, y: 4), in: image, scale: scale)
+            if corner.reduce(0, +) < 0.6 { return }
         }
-        let window = app.windows.firstMatch.frame
-        let scale = CGFloat(image.width) / max(window.width, 1)
-        let corner = colour(at: CGPoint(x: 4, y: 4), in: image, scale: scale)
         XCTAssertLessThan(corner.reduce(0, +), 0.6, """
             dark mode took effect (the colour at the top corner is \(corner)). On the iOS 27.0 simulator a new simulator \
-            changes its appearance only after its first restart: restart it (xcrun simctl shutdown, then boot) and run again
+            changes its appearance only after its first restart. automated-checks.sh restarts the simulator once when \
+            it does not change to dark mode; see its output. Else restart it (xcrun simctl shutdown, then boot) and run again
             """, file: file, line: line)
     }
 

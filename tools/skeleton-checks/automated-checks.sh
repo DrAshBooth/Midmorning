@@ -87,6 +87,78 @@ runtime = next((r for r in data["runtimes"] if r["identifier"] == key), None)
 print("%s (%s)" % (runtime["name"], runtime["buildversion"]) if runtime else (key or "unknown"))
 ' "$UDID")
 
+# Dark mode. testAnAlertKeepsTheSystemBlue and the dark-mode audits set dark
+# mode with XCUIDevice.appearance. On the iOS 27.0 simulator, a new simulator
+# did not change to dark mode after the tests set it, until it restarted once
+# (8 and 9 October 2026). Another new simulator changed to dark mode when
+# `simctl ui` set it before the tests, and the tests then changed it too. So
+# the script opens the Settings app, sets light mode and then dark mode with
+# `simctl ui`, and measures the mean lightness of a screenshot after each
+# change (light mode about 0.95, dark mode about 0.1). The screen must be
+# light and then dark, so a black screen does not pass. When the screen does
+# not change, the script restarts the simulator once and measures again. At
+# the end it sets light mode, which each test expects.
+
+# screen_matches <screenshot> light|dark: prints the mean lightness of the
+# screenshot, and fails unless it fits that mode.
+screen_matches() {
+  python3 - "$1" "$2" <<'PY'
+import struct, sys
+data = open(sys.argv[1], "rb").read()
+offset = struct.unpack_from("<I", data, 10)[0]
+width, height = struct.unpack_from("<ii", data, 18)
+size = struct.unpack_from("<H", data, 28)[0] // 8
+row = (width * size + 3) & ~3
+total = count = 0
+for y in range(0, abs(height), 13):
+    for x in range(0, width, 11):
+        p = offset + y * row + x * size
+        total += data[p] + data[p + 1] + data[p + 2]
+        count += 3
+value = total / count / 255 if count else -1
+print("%.2f" % value)
+sys.exit(0 if (0 <= value < 0.4 if sys.argv[2] == "dark" else value > 0.6) else 1)
+PY
+}
+# shows_appearance light|dark: sets that appearance and waits at most 10 s
+# for a screen that fits it.
+shows_appearance() {
+  local shot value=nothing
+  shot=$(mktemp -t mm-appearance) || return 1
+  xcrun simctl ui "$UDID" appearance "$1"
+  for _ in 1 2 3 4 5; do
+    sleep 2
+    xcrun simctl io "$UDID" screenshot --type=bmp "$shot" >/dev/null 2>&1 || continue
+    if value=$(screen_matches "$shot" "$1"); then
+      rm -f "$shot"
+      return 0
+    fi
+  done
+  echo "  in $1 mode the screen measured a lightness of $value"
+  rm -f "$shot"
+  return 1
+}
+dark_mode_works() {
+  local works=1
+  xcrun simctl terminate "$UDID" com.apple.Preferences >/dev/null 2>&1
+  xcrun simctl launch "$UDID" com.apple.Preferences >/dev/null 2>&1
+  shows_appearance light && shows_appearance dark && works=0
+  xcrun simctl terminate "$UDID" com.apple.Preferences >/dev/null 2>&1
+  xcrun simctl ui "$UDID" appearance light
+  return $works
+}
+step "check that the simulator changes to dark mode"
+if ! dark_mode_works; then
+  step "restart the simulator once, because it did not change to dark mode"
+  xcrun simctl shutdown "$UDID"
+  xcrun simctl boot "$UDID"
+  xcrun simctl bootstatus "$UDID" -b >/dev/null || exit 1
+  if ! dark_mode_works; then
+    echo "WARNING: the simulator $DEVICE_NAME did not change to dark mode after a restart."
+    echo "testAnAlertKeepsTheSystemBlue and the dark-mode audits will fail."
+  fi
+fi
+
 # 2. Build and install the app; build the UI-test bundle.
 step "build the app"
 xcodebuild -project "$ROOT/App/Midmorning.xcodeproj" -scheme Midmorning \
