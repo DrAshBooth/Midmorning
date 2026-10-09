@@ -40,6 +40,12 @@ struct WeighInRoute: Hashable {}
 struct ReviewsListRoute: Hashable {}
 struct WeeklyReviewRoute: Hashable { let week: Int; var runStartDay: String? = nil }
 
+/// The settings screen (settings spec, "One screen, one tap from Today").
+/// A value in Today's navigation path, as every other screen on Today's
+/// stack, so a reminder tap that empties the path also closes Settings
+/// (ruling r20-01, mm-t45.12).
+struct SettingsRoute: Hashable {}
+
 struct TodayView: View {
     let store: RecordStore
 
@@ -54,6 +60,11 @@ struct TodayView: View {
     @State private var previousSection: DaySection?
     @State private var earlierDaysAvailable = false
     @State private var showingNewEntry = false
+    /// The sheet of Today that is on screen: set when it appears, cleared
+    /// when its dismissal has ended. A reminder route waits while it is
+    /// set, and an empty new-entry sheet closes first (ruling r20-01,
+    /// mm-t45.12; `opensReminderRoutes`, `TodayRouteGate`).
+    @State private var sheetOnScreen: TodayRouteGate.TodaySheet?
     @State private var newEntryInitialTime: Date?
     @State private var editingEntry: RecordRow?
     @State private var scrollTarget: String?
@@ -231,9 +242,7 @@ struct TodayView: View {
                         if index > 0 { Spacer() }
                         switch item {
                         case .settings:
-                            NavigationLink("today.settings") {
-                                SettingsView(store: store)
-                            }
+                            Button("today.settings") { navigationPath.append(SettingsRoute()) }
                         case .programme:
                             Button("today.programme") { navigationPath.append(ProgrammeRoute.screen) }
                         case .reviews:
@@ -255,24 +264,28 @@ struct TodayView: View {
                     scrollTarget = scrollId(forSaved: saved)
                     addEntryFocused = true
                 }
+                .onAppear { sheetOnScreen = .newEntry }
             }
-            .sheet(item: $planBuilderMode) { mode in
+            .sheet(item: $planBuilderMode, onDismiss: { sheetOnScreen = nil }) { mode in
                 PlanBuilderView(store: store, mode: mode) { reload() }
+                    .onAppear { sheetOnScreen = .planBuilder }
             }
-            .sheet(item: $editingEntry) { entry in
+            .sheet(item: $editingEntry, onDismiss: { sheetOnScreen = nil }) { entry in
                 EditEntryView(store: store, entry: entry) { _ in
                     reload()
                 } onDelete: {
                     reload()
                 }
+                .onAppear { sheetOnScreen = .editEntry }
             }
             .deleteEntryConfirmation($pendingDelete) { entry in
                 try? store.delete(entryId: entry.id, deletedAt: Date())
                 reload()
             }
-            .sheet(isPresented: $isShowingCloseTheDay) {
+            .sheet(isPresented: $isShowingCloseTheDay, onDismiss: { sheetOnScreen = nil }) {
                 if let currentSection {
                     CloseTheDayView(store: store, dateKey: currentSection.id) { reload() }
+                        .onAppear { sheetOnScreen = .closeTheDay }
                 }
             }
             .navigationDestination(for: EarlierDaysRoute.self) { _ in
@@ -283,6 +296,9 @@ struct TodayView: View {
             }
             .navigationDestination(for: ProgrammeRoute.self) { _ in
                 ProgrammeScreenView(store: store)
+            }
+            .navigationDestination(for: SettingsRoute.self) { _ in
+                SettingsView(store: store)
             }
             .navigationDestination(for: Stage.self) { stage in
                 StageScreenView(store: store, stage: stage)
@@ -305,8 +321,9 @@ struct TodayView: View {
         // r16-02, mm-t12b.27): on iOS 27 they made Today blank. The cover
         // window (`AppLockCoverWindow`) hides Today and every screen on it
         // while the app is not active, with the app lock on or off.
-        // A tap on a reminder opens its own screen (reminders spec).
-        .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
+        // A tap on a reminder goes back to Today, then opens its own screen
+        // (reminders spec; ruling r20-01, mm-t45.12).
+        .opensReminderRoutes(store: store, navigationPath: $navigationPath, showingNewEntry: $showingNewEntry, sheetOnScreen: sheetOnScreen, newEntryInitialTime: $newEntryInitialTime, isShowingCloseTheDay: $isShowingCloseTheDay, planBuilderMode: $planBuilderMode)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { reload() }
         }
@@ -481,9 +498,12 @@ struct TodayView: View {
     /// After Save or Cancel, VoiceOver focus returns to "Add an entry"
     /// (record spec, "The Today stack"), and the next new entry opens at
     /// the current time again, not at an earlier "Add it" planned time.
+    /// A reminder route that waited for the sheet opens now
+    /// (`sheetOnScreen`, ruling r20-01).
     private func newEntryDismissed() {
         newEntryInitialTime = nil
         addEntryFocused = true
+        sheetOnScreen = nil
     }
 
     private func reload() {

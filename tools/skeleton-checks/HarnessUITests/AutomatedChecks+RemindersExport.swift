@@ -709,8 +709,10 @@ extension AutomatedChecks {
     /// Lunch skipped, and Diagnostics "Queue length" reads 0. The test
     /// writes the queue file as the handler does (`queue.json` in the App
     /// Group, format version 1). (The tap on "Skipped" on a real reminder,
-    /// with the app closed or open, and the next-planned-meal line, which
-    /// the row does not give to accessibility, stay device checks.)
+    /// with the app closed or open, stays a device check. At 17:xx the
+    /// window of the next planned meal after Lunch has ended, so this store
+    /// shows no next-planned-meal line.
+    /// `testAQueuedSkippedPointsToTheNextPlannedMeal` reads that line.)
     func testAQueuedSkippedAppliesWhenTheAppOpens() throws {
         try launchOnTodayInTheSeededZone("stage2Evening")
         // A skipped planned meal's row reads exactly "Lunch, 13:00,
@@ -739,6 +741,41 @@ extension AutomatedChecks {
         XCTAssertEqual(diagnosticsCount("Queue length"), 0, "Diagnostics \"Queue length\" reads 0")
         let left = (try? Data(contentsOf: queueURL)).map { String(decoding: $0, as: UTF8.self) } ?? ""
         XCTAssertFalse(left.contains("\"skipped\""), "the app emptied the queue file: \(left)")
+    }
+
+    /// mm-t24.22, comment of mm-t24.24, the next-planned-meal line after a
+    /// queued "Skipped" (ruling r19-02, mm-t23.26: the planned meal row's
+    /// accessibility label ends with that line). The seeded store
+    /// `stage2Morning` is at 06:00 to 16:59 local time (10:xx when the
+    /// Mac's zone allows it), so the window of Mid-afternoon (16:00) is
+    /// still open. With the app closed, the action queue holds "Skipped"
+    /// for Lunch. The app opens: the Lunch row reads "Lunch, 13:00,
+    /// Skipped", and the Mid-afternoon row shows "Mid-afternoon at 16:00
+    /// still happens." Its label ends with ", Mid-afternoon at 16:00 still
+    /// happens.". Before the queue, no row shows that line.
+    func testAQueuedSkippedPointsToTheNextPlannedMeal() throws {
+        let hour = try launchOnTodayInTheSeededZone("stage2Morning")
+        XCTAssertLessThan(hour, 16, "the seeded local time is before 16:00, so the window of Mid-afternoon is open. The seeder chose a zone with no such time; this is not a fault of the app.")
+        let line = "Mid-afternoon at 16:00 still happens."
+        let midAfternoon = element(labelBeginningWith: "Mid-afternoon, 16:00")
+        XCTAssertTrue(scrollTo(midAfternoon), "Today shows the Mid-afternoon row")
+        XCTAssertFalse(midAfternoon.label.hasSuffix(" still happens."), "before the queue, the Mid-afternoon row holds no line: \"\(midAfternoon.label)\"")
+        XCTAssertFalse(app.staticTexts[line].exists, "before the queue, Today shows no \"\(line)\"")
+        app.terminate()
+        // The queue file, as the notification handler writes it.
+        let dayKey = try seededDayKey("stage2Morning")
+        let moment = ISO8601DateFormatter().string(from: Date())
+        let queue = #"{"formatVersion":1,"actions":[{"kind":"skipped","dayKey":"\#(dayKey)","slotIndex":2,"plannedTime":"13:00","snoozeCount":0,"moment":"\#(moment)"}]}"#
+        let group = try XCTUnwrap(appGroupDirectory(), "the simulator holds the App Group container of the app")
+        try Data(queue.utf8).write(to: group.appendingPathComponent("queue.json"))
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 20))
+        let skipped = element(labelled: "Lunch, 13:00, Skipped")
+        XCTAssertTrue(skipped.waitForExistence(timeout: 8) || scrollTo(skipped), "after the app opens, Today shows Lunch skipped")
+        let row = element(labelBeginningWith: "Mid-afternoon, 16:00")
+        XCTAssertTrue(scrollTo(row), "Today shows the Mid-afternoon row")
+        XCTAssertTrue(row.staticTexts[line].exists, "the Mid-afternoon row shows \"\(line)\"")
+        XCTAssertEqual(row.label, "Mid-afternoon, 16:00, \(line)", "ruling r19-02: the row's accessibility label ends with the line, after a comma and a space")
     }
 
     // MARK: mm-t41.15 and mm-t42.14 (safe mode, rulings r13-13 and r13-05)

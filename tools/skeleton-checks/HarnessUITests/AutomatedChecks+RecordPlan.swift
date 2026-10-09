@@ -791,7 +791,9 @@ extension AutomatedChecks {
     /// just before Lunch, and Mid-afternoon after Lunch: the Lunch row shows
     /// the entry and no next-planned-meal line; the Mid-afternoon row shows
     /// "Mid-afternoon at <time> still happens.". mm-t11.39: that line on the
-    /// screen.
+    /// screen. Ruling r19-02 (mm-t23.26): the Mid-afternoon row's
+    /// accessibility label ends with that line, after a comma and a space,
+    /// and the Lunch row's label does not hold it.
     func testAStarredEntryPointsToTheNextPlannedMeal() throws {
         let facts = try recordPlanFacts("planStar")
         let midAfternoon = facts["midAfternoon"]!
@@ -804,7 +806,12 @@ extension AutomatedChecks {
         let midRow = element(labelBeginningWith: "Mid-afternoon, \(midAfternoon)")
         XCTAssertTrue(scrollTo(midRow), "Today shows the Mid-afternoon row")
         XCTAssertTrue(midRow.staticTexts["Mid-afternoon at \(midAfternoon) still happens."].exists, "the Mid-afternoon row shows \"Mid-afternoon at \(midAfternoon) still happens.\"")
-        XCTAssertEqual(app.staticTexts.matching(lines).count, 1, "Today shows one next-planned-meal line")
+        // A line's own text holds no ", "; a row's label does (r19-02).
+        let lineTexts = NSPredicate(format: "label ENDSWITH %@ AND NOT (label CONTAINS %@)", " still happens.", ", ")
+        XCTAssertEqual(app.staticTexts.matching(lineTexts).count, 1, "Today shows one next-planned-meal line")
+        // Ruling r19-02 (mm-t23.26): the row's label ends with the line.
+        XCTAssertTrue(midRow.label.hasSuffix(", Mid-afternoon at \(midAfternoon) still happens."), "the Mid-afternoon row's accessibility label ends with the line: \"\(midRow.label)\"")
+        XCTAssertFalse(lunchRow.label.hasSuffix(" still happens."), "the Lunch row's accessibility label holds no line: \"\(lunchRow.label)\"")
     }
 
     /// mm-t23.15, comment of mm-t23.20, the part with no text size: an

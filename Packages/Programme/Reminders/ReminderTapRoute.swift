@@ -7,8 +7,9 @@ import Foundation
 /// reminder"). The App target's notification delegate calls this, and
 /// Today opens the route.
 public enum ReminderTapRoute: Sendable, Equatable {
-    /// Today as it is: a tap on a planned meal reminder or on the far
-    /// reminder, and a tap on a kind that has no screen of its own yet.
+    /// Today, with no other screen on its stack (ruling r20-01): a tap on a
+    /// planned meal reminder or on the far reminder, and a tap on a kind
+    /// that has no screen of its own yet.
     case today
     /// "Add" on a planned meal reminder: the new-entry screen through the
     /// pending-route rule, with no cover (app-lock spec, "A new entry before
