@@ -40,6 +40,19 @@ final class SupportSheetTests: XCTestCase {
         XCTAssertEqual(SupportSheet.nhs111Number, "111")
     }
 
+    /// r19-01 (mm-t45.5): "Beat webchat" opens Beat's one-to-one web chat
+    /// page. The old page (".../i-need-support-now/one-to-one-webchat/")
+    /// answered 404 on 7 and 9 October 2026; this page answered 200 on
+    /// 9 October 2026. A reviewer still confirms the page before each
+    /// release (safeguarding spec, "The support sheet", "Release check").
+    func testTheBeatWebchatLinkOpensBeatsWebChatPage() {
+        XCTAssertEqual(
+            SupportSheet.beatWebchatURLString,
+            "https://www.beateatingdisorders.org.uk/get-information-and-support/get-help-for-myself/support-now/one-to-one-web-chat/"
+        )
+        XCTAssertFalse(SupportSheet.beatWebchatURLString.contains("i-need-support-now"))
+    }
+
     func testTheCallWarningNamesNoPhoneBill() {
         XCTAssertFalse(SupportSheet.callRecentsWarning.lowercased().contains("bill"))
     }

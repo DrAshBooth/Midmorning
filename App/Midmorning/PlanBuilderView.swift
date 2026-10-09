@@ -77,7 +77,7 @@ struct PlanBuilderView: View {
                     } label: {
                         Text("entry.save").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.filled)
                     .listRowInsets(EdgeInsets())
                     .padding()
                 }
@@ -97,9 +97,11 @@ struct PlanBuilderView: View {
             }
             // Ruling r16-03 (mm-t12b.28): an alert shows "Save anyway" and
             // "Go back"; from iOS 26 a confirmation dialog shows no cancel.
-            .alert(Text(softRuleLines.map(\.string).joined(separator: "\n\n")), isPresented: $isShowingSoftRuleCheck) {
-                Button("plan.saveAnyway") { performSave() }
-                Button("plan.goBack", role: .cancel) {}
+            .alertInSystemColours { content in
+                content.alert(Text(softRuleLines.map(\.string).joined(separator: "\n\n")), isPresented: $isShowingSoftRuleCheck) {
+                    Button("plan.saveAnyway") { performSave() }
+                    Button("plan.goBack", role: .cancel) {}
+                }
             }
         }
         .onAppear(perform: load)

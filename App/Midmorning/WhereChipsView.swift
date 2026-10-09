@@ -84,7 +84,7 @@ struct WhereChipsView: View {
         }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         if isSelected {
-            button.buttonStyle(.borderedProminent)
+            button.buttonStyle(.filled)
         } else {
             button.buttonStyle(.bordered)
         }

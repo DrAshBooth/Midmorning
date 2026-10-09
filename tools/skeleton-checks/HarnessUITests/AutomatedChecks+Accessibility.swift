@@ -218,6 +218,12 @@ extension AutomatedChecks {
     /// The description of a hit-area issue (`smallControls`).
     static let hitAreaCompact = "Hit area under 44 by 44 points"
 
+    /// The description of a contrast issue that the test measures in a
+    /// screenshot of a system calendar
+    /// (`assertTheSelectedDayOfTheCalendarContrasts`). The audit never gives
+    /// this description, so an entry that names it takes no audit issue.
+    static let calendarDayCompact = "Selected day of a system calendar under 3:1"
+
     /// The issues that the audits exclude. Each one is not a fault of the
     /// app, and each entry tells why. No entry takes every issue of a type.
     /// An issue with no frame is not in this list: only an entry of
@@ -339,18 +345,24 @@ extension AutomatedChecks {
                 "Programme (default text size)": 7, "Settings (default text size)": 5,
                 "Today with entries and a gap band (default text size)": 1, "onboarding screen 2 (default text size)": 6,
                 "onboarding screen 3 (default text size)": 2, "onboarding screen 4 (default text size)": 3,
-                "the close-the-day screen (default text size)": 2, "the exclusion page (default text size)": 8,
-                "the export screen (default text size)": 2, "the privacy notice (default text size)": 5,
-                "the restart re-screen (default text size)": 5, "the support sheet (default text size)": 12,
+                "the close-the-day screen (default text size)": 2, "the export screen (default text size)": 1,
+                "the privacy notice (default text size)": 5, "the restart re-screen (default text size)": 5,
                 "the weekly review (default text size)": 1, "the weigh-in screen with no weigh-in day (default text size)": 7,
             ],
             reason: """
                 The audit itself measured this text at 3:1 or more: "Contrast nearly passed" says that the text passes \
                 at a larger font size, and WCAG 2 sets 3:1 for large text (4.5:1 for other text). product-rules sets \
                 3:1 (mm-t45.17 holds the decision on primary text). The audit gives no element and no frame, so the \
-                test cannot measure the text itself, and the pinned count of the page limits the entry. (On the \
-                exclusion page and the support sheet these are the "Call" and "Copy number" controls of the numbers, \
-                blue on white, 3.5:1 in a screenshot.)
+                test cannot measure the text itself, and the pinned count of the page limits the entry. The pins \
+                come from the runs of 8 and 9 October 2026, before the app used its AccentColor asset (ruling r21-02, \
+                mm-t12b.29). Then the text controls were the system blue on white, 3.5:1: on the exclusion page and \
+                the support sheet these were the "Call" and "Copy number" controls of the numbers. With the accent \
+                colour 1F4E79 on white (8.7:1), the runs of 9 October 2026 on branch rulings3-colour-link gave no such \
+                issue on the exclusion page and the support sheet, so these screens have no pin now. The export screen \
+                gave none in two runs and 1 in a third run (12:10, commit 4ffbc47): its pin is 1, down from 2. Its \
+                text controls are now the accent colour, so the likely part is the footer text in the secondary \
+                colour, about 3.4:1 on white. This is not proved. No run with the accent colour has audited the other \
+                screens of the list yet.
                 """) { _ in true },
         AuditElementlessExclusion(
             types: [.elementDetection, .dynamicType, .textClipped],
@@ -365,6 +377,12 @@ extension AutomatedChecks {
                 "Today with the plan card (AX5)": 2,
                 "onboarding screen 3 (default text size)": 1, "onboarding screen 3 (AX5)": 6,
                 "the Reminders group (AX5)": 2, "the edit screen (AX5)": 1, "the new-entry screen (AX5)": 1,
+                // Page 2 of the exclusion page: the title "Not right now"
+                // blurred under the status bar, and the first line under the
+                // glass of "Get support" (audit-shots, 9 October 2026, on
+                // main 9d10cd2 and on branch rulings3-colour-link: 3 issues).
+                // Ruling r21-02 did not cause them; mm-t45.28 holds this pin.
+                "the exclusion page (default text size)": 3,
                 "the not-right-now page (AX5)": 1, "the privacy notice (default text size)": 1, "the privacy notice (AX5)": 1,
                 "the restart re-screen (AX5)": 1, "the support sheet (default text size)": 7, "the support sheet (AX5)": 2,
                 "the weekly review (default text size)": 2, "the weekly review (AX5)": 1,
@@ -422,16 +440,15 @@ extension AutomatedChecks {
             ]) { finding in
             finding.elementType == nil && !finding.hasFrame && finding.type.contains(.contrast) && finding.compact == "Contrast failed"
         },
-        AuditKnownDefect(bead: "mm-t12b.29", reason: """
-            The app does not use the AccentColor asset, so a bordered button shows the system blue on its own light \
-            tint, at 2.8:1: the Where chips on the new-entry and edit screens, and "Get support" on the store-open \
-            fault screen.
+        AuditKnownDefect(bead: "mm-t12b.30", reason: """
+            In dark mode, the system calendar of "To" on the export screen shows the numeral of the selected current \
+            day in white on the dark accent value 7CB4E6: about 2.2:1 in a screenshot (9 October 2026). The system \
+            calendar draws the numeral, and the app cannot set its colour. The bead holds the options for Ash. The \
+            entry takes only this measurement of the test (`assertTheSelectedDayOfTheCalendarContrasts`), only in \
+            dark mode, and only from 2:1 up, so a lower value fails the test.
             """) { finding in
-            let chips: Set<String> = ["Home", "Work", "Out", "Travelling", "Add a place"]
-            let onEntryScreen = finding.screen.hasPrefix("the new-entry screen") || finding.screen.hasPrefix("the edit screen")
-            let onFaultScreen = finding.screen.hasPrefix("the store-open fault screen")
-            return finding.type.contains(.contrast) && finding.elementType == .button && (finding.measured ?? 3) < 3
-                && ((onEntryScreen && chips.contains(finding.label ?? "")) || (onFaultScreen && finding.label == "Get support"))
+            finding.compact == calendarDayCompact && finding.dark && finding.screen == "the export screen"
+                && (finding.label ?? "").hasPrefix("Today, ") && (finding.measured ?? 0) >= 2
         },
     ] + auditHitAreaKnownDefects
 
@@ -557,7 +574,8 @@ extension AutomatedChecks {
     /// is the higher of the two ratios. For example (8 October 2026): black
     /// text on white 21:1, the secondary text 8A8A8E on white 3.4:1, a
     /// section header 85858B on F2F2F7 3.3:1, white on the system blue
-    /// 3.5:1, and the system blue on its own light tint 2.8:1. A frame that
+    /// 3.5:1, and the system blue on its own light tint 2.8:1 (before the
+    /// app used its AccentColor asset, mm-t12b.29). A frame that
     /// holds two texts gives the contrast of the darker one only, so the
     /// audit measures each text and image of an element on its own
     /// (`measureContrast`).
@@ -1839,6 +1857,7 @@ extension AutomatedChecks {
             add.tap()
             XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
             dismissKeyboardTip()
+            if size == .standard { assertTheKeyboardSaveContrasts(on: "the new-entry screen", dark: false) }
             auditHideTheKeyboard(on: "the new-entry screen", size: size)
             audit("the new-entry screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
             app.navigationBars.buttons["Cancel"].firstMatch.tap()
@@ -1857,8 +1876,51 @@ extension AutomatedChecks {
             XCTAssertTrue(app.buttons["Delete entry"].firstMatch.waitForExistence(timeout: 8) || app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 2), "the edit screen shows")
             dismissKeyboardTip()
             auditHideTheKeyboard(on: "the edit screen", size: size)
+            if size == .standard { auditSelectAWhereChip(on: "the edit screen") }
             audit("the edit screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
         }
+    }
+
+    /// Selects the Where chip "Home", so that the audit of the screen
+    /// measures a filled chip as well as the bordered chips (ruling r21-02,
+    /// mm-t12b.29: the text of a filled button contrasts with the accent
+    /// colour in light mode and in dark mode). The test does not save the
+    /// entry; the next launch copies the seeded store again. Only at the
+    /// default text size: at AX5 the audit does not measure contrast.
+    func auditSelectAWhereChip(on screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        let home = app.buttons["Home"].firstMatch
+        XCTAssertTrue(home.waitForExistence(timeout: 5), "\(screen) shows the Where chip \"Home\"", file: file, line: line)
+        XCTAssertTrue(scrollTo(home), "\(screen) shows the Where chip \"Home\"", file: file, line: line)
+        home.tap()
+        XCTAssertTrue(home.isSelected, "on \(screen), the Where chip \"Home\" is selected (filled)", file: file, line: line)
+    }
+
+    /// The "Save" on the keyboard's toolbar (`PredictiveTextView`) is a
+    /// filled button on iOS 26 and later: the accent colour fills it. The
+    /// audit pages hide the keyboard, so the test measures that "Save" in a
+    /// screenshot while the keyboard shows: its text contrasts with the
+    /// fill at 3:1 or more (ruling r21-02, mm-t12b.29). Before the fix,
+    /// the white text on the dark accent value measured 2.1:1 (9 October
+    /// 2026).
+    func assertTheKeyboardSaveContrasts(on screen: String, dark: Bool, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "\(screen) shows the keyboard", file: file, line: line)
+        // The navigation bar has a "Save" too; the keyboard's is the lower one.
+        let saves = app.buttons.matching(NSPredicate(format: "label == %@", "Save")).allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 0 }
+        guard let save = saves.max(by: { $0.frame.minY < $1.frame.minY }), save.frame.minY > app.windows.firstMatch.frame.height / 3 else {
+            XCTFail("\(screen) shows \"Save\" on the keyboard's toolbar", file: file, line: line)
+            return
+        }
+        sleep(1)
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else {
+            XCTFail("no screenshot", file: file, line: line)
+            return
+        }
+        let scale = CGFloat(image.width) / max(app.windows.firstMatch.frame.width, 1)
+        let ratio = measuredContrast(in: save.frame, of: image, scale: scale)
+        let mode = dark ? ", dark" : ""
+        auditLog("  (\(screen)\(mode): the keyboard's \"Save\" measured \(ratio.map { String(format: "%.1f", $0) } ?? "nothing"):1)")
+        XCTAssertGreaterThanOrEqual(ratio ?? 0, 3, "on \(screen)\(mode), the text of the keyboard's \"Save\" contrasts with its fill at 3:1 or more",
+                                    file: file, line: line)
     }
 
     /// "Earlier days" and one earlier day (`review`).
@@ -2031,7 +2093,62 @@ extension AutomatedChecks {
             auditOpenSettings()
             auditOpen("Export", screen: "Export")
             audit("the export screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 10))
+            if size == .standard { assertTheSelectedDayOfTheCalendarContrasts(size: size, dark: false) }
         }
+    }
+
+    /// The export screen's "To" is a compact date picker. A tap opens the
+    /// system calendar, which fills the circle of the selected day with the
+    /// accent colour. "To" starts at the current day, and the calendar
+    /// shows the numeral of the current day in white on that fill (9
+    /// October 2026, iOS 27.0 simulator). The audit pages do not open the
+    /// calendar, so the test measures that day in a screenshot, as
+    /// `assertTheKeyboardSaveContrasts` does: 3:1 or more (ruling r21-02,
+    /// mm-t12b.29). A value under 3:1 is an issue (`calendarDayCompact`)
+    /// that goes through `auditKnownDefects`, as an audit issue does. White
+    /// on the dark value 7CB4E6 is about 2.2:1: in dark mode the entry for
+    /// mm-t12b.30 takes it while that bead waits for a decision, so it is an
+    /// expected failure from `auditKnownDefects` and the log line says
+    /// "known fault mm-t12b.30". Then the test closes the calendar.
+    func assertTheSelectedDayOfTheCalendarContrasts(size: AuditTextSize, dark: Bool, file: StaticString = #filePath, line: UInt = #line) {
+        let to = app.datePickers["To"].firstMatch
+        XCTAssertTrue(to.waitForExistence(timeout: 5), "the export screen shows \"To\"", file: file, line: line)
+        to.tap()
+        let day = app.buttons.matching(NSPredicate(format: "selected == true AND label BEGINSWITH %@", "Today, ")).firstMatch
+        XCTAssertTrue(day.waitForExistence(timeout: 5), "the calendar of \"To\" shows the current day, selected", file: file, line: line)
+        sleep(1)
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else {
+            XCTFail("no screenshot", file: file, line: line)
+            return
+        }
+        let scale = CGFloat(image.width) / max(app.windows.firstMatch.frame.width, 1)
+        let ratio = measuredContrast(in: day.frame, of: image, scale: scale) ?? 0
+        let mode = dark ? ", dark" : ""
+        let text = String(format: "the export screen\(mode): the selected current day \"\(day.label)\" of the calendar of \"To\" measured %.1f:1", ratio)
+        auditLog("  (\(text))")
+        if ratio < 3 {
+            let finding = AuditFinding(
+                screen: "the export screen", size: size, dark: dark, type: .contrast, compact: Self.calendarDayCompact,
+                detail: "the numeral of the selected day contrasts with its fill at less than 3:1",
+                elementType: day.elementType, label: day.label, identifier: day.identifier, frame: day.frame, measured: ratio)
+            if let defect = Self.auditKnownDefects.first(where: { $0.pins == nil && $0.matches(finding) }) {
+                auditLog("  known fault \(defect.bead): \(finding.text)")
+                // As in `auditPage`: an expected failure still stops a test
+                // that has `continueAfterFailure` false.
+                let stops = continueAfterFailure
+                continueAfterFailure = true
+                XCTExpectFailure("\(defect.bead): \(defect.reason)") {
+                    XCTFail(finding.text, file: file, line: line)
+                }
+                continueAfterFailure = stops
+            } else {
+                auditLog("  ISSUE: \(finding.text)")
+                XCTFail("\(text): the numeral contrasts with its fill at less than 3:1", file: file, line: line)
+            }
+        }
+        let dismiss = app.buttons["PopoverDismissRegion"].firstMatch
+        if dismiss.exists { dismiss.tap() } else { to.tap() }
+        XCTAssertTrue(day.waitForNonExistence(timeout: 5), "the calendar of \"To\" closes", file: file, line: line)
     }
 
     /// The support sheet from Today (`week1`).
@@ -2510,6 +2627,7 @@ extension AutomatedChecks {
             app.buttons["Add an entry"].firstMatch.tap()
             XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
             dismissKeyboardTip()
+            assertTheKeyboardSaveContrasts(on: "the new-entry screen", dark: true)
             auditHideTheKeyboard(on: "the new-entry screen", size: size)
             audit("the new-entry screen", size: size, dark: true, types: .contrast, pages: 3)
             try auditLaunchOnToday("planMatched", size: size)
@@ -2532,7 +2650,22 @@ extension AutomatedChecks {
             goBack()
             assertScreen("Getting started")
             auditOpen("Weigh-in", screen: "Weigh-in")
-            audit("the weigh-in screen", size: size, dark: true, types: .contrast, pages: 3)
+            // As in the audit in light mode: 5 kg and "Save" show the
+            // message for a weight outside the range, and "Save" stays
+            // enabled, so the audit measures the enabled "Save" in dark
+            // mode, not only the disabled one (ruling r21-02, mm-t12b.29).
+            let weight = app.textFields["Weight"].firstMatch
+            XCTAssertTrue(weight.waitForExistence(timeout: 5), "the weigh-in screen shows the weight input")
+            weight.tap()
+            dismissKeyboardTip()
+            weight.typeText("5")
+            let save = app.buttons["Save"].firstMatch
+            XCTAssertTrue(scrollTo(save, maxSwipes: 8))
+            save.tap()
+            XCTAssertTrue(element(labelBeginningWith: "That number is outside the range").waitForExistence(timeout: 5), "5 kg shows the message for a weight outside the range")
+            XCTAssertTrue(save.isEnabled, "with a weight typed, \"Save\" is enabled")
+            auditScrollToTheTop("the weigh-in screen", size: size)
+            audit("the weigh-in screen", size: size, dark: true, types: .contrast, pages: 4)
             try auditLaunchOnToday("review", size: size)
             openTheDueReview()
             audit("the weekly review", size: size, dark: true, types: .contrast, pages: 6)
@@ -2560,7 +2693,12 @@ extension AutomatedChecks {
     /// earlier day, the edit screen, the close-the-day screen, the Reminders
     /// group, the privacy notice, Diagnostics, Export, the stage screen, the
     /// Reviews list, safe mode and the store-open fault screen. Each screen
-    /// has the same pages as its audit in light mode. With the next test,
+    /// has the same pages as its audit in light mode. On the export screen
+    /// the test also measures the selected day of the calendar of "To"
+    /// (`assertTheSelectedDayOfTheCalendarContrasts`). The edit screen shows
+    /// a selected (filled) Where chip. The test also audits the deleted
+    /// screen, which has no audit in light mode, for its filled button
+    /// "Done" (ruling r21-02, mm-t12b.29). With the next test,
     /// the dark-mode audits cover each screen of the light-mode audits. They
     /// leave out only four states of Today (a matched planned meal, the plan
     /// card, the stage 1 card, the pinned note) and two states of the
@@ -2585,6 +2723,7 @@ extension AutomatedChecks {
             XCTAssertTrue(app.buttons["Delete entry"].firstMatch.waitForExistence(timeout: 8) || app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 2), "the edit screen shows")
             dismissKeyboardTip()
             auditHideTheKeyboard(on: "the edit screen", size: size)
+            auditSelectAWhereChip(on: "the edit screen")
             audit("the edit screen", size: size, dark: true, types: .contrast, pages: 3)
             try auditLaunchOnToday("or-plan", size: size)
             let closeTheDay = app.buttons["Close the day"].firstMatch
@@ -2608,6 +2747,7 @@ extension AutomatedChecks {
             auditOpenSettings()
             auditOpen("Export", screen: "Export")
             audit("the export screen", size: size, dark: true, types: .contrast, pages: 3)
+            assertTheSelectedDayOfTheCalendarContrasts(size: size, dark: true)
             try auditLaunchOnToday("week1", size: size)
             tapToolbar("Programme")
             assertScreen("Programme")
@@ -2627,6 +2767,15 @@ extension AutomatedChecks {
             try auditLaunch("corrupt", size: size)
             XCTAssertTrue(element(labelled: "Midmorning cannot open your record on this device.").waitForExistence(timeout: 20), "the store-open fault screen shows")
             audit("the store-open fault screen", size: size, dark: true, types: .contrast, pages: 2)
+            try auditLaunchOnToday("week1", size: size)
+            tapToolbar("Settings")
+            assertScreen("Settings")
+            let delete = app.buttons["Delete everything"].firstMatch
+            XCTAssertTrue(scrollTo(delete))
+            delete.tap()
+            tapDialogButton("Delete everything")
+            XCTAssertTrue(element(labelBeginningWith: "Everything is deleted.").waitForExistence(timeout: 10), "the deleted screen shows")
+            audit("the deleted screen", size: size, dark: true, types: .contrast)
         }
     }
 

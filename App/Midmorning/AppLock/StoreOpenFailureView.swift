@@ -25,7 +25,7 @@ struct StoreOpenFailureView: View {
                 Text("applock.storeOpenFailure.message")
                     .multilineTextAlignment(.center)
                 Button("applock.storeOpenFailure.tryAgain", action: onTryAgain)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.filled)
                 Button("today.getSupport") { isShowingSupportSheet = true }
                     .buttonStyle(.bordered)
                 Button(role: .destructive) {
@@ -50,19 +50,21 @@ struct StoreOpenFailureView: View {
         }
         // Ruling r16-03 (mm-t12b.28): an alert shows "Delete everything"
         // and "Cancel"; from iOS 26 a confirmation dialog shows no "Cancel".
-        .alert(
-            "applock.deleteEverything.confirm.title",
-            isPresented: $isShowingDeleteConfirmation
-        ) {
-            Button("settings.privacy.deleteEverything", role: .destructive) {
-                // The deleted screen only after a deletion that succeeded;
-                // on failure this page stays and shows the failure line.
-                deleteOutcome = DeleteAllOutcome.of { try seam.deleteEverything() }
-                if deleteOutcome == .deleted { onDeleted() }
+        .alertInSystemColours { content in
+            content.alert(
+                "applock.deleteEverything.confirm.title",
+                isPresented: $isShowingDeleteConfirmation
+            ) {
+                Button("settings.privacy.deleteEverything", role: .destructive) {
+                    // The deleted screen only after a deletion that succeeded;
+                    // on failure this page stays and shows the failure line.
+                    deleteOutcome = DeleteAllOutcome.of { try seam.deleteEverything() }
+                    if deleteOutcome == .deleted { onDeleted() }
+                }
+                Button("entry.cancel", role: .cancel) {}
+            } message: {
+                Text("applock.deleteEverything.confirm.message")
             }
-            Button("entry.cancel", role: .cancel) {}
-        } message: {
-            Text("applock.deleteEverything.confirm.message")
         }
     }
 }

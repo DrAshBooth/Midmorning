@@ -35,6 +35,6 @@ struct FullWidthConfirmButton: View {
         Button(action: action) {
             label.frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.filled)
     }
 }

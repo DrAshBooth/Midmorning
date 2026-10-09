@@ -67,7 +67,7 @@ struct CoverView: View {
                     .font(.largeTitle)
                 if showsUnlock {
                     Button("applock.cover.unlock") { Task { await tapUnlock() } }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.filled)
                         .accessibilityFocused($focusedControl, equals: .unlock)
                 } else {
                     Button("applock.cover.deleteFromThisDevice") {
@@ -108,33 +108,35 @@ struct CoverView: View {
         // Ruling r16-03 (mm-t12b.28): each confirmation is an alert, which
         // shows both buttons. From iOS 26 a confirmation dialog shows no
         // "Cancel".
-        .alert(
-            "applock.deleteEverything.confirm.title",
-            isPresented: $isShowingDeleteEverythingConfirmation
-        ) {
-            Button("applock.cover.deleteEverything", role: .destructive) {
-                Task {
-                    // The deleted screen only after a deletion that
-                    // succeeded; on failure the cover stays.
-                    if await controller.confirmDeleteEverything() { onEverythingDeleted() }
+        .alertInSystemColours { content in
+            content.alert(
+                "applock.deleteEverything.confirm.title",
+                isPresented: $isShowingDeleteEverythingConfirmation
+            ) {
+                Button("applock.cover.deleteEverything", role: .destructive) {
+                    Task {
+                        // The deleted screen only after a deletion that
+                        // succeeded; on failure the cover stays.
+                        if await controller.confirmDeleteEverything() { onEverythingDeleted() }
+                    }
                 }
+                Button("applock.cancel", role: .cancel) {}
+            } message: {
+                Text("applock.deleteEverything.confirm.message")
             }
-            Button("applock.cancel", role: .cancel) {}
-        } message: {
-            Text("applock.deleteEverything.confirm.message")
-        }
-        .alert(
-            "applock.deleteFromThisDevice.confirm.title",
-            isPresented: $isShowingDeleteFromThisDeviceConfirmation
-        ) {
-            Button("applock.cover.deleteFromThisDevice", role: .destructive) {
-                Task {
-                    if await controller.confirmDeleteFromThisDevice() { onDeleteFromThisDevice() }
+            .alert(
+                "applock.deleteFromThisDevice.confirm.title",
+                isPresented: $isShowingDeleteFromThisDeviceConfirmation
+            ) {
+                Button("applock.cover.deleteFromThisDevice", role: .destructive) {
+                    Task {
+                        if await controller.confirmDeleteFromThisDevice() { onDeleteFromThisDevice() }
+                    }
                 }
+                Button("applock.cancel", role: .cancel) {}
+            } message: {
+                Text("applock.deleteFromThisDevice.confirm.message")
             }
-            Button("applock.cancel", role: .cancel) {}
-        } message: {
-            Text("applock.deleteFromThisDevice.confirm.message")
         }
     }
 

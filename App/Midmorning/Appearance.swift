@@ -12,6 +12,78 @@ enum Appearance {
     static let accentContrastNote = "AccentColor: light 1F4E79 vs white 8.7:1; dark 7CB4E6 vs black 9.5:1; Increase Contrast 5078A0 vs white 4.6:1 and vs black 4.5:1."
 }
 
+/// The content of a view that shows an alert, with the accent colour as its
+/// tint, as the root of the app gives it (`MidmorningApp`). See
+/// `View.alertInSystemColours`.
+struct AccentTinted<Content: View>: View {
+    let content: Content
+
+    var body: some View {
+        content.tint(Color.accentColor)
+    }
+}
+
+extension View {
+    /// product-rules "Appearance": "System alerts, confirmation dialogs and
+    /// swipe actions MUST also keep their system colours." SwiftUI gives an
+    /// alert the tint of the place of its `.alert` modifier. The root of
+    /// the app sets the accent colour as the tint, and from ruling r21-02
+    /// (mm-t12b.29) the accent colour is the AccentColor asset. So "Cancel"
+    /// of each alert showed 1F4E79 in light mode and 7CB4E6 in dark mode,
+    /// not the system blue (9 October 2026, iOS 27.0 simulator). A UIKit
+    /// appearance proxy for `UIAlertController` did not change it.
+    ///
+    /// Every alert of the app goes through this function:
+    /// `view.alertInSystemColours { $0.alert(...) }`. The alert gets the
+    /// system blue as its tint, as before the ruling. The view itself keeps
+    /// the accent colour (`AccentTinted`). A modifier after this one does
+    /// not get the system blue. The swipe action keeps its system colour
+    /// with `.tint(.red)` (DaySectionView.swift). The app has no
+    /// confirmation dialog: each one is an alert (ruling r16-03).
+    /// `AutomatedChecks.testAnAlertKeepsTheSystemBlue` measures "Cancel" of
+    /// "Delete everything" and "Get support" on Settings, in light mode and
+    /// in dark mode.
+    func alertInSystemColours<Alerted: View>(_ addAlert: (AccentTinted<Self>) -> Alerted) -> some View {
+        addAlert(AccentTinted(content: self)).tint(Color(uiColor: .systemBlue))
+    }
+}
+
+/// The filled button of every screen (ruling r21-02, mm-t12b.29). The
+/// accent colour fills the button, as `.borderedProminent` does, and the
+/// text is the system background colour: white in light mode, and black
+/// (on a sheet, the near-black 1C1C1E of the sheet) in dark mode. The
+/// system's own white text on the dark accent value 7CB4E6 is about 2.2:1,
+/// under the 3:1 of product-rules "Accessibility everywhere". Measured in
+/// screenshots of onboarding screen 1 on the iOS 27.0 simulator (9 October
+/// 2026): light mode, white on 1F4E79, 8.7:1; dark mode, black on 7CB4E6,
+/// 9.5:1. With Increase Contrast the system changes the fill: light mode,
+/// white on 406080, 6.6:1; dark mode, black on B3DBFF, 14.5:1.
+/// `AccentContrastTests` checks each text on each value of the asset. A
+/// disabled button keeps the system's own colours. Every filled button
+/// uses `.buttonStyle(.filled)`, never `.borderedProminent`. The one filled
+/// button that UIKit draws, "Save" on the keyboard's toolbar
+/// (`PredictiveTextView`), sets the system background colour as its text
+/// itself.
+struct FilledButtonStyle: PrimitiveButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        Button(role: configuration.role, action: configuration.trigger) {
+            if isEnabled {
+                configuration.label.foregroundStyle(Color(uiColor: .systemBackground))
+            } else {
+                configuration.label
+            }
+        }
+        .buttonStyle(.borderedProminent)
+    }
+}
+
+extension PrimitiveButtonStyle where Self == FilledButtonStyle {
+    /// The filled button: see `FilledButtonStyle`.
+    static var filled: FilledButtonStyle { FilledButtonStyle() }
+}
+
 public extension View {
     /// The plain list style, with no grouped-style section fill, for every
     /// list in the app.
@@ -169,6 +241,27 @@ struct PredictiveTextView: UIViewRepresentable {
             let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 100, height: 44))
             let save = UIBarButtonItem(title: NSLocalizedString("entry.save", comment: ""), style: .done, target: self, action: #selector(saveTapped))
             save.accessibilityTraits = .button
+            // On iOS 26 and later a `.done` item is a filled button: the
+            // accent colour fills it. Its text is the system background
+            // colour, as in `FilledButtonStyle` (ruling r21-02, mm-t12b.29;
+            // product-rules "Appearance"). The system's white text on the
+            // dark accent value measured 2.1:1. `UIColor.systemBackground`
+            // given as it is does not work here: on the keyboard's toolbar
+            // it showed as a light blue, 4.9:1 in light mode and 1.4:1 in
+            // dark mode. So the provider resolves the system background
+            // colour for the trait collection of the item at the base level
+            // (white in light mode, black in dark mode) and gives the item
+            // that value. `assertTheKeyboardSaveContrasts` measures it.
+            // Before iOS 26 the item is bold text in the accent colour with
+            // no fill, so it keeps its own colour.
+            if #available(iOS 26.0, *) {
+                let text = UIColor { traits in
+                    UIColor.systemBackground.resolvedColor(with: traits.modifyingTraits { $0.userInterfaceLevel = .base })
+                }
+                for state: UIControl.State in [.normal, .highlighted] {
+                    save.setTitleTextAttributes([.foregroundColor: text], for: state)
+                }
+            }
             toolbar.items = [UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil), save]
             toolbar.sizeToFit()
             return toolbar

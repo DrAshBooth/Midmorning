@@ -97,13 +97,15 @@ struct EditEntryView: View {
             }
             // Ruling r16-03 (mm-t12b.28): an alert shows "Delete" and
             // "Cancel"; from iOS 26 a confirmation dialog shows no "Cancel".
-            .alert("entry.delete.confirmTitle", isPresented: $showingDeleteConfirm) {
-                Button("entry.delete.action", role: .destructive) {
-                    try? store.delete(entryId: entry.id, deletedAt: Date())
-                    dismiss()
-                    onDelete()
+            .alertInSystemColours { content in
+                content.alert("entry.delete.confirmTitle", isPresented: $showingDeleteConfirm) {
+                    Button("entry.delete.action", role: .destructive) {
+                        try? store.delete(entryId: entry.id, deletedAt: Date())
+                        dismiss()
+                        onDelete()
+                    }
+                    Button("entry.cancel", role: .cancel) {}
                 }
-                Button("entry.cancel", role: .cancel) {}
             }
         }
         // The cover window hides this screen while the app is not active
