@@ -140,6 +140,18 @@ Tools the tests use:
   PDFKit, read a label hidden from VoiceOver with Vision text recognition,
   or make the store files read-only so that a save fails.
 
+Accessibility audits. `AutomatedChecks+Accessibility.swift` holds 22
+tests: XCUITest's accessibility audit on each main screen at the default
+text size and at the largest accessibility size, a contrast audit in dark
+mode, and checks of headings, custom actions and labels in the
+accessibility tree. Ash does not test accessibility by hand (8 October
+2026), so these tests are the evidence for it. They take about 90 minutes,
+so a run without names leaves them out; run them with
+`tools/skeleton-checks/automated-checks.sh --audits`. The counted run of
+gate mm-t43.31 is the run without names. A new simulator changes to dark
+mode only after it restarts once; the dark-mode test says so when it
+fails.
+
 When to run. Start the checks between 09:00 and 02:45 in the Mac's time
 zone. The seeder puts no entry after now, and the gap band on the current
 record day needs 5 hours of that day; before 09:00 the seeder stops with an

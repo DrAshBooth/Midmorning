@@ -22,12 +22,23 @@
 # changes that are not committed does not count; the script says so loudly
 # at the start and in that line.
 #
-# Usage: tools/skeleton-checks/automated-checks.sh [test name ...]
-#   With no test name, the script runs every test in AutomatedChecks.
+# Usage: tools/skeleton-checks/automated-checks.sh [--audits] [test name ...]
+#   With no test name, the script runs every test in AutomatedChecks except
+#   the accessibility audits of AutomatedChecks+Accessibility.swift, which
+#   take about 90 minutes more. "--audits" with no test name runs only the
+#   audits. The run that counts for gate mm-t43.31 is the run with no
+#   argument.
 #   DEVICE_NAME sets the simulator (default: mm-automated-checks). The script
 #   makes that simulator when it does not exist, so that the run does not
 #   disturb a simulator that another session uses.
 set -uo pipefail
+AUDIT_FILE="$(cd "$(dirname "$0")" && pwd)/HarnessUITests/AutomatedChecks+Accessibility.swift"
+AUDIT_TESTS=()
+[ -f "$AUDIT_FILE" ] && AUDIT_TESTS=($(grep -oE 'func test[A-Za-z0-9_]+\(' "$AUDIT_FILE" | sed -E 's/func (test[A-Za-z0-9_]+)\(/\1/'))
+if [ "${1:-}" = "--audits" ]; then
+  shift
+  [ $# -eq 0 ] && set -- "${AUDIT_TESTS[@]}"
+fi
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 DEVICE_NAME=${DEVICE_NAME:-mm-automated-checks}
@@ -169,6 +180,7 @@ if [ $# -eq 0 ]; then
     first+=("-only-testing:HarnessUITests/AutomatedChecks/$name")
     rest+=("-skip-testing:HarnessUITests/AutomatedChecks/$name")
   done
+  for name in "${AUDIT_TESTS[@]}"; do rest+=("-skip-testing:HarnessUITests/AutomatedChecks/$name"); done
 fi
 run_pass() {
   local bundle=$1; shift
