@@ -236,7 +236,7 @@ The PDF MUST use fixed text sizes. The body MUST be 11 pt, a day heading 14 pt a
 
 The PDF MUST be a tagged PDF. The PDF MUST tag the heading "Record" as an H1. The PDF MUST tag each day heading as an H2. On each page that holds a day's entries, those entries MUST be one tagged list, with one list item per entry. A day that continues on the next page therefore has one list on each of its pages, because a Core Graphics tag cannot cross a page. The heading that a continuation page repeats MUST NOT be a tagged heading, so each day has one H2. Ash ruled this on 26 September 2026. Each item's text MUST read, in order: the time, the asterisk when starred, the What, the Where, the Context. With "Include context" off, the item's text MUST end at the Where.
 
-When the system's PDF renderer can write the tag, the PDF MUST declare the language en-GB. The team MUST test that during the export change before it commits to the tag. The design states the risk. A screen reader MUST read the days in date order. A screen reader MUST read each entry in one pass, not one column at a time.
+The PDF MUST declare the language en-GB on each tag: the H1, each H2, each list and each list item. Core Graphics has no key for the language of the whole document, so the document catalog holds no language. Ash ruled on 9 October 2026 that the language on each tag is the declaration of the PDF's language (r20-02). A screen reader MUST read the days in date order. A screen reader MUST read each entry in one pass, not one column at a time.
 
 #### Scenario: Screen reader on the PDF
 - **WHEN** a screen reader opens the PDF
@@ -255,8 +255,8 @@ When the system's PDF renderer can write the tag, the PDF MUST declare the langu
 - **THEN** the day has one H2, one list on page 1 and one list on page 2, and the heading that page 2 repeats has no tag
 
 #### Scenario: The document language after the spike
-- **WHEN** the spike shows that the renderer writes the language tag, and a PDF reader shows the document's properties
-- **THEN** the language reads en-GB
+- **WHEN** a PDF reader shows the tag tree of an export PDF
+- **THEN** the H1, each H2, each list and each list item declare the language en-GB
 
 #### Scenario: Voice Control
 - **WHEN** a person using Voice Control says "Show names" on the export screen
