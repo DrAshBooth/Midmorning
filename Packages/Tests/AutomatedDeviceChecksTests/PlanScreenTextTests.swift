@@ -66,5 +66,8 @@ final class PlanScreenTextTests: XCTestCase {
         XCTAssertEqual(ScreenText.english(line), "Mid-afternoon at 16:00 still happens.")
         try ScreenText.assertScreen("PlanTodayModel.swift", shows: ["NextPlannedMeal.line(for: PlanMealFact("])
         try ScreenText.assertScreen("PlannedMealRowView.swift", shows: ["if let nextLine = row.nextLine", "Text(nextLine)"])
+        // Ruling r19-02 (mm-t23.26): the row's accessibility label ends
+        // with the same line (`PlannedMealAccessibility`).
+        try ScreenText.assertScreen("PlannedMealRowView.swift", shows: ["nextPlannedMealLine: row.nextLine.map(CatalogueText.verbatim)"])
     }
 }

@@ -50,7 +50,9 @@ public struct MatchedEntryText: Sendable, Equatable {
 /// The planned meal row's VoiceOver label (regular-eating-plan spec,
 /// "Accessibility of the plan"): the slot label, then the planned time, then
 /// the matched entry's own label or "Skipped", then the missed planned meal
-/// prompt's text when it shows on this row.
+/// prompt's text when it shows on this row. The label ends with the
+/// next-planned-meal line when the row shows it (ruling r19-02, mm-t23.26).
+/// A comma and a space separate the parts.
 public enum PlannedMealAccessibility {
     public static func label(
         slotLabel: String,
@@ -58,6 +60,7 @@ public enum PlannedMealAccessibility {
         matchedEntryAccessibilityLabel: CatalogueText?,
         isSkipped: Bool,
         prompt: MissedMealPrompt.Form?,
+        nextPlannedMealLine: CatalogueText?,
         timeText: (Date) -> String
     ) -> CatalogueText {
         var parts: [CatalogueText] = [.verbatim(slotLabel), .verbatim(time)]
@@ -68,6 +71,9 @@ public enum PlannedMealAccessibility {
         }
         if let prompt {
             parts.append(MissedMealPrompt.line(for: prompt, timeText: timeText))
+        }
+        if let nextPlannedMealLine {
+            parts.append(nextPlannedMealLine)
         }
         return .list(parts)
     }

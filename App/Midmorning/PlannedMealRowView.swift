@@ -1,6 +1,7 @@
 import SwiftUI
 import Record
 import Plan
+import Constants
 
 /// One planned meal row on Today (regular-eating-plan spec, "Today shows the
 /// plan beside the record"; "A missed planned meal gets one prompt"). The
@@ -36,10 +37,14 @@ struct PlannedMealRowView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
+        // The label ends with the next-planned-meal line when the row shows
+        // it (ruling r19-02, mm-t23.26).
         .accessibilityLabel(PlannedMealAccessibility.label(
             slotLabel: row.label, time: row.time,
             matchedEntryAccessibilityLabel: row.matchedEntry?.accessibilityLabel,
-            isSkipped: isSkipped, prompt: row.prompt, timeText: clockTimeText
+            isSkipped: isSkipped, prompt: row.prompt,
+            nextPlannedMealLine: row.nextLine.map(CatalogueText.verbatim),
+            timeText: clockTimeText
         ).string)
         .accessibilityCustomActions(for: row, onAddIt: onAddIt, onSkip: onSkip)
     }
