@@ -419,7 +419,7 @@ The app MUST add one to the launch failure count in `Local.store` each time it f
 
 When the container throws for any reason other than unavailable protected data, the app MUST show one page. The page MUST read "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything". "Try again" MUST open the container again. "Delete everything" MUST open the Delete-all confirmation. The app MUST NOT delete the store without the person's confirmation.
 
-In safe mode the app MUST open the store at the schema version that the store holds. A store that needs a schema migration cannot open read-only with the current schema version. So in safe mode the app MUST first read the schema version that the store's metadata names. The app MUST then open the store read-only with the `VersionedSchema` of that version from `RecordMigrationPlan.schemas`, and with no migration plan. No migration step runs, and no store file changes. When that open succeeds, the app shows Today with Export and Get support, as above. Today then appears in safe mode, so the next launch is not in safe mode. That launch MUST run the migration. When no `VersionedSchema` in the app agrees with the store's metadata, the open throws, and the app MUST show the page above. The app holds one schema version now, `RecordSchemaV1`. So a test MUST prove this rule with a second schema version that only the test holds. Ash ruled this on 7 October 2026 (r15-01).
+In safe mode the app MUST open the store at the schema version that the store holds. A store that needs a schema migration cannot open read-only with the current schema version. So in safe mode the app MUST first read the schema version that the metadata of each store file names. `Record.store` and `Local.store` migrate one at a time, so the two files can hold different versions after a launch that stopped between them. The app MUST then open each file read-only with the `VersionedSchema` of its own version from `RecordMigrationPlan.schemas`, and with no migration plan. No migration step runs, and no store file changes. When that open succeeds, the app shows Today with Export and Get support, as above. Today then appears in safe mode, so the next launch is not in safe mode. That launch MUST run the migration. When no `VersionedSchema` in the app agrees with the metadata of a file, the open throws, and the app MUST show the page above. The app holds one schema version now, `RecordSchemaV1`. So a test MUST prove this rule with a second schema version that only the test holds. Ash ruled this on 7 October 2026 (r15-01) and, for two files at different versions, on 8 October 2026 (r18-01).
 
 #### Scenario: Third launch with an uncleared marker
 - **WHEN** the app ends before Today appears on two launches in a row and the person opens it a third time
@@ -476,6 +476,10 @@ In safe mode the app MUST open the store at the schema version that the store ho
 #### Scenario: Try again
 - **WHEN** the person taps "Try again" and the container opens
 - **THEN** the app shows Today
+
+#### Scenario: A migration that stopped after one file
+- **WHEN** a launch stopped after the migration of one store file, so `Record.store` and `Local.store` hold different schema versions, and the app enters safe mode
+- **THEN** the app opens each file read-only at its own version, Today shows with Export, and no store file changes
 
 ### Requirement: The app holds no analytics of its own
 
