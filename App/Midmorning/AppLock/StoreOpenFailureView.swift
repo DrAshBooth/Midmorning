@@ -25,7 +25,7 @@ struct StoreOpenFailureView: View {
                 Text("applock.storeOpenFailure.message")
                     .multilineTextAlignment(.center)
                 Button("applock.storeOpenFailure.tryAgain", action: onTryAgain)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.filled)
                 Button("today.getSupport") { isShowingSupportSheet = true }
                     .buttonStyle(.bordered)
                 Button(role: .destructive) {

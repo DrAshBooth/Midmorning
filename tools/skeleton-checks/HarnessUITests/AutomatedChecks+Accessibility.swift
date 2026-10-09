@@ -422,17 +422,6 @@ extension AutomatedChecks {
             ]) { finding in
             finding.elementType == nil && !finding.hasFrame && finding.type.contains(.contrast) && finding.compact == "Contrast failed"
         },
-        AuditKnownDefect(bead: "mm-t12b.29", reason: """
-            The app does not use the AccentColor asset, so a bordered button shows the system blue on its own light \
-            tint, at 2.8:1: the Where chips on the new-entry and edit screens, and "Get support" on the store-open \
-            fault screen.
-            """) { finding in
-            let chips: Set<String> = ["Home", "Work", "Out", "Travelling", "Add a place"]
-            let onEntryScreen = finding.screen.hasPrefix("the new-entry screen") || finding.screen.hasPrefix("the edit screen")
-            let onFaultScreen = finding.screen.hasPrefix("the store-open fault screen")
-            return finding.type.contains(.contrast) && finding.elementType == .button && (finding.measured ?? 3) < 3
-                && ((onEntryScreen && chips.contains(finding.label ?? "")) || (onFaultScreen && finding.label == "Get support"))
-        },
     ] + auditHitAreaKnownDefects
 
     /// The findings of the current test that no exclusion took.
@@ -557,7 +546,8 @@ extension AutomatedChecks {
     /// is the higher of the two ratios. For example (8 October 2026): black
     /// text on white 21:1, the secondary text 8A8A8E on white 3.4:1, a
     /// section header 85858B on F2F2F7 3.3:1, white on the system blue
-    /// 3.5:1, and the system blue on its own light tint 2.8:1. A frame that
+    /// 3.5:1, and the system blue on its own light tint 2.8:1 (before the
+    /// app used its AccentColor asset, mm-t12b.29). A frame that
     /// holds two texts gives the contrast of the darker one only, so the
     /// audit measures each text and image of an element on its own
     /// (`measureContrast`).
@@ -1839,6 +1829,7 @@ extension AutomatedChecks {
             add.tap()
             XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
             dismissKeyboardTip()
+            if size == .standard { assertTheKeyboardSaveContrasts(on: "the new-entry screen", dark: false) }
             auditHideTheKeyboard(on: "the new-entry screen", size: size)
             audit("the new-entry screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
             app.navigationBars.buttons["Cancel"].firstMatch.tap()
@@ -1857,8 +1848,51 @@ extension AutomatedChecks {
             XCTAssertTrue(app.buttons["Delete entry"].firstMatch.waitForExistence(timeout: 8) || app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 2), "the edit screen shows")
             dismissKeyboardTip()
             auditHideTheKeyboard(on: "the edit screen", size: size)
+            if size == .standard { auditSelectAWhereChip(on: "the edit screen") }
             audit("the edit screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 8))
         }
+    }
+
+    /// Selects the Where chip "Home", so that the audit of the screen
+    /// measures a filled chip as well as the bordered chips (ruling r21-02,
+    /// mm-t12b.29: the text of a filled button contrasts with the accent
+    /// colour in light mode and in dark mode). The test does not save the
+    /// entry; the next launch copies the seeded store again. Only at the
+    /// default text size: at AX5 the audit does not measure contrast.
+    func auditSelectAWhereChip(on screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        let home = app.buttons["Home"].firstMatch
+        XCTAssertTrue(home.waitForExistence(timeout: 5), "\(screen) shows the Where chip \"Home\"", file: file, line: line)
+        XCTAssertTrue(scrollTo(home), "\(screen) shows the Where chip \"Home\"", file: file, line: line)
+        home.tap()
+        XCTAssertTrue(home.isSelected, "on \(screen), the Where chip \"Home\" is selected (filled)", file: file, line: line)
+    }
+
+    /// The "Save" on the keyboard's toolbar (`PredictiveTextView`) is a
+    /// filled button on iOS 26 and later: the accent colour fills it. The
+    /// audit pages hide the keyboard, so the test measures that "Save" in a
+    /// screenshot while the keyboard shows: its text contrasts with the
+    /// fill at 3:1 or more (ruling r21-02, mm-t12b.29). Before the fix,
+    /// the white text on the dark accent value measured 2.1:1 (9 October
+    /// 2026).
+    func assertTheKeyboardSaveContrasts(on screen: String, dark: Bool, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "\(screen) shows the keyboard", file: file, line: line)
+        // The navigation bar has a "Save" too; the keyboard's is the lower one.
+        let saves = app.buttons.matching(NSPredicate(format: "label == %@", "Save")).allElementsBoundByIndex.filter { $0.exists && $0.frame.height > 0 }
+        guard let save = saves.max(by: { $0.frame.minY < $1.frame.minY }), save.frame.minY > app.windows.firstMatch.frame.height / 3 else {
+            XCTFail("\(screen) shows \"Save\" on the keyboard's toolbar", file: file, line: line)
+            return
+        }
+        sleep(1)
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else {
+            XCTFail("no screenshot", file: file, line: line)
+            return
+        }
+        let scale = CGFloat(image.width) / max(app.windows.firstMatch.frame.width, 1)
+        let ratio = measuredContrast(in: save.frame, of: image, scale: scale)
+        let mode = dark ? ", dark" : ""
+        auditLog("  (\(screen)\(mode): the keyboard's \"Save\" measured \(ratio.map { String(format: "%.1f", $0) } ?? "nothing"):1)")
+        XCTAssertGreaterThanOrEqual(ratio ?? 0, 3, "on \(screen)\(mode), the text of the keyboard's \"Save\" contrasts with its fill at 3:1 or more",
+                                    file: file, line: line)
     }
 
     /// "Earlier days" and one earlier day (`review`).
@@ -2510,6 +2544,7 @@ extension AutomatedChecks {
             app.buttons["Add an entry"].firstMatch.tap()
             XCTAssertTrue(app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 8), "the new-entry screen shows")
             dismissKeyboardTip()
+            assertTheKeyboardSaveContrasts(on: "the new-entry screen", dark: true)
             auditHideTheKeyboard(on: "the new-entry screen", size: size)
             audit("the new-entry screen", size: size, dark: true, types: .contrast, pages: 3)
             try auditLaunchOnToday("planMatched", size: size)
@@ -2560,7 +2595,10 @@ extension AutomatedChecks {
     /// earlier day, the edit screen, the close-the-day screen, the Reminders
     /// group, the privacy notice, Diagnostics, Export, the stage screen, the
     /// Reviews list, safe mode and the store-open fault screen. Each screen
-    /// has the same pages as its audit in light mode. With the next test,
+    /// has the same pages as its audit in light mode. The edit screen shows
+    /// a selected (filled) Where chip. The test also audits the deleted
+    /// screen, which has no audit in light mode, for its filled button
+    /// "Done" (ruling r21-02, mm-t12b.29). With the next test,
     /// the dark-mode audits cover each screen of the light-mode audits. They
     /// leave out only four states of Today (a matched planned meal, the plan
     /// card, the stage 1 card, the pinned note) and two states of the
@@ -2585,6 +2623,7 @@ extension AutomatedChecks {
             XCTAssertTrue(app.buttons["Delete entry"].firstMatch.waitForExistence(timeout: 8) || app.switches["felt like a binge"].firstMatch.waitForExistence(timeout: 2), "the edit screen shows")
             dismissKeyboardTip()
             auditHideTheKeyboard(on: "the edit screen", size: size)
+            auditSelectAWhereChip(on: "the edit screen")
             audit("the edit screen", size: size, dark: true, types: .contrast, pages: 3)
             try auditLaunchOnToday("or-plan", size: size)
             let closeTheDay = app.buttons["Close the day"].firstMatch
@@ -2627,6 +2666,15 @@ extension AutomatedChecks {
             try auditLaunch("corrupt", size: size)
             XCTAssertTrue(element(labelled: "Midmorning cannot open your record on this device.").waitForExistence(timeout: 20), "the store-open fault screen shows")
             audit("the store-open fault screen", size: size, dark: true, types: .contrast, pages: 2)
+            try auditLaunchOnToday("week1", size: size)
+            tapToolbar("Settings")
+            assertScreen("Settings")
+            let delete = app.buttons["Delete everything"].firstMatch
+            XCTAssertTrue(scrollTo(delete))
+            delete.tap()
+            tapDialogButton("Delete everything")
+            XCTAssertTrue(element(labelBeginningWith: "Everything is deleted.").waitForExistence(timeout: 10), "the deleted screen shows")
+            audit("the deleted screen", size: size, dark: true, types: .contrast)
         }
     }
 

@@ -342,7 +342,7 @@ struct TodayView: View {
                 Text("today.addEntry")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.filled)
             .accessibilityFocused($addEntryFocused)
         }
         .textCase(nil)

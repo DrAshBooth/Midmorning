@@ -12,6 +12,41 @@ enum Appearance {
     static let accentContrastNote = "AccentColor: light 1F4E79 vs white 8.7:1; dark 7CB4E6 vs black 9.5:1; Increase Contrast 5078A0 vs white 4.6:1 and vs black 4.5:1."
 }
 
+/// The filled button of every screen (ruling r21-02, mm-t12b.29). The
+/// accent colour fills the button, as `.borderedProminent` does, and the
+/// text is the system background colour: white in light mode, and black
+/// (on a sheet, the near-black 1C1C1E of the sheet) in dark mode. The
+/// system's own white text on the dark accent value 7CB4E6 is about 2.2:1,
+/// under the 3:1 of product-rules "Accessibility everywhere". Measured in
+/// screenshots of onboarding screen 1 on the iOS 27.0 simulator (9 October
+/// 2026): light mode, white on 1F4E79, 8.7:1; dark mode, black on 7CB4E6,
+/// 9.5:1. With Increase Contrast the system changes the fill: light mode,
+/// white on 406080, 6.6:1; dark mode, black on B3DBFF, 14.5:1.
+/// `AccentContrastTests` checks each text on each value of the asset. A
+/// disabled button keeps the system's own colours. Every filled button
+/// uses `.buttonStyle(.filled)`, never `.borderedProminent`. The one filled
+/// button that UIKit draws, "Save" on the keyboard's toolbar
+/// (`PredictiveTextView`), sets its own text colour.
+struct FilledButtonStyle: PrimitiveButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        Button(role: configuration.role, action: configuration.trigger) {
+            if isEnabled {
+                configuration.label.foregroundStyle(Color(uiColor: .systemBackground))
+            } else {
+                configuration.label
+            }
+        }
+        .buttonStyle(.borderedProminent)
+    }
+}
+
+extension PrimitiveButtonStyle where Self == FilledButtonStyle {
+    /// The filled button: see `FilledButtonStyle`.
+    static var filled: FilledButtonStyle { FilledButtonStyle() }
+}
+
 public extension View {
     /// The plain list style, with no grouped-style section fill, for every
     /// list in the app.
@@ -169,6 +204,23 @@ struct PredictiveTextView: UIViewRepresentable {
             let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 100, height: 44))
             let save = UIBarButtonItem(title: NSLocalizedString("entry.save", comment: ""), style: .done, target: self, action: #selector(saveTapped))
             save.accessibilityTraits = .button
+            // On iOS 26 and later a `.done` item is a filled button: the
+            // accent colour fills it. Its text is white in light mode and
+            // black in dark mode, as in `FilledButtonStyle` (ruling r21-02,
+            // mm-t12b.29). The system's white text on the dark accent
+            // value measured 2.1:1. `UIColor.systemBackground` does not
+            // work here: on the keyboard's toolbar it showed as a light
+            // blue, 4.9:1 in light mode and 1.4:1 in dark mode. Black and
+            // white measured 8.6:1 in light mode and 9.7:1 in dark mode
+            // (iOS 27.0 simulator, 9 October 2026). Before iOS 26 the item
+            // is bold text in the accent colour with no fill, so it keeps
+            // its own colour.
+            if #available(iOS 26.0, *) {
+                let text = UIColor { $0.userInterfaceStyle == .dark ? .black : .white }
+                for state: UIControl.State in [.normal, .highlighted] {
+                    save.setTitleTextAttributes([.foregroundColor: text], for: state)
+                }
+            }
             toolbar.items = [UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil), save]
             toolbar.sizeToFit()
             return toolbar

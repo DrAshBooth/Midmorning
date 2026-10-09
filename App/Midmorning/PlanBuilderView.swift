@@ -77,7 +77,7 @@ struct PlanBuilderView: View {
                     } label: {
                         Text("entry.save").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.filled)
                     .listRowInsets(EdgeInsets())
                     .padding()
                 }

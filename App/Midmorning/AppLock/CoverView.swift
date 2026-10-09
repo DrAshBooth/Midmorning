@@ -67,7 +67,7 @@ struct CoverView: View {
                     .font(.largeTitle)
                 if showsUnlock {
                     Button("applock.cover.unlock") { Task { await tapUnlock() } }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.filled)
                         .accessibilityFocused($focusedControl, equals: .unlock)
                 } else {
                     Button("applock.cover.deleteFromThisDevice") {

@@ -32,7 +32,7 @@ struct DeletedScreen: View {
                     .padding(.horizontal)
                 if !isAcknowledged {
                     Button("applock.done") { isAcknowledged = true }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.filled)
                 }
                 // Safeguarding: "Get support on every screen" — this is a
                 // full screen, so it carries the same control every other
