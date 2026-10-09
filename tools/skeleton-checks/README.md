@@ -86,9 +86,10 @@ everywhere" and the accessibility requirement of each spec.
 Accessibility labels in App Store Connect. Ash ruled on 9 October 2026
 (r21-01, mm-t43.16) that a passing run of the accessibility audits on the
 commit of the build is sufficient to declare an accessibility label. The
-audits are the tests that `tools/skeleton-checks/automated-checks.sh
---audits` runs. In a passing run, every audit passes, and the working tree
-has no change that is not committed. Write that run as a dated line in the
+audits are the tests that
+`tools/skeleton-checks/automated-checks.sh --audits` runs. In a passing
+run, every audit passes, and the working tree has no change that is not
+committed. Write that run as a dated line in the
 table below, with its commit. A declaration needs no device check and no
 screenshot. Safeguarding "Regulatory release gates", data-and-privacy
 "Release gates and the App Store submission" and onboarding "Four screens,
