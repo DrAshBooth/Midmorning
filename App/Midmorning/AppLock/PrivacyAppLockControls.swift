@@ -29,20 +29,22 @@ struct PrivacyAppLockControls: View {
         }
         // Ruling r16-03 (mm-t12b.28): an alert shows "Turn on" and
         // "Cancel"; from iOS 26 a confirmation dialog shows no "Cancel".
-        .alert(
-            strings.onlyLabel?.string ?? "",
-            isPresented: $isShowingFaceOrTouchOnlyWarning
-        ) {
-            Button("applock.faceOrTouchOnly.turnOn") {
-                // Ruling r15-03: a biometrics-only system authentication
-                // request comes first. On a cancel or a failure the switch
-                // stays off. Ruling r13-06: a turn-on that succeeds saves
-                // the current enrolment state hash, read after the request.
-                Task { await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: EnrolmentHash.current()) }
+        .alertInSystemColours { content in
+            content.alert(
+                strings.onlyLabel?.string ?? "",
+                isPresented: $isShowingFaceOrTouchOnlyWarning
+            ) {
+                Button("applock.faceOrTouchOnly.turnOn") {
+                    // Ruling r15-03: a biometrics-only system authentication
+                    // request comes first. On a cancel or a failure the switch
+                    // stays off. Ruling r13-06: a turn-on that succeeds saves
+                    // the current enrolment state hash, read after the request.
+                    Task { await controller.confirmTurnOnFaceOrTouchOnly(currentEnrolmentHash: EnrolmentHash.current()) }
+                }
+                Button("applock.cancel", role: .cancel) {}
+            } message: {
+                Text(strings.enrolmentWarning?.string ?? "")
             }
-            Button("applock.cancel", role: .cancel) {}
-        } message: {
-            Text(strings.enrolmentWarning?.string ?? "")
         }
     }
 

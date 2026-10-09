@@ -155,19 +155,21 @@ struct SettingsView: View {
         .getSupport()
         // Ruling r16-03 (mm-t12b.28): an alert shows "Delete everything"
         // and "Cancel"; from iOS 26 a confirmation dialog shows no "Cancel".
-        .alert(
-            "applock.deleteEverything.confirm.title",
-            isPresented: $isShowingDeleteConfirmation
-        ) {
-            Button("settings.privacy.deleteEverything", role: .destructive) {
-                deleteOutcome = DeleteAllOutcome.of { try deleteAllSeam.deleteEverything() }
-                if deleteOutcome == .deleted {
-                    deletionNotifier.onEverythingDeleted()
+        .alertInSystemColours { content in
+            content.alert(
+                "applock.deleteEverything.confirm.title",
+                isPresented: $isShowingDeleteConfirmation
+            ) {
+                Button("settings.privacy.deleteEverything", role: .destructive) {
+                    deleteOutcome = DeleteAllOutcome.of { try deleteAllSeam.deleteEverything() }
+                    if deleteOutcome == .deleted {
+                        deletionNotifier.onEverythingDeleted()
+                    }
                 }
+                Button("entry.cancel", role: .cancel) {}
+            } message: {
+                Text("applock.deleteEverything.confirm.message")
             }
-            Button("entry.cancel", role: .cancel) {}
-        } message: {
-            Text("applock.deleteEverything.confirm.message")
         }
         .onAppear(perform: load)
     }

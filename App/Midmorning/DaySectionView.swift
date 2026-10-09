@@ -211,13 +211,15 @@ extension View {
     /// confirmation dialog. From iOS 26 a confirmation dialog shows as a
     /// popover with no "Cancel"; an alert shows both buttons.
     func deleteEntryConfirmation(_ pending: Binding<RecordRow?>, onDelete: @escaping (RecordRow) -> Void) -> some View {
-        alert(
-            "entry.delete.confirmTitle",
-            isPresented: Binding(get: { pending.wrappedValue != nil }, set: { if !$0 { pending.wrappedValue = nil } }),
-            presenting: pending.wrappedValue
-        ) { entry in
-            Button("entry.delete.action", role: .destructive) { onDelete(entry) }
-            Button("entry.cancel", role: .cancel) {}
+        alertInSystemColours { content in
+            content.alert(
+                "entry.delete.confirmTitle",
+                isPresented: Binding(get: { pending.wrappedValue != nil }, set: { if !$0 { pending.wrappedValue = nil } }),
+                presenting: pending.wrappedValue
+            ) { entry in
+                Button("entry.delete.action", role: .destructive) { onDelete(entry) }
+                Button("entry.cancel", role: .cancel) {}
+            }
         }
     }
 }

@@ -117,8 +117,9 @@ final class AccentContrastTests: XCTestCase {
     }
 
     /// Ruling r21-02: the text of a filled button is white in light mode
-    /// and black or near-black in dark mode (`FilledButtonStyle`, the
-    /// system background colour; the keyboard's "Save", black). Each text
+    /// and black or near-black in dark mode (the system background colour:
+    /// `FilledButtonStyle`, and the keyboard's "Save" at the base level,
+    /// black). Each text
     /// contrasts with each fill that
     /// can show with it at 3:1 or more. With Increase Contrast on in dark
     /// mode, the fill is the dark value or the Increase Contrast value, so
@@ -157,16 +158,76 @@ final class AccentContrastTests: XCTestCase {
     }
 
     /// "Save" on the keyboard's toolbar is a `.done` bar button item: a
-    /// filled button on iOS 26 and later. Its text is white in light mode
-    /// and black in dark mode, from iOS 26 only (before iOS 26 the item has
-    /// no fill). `assertTheKeyboardSaveContrasts` in the UI tests measures
-    /// it in a screenshot.
-    func testTheKeyboardSaveHasDarkTextInDarkMode() throws {
+    /// filled button on iOS 26 and later. Its text is the system background
+    /// colour (product-rules "Appearance", ruling r21-02), from iOS 26 only
+    /// (before iOS 26 the item has no fill). The provider resolves
+    /// `UIColor.systemBackground` at the base level, because the colour as
+    /// it is showed as a light blue on the keyboard's toolbar: white in
+    /// light mode and black in dark mode. `assertTheKeyboardSaveContrasts`
+    /// in the UI tests measures it in a screenshot.
+    func testTheKeyboardSaveHasTheSystemBackgroundColourAsItsText() throws {
         let appearance = try ScreenText.source("Appearance.swift")
         XCTAssertTrue(appearance.contains("style: .done"))
         XCTAssertTrue(appearance.contains(
-            "if #available(iOS 26.0, *) { let text = UIColor { $0.userInterfaceStyle == .dark ? .black : .white } "
+            "if #available(iOS 26.0, *) { let text = UIColor { traits in "
+                + "UIColor.systemBackground.resolvedColor(with: traits.modifyingTraits { $0.userInterfaceLevel = .base }) } "
                 + "for state: UIControl.State in [.normal, .highlighted] { save.setTitleTextAttributes([.foregroundColor: text], for: state) } }"
-        ), "the keyboard's \"Save\" sets black text in dark mode and white text in light mode, on iOS 26 and later")
+        ), "the keyboard's \"Save\" takes the system background colour as its text, on iOS 26 and later")
+        for fixed in ["? .black : .white", "UIColor.black", "UIColor.white"] {
+            XCTAssertFalse(appearance.contains(fixed), "Appearance.swift sets no fixed text colour (\(fixed)): product-rules \"Appearance\"")
+        }
+    }
+
+    /// product-rules "Appearance": "System alerts, confirmation dialogs and
+    /// swipe actions MUST also keep their system colours." SwiftUI gives an
+    /// alert the tint of the place of its `.alert` modifier, and the root
+    /// tint is the accent colour. So every alert of the App target is
+    /// inside `alertInSystemColours` (Appearance.swift), which gives the
+    /// alert the system blue and keeps the accent colour on the view. The
+    /// swipe action keeps `.tint(.red)`.
+    /// `AutomatedChecks.testAnAlertKeepsTheSystemBlue` in the UI tests
+    /// measures "Cancel" of an alert in light mode and in dark mode.
+    func testAlertsAndSwipeActionsKeepTheirSystemColours() throws {
+        let appearance = try ScreenText.source("Appearance.swift")
+        XCTAssertTrue(appearance.contains(
+            "func alertInSystemColours<Alerted: View>(_ addAlert: (AccentTinted<Self>) -> Alerted) -> some View { "
+                + "addAlert(AccentTinted(content: self)).tint(Color(uiColor: .systemBlue)) }"
+        ), "the alert gets the system blue as its tint")
+        XCTAssertTrue(appearance.contains("var body: some View { content.tint(Color.accentColor) }"), "the view under the alert keeps the accent colour")
+        let enumerator = try XCTUnwrap(FileManager.default.enumerator(at: AppFiles.appSources, includingPropertiesForKeys: nil))
+        var alerts = 0
+        for case let url as URL in enumerator where url.pathExtension == "swift" {
+            let path = url.path.replacingOccurrences(of: AppFiles.appSources.path + "/", with: "")
+            let code = Array(try ScreenText.source(path).filter { !$0.isWhitespace })
+            func has(_ word: String, at index: Int) -> Bool {
+                let characters = Array(word)
+                return index + characters.count <= code.count && Array(code[index..<index + characters.count]) == characters
+            }
+            // Each "alert(" call (not "alertInSystemColours") is inside the
+            // braces of an `alertInSystemColours { content in ... }`.
+            var opened: [Int] = []  // the brace depth of each open alertInSystemColours block
+            var depth = 0
+            var index = 0
+            while index < code.count {
+                if has("alertInSystemColours{", at: index) {
+                    opened.append(depth)
+                    index += "alertInSystemColours".count
+                    continue
+                }
+                if has("alert(", at: index), index == 0 || !(code[index - 1].isLetter || code[index - 1].isNumber) {
+                    alerts += 1
+                    XCTAssertFalse(opened.isEmpty, "\(path): an alert is not inside alertInSystemColours, so it shows the accent colour")
+                }
+                if code[index] == "{" { depth += 1 }
+                if code[index] == "}" {
+                    depth -= 1
+                    if let last = opened.last, depth == last { opened.removeLast() }
+                }
+                index += 1
+            }
+        }
+        XCTAssertEqual(alerts, 9, "the App target has nine alerts (ruling r16-03); a new one goes through alertInSystemColours")
+        XCTAssertTrue(try ScreenText.source("DaySectionView.swift").contains(".swipeActions(edge: .trailing) { Button { askToDelete(entry) } label: { Text(\"entry.delete.action\") } .tint(.red) }"),
+                      "the swipe action \"Delete\" keeps the system red")
     }
 }

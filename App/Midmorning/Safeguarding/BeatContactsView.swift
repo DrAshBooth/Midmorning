@@ -62,9 +62,11 @@ struct NumberRow: View {
         }
         // Ruling r16-03 (mm-t12b.28): an alert shows "Call" and "Cancel";
         // from iOS 26 a confirmation dialog shows no "Cancel".
-        .alert(SupportSheet.callRecentsWarning, isPresented: $isConfirmingCall) {
-            Button(CommonLabels.call.string) { NumberRow.startCall(number) }
-            Button(CommonLabels.cancel.string, role: .cancel) {}
+        .alertInSystemColours { content in
+            content.alert(SupportSheet.callRecentsWarning, isPresented: $isConfirmingCall) {
+                Button(CommonLabels.call.string) { NumberRow.startCall(number) }
+                Button(CommonLabels.cancel.string, role: .cancel) {}
+            }
         }
         .task(id: copyCount) {
             guard copyCount > 0 else { return }
