@@ -28,8 +28,19 @@ struct CloseTheDayView: View {
                 }
 
                 Section {
-                    TextField("closeTheDay.feelingWord", text: $feelingWord)
-                        .accessibilityLabel("closeTheDay.feelingWord")
+                    // product-rules "Appearance": the label sits above the
+                    // field. As a placeholder, the label did not fit on one
+                    // line at the largest text size, and the field cut it
+                    // (AutomatedChecks.testAuditTodayWithPlannedMealsCardsAndTheNote).
+                    // VoiceOver reads the label once, on the field.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("closeTheDay.feelingWord")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                        TextField("", text: $feelingWord)
+                            .accessibilityLabel("closeTheDay.feelingWord")
+                    }
                 }
 
                 Section {

@@ -81,12 +81,19 @@ struct NumberRow: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Each control has a hit area of at least 44 by 44 points
+    /// (`minimumHitArea`); as plain text they were 29 by 22 ("Call") and
+    /// 103 by 22 ("Copy number") points.
     @ViewBuilder
     private var controls: some View {
-        Button(CommonLabels.call.string) { isConfirmingCall = true }
-            .buttonStyle(.borderless)
-        Button((showsCopiedLabel ? CommonLabels.copied : CommonLabels.copyNumber).string) { copy() }
-            .buttonStyle(.borderless)
+        Button { isConfirmingCall = true } label: {
+            Text(CommonLabels.call.string).minimumHitArea()
+        }
+        .buttonStyle(.borderless)
+        Button { copy() } label: {
+            Text((showsCopiedLabel ? CommonLabels.copied : CommonLabels.copyNumber).string).minimumHitArea()
+        }
+        .buttonStyle(.borderless)
     }
 
     private func copy() {
@@ -123,8 +130,10 @@ struct BeatWebchatButton: View {
     @State private var isShowingWebchat = false
 
     var body: some View {
-        Button(CommonLabels.beatWebchat) { isShowingWebchat = true }
-            .buttonStyle(.borderless)
+        Button { isShowingWebchat = true } label: {
+            Text(CommonLabels.beatWebchat).minimumHitArea()
+        }
+        .buttonStyle(.borderless)
             .sheet(isPresented: $isShowingWebchat) {
                 SafariView(urlString: SupportSheet.beatWebchatURLString)
             }

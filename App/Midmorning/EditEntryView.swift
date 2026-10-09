@@ -74,8 +74,11 @@ struct EditEntryView: View {
                     Button(role: .destructive) {
                         showingDeleteConfirm = true
                     } label: {
+                        // A hit area of at least 44 points high
+                        // (product-rules spec, "Accessibility everywhere").
                         Text("entry.delete.button")
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
                     }
                 }
                 .padding()

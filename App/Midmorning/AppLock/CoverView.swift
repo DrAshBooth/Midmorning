@@ -76,8 +76,10 @@ struct CoverView: View {
                     .buttonStyle(.bordered)
                     .accessibilityFocused($focusedControl, equals: .deleteFromThisDevice)
                 }
-                Button("applock.cover.deleteEverything") { Task { await tapDeleteEverything() } }
-                    .buttonStyle(.plain)
+                Button { Task { await tapDeleteEverything() } } label: {
+                    Text("applock.cover.deleteEverything").minimumHitArea()
+                }
+                .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
                 // data-and-privacy spec, "Delete-all" (ruling r14-01): one
                 // line under the controls after a failed deletion. The

@@ -139,12 +139,14 @@ struct PlanBuilderView: View {
                 Text("settings.reminders.quietHoursNotSent").font(.footnote).foregroundStyle(.secondary)
             }
             HStack {
-                Button("plan.rename") { beginRename(meal.slotIndex) }
-                    .accessibilityLabel(PlanBuilderAccessibility.renameControlLabel(slotLabel: slotLabel).string)
+                Button { beginRename(meal.slotIndex) } label: {
+                    Text("plan.rename").minimumHitArea()
+                }
+                .accessibilityLabel(PlanBuilderAccessibility.renameControlLabel(slotLabel: slotLabel).string)
                 if !locked {
                     Spacer()
                     Button(role: .destructive) { remove(meal.slotIndex) } label: {
-                        Text(PlanBuilderAccessibility.removeControlLabel(slotLabel: slotLabel).string)
+                        Text(PlanBuilderAccessibility.removeControlLabel(slotLabel: slotLabel).string).minimumHitArea()
                     }
                 }
             }
