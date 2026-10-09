@@ -176,9 +176,29 @@ so a run without names leaves them out; run them with
 `tools/skeleton-checks/automated-checks.sh --audits`. The counted run of
 gate mm-t43.31 is the run without names. A passing run with `--audits` on
 the commit of a build is the evidence for an accessibility label of that
-build in App Store Connect (r21-01). A new simulator changes to dark
-mode only after it restarts once; the dark-mode test says so when it
-fails.
+build in App Store Connect (r21-01). A new simulator changes to dark mode
+only after it restarts once; the dark-mode test says so when it fails.
+From 9 October 2026, an issue that has an element fails the test, unless
+an exclusion with its reason (`auditExclusions`) or a known defect with
+its bead (`auditKnownDefects`, an expected failure) takes it. An issue
+with no element and no frame cannot be traced to a control, and the number
+of these issues on a page changes from run to run. So such an issue does
+not fail the test, and no count limits it. The test records each one with
+its page and its text size: one line in `accessibility-audit.log`, one
+line that starts with "AUDIT RECORDED" in `xcodebuild.log`, and the
+attachment "Audit issues to review" in the result bundle. The screens of
+its page are in `audit-shots`, so that a person can review it. mm-t45.18
+(contrast), mm-t45.27 (the new-entry and edit screens) and mm-t45.28 (the
+other screens) track these issues. A "Contrast failed" issue with no
+element is also an expected failure of mm-t45.18. A contrast issue of an
+element that a bar covers in part stays open until an audit page shows the
+element clear of the bars. At the end of the walk, the test scrolls each
+element that is still open clear of the bars and audits it there. If no
+scroll shows it clear, the test records the issue as "not measured". It
+does not take it as a pass, and the value measured under the bar is not
+its contrast. Ash has not ruled if a run that records an issue counts for
+an accessibility label. Until Ash rules, such a run does not count, as for
+an expected failure from `auditKnownDefects`.
 
 When to run. Start the checks between 09:00 and 02:45 in the Mac's time
 zone. The seeder puts no entry after now, and the gap band on the current
