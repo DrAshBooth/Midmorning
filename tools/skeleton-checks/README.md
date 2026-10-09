@@ -105,7 +105,14 @@ matches an entry of `auditKnownDefects`
 a bead, and XCTest then reports that test as passed. Ash has not ruled if
 such a run counts for a label that the known defect touches (the question
 is on mm-t43.16). Until Ash rules, a run in which an audit gave an expected
-failure from `auditKnownDefects` does not count for a declaration.
+failure from `auditKnownDefects` does not count for a declaration. On 9
+October 2026, `auditKnownDefects` holds open entries for mm-t45.18
+(contrast with no element) and for mm-t45.20 and mm-t45.21 (hit areas, in
+`auditHitAreaKnownDefects`). These entries take findings on screens that
+each run audits, for example the onboarding screens, Today and Settings.
+So no run counts at this time, and the team declares no accessibility
+label. This stays true until Ash rules on mm-t43.16, or until each of these
+beads closes and an agent removes its entry.
 
 A flow check does a sequence of actions and then looks at what the app
 shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow

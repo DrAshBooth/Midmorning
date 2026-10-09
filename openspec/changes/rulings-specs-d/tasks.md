@@ -15,6 +15,7 @@ Each task changes one requirement and its copy in `openspec/changes/v1-programme
 - [x] 3.1 Add reminders "A tap on a reminder opens its screen from Today" for r20-01, with the scenarios "A tap while another screen shows", "A tap on the weigh-in day reminder while another screen shows" and "A tap over a new entry with a draft". Add the same requirement to the v1-programme reminders spec. Run `openspec validate rulings-specs-d --type change --strict`.
 - [x] 3.2 Change "their back control MUST show Today" to "their back control MUST go back to Today", and make the scenario "A tap on the weigh-in day reminder while another screen shows" read "a tap on its back control shows Today". iOS can show "Back" or only a chevron as the back control. Do the same in the v1-programme copy. Run `openspec validate rulings-specs-d --type change --strict`.
 - [x] 3.3 Flag the conflict between this requirement and safeguarding "The not-right-now page" and "The GP suggestion page" for Ash, with the cases that the requirement does not give (an empty new-entry screen, the other sheets, a midday reminder over a draft). mm-t45.23 (label `human`) holds the conflict and the options. Do not add a rule for these cases until Ash rules.
+- [x] 3.4 Record mm-t45.23 as an open safeguarding gate on mm-t45.23 and mm-t45.12: the lead does not merge commit 0024f4f (branch rulings3-routing-labels) until Ash rules on mm-t45.23. After the ruling, add the exception sentence and one scenario for each case to this requirement and to its v1-programme copy.
 
 ## 4. export
 
@@ -28,6 +29,7 @@ Each task changes one requirement and its copy in `openspec/changes/v1-programme
 - [x] 5.4 Change task 4.3.4 and the paragraph on accessibility checks in `openspec/changes/v1-programme/tasks.md`, and `tools/skeleton-checks/README.md`, for r21-01. Run `openspec validate --all --strict`.
 - [x] 5.5 Ask Ash on mm-t43.16 if a run with an expected failure from `auditKnownDefects` counts for a declaration. Until Ash rules, task 4.3.4 and the README paragraph "Known defects and a declaration" say that such a run does not count. After the ruling, write the answer as one sentence in safeguarding "Regulatory release gates" and in the README.
 - [x] 5.6 Change the scenario name in the description and the notes of index bead mm-t43.3 to "Accessibility label without a passing audit run", and change the description of gate mm-t43.16 to the r21-01 rule.
+- [x] 5.7 State the result of the interim answer in task 4.3.4 and in the README paragraph "Known defects and a declaration": while `auditKnownDefects` holds the entries for mm-t45.18, mm-t45.20 and mm-t45.21, no run counts, and the team declares no accessibility label. Add the same text as a comment on mm-t43.16. Run `openspec validate --all --strict`.
 
 ## 6. product-rules
 
@@ -48,7 +50,8 @@ This change does not build code. These beads hold the build work for the rulings
 - mm-t12b.29 builds r21-02 in the app target's build settings and the filled button style.
 - r19-04 and r20-02 need no code. This change closes mm-t15.24 and mm-t42.31.
 - mm-t43.16 is a gate. Ash closes it.
-- mm-t45.23 (label `human`) holds the conflict between r20-01 and the safeguarding pages. Commit 0024f4f (branch rulings3-routing-labels) builds r20-01 as written.
+- mm-t45.23 (P1, label `human`) holds the conflict between r20-01 and the safeguarding pages. It is an open safeguarding gate. Commit 0024f4f (branch rulings3-routing-labels) builds r20-01 as written, so the lead does not merge 0024f4f until Ash rules on mm-t45.23. mm-t45.25 holds the other sheets that a reminder tap closes.
+- mm-t45.26 adds a UI test for the scenario "No biometric enrolled" (r19-04): the Privacy group shows no "Face ID only" or "Touch ID only" control. Item (5) of device-check bead mm-t15.14 stays on that bead until the test exists.
 - mm-t45.24 holds three code comments that give the rules from before r19-04 and r20-02. Task 9.1 changed the design line in `openspec/changes/v1-programme/design.md`.
 - After the archive of this change, set the spec_id of mm-t45.12 to the new heading: `bd update mm-t45.12 --spec-id "openspec/specs/reminders/spec.md#A tap on a reminder opens its screen from Today"`. Before the archive, `openspec/specs` does not hold that heading, so `scripts/check-beads` cannot find it.
 

@@ -46,4 +46,4 @@ None.
 
 ## Impact
 
-This change edits spec text and two documents only. The code agents build the code for r19-01, r19-02, r20-01 and r21-02, and close their beads. r19-04 and r20-02 need no code, so this change closes mm-t15.24 and mm-t42.31. mm-t43.16 is a gate that Ash closes; this change adds a comment to it.
+This change edits spec text and two documents only. The code agents build the code for r19-01, r19-02, r20-01 and r21-02, and close their beads. r19-04 and r20-02 need no code, so this change closes mm-t15.24 and mm-t42.31. mm-t43.16 is a gate that Ash closes; this change adds a comment to it. Until Ash answers its question on known defects, no run of the audits counts, because the entries of `auditKnownDefects` for mm-t45.18, mm-t45.20 and mm-t45.21 take findings in each run. mm-t45.23 is an open safeguarding gate: the lead does not merge commit 0024f4f (branch rulings3-routing-labels) until Ash rules on it.
