@@ -43,7 +43,7 @@ public enum SupportSheet {
     // A reviewer confirms this URL against Beat's own website before every
     // release (the "Release check" scenario); the change README holds the
     // dated line.
-    public static let beatWebchatURLString = "https://www.beateatingdisorders.org.uk/get-information-and-support/get-help-for-myself/i-need-support-now/one-to-one-webchat/"
+    public static let beatWebchatURLString = "https://www.beateatingdisorders.org.uk/get-information-and-support/get-help-for-myself/support-now/one-to-one-web-chat/"
 
     public static let samaritansNumber = "116 123"
     public static let samaritansLine = "Any time, about anything."
