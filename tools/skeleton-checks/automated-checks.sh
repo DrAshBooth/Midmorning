@@ -74,7 +74,12 @@ if [ -z "$UDID" ]; then
   step "make the simulator $DEVICE_NAME ($RUNTIME)"
   UDID=$(xcrun simctl create "$DEVICE_NAME" com.apple.CoreSimulator.SimDeviceType.iPhone-17 "$RUNTIME") || exit 1
 fi
-step "boot the simulator $UDID"
+# A simulator that stays booted for days can stop applying the UI tests'
+# own appearance change (testAnAlertKeepsTheSystemBlue saw light mode on
+# 9 October 2026 after the script's own dark-mode check had passed). So
+# each run starts the simulator fresh.
+step "restart the simulator $UDID"
+xcrun simctl shutdown "$UDID" 2>/dev/null
 xcrun simctl boot "$UDID" 2>/dev/null
 xcrun simctl bootstatus "$UDID" -b >/dev/null || exit 1
 # The runtime of that simulator, for example "iOS 27.0 (24A434)".
