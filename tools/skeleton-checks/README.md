@@ -277,3 +277,4 @@ on branch rulings2-record-review: each row reads its own answer, and
 | 9 October 2026 | 4221e61 (main) | iOS 27.0 (24A434) | 149 of 152 passed in 5818 s. The two support-sheet call checks could not drag the sheet's list under its large title (the rows grew with the 44-point hit areas), and testAnAlertKeepsTheSystemBlue saw light mode; e5a8119 fixes both in the tests. |
 | 9 October 2026 | e5a8119 (main) | iOS 27.0 (24A434) | 151 of 152 passed in 5865 s. testAnAlertKeepsTheSystemBlue saw light mode on the simulator that had stayed booted; after a restart it passed twice by name. The script now restarts the simulator at the start of each run. |
 | 9 October 2026 | e5a8119 (main), --audits | iOS 27.0 (24A434) | 22 of 22 audits passed in 5425 s; 96 issues with no element were recorded for review. |
+| 9 October 2026 | 8358781 (main) | iOS 27.0 (24A434) | 152 of 152 passed in 6064 s. |
