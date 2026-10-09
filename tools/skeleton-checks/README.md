@@ -177,8 +177,12 @@ so a run without names leaves them out; run them with
 gate mm-t43.31 is the run without names. A passing run with `--audits` on
 the commit of a build is the evidence for an accessibility label of that
 build in App Store Connect (r21-01). A new simulator changes to dark
-mode only after it restarts once; the dark-mode test says so when it
-fails.
+mode only after it restarts once. So before the build, the script sets
+dark mode, opens the Settings app and measures a screenshot. When the
+screen is not dark, the script restarts the simulator once (9 October
+2026). The dark-mode tests (the dark-mode audits and
+`testAnAlertKeepsTheSystemBlue`) fail with a message when dark mode does
+not show.
 
 When to run. Start the checks between 09:00 and 02:45 in the Mac's time
 zone. The seeder puts no entry after now, and the gap band on the current

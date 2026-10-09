@@ -121,9 +121,20 @@ extension AutomatedChecks {
     /// points under it, show between the navigation bar and `bar`. It drags
     /// down the list first, and back up when it found nothing in the first
     /// half of the drags. Returns the element from the last snapshot.
+    ///
+    /// When a drag leaves the element where it was, the next drag is two
+    /// times longer, and so on, up to the height of the list. Under a large
+    /// title, the list goes back after a short drag: in the support sheet,
+    /// a drag of 32 points left the list where it was 19 times, and a drag
+    /// of 48 points moved it (9 October 2026, iOS 27.0 simulator). A swipe
+    /// of a person is longer, so the person can scroll the list.
     @discardableResult
     func reveal(extra: CGFloat = 0, bar: String? = nil, maxDrags: Int = 20, _ find: ([Seen]) -> Seen?) -> Seen? {
         var drags = 0
+        // The element's top before the last drag, and the number of drags
+        // in a row that did not move it.
+        var lastTop: CGFloat?
+        var stalls = 0
         while true {
             let seen = look()
             let bounds = listBounds(seen, bar: bar)
@@ -133,9 +144,14 @@ extension AutomatedChecks {
                 let high = bounds.top - target.frame.minY
                 if low <= 0, high <= 1 { return target }
                 guard drags < maxDrags else { return nil }
-                dragList(by: low > 0 ? low + 12 : -(high + 12), bounds: bounds)
+                if let lastTop, abs(lastTop - target.frame.minY) < 1 { stalls += 1 } else { stalls = 0 }
+                lastTop = target.frame.minY
+                let length = ((low > 0 ? low : high) + 12) * pow(2, CGFloat(min(stalls, 4)))
+                dragList(by: low > 0 ? length : -length, bounds: bounds)
             } else {
                 guard drags < maxDrags else { return nil }
+                lastTop = nil
+                stalls = 0
                 dragList(by: drags < maxDrags / 2 ? room * 0.6 : -room * 0.6, bounds: bounds)
             }
             drags += 1

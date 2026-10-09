@@ -114,6 +114,19 @@ extension AutomatedChecks {
     /// colour from the same place (`alertInSystemColours`;
     /// `AccentContrastTests` proves that each alert uses it), so one alert
     /// proves the rule for each of them.
+    ///
+    /// Decision r22-04 (open on 9 October 2026; mm-t12b.29) asks if an
+    /// alert can show the accent colour. Its text tells of the app before
+    /// commit 482a8f5. From that commit each alert gets the system blue
+    /// from `alertInSystemColours`: on main 4221e61 this test measured
+    /// "Cancel" 0088FF in light mode and 0091FF in dark mode. Until Ash
+    /// rules, the test checks product-rules "Appearance" as it is now. If
+    /// Ash accepts the accent colour on alerts, change `.systemBlue` to
+    /// `.accent` for "Cancel" and remove `alertInSystemColours`.
+    ///
+    /// The dark half needs a simulator that changes to dark mode.
+    /// automated-checks.sh checks this before the run, and restarts a new
+    /// simulator once (`dark_mode_works`).
     func testAnAlertKeepsTheSystemBlue() throws {
         addTeardownBlock { XCUIDevice.shared.appearance = .light }
         for dark in [false, true] {
