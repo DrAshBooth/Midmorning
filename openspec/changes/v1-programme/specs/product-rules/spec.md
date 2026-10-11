@@ -90,7 +90,7 @@ Every feature the person can turn on MUST have a switch to turn it off. The week
 
 Every control MUST have a VoiceOver label. Every control with no visible text MUST have a label a person can say with Voice Control. Every text MUST scale with Dynamic Type. Meaning MUST NOT depend on colour alone. The record and urge flows MUST be complete with VoiceOver.
 
-Every control MUST have a hit area of at least 44 by 44 points. Two controls MUST have at least 8 points between them. Every animation MUST stop or become a cross-fade when Reduce Motion is on. Secondary text and every glyph that carries meaning MUST contrast with the background at 3:1 or more. That contrast MUST hold in light mode, in dark mode and with Increase Contrast on.
+Every control MUST have a hit area of at least 44 by 44 points. Two controls MUST have at least 8 points between them. Every animation MUST stop or become a cross-fade when Reduce Motion is on. Primary text and the text of every button MUST contrast with the background at 4.5:1 or more. Secondary text, large text and every glyph that carries meaning MUST contrast with the background at 3:1 or more. Large text is text of 18 points or more, or of 14 points or more in bold. That contrast MUST hold in light mode, in dark mode and with Increase Contrast on. The accessibility audits measure contrast in light mode, in dark mode, and in dark mode with Increase Contrast on. Ash ruled the limits on 11 October 2026 (r22-06), and ruled on the same day that the audits get a pass with Increase Contrast on (r22-07).
 
 #### Scenario: Urge flow with VoiceOver
 - **WHEN** a person using VoiceOver taps Urge, hears the timer, reads the alternatives list and saves an outcome
@@ -103,6 +103,18 @@ Every control MUST have a hit area of at least 44 by 44 points. Two controls MUS
 #### Scenario: Voice Control
 - **WHEN** the person says "Tap Add an entry" on Today
 - **THEN** the new-entry screen opens
+
+#### Scenario: Button text in light mode
+- **WHEN** the device is in light mode and the Privacy group of the settings screen shows "Delete everything"
+- **THEN** the text of "Delete everything" contrasts with the row background at 4.5:1 or more
+
+#### Scenario: Secondary text in light mode
+- **WHEN** the device is in light mode and the export screen shows the line above "Make PDF" in the secondary text colour
+- **THEN** the line contrasts with the background at 3:1 or more
+
+#### Scenario: Increase Contrast in dark mode
+- **WHEN** the device is in dark mode with Increase Contrast on and onboarding screen 1 shows "Continue"
+- **THEN** the text of "Continue" contrasts with its fill at 4.5:1 or more
 
 ### Requirement: Dates and times in strings
 
@@ -138,9 +150,9 @@ The app MUST NOT call a language model or any generative service at runtime. Eve
 
 Every screen MUST use the system text styles and the system semantic colours. The app MUST NOT use a custom font. The app MUST NOT use a custom colour, except the accent colour.
 
-The app MUST define one accent colour, in the AccentColor asset. The asset MUST hold a light value, a dark value and an Increase Contrast value. Each value MUST contrast with the row background at 3:1 or more. The team changes the accent colour in that one asset only.
+The app MUST define one accent colour, in the AccentColor asset. The asset MUST hold a light value, a dark value, and an Increase Contrast value for each of light mode and dark mode. Each value MUST contrast with the row background at 4.5:1 or more, because the accent colour is the text colour of a text button. Each Increase Contrast value MUST contrast more than the value of its mode. The team changes the accent colour in that one asset only.
 
-Every control MUST use the accent colour as its tint. The app MUST NOT use the accent colour on anything that is not a control. The star control on the new-entry screen is an exception. Its tint is the system grey, as `record` states. System alerts, confirmation dialogs and swipe actions MUST also keep their system colours. The text of a filled button MUST use the system background colour (`systemBackground`). This system semantic colour is white in light mode, and black or near-black in dark mode. So the text of a filled button is not a custom colour. It MUST contrast with the accent colour at 3:1 or more in light mode, in dark mode and with Increase Contrast. Ash ruled on 9 October 2026 that a filled button has near-black text in dark mode (r21-02).
+Every control MUST use the accent colour as its tint. A control on a screen that deletes data also uses the accent colour, not red, because the system red is less than 4.5:1 on white. The app MUST NOT use the accent colour on anything that is not a control. The star control on the new-entry screen is an exception. Its tint is the system grey, as `record` states. System alerts, confirmation dialogs and swipe actions MUST also keep their system colours. So each control of a system alert MUST show the system blue, or the system red for a control that deletes, and MUST NOT show the accent colour. Ash ruled this on 11 October 2026 (r22-04). The text of a filled button MUST use the system background colour (`systemBackground`). This system semantic colour is white in light mode, and black or near-black in dark mode. So the text of a filled button is not a custom colour. It MUST contrast with the accent colour at 4.5:1 or more in light mode, in dark mode and with Increase Contrast. Ash ruled on 9 October 2026 that a filled button has near-black text in dark mode (r21-02).
 
 These MUST use the primary text colour and MUST NOT use the accent colour:
 
@@ -169,7 +181,11 @@ Every text field MUST fill the width of its row. Its label MUST sit above it. It
 
 #### Scenario: A filled button in dark mode
 - **WHEN** the device is in dark mode and onboarding screen 1 shows "Continue"
-- **THEN** "Continue" shows its text in the system background colour, black, on the dark value of the accent colour, at 3:1 or more
+- **THEN** "Continue" shows its text in the system background colour, black, on the dark value of the accent colour, at 4.5:1 or more
+
+#### Scenario: An alert keeps the system blue
+- **WHEN** the person taps "Delete everything" on the settings screen, in light mode or in dark mode
+- **THEN** the alert shows "Cancel" in the system blue, not in the accent colour
 
 #### Scenario: Where chips at the largest text size
 - **WHEN** the text size is the largest accessibility size (AX5) and the new-entry screen shows all thirteen Where chips

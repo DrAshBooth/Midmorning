@@ -2,6 +2,42 @@
 
 ## MODIFIED Requirements
 
+### Requirement: Choose a date range
+
+The app MUST show an export screen with the title "Export". The screen MUST be reachable from the settings screen and from Today in at most two taps. The screen MUST show a "From" date control and a "To" date control. Each date control MUST be a wheel date picker (the iOS wheel style), with its label above it. A date control MUST NOT open the system calendar. Ash ruled this on 11 October 2026 (r22-05): the calendar filled the selected day with the accent colour, and its white numeral was 2.2:1 in dark mode. The screen MUST show a switch "Include weigh-ins", a switch "Include context" and a control "Make PDF". The range MUST be in whole record days. "To" MUST NOT be after the current record day.
+
+"From" MUST NOT be after "To". "From" MUST default to 27 days before the current record day. When the earliest record day with an entry is later, "From" MUST default to that day. "To" MUST default to the current record day. "Include weigh-ins" MUST be off by default. "Include context" MUST be on by default.
+
+The screen MUST show one line above "Make PDF": "The PDF leaves the app when you share it. Mail, Files and Messages keep their own copy, and Delete everything does not reach those copies." The screen MUST NOT show a count of entries or a count of starred entries. The screen MUST NOT show any other text about the range's content.
+
+#### Scenario: Default range
+- **WHEN** the person opens the export screen on Thursday 24 September and the record has entries since 1 August
+- **THEN** "From" reads 28 August and "To" reads 24 September
+
+#### Scenario: Short record
+- **WHEN** the person opens the export screen on Thursday 24 September and the earliest entry is on 20 September
+- **THEN** "From" reads 20 September and "To" reads 24 September
+
+#### Scenario: A range of one day
+- **WHEN** the person sets "From" and "To" both to 21 September and taps "Make PDF"
+- **THEN** the PDF holds the record day 21 September and no other day
+
+#### Scenario: To before From
+- **WHEN** "To" is 21 September and the person tries to set "From" to 22 September
+- **THEN** the "From" control does not offer 22 September
+
+#### Scenario: The dates are wheels
+- **WHEN** the person opens the export screen in dark mode
+- **THEN** "From" and "To" each show a label above a wheel of day, month and year, and no control opens a calendar
+
+#### Scenario: The switches when the screen opens
+- **WHEN** the person opens the export screen for the first time
+- **THEN** "Include weigh-ins" is off and "Include context" is on
+
+#### Scenario: The line above "Make PDF"
+- **WHEN** the person opens the export screen
+- **THEN** the line above "Make PDF" reads "The PDF leaves the app when you share it. Mail, Files and Messages keep their own copy, and Delete everything does not reach those copies."
+
 ### Requirement: Accessibility of the export
 
 Every control on the export screen MUST have a VoiceOver label. A control with no visible text MUST have a label a person can say with Voice Control. Text on the export screen MUST use system text styles. Text on the export screen MUST scale with Dynamic Type. The PDF MUST hold selectable text, not an image of text.

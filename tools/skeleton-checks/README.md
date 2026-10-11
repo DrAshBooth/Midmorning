@@ -99,20 +99,29 @@ checks ran, so this run does not count". Those words do not apply to that
 run: its line counts for a declaration when every audit passed on a
 working tree with no change that is not committed.
 
-Known defects and a declaration. The audits change each finding that
-matches an entry of `auditKnownDefects`
+Known faults, logged issues and a declaration. The audits change each
+finding that matches an entry of `auditKnownDefects`
 (`AutomatedChecks+Accessibility.swift`) into an expected failure that names
-a bead, and XCTest then reports that test as passed. Ash has not ruled if
-such a run counts for a label that the known defect touches (the question
-is on mm-t43.16). Until Ash rules, a run in which an audit gave an expected
-failure from `auditKnownDefects` does not count for a declaration. On 9
-October 2026, `auditKnownDefects` holds open entries for mm-t45.18
-(contrast with no element) and for mm-t45.20 and mm-t45.21 (hit areas, in
-`auditHitAreaKnownDefects`). These entries take findings on screens that
-each run audits, for example the onboarding screens, Today and Settings.
-So no run counts at this time, and the team declares no accessibility
-label. This stays true until Ash rules on mm-t43.16, or until each of these
-beads closes and an agent removes its entry.
+a bead, and XCTest then reports that test as passed. The audits also record
+some issues and do not fail on them: an issue with no element, and a
+contrast issue "not measured". Ash ruled on 11 October 2026 (r22-03,
+mm-t43.16) that a passing run supports a label only for a feature with no
+known fault and no logged issue in that run. Read the kind of each expected
+failure and each line that starts with "AUDIT RECORDED" in
+`xcodebuild.log`, and use this map:
+
+- a contrast issue: "Sufficient Contrast" and "Dark Interface";
+- a Dynamic Type issue or a clipped-text issue: "Larger Text";
+- an element-detection, element-description, trait or hit-area issue, or a
+  control with no label: "VoiceOver" and "Voice Control".
+
+For example, a run that logs a contrast issue does not support "Sufficient
+Contrast". On 11 October 2026, `auditKnownDefects` holds open entries for
+mm-t45.18 (contrast with no element) and for mm-t45.20 and mm-t45.21 (hit
+areas, in `auditHitAreaKnownDefects`). These entries take findings on
+screens that each run audits. So while they stay, a run supports none of
+the labels "Sufficient Contrast", "Dark Interface", "VoiceOver" and "Voice
+Control".
 
 A flow check does a sequence of actions and then looks at what the app
 shows or keeps. The review fixes (commit aee8059) added UI tests for 12 flow
@@ -129,7 +138,8 @@ accessibility part of a flow is not a device check, for example the
 VoiceOver action of mm-t12b.7. "Point contrast" on mm-t22.16 measures a
 colour in dark mode with Increase Contrast. Ruling r16-01 kept it as a
 device check. It is a contrast check, so it left the device-check list on
-8 October 2026.
+8 October 2026. From 11 October 2026 the pass with Increase Contrast of
+`--audits` measures it (r22-07, mm-t45.19).
 
 The script makes and boots its own simulator (`mm-automated-checks`), so it
 does not disturb a simulator that another session uses. It reads the
@@ -169,8 +179,15 @@ Tools the tests use:
 Accessibility audits. `AutomatedChecks+Accessibility.swift` holds 22
 tests: XCUITest's accessibility audit on each main screen at the default
 text size and at the largest accessibility size, a contrast audit in dark
-mode, and checks of headings, custom actions and labels in the
-accessibility tree. Ash does not test accessibility by hand (8 October
+mode, the same dark-mode contrast audit with Increase Contrast on, and
+checks of headings, custom actions and labels in the accessibility tree.
+The contrast limits are 4.5:1 for primary text and for the text of a
+button, and 3:1 for secondary text and for each glyph (r22-06, 11 October
+2026; `auditContrastLimit`). A UI test cannot turn on Increase Contrast, so
+with `--audits` the script turns it on with `xcrun simctl ui`, runs the
+three dark-mode contrast audits again, and turns it off (r22-07, 11
+October 2026; about 14 minutes more). The log and each failure of that
+pass name Increase Contrast. Ash does not test accessibility by hand (8 October
 2026), so these tests are the evidence for it. They take about 90 minutes,
 so a run without names leaves them out; run them with
 `tools/skeleton-checks/automated-checks.sh --audits`. The counted run of
@@ -201,9 +218,9 @@ element clear of the bars. At the end of the walk, the test scrolls each
 element that is still open clear of the bars and audits it there. If no
 scroll shows it clear, the test records the issue as "not measured". It
 does not take it as a pass, and the value measured under the bar is not
-its contrast. Ash has not ruled if a run that records an issue counts for
-an accessibility label. Until Ash rules, such a run does not count, as for
-an expected failure from `auditKnownDefects`.
+its contrast. A run that records an issue supports no accessibility
+label for the feature of that issue (r22-03; see "Known faults, logged
+issues and a declaration").
 
 When to run. Start the checks between 09:00 and 02:45 in the Mac's time
 zone. The seeder puts no entry after now, and the gap band on the current
