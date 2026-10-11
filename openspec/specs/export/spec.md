@@ -7,7 +7,7 @@ The export makes a PDF of any date range of the record, formatted like the paper
 
 ### Requirement: Choose a date range
 
-The app MUST show an export screen with the title "Export". The screen MUST be reachable from the settings screen and from Today in at most two taps. The screen MUST show a "From" date control and a "To" date control. The screen MUST show a switch "Include weigh-ins", a switch "Include context" and a control "Make PDF". The range MUST be in whole record days. "To" MUST NOT be after the current record day.
+The app MUST show an export screen with the title "Export". The screen MUST be reachable from the settings screen and from Today in at most two taps. The screen MUST show a "From" date control and a "To" date control. Each date control MUST be a wheel date picker (the iOS wheel style), with its label above it. A date control MUST NOT open the system calendar. Ash ruled this on 11 October 2026 (r22-05): the calendar filled the selected day with the accent colour, and its white numeral was 2.2:1 in dark mode. The screen MUST show a switch "Include weigh-ins", a switch "Include context" and a control "Make PDF". The range MUST be in whole record days. "To" MUST NOT be after the current record day.
 
 "From" MUST NOT be after "To". "From" MUST default to 27 days before the current record day. When the earliest record day with an entry is later, "From" MUST default to that day. "To" MUST default to the current record day. "Include weigh-ins" MUST be off by default. "Include context" MUST be on by default.
 
@@ -28,6 +28,10 @@ The screen MUST show one line above "Make PDF": "The PDF leaves the app when you
 #### Scenario: To before From
 - **WHEN** "To" is 21 September and the person tries to set "From" to 22 September
 - **THEN** the "From" control does not offer 22 September
+
+#### Scenario: The dates are wheels
+- **WHEN** the person opens the export screen in dark mode
+- **THEN** "From" and "To" each show a label above a wheel of day, month and year, and no control opens a calendar
 
 #### Scenario: The switches when the screen opens
 - **WHEN** the person opens the export screen for the first time
@@ -235,7 +239,7 @@ The PDF MUST use fixed text sizes. The body MUST be 11 pt, a day heading 14 pt a
 
 The PDF MUST be a tagged PDF. The PDF MUST tag the heading "Record" as an H1. The PDF MUST tag each day heading as an H2. On each page that holds a day's entries, those entries MUST be one tagged list, with one list item per entry. A day that continues on the next page therefore has one list on each of its pages, because a Core Graphics tag cannot cross a page. The heading that a continuation page repeats MUST NOT be a tagged heading, so each day has one H2. Ash ruled this on 26 September 2026. Each item's text MUST read, in order: the time, the asterisk when starred, the What, the Where, the Context. With "Include context" off, the item's text MUST end at the Where.
 
-When the system's PDF renderer can write the tag, the PDF MUST declare the language en-GB. The team MUST test that during the export change before it commits to the tag. The design states the risk. A screen reader MUST read the days in date order. A screen reader MUST read each entry in one pass, not one column at a time.
+The PDF MUST declare the language en-GB on each tag: the H1, each H2, each list and each list item. Core Graphics has no key for the language of the whole document, so the document catalog holds no language. Ash ruled on 9 October 2026 that the language on each tag is the declaration of the PDF's language (r20-02). A screen reader MUST read the days in date order. A screen reader MUST read each entry in one pass, not one column at a time.
 
 #### Scenario: Screen reader on the PDF
 - **WHEN** a screen reader opens the PDF
@@ -254,8 +258,8 @@ When the system's PDF renderer can write the tag, the PDF MUST declare the langu
 - **THEN** the day has one H2, one list on page 1 and one list on page 2, and the heading that page 2 repeats has no tag
 
 #### Scenario: The document language after the spike
-- **WHEN** the spike shows that the renderer writes the language tag, and a PDF reader shows the document's properties
-- **THEN** the language reads en-GB
+- **WHEN** a PDF reader shows the tag tree of an export PDF
+- **THEN** the H1, each H2, each list and each list item declare the language en-GB
 
 #### Scenario: Voice Control
 - **WHEN** a person using Voice Control says "Show names" on the export screen

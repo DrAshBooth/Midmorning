@@ -13,7 +13,7 @@ After Delete-all the app MUST show onboarding again (`data-and-privacy` owns Del
 
 The four screens together MUST ask the person to type at most five numbers. Every other input MUST be one tap. A reviewer walks the four screens with every default on the simulator. The target for that walk is under three minutes.
 
-Every control on the four screens MUST have a VoiceOver label. Every text on the four screens MUST scale with Dynamic Type. The team MUST declare an accessibility label in App Store Connect only after a device check of that label. The check MUST have a dated screenshot. `safeguarding` states that gate.
+Every control on the four screens MUST have a VoiceOver label. Every text on the four screens MUST scale with Dynamic Type. The team MUST declare an accessibility label in App Store Connect only after a passing run of the accessibility audits on the commit of the build. `safeguarding` states that gate. Ash ruled on 9 October 2026 that the passing run is sufficient for a declaration (r21-01). The run supports a label only for a feature with no known fault and no logged issue in that run (r22-03).
 
 #### Scenario: First launch
 - **WHEN** the app opens for the first time after install and iCloud holds no record
@@ -33,7 +33,7 @@ Every control on the four screens MUST have a VoiceOver label. Every text on the
 
 #### Scenario: Accessibility labels
 - **WHEN** the team declares the VoiceOver accessibility label in App Store Connect
-- **THEN** the change's README holds a dated screenshot of the VoiceOver check on the four screens
+- **THEN** `tools/skeleton-checks/README.md` holds a dated line for a passing run of `tools/skeleton-checks/automated-checks.sh --audits` on the commit of that build, and that run includes the audit of the four screens
 
 ### Requirement: No account
 
