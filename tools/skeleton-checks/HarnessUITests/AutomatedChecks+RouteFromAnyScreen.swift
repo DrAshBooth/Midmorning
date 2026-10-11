@@ -513,7 +513,7 @@ extension AutomatedChecks {
         tapDoneOnTheSafeguardingPage(notRightNow)
         assertTheReviewStays("(3) after \"Done\" on the not-right-now page")
         goBack()
-        XCTAssertTrue(app.textFields["Weight"].firstMatch.waitForExistence(timeout: 15), "(3) after Back from the review, the weigh-in screen opens")
+        XCTAssertTrue(app.navigationBars["Weigh-in"].waitForExistence(timeout: 15), "(3) after Back from the review, the weigh-in screen opens")
         assertTheRouteOpensOnToday("Weigh-in", before: "Weekly review", "(3) the route after Back from the review")
     }
 

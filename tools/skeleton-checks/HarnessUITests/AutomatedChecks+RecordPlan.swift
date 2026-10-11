@@ -409,7 +409,7 @@ extension AutomatedChecks {
         }
         XCTAssertEqual(shownKey("From"), picked, "\"From\" shows the picked date")
         let make = app.buttons["Make PDF"].firstMatch
-        XCTAssertTrue(scrollTo(make), "the export screen shows \"Make PDF\"")
+        XCTAssertTrue(scrollToBesideTheWheels(make), "the export screen shows \"Make PDF\"")
         make.tap()
         // The PDF in the app's temporary folder, tmp/Export/<UUID>/<name>.
         let exportFolder = URL(fileURLWithPath: ProcessInfo.processInfo.environment["APP_DATA"] ?? "").appendingPathComponent("tmp/Export")
