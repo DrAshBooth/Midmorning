@@ -86,7 +86,7 @@ extension AutomatedChecks {
         export.tap()
         assertScreen("Export", file: file, line: line)
         let makePDF = app.buttons["Make PDF"].firstMatch
-        XCTAssertTrue(scrollTo(makePDF), "the export screen shows \"Make PDF\"", file: file, line: line)
+        XCTAssertTrue(scrollToBesideTheWheels(makePDF), "the export screen shows \"Make PDF\"", file: file, line: line)
         makePDF.tap()
         let sheet = app.otherElements["ActivityListView"].firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 15), "\"Make PDF\" shows the system share sheet", file: file, line: line)
@@ -422,12 +422,12 @@ extension AutomatedChecks {
         export.tap()
         assertScreen("Export")
         let weighIns = app.switches["Include weigh-ins"].firstMatch
-        XCTAssertTrue(scrollTo(weighIns), "the export screen shows \"Include weigh-ins\"")
+        XCTAssertTrue(scrollToBesideTheWheels(weighIns), "the export screen shows \"Include weigh-ins\"")
         XCTAssertEqual(weighIns.value as? String, "0", "\"Include weigh-ins\" is off by default")
         flipSwitch("Include weigh-ins")
         XCTAssertEqual(weighIns.value as? String, "1", "\"Include weigh-ins\" is on")
         let makePDF = app.buttons["Make PDF"].firstMatch
-        XCTAssertTrue(scrollTo(makePDF), "the export screen shows \"Make PDF\"")
+        XCTAssertTrue(scrollToBesideTheWheels(makePDF), "the export screen shows \"Make PDF\"")
         makePDF.tap()
         let sheet = app.otherElements["ActivityListView"].firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 20), "\"Make PDF\" shows the system share sheet")

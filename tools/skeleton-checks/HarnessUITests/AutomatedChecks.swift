@@ -95,6 +95,22 @@ final class AutomatedChecks: XCTestCase {
         return element.exists && element.isHittable
     }
 
+    /// `scrollTo` for the export screen. Its dates are wheel date pickers
+    /// (ruling r22-05), and a swipe in the middle of the screen turns a
+    /// wheel and changes a date. So this drags 8 points from the leading
+    /// edge, beside the wheels, as the audits do (`auditScrollDown`).
+    @discardableResult
+    func scrollToBesideTheWheels(_ element: XCUIElement, maxSwipes: Int = 8) -> Bool {
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let height = app.windows.firstMatch.frame.height
+        for _ in 0..<maxSwipes {
+            if element.exists && element.isHittable { return true }
+            origin.withOffset(CGVector(dx: 8, dy: height * 0.75))
+                .press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: 8, dy: height * 0.35)), withVelocity: .fast, thenHoldForDuration: 0.1)
+        }
+        return element.exists && element.isHittable
+    }
+
     /// Waits for the navigation bar of the screen `title`.
     func assertScreen(_ title: String, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(app.navigationBars[title].waitForExistence(timeout: 8), "the screen \"\(title)\" shows", file: file, line: line)
@@ -606,7 +622,7 @@ final class AutomatedChecks: XCTestCase {
         XCTAssertTrue(scrollTo(export))
         export.tap()
         assertScreen("Export")
-        XCTAssertTrue(app.buttons["Make PDF"].firstMatch.waitForExistence(timeout: 5) || scrollTo(app.buttons["Make PDF"].firstMatch), "the export screen shows \"Make PDF\"")
+        XCTAssertTrue(scrollToBesideTheWheels(app.buttons["Make PDF"].firstMatch), "the export screen shows \"Make PDF\"")
     }
 
     /// mm-t42.14, "Opens the export screen", the not-right-now page: "Yes"

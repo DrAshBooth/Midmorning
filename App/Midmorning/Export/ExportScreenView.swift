@@ -25,11 +25,15 @@ struct ExportScreenView: View {
 
     var body: some View {
         Form {
+            // Ruling r22-05 (mm-t12b.30): each date is a wheel date picker,
+            // with its label above it. The compact picker opened the system
+            // calendar, which fills the selected day with the accent colour
+            // and draws its numeral in white: 2.2:1 on the dark accent value.
+            // A wheel has no filled day: the selected row shows the primary
+            // text colour on a grey band.
             Section {
-                DatePicker(ExportContent.fromLabel.string, selection: fromDateBinding, in: ...toDateUpperBound, displayedComponents: .date)
-                    .accessibilityLabel(ExportContent.fromLabel.string)
-                DatePicker(ExportContent.toLabel.string, selection: toDateBinding, in: ...currentDateUpperBound, displayedComponents: .date)
-                    .accessibilityLabel(ExportContent.toLabel.string)
+                exportDateWheel(ExportContent.fromLabel.string, selection: fromDateBinding, in: ...toDateUpperBound)
+                exportDateWheel(ExportContent.toLabel.string, selection: toDateBinding, in: ...currentDateUpperBound)
             }
             // `ExportDayKey.date` is midnight GMT of the key's date, so the
             // pickers show and set dates in GMT; in the device zone a key
@@ -70,6 +74,24 @@ struct ExportScreenView: View {
                 cleanUpTemporaryFile(pendingFileURL)
             })
         )
+    }
+
+    // MARK: Date wheels
+
+    /// One date of the range: the label above a wheel date picker (ruling
+    /// r22-05). The label in the row is hidden from VoiceOver; the picker
+    /// carries the same label from its own title, so VoiceOver and Voice
+    /// Control name it "From" or "To" once. (An `accessibilityLabel` on the
+    /// picker as well read "From, From", 11 October 2026.)
+    private func exportDateWheel(_ label: String, selection: Binding<Date>, in range: PartialRangeThrough<Date>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: label)
+                .accessibilityHidden(true)
+            DatePicker(label, selection: selection, in: range, displayedComponents: .date)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .frame(maxWidth: .infinity)
+        }
     }
 
     // MARK: Date bindings

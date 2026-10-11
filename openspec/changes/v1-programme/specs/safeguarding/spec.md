@@ -124,7 +124,7 @@ The change's README MUST hold the clinical reviewer's dated sign-off of the scre
 
 The team MUST answer the age rating questionnaire truthfully. The team MUST raise the minimum age to 18+. The app MUST NOT request the Declared Age Range entitlement in V1. The typed age is the gate.
 
-The team MUST declare an accessibility label in App Store Connect only after a passing run of the accessibility audits on the commit of the build. The accessibility audits are the tests that `tools/skeleton-checks/automated-checks.sh --audits` runs. In a passing run, every audit passes, and the working tree has no change that is not committed. The table in `tools/skeleton-checks/README.md` MUST hold a dated line for that run, with its commit. A declaration needs no device check and no screenshot. Ash ruled this on 9 October 2026 (r21-01).
+The team MUST declare an accessibility label in App Store Connect only after a passing run of the accessibility audits on the commit of the build. The accessibility audits are the tests that `tools/skeleton-checks/automated-checks.sh --audits` runs. In a passing run, every audit passes, and the working tree has no change that is not committed. The table in `tools/skeleton-checks/README.md` MUST hold a dated line for that run, with its commit. A declaration needs no device check and no screenshot. Ash ruled this on 9 October 2026 (r21-01). A passing run supports a label only for a feature with no known fault and no logged issue in that run. A known fault is an expected failure from `auditKnownDefects`. A logged issue is an issue that the run records and does not fail on. For example, a run that logs a contrast issue does not support the label "Sufficient Contrast". Ash ruled this on 11 October 2026 (r22-03).
 
 A cohort runs while any person outside the team has a TestFlight build. During a cohort the team MUST ship a new build at least every 45 days. The team MUST NOT let a tester's build reach 75 days. The change's README MUST hold a dated line per build with its expiry. A build MUST NOT raise the minimum iOS version during a running cohort. The tester invitation MUST state the expiry rule and the exit: export, then "Delete everything".
 
@@ -173,6 +173,10 @@ The team MUST invite every tester by email. The team MUST NOT create a public Te
 #### Scenario: Accessibility label without a passing audit run
 - **WHEN** the table in `tools/skeleton-checks/README.md` holds no dated line for a passing run of `tools/skeleton-checks/automated-checks.sh --audits` on the commit of the build
 - **THEN** the team does not declare the VoiceOver label in App Store Connect
+
+#### Scenario: A passing run that logs a contrast issue
+- **WHEN** the passing run of `tools/skeleton-checks/automated-checks.sh --audits` on the commit of the build records a contrast issue with no element
+- **THEN** the team does not declare the label "Sufficient Contrast" for that build
 
 #### Scenario: Testers by email
 - **WHEN** the team invites a tester

@@ -91,6 +91,10 @@ struct ReviewScreenView: View {
                 .background(.bar)
         }
         .onAppear(perform: load)
+        // Ruling r22-01 (mm-t45.23): a reminder tap does not close the
+        // review, which only "Done" saves. The route waits until the person
+        // leaves it.
+        .holdsReminderRoutesWhileOpen(.weeklyReview(week: runStartDay == nil ? week : nil))
         .fullScreenCover(isPresented: Binding(get: { notRightNowReasons != nil }, set: { if !$0 { notRightNowReasons = nil } })) {
             NotRightNowPageView(store: store, reasons: notRightNowReasons ?? []) { notRightNowReasons = nil }
         }

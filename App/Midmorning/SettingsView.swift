@@ -112,7 +112,11 @@ struct SettingsView: View {
                         UIApplication.shared.open(url)
                     }
                 }
-                Button("settings.privacy.deleteEverything", role: .destructive) {
+                // Ruling r22-06 (mm-t45.17): button text contrasts at 4.5:1 or
+                // more. The system red of a destructive role is about 3.6:1 on white,
+                // so this button has no role and uses the accent colour, as
+                // product-rules "Appearance" gives every control.
+                Button("settings.privacy.deleteEverything") {
                     isShowingDeleteConfirmation = true
                 }
                 // data-and-privacy spec, "Delete-all" (ruling r14-01): one

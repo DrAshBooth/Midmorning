@@ -71,7 +71,11 @@ struct EditEntryView: View {
                     ForEach(NewEntryField.order, id: \.self) { field in
                         fieldView(field)
                     }
-                    Button(role: .destructive) {
+                    // Ruling r22-06 (mm-t45.17): button text contrasts at 4.5:1 or
+                    // more. The system red of a destructive role is about 3.6:1 on white,
+                    // so this button has no role and uses the accent colour, as
+                    // product-rules "Appearance" gives every control.
+                    Button {
                         showingDeleteConfirm = true
                     } label: {
                         // A hit area of at least 44 points high

@@ -37,11 +37,15 @@ struct DeletedScreen: View {
                 // Safeguarding: "Get support on every screen" — this is a
                 // full screen, so it carries the same control every other
                 // full screen this change adds does.
+                // Ruling r22-06 (mm-t45.17): button text contrasts at 4.5:1 or
+                // more. The secondary text colour is about 3.4:1 on white, so the
+                // text uses the accent colour, as product-rules "Appearance" gives
+                // every control.
                 Button { isShowingSupportSheet = true } label: {
                     Text("today.getSupport").minimumHitArea()
                 }
                 .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                .foregroundStyle(.tint)
             }
             .dynamicTypeSize(...(.accessibility5))
             .padding()

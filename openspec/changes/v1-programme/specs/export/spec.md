@@ -8,7 +8,7 @@ The export makes a PDF of any date range of the record, formatted like the paper
 
 ### Requirement: Choose a date range
 
-The app MUST show an export screen with the title "Export". The screen MUST be reachable from the settings screen and from Today in at most two taps. The screen MUST show a "From" date control and a "To" date control. The screen MUST show a switch "Include weigh-ins", a switch "Include context" and a control "Make PDF". The range MUST be in whole record days. "To" MUST NOT be after the current record day.
+The app MUST show an export screen with the title "Export". The screen MUST be reachable from the settings screen and from Today in at most two taps. The screen MUST show a "From" date control and a "To" date control. Each date control MUST be a wheel date picker (the iOS wheel style), with its label above it. A date control MUST NOT open the system calendar. Ash ruled this on 11 October 2026 (r22-05): the calendar filled the selected day with the accent colour, and its white numeral was 2.2:1 in dark mode. The screen MUST show a switch "Include weigh-ins", a switch "Include context" and a control "Make PDF". The range MUST be in whole record days. "To" MUST NOT be after the current record day.
 
 "From" MUST NOT be after "To". "From" MUST default to 27 days before the current record day. When the earliest record day with an entry is later, "From" MUST default to that day. "To" MUST default to the current record day. "Include weigh-ins" MUST be off by default. "Include context" MUST be on by default.
 
@@ -29,6 +29,10 @@ The screen MUST show one line above "Make PDF": "The PDF leaves the app when you
 #### Scenario: To before From
 - **WHEN** "To" is 21 September and the person tries to set "From" to 22 September
 - **THEN** the "From" control does not offer 22 September
+
+#### Scenario: The dates are wheels
+- **WHEN** the person opens the export screen in dark mode
+- **THEN** "From" and "To" each show a label above a wheel of day, month and year, and no control opens a calendar
 
 #### Scenario: The switches when the screen opens
 - **WHEN** the person opens the export screen for the first time

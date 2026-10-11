@@ -344,7 +344,9 @@ extension AutomatedChecks {
     /// Ash's Mac): the earliest day with an entry and the current record
     /// day. A date picked in "From" gives that date in the PDF: the PDF's
     /// file name and its first day heading. The test reads the PDF that
-    /// "Make PDF" writes to the app's temporary folder.
+    /// "Make PDF" writes to the app's temporary folder. Each date is a wheel
+    /// date picker (ruling r22-05, mm-t12b.30): the test reads the three
+    /// wheels, and picks the date with the day, month and year wheels.
     func testExportInNewYorkShowsTheSameDates() throws {
         let facts = try recordPlanFacts("bands")
         func openExport() {
@@ -355,18 +357,25 @@ extension AutomatedChecks {
             export.tap()
             assertScreen("Export")
         }
-        /// The day key that a date picker shows: "3 Oct 2026" or, on its
-        /// first layout, "03/10/2026".
+        /// The wheels of a date picker, from left to right.
+        func wheels(_ label: String) -> [XCUIElement] {
+            app.datePickers[label].pickerWheels.allElementsBoundByIndex.sorted { $0.frame.minX < $1.frame.minX }
+        }
+        /// The day key that a wheel date picker shows: the values of its
+        /// day, month and year wheels, for example "3", "October" and
+        /// "2026" (en-GB).
         func shownKey(_ label: String) -> String? {
-            guard let value = app.datePickers[label].buttons.firstMatch.value as? String else { return nil }
-            for format in ["d MMM yyyy", "dd/MM/yyyy"] {
-                let formatter = DateFormatter()
-                formatter.locale = Locale(identifier: "en_GB")
-                formatter.timeZone = recordPlanKeyCalendar.timeZone
-                formatter.dateFormat = format
-                if let date = formatter.date(from: value) { return recordPlanKey(date) }
-            }
-            return value
+            let values = wheels(label).compactMap { $0.value as? String }
+            guard values.count == 3 else { return "the wheels of \(label): \(values)" }
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_GB")
+            formatter.timeZone = recordPlanKeyCalendar.timeZone
+            formatter.dateFormat = "d MMMM yyyy"
+            let year = values.first { $0.count == 4 && Int($0) != nil } ?? ""
+            let day = values.first { $0.count <= 2 && Int($0) != nil } ?? ""
+            let month = values.first { Int($0) == nil } ?? ""
+            guard let date = formatter.date(from: "\(day) \(month) \(year)") else { return values.joined(separator: " ") }
+            return recordPlanKey(date)
         }
         try launchOnToday("bands")
         openExport()
@@ -381,16 +390,27 @@ extension AutomatedChecks {
         XCTAssertEqual(to, home.to, "\"To\" shows the same date in New York as in the home zone")
         XCTAssertEqual(from, facts["before"], "\"From\" shows the earliest day with an entry")
         XCTAssertEqual(to, recordPlanCurrentDayKey(in: newYork), "\"To\" shows the current record day")
-        // Pick the next day in "From".
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Today, ")).firstMatch.exists, "the export screen shows no calendar")
+        // Pick the next day in "From": the year, then the month, then the
+        // day wheel.
         let picked = facts["opened"]!
-        app.datePickers["From"].buttons.firstMatch.tap()
-        let day = app.buttons[recordPlanDayText(picked)].firstMatch
-        if !day.waitForExistence(timeout: 5) { app.buttons["Next Month"].firstMatch.tap() }
-        XCTAssertTrue(day.waitForExistence(timeout: 5), "the calendar shows \(picked)")
-        day.tap()
-        app.staticTexts["Export"].firstMatch.tap()
+        let fromWheels = wheels("From")
+        XCTAssertEqual(fromWheels.count, 3, "\"From\" is a wheel date picker with three wheels")
+        /// The format of a wheel's value: a year, a month name or a day.
+        func format(of wheel: XCUIElement) -> String {
+            let value = (wheel.value as? String) ?? ""
+            return Int(value) == nil ? "MMMM" : value.count == 4 ? "yyyy" : "d"
+        }
+        let byFormat = Dictionary(fromWheels.map { (format(of: $0), $0) }, uniquingKeysWith: { first, _ in first })
+        for format in ["yyyy", "MMMM", "d"] {
+            guard let wheel = byFormat[format] else { XCTFail("\"From\" has a wheel for \(format)"); continue }
+            let value = recordPlanDayText(picked, format: format)
+            if (wheel.value as? String) != value { wheel.adjust(toPickerWheelValue: value) }
+        }
         XCTAssertEqual(shownKey("From"), picked, "\"From\" shows the picked date")
-        app.buttons["Make PDF"].firstMatch.tap()
+        let make = app.buttons["Make PDF"].firstMatch
+        XCTAssertTrue(scrollToBesideTheWheels(make), "the export screen shows \"Make PDF\"")
+        make.tap()
         // The PDF in the app's temporary folder, tmp/Export/<UUID>/<name>.
         let exportFolder = URL(fileURLWithPath: ProcessInfo.processInfo.environment["APP_DATA"] ?? "").appendingPathComponent("tmp/Export")
         let name = "Record \(picked) to \(to ?? "").pdf"

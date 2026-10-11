@@ -16,6 +16,7 @@ Each task changes one requirement and its copy in `openspec/changes/v1-programme
 - [x] 3.2 Change "their back control MUST show Today" to "their back control MUST go back to Today", and make the scenario "A tap on the weigh-in day reminder while another screen shows" read "a tap on its back control shows Today". iOS can show "Back" or only a chevron as the back control. Do the same in the v1-programme copy. Run `openspec validate rulings-specs-d --type change --strict`.
 - [x] 3.3 Flag the conflict between this requirement and safeguarding "The not-right-now page" and "The GP suggestion page" for Ash, with the cases that the requirement does not give (an empty new-entry screen, the other sheets, a midday reminder over a draft). mm-t45.23 (label `human`) holds the conflict and the options. Do not add a rule for these cases until Ash rules.
 - [x] 3.4 Record mm-t45.23 as an open safeguarding gate on mm-t45.23 and mm-t45.12: the lead does not merge commit 0024f4f (branch rulings3-routing-labels) until Ash rules on mm-t45.23. After the ruling, add the exception sentence and one scenario for each case to this requirement and to its v1-programme copy.
+- [x] 3.5 Add the r22-01 paragraph (the pages stay until "Done"; the weekly review, the check-in, the restart re-screen and the weigh-in screen stay until the person leaves them; the screen of the reminder opens no second time) and the r22-02 paragraph (each sheet of Today stays; an empty new entry closes; the sheet of the reminder stays; "unsaved input" names text, a Where, a typed place and the star) to the requirement and its v1-programme copy, with nine more scenarios. Run `openspec validate rulings-specs-d --type change --strict`.
 
 ## 4. export
 
@@ -58,3 +59,17 @@ This change does not build code. These beads hold the build work for the rulings
 ## 9. design
 
 - [x] 9.1 Change the export line of `openspec/changes/v1-programme/design.md` ("Export renders a tagged, flowing column at fixed sizes") for r20-02: each tag declares en-GB, and the document catalog holds no language. Run `openspec validate --all --strict`.
+
+## 10. Round 22 (11 October 2026)
+
+- [x] 10.1 r22-05: modify export "Choose a date range" (wheel date pickers, the scenario "The dates are wheels"), here and in the v1-programme copy. Run `openspec validate rulings-specs-d --type change --strict`.
+- [x] 10.2 r22-06 and r22-07: edit product-rules "Accessibility everywhere" in v1-programme (4.5:1 and 3:1, the audit pass with Increase Contrast, three scenarios). Run `openspec validate --all --strict`.
+- [x] 10.3 r22-04 and r22-06: edit product-rules "Appearance" in v1-programme (alerts keep the system blue, the scenario "An alert keeps the system blue", 4.5:1 for the asset and the text of a filled button, an Increase Contrast value for each mode, a control that deletes uses the accent colour). Run `openspec validate --all --strict`.
+- [x] 10.4 r22-03: add the rule to safeguarding "Regulatory release gates" (with the scenario "A passing run that logs a contrast issue"), data-and-privacy "Release gates and the App Store submission", onboarding "Four screens, once, in order" here and in v1-programme, task 4.3.4 of `v1-programme/tasks.md` and `tools/skeleton-checks/README.md`. Run `openspec validate --all --strict`.
+- [x] 10.5 Build r22-01 and r22-02: `TodayRouteGate.Hold` and the step `keepTheScreen`; `holdsReminderRoutesWhileOpen` on the weekly review, the re-screen and the weigh-in screen; the midday reminder over a new entry with input keeps it. Proof: `TodayRouteGateTests`, `ReminderRouteHoldSourceTests`, and the UI tests of `AutomatedChecks+RouteFromAnyScreen.swift`, with the new `testReminderTapWaitsForAScreenWithAnswers`.
+- [x] 10.6 Build r22-05: `ExportScreenView` shows wheel date pickers. Proof: `testExportInNewYorkShowsTheSameDates` and `assertTheExportDatesAreWheels` in the export audits; the entry for mm-t12b.30 leaves `auditKnownDefects`.
+- [x] 10.7 Build r22-06: the audits measure each part at its own limit (`auditContrastLimit`); the keyboard "Save" at 4.5:1; the controls that delete use the accent colour; the AccentColor asset gets Increase Contrast values 143552 (light) and A8D2F7 (dark). Proof: `AccentContrastTests` and the audits.
+- [x] 10.8 Build r22-07: the pass with Increase Contrast in `automated-checks.sh --audits` (`INCREASE_CONTRAST`, `auditIncreaseContrast`). Proof: a run of `--audits`.
+- The check-in part of r22-01 (no scenario of this change), deferred: mm-t36.8. The check-in screen does not exist yet. Its build gives it `holdsReminderRoutesWhileOpen(.checkIn)`; the hold kind is in `TodayRouteGate.Hold`.
+- Two cases that r22-02 keeps as built (no scenario of this change), deferred: mm-t45.25. The edit screen of an earlier day and the plan builder of a stage screen close with their screen after a reminder tap, and unsaved changes in them go.
+

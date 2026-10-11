@@ -75,6 +75,9 @@ struct WeighInScreenView: View {
         .recordListStyle()
         .navigationTitle(WeighInContent.title.string)
         .getSupport()
+        // Ruling r22-01 (mm-t45.23): a reminder tap does not close this
+        // screen. The route waits until the person leaves it.
+        .holdsReminderRoutesWhileOpen(.weighInScreen)
         .onAppear(perform: reload)
         .fullScreenCover(isPresented: Binding(get: { notRightNowReasons != nil }, set: { if !$0 { notRightNowReasons = nil } })) {
             NotRightNowPageView(store: store, reasons: notRightNowReasons ?? []) { notRightNowReasons = nil }

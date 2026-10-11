@@ -28,13 +28,17 @@ struct StoreOpenFailureView: View {
                     .buttonStyle(.filled)
                 Button("today.getSupport") { isShowingSupportSheet = true }
                     .buttonStyle(.bordered)
-                Button(role: .destructive) {
+                // Ruling r22-06 (mm-t45.17): button text contrasts at 4.5:1 or
+                // more. The secondary text colour is about 3.4:1 on white, so the
+                // text uses the accent colour, as product-rules "Appearance" gives
+                // every control.
+                Button {
                     isShowingDeleteConfirmation = true
                 } label: {
                     Text("settings.privacy.deleteEverything").minimumHitArea()
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.tint)
                 // data-and-privacy spec, "Delete-all" (ruling r14-01): one
                 // line under the controls after a failed deletion.
                 if deleteOutcome == .failed {

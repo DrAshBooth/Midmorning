@@ -28,6 +28,10 @@
 #   take about 90 minutes more. "--audits" with no test name runs only the
 #   audits. The run that counts for gate mm-t43.31 is the run with no
 #   argument.
+#   With "--audits", the script then runs the three dark-mode contrast
+#   audits (INCREASE_CONTRAST_TESTS) again with Increase Contrast on: about
+#   14 minutes more (ruling r22-07, mm-t45.19). With test names after
+#   "--audits", it runs that pass only for the named tests in that list.
 #   DEVICE_NAME sets the simulator (default: mm-automated-checks). The script
 #   makes that simulator when it does not exist, so that the run does not
 #   disturb a simulator that another session uses.
@@ -35,7 +39,12 @@ set -uo pipefail
 AUDIT_FILE="$(cd "$(dirname "$0")" && pwd)/HarnessUITests/AutomatedChecks+Accessibility.swift"
 AUDIT_TESTS=()
 [ -f "$AUDIT_FILE" ] && AUDIT_TESTS=($(grep -oE 'func test[A-Za-z0-9_]+\(' "$AUDIT_FILE" | sed -E 's/func (test[A-Za-z0-9_]+)\(/\1/'))
+# The tests of the pass with Increase Contrast on (ruling r22-07, mm-t45.19).
+INCREASE_CONTRAST_TESTS=(testAuditContrastInDarkMode testAuditContrastInDarkModeOnTheRecordAndSettingsScreens
+  testAuditContrastInDarkModeOnTheOnboardingAndSafeguardingScreens)
+AUDITS=0
 if [ "${1:-}" = "--audits" ]; then
+  AUDITS=1
   shift
   [ $# -eq 0 ] && set -- "${AUDIT_TESTS[@]}"
 fi
@@ -262,7 +271,7 @@ fi
 run_pass() {
   local bundle=$1; shift
   TEST_RUNNER_APP_DATA="$DATA" TEST_RUNNER_STORES="$HERE/stores" TEST_RUNNER_OUT_DIR="$OUT" \
-    TEST_RUNNER_CONTENT_DRAFT="$CONTENT_DRAFT" \
+    TEST_RUNNER_CONTENT_DRAFT="$CONTENT_DRAFT" TEST_RUNNER_INCREASE_CONTRAST="${INCREASE_CONTRAST:-0}" \
     xcodebuild test-without-building -project "$HERE/Harness.xcodeproj" -scheme HarnessUITests \
     -destination "platform=iOS Simulator,id=$UDID" -derivedDataPath "$HERE/.dd" \
     -collect-test-diagnostics never \
@@ -275,6 +284,30 @@ if [ ${#first[@]} -gt 0 ] && [ ${#rest[@]} -gt 0 ]; then
   install_new || exit 1
 fi
 if [ ${#rest[@]} -gt 0 ]; then run_pass AutomatedChecks "${rest[@]}" || status=$?; fi
+# The pass with Increase Contrast on (ruling r22-07, mm-t45.19): only with
+# "--audits", and only for the tests of INCREASE_CONTRAST_TESTS that this
+# run names. The tests see INCREASE_CONTRAST=1, so each log line and each
+# failure names Increase Contrast, and each test fails when the setting is
+# off. The script turns the setting off again at the end, also when the
+# pass stops.
+contrast=()
+if [ "$AUDITS" -eq 1 ]; then
+  for name in "${INCREASE_CONTRAST_TESTS[@]}"; do
+    case " $* " in *" $name "*) contrast+=("-only-testing:HarnessUITests/AutomatedChecks/$name") ;; esac
+  done
+fi
+if [ ${#contrast[@]} -gt 0 ]; then
+  step "turn on Increase Contrast, and run the dark-mode contrast audits again"
+  trap 'kill "$relay" 2>/dev/null; xcrun simctl ui "$UDID" increase_contrast disabled' EXIT
+  xcrun simctl ui "$UDID" increase_contrast enabled
+  sleep 2
+  if [ "$(xcrun simctl ui "$UDID" increase_contrast)" != "enabled" ]; then
+    echo "WARNING: Increase Contrast did not turn on; the pass with Increase Contrast fails."
+  fi
+  INCREASE_CONTRAST=1 run_pass IncreaseContrast "${contrast[@]}" || status=$?
+  xcrun simctl ui "$UDID" increase_contrast disabled
+  step "turn off Increase Contrast"
+fi
 grep -E "Test Case .* (passed|failed)|error: " "$OUT/xcodebuild.log" | sed -E 's/^.*Test Case .-\[HarnessUITests\.AutomatedChecks (test[^]]*)\]. (passed|failed).*\(([0-9.]+) seconds\).*/\2  \1 (\3 s)/'
 step "done (the log and the result bundles are in $OUT)"
 
