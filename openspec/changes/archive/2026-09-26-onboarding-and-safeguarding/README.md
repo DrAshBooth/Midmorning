@@ -52,3 +52,31 @@ Every scenario below needs a device or the simulator's own hardware-backed behav
 7. "Call Samaritans", "Cancel the call", "Call Beat in Scotland", "Copy a number", "Beat webchat" — the confirmation dialog, the real call flow, the pasteboard write and the `SFSafariViewController`, on the support sheet (task 11.1; requirement "The support sheet").
 8. "Release check" — a reviewer checks each number, its hours and the webchat URL against the service's own website (task 11.1; requirement "The support sheet").
 9. "The pasteboard clears", "Universal Clipboard", "Copy and paste into Messages", "Largest text size" — the GP paragraph's "Copy" control (task 12.1; requirement "The GP paragraph").
+
+### Results on a device
+
+Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
+iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
+58cbf1a. The device test guide holds each step. Each check passed.
+The guide holds no screenshots.
+
+- Validation messages (guide s1-1, t14-q2): on screens 2 and 3, no message
+  is red. Pass. The re-screen and the weigh-in screen are not done.
+- "The pasteboard clears", "Universal Clipboard", "Copy and paste into
+  Messages" (guide s1-2, t14-9): Messages gets the edited text, the Mac does
+  not, and the pasteboard is empty after 60 seconds. Pass.
+- "Call Beat" on the exclusion page (guide s1-3, t14-6): the system call
+  prompt shows 0808 801 0677. Pass.
+- Leave onboarding (guide s1-4, t14-r4): after the exclusion page and after
+  Your start, the app opens on screen 1 and keeps nothing. Pass.
+- Lock sentence on a Face ID device (guide s1-5, t14-r7): the label and the
+  sentence name Face ID. Pass. The Touch ID and no-passcode devices are not
+  done.
+- "BMI on no screen" (guide s1-6, t14-3): no screen shows a BMI value. Pass.
+- "Call Samaritans", "Cancel the call", "Call Beat in Scotland" (guide s2-1,
+  t14-7): each call shows the system call prompt, and Cancel returns to the
+  sheet. Pass.
+- "Copy a number" (guide s2-2, t14-7): the iPhone pastes the number, the Mac
+  does not, and the pasteboard is empty after a minute. Pass.
+- "Beat webchat" (guide s2-3, t14-7): Safari opens the Beat webchat page.
+  Pass.

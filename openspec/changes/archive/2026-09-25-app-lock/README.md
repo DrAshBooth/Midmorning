@@ -47,3 +47,32 @@ Every scenario below needs a device or the simulator's own hardware-backed behav
 6. The real deletion for "Delete from this device after an enrolment change", once 4.1 replaces the stub seam (task 9.1).
 7. "Return to a draft" and "Draft in the app switcher" for "Unsaved text survives the lock" (task 10.1).
 8. "VoiceOver on the cover", "Focus through the system request" and "Largest text size" for "Accessibility of the cover" (task 14.1).
+
+### Results on a device
+
+Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
+iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
+58cbf1a. The device test guide holds each step. Each check passed.
+The guide holds no screenshots.
+
+- "When the app asks" (guide s4-1, t15-1, t15-r4): Face ID asks by itself at
+  launch and after a return, once. After Cancel the cover keeps Unlock.
+  Pass.
+- Device lock and sleep (guide s4-2, t15-1): each time, the cover shows and
+  Face ID asks. Pass. The clock change is not done.
+- "Fallback to the device passcode" (guide s4-3, t15-4): the passcode
+  unlocks the app. Pass.
+- Face ID lockout (guide s4-4, t15-1): no crash and no loop, and the
+  passcode opens the app. Pass.
+- "App switcher" (guide s4-5, t15-2, t15-r2, t15-7): every card shows only
+  the cover, also with a sheet open and with a draft. Pass.
+- "Return to a draft" (guide s4-6, t15-7): the same screen and the same text
+  come back after the lock. Pass.
+- "App lock off" (guide s4-7, t15-2): Today is never blank. Pass on iOS 26.
+- Notification Centre for 45 seconds with Lock after 30 seconds (guide s4-8,
+  t15-q5): no Face ID request. Pass on iOS 26.6.2. r19-05 asks for iOS 27,
+  so mm-t45.7 stays open.
+- "Face ID only", "Turn on" and "Cancel the turn-on" (guide s4-9, t15-q3,
+  t15-5): the prompt has no Enter Passcode button, Cancel leaves the switch
+  off, and a success turns it on. Pass. The Touch ID device, no biometric
+  enrolled and the enrolment change are not done.

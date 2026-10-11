@@ -169,3 +169,15 @@ built app and adds its date and screenshot here.
   device"): capture the device's network traffic for a full record day; it
   reaches iCloud hosts only (none, with sync off) and holds no readable
   entry field, weight value or free text.
+
+### Results on a device
+
+Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
+iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
+58cbf1a. The device test guide holds each step. Each check passed.
+The guide holds no screenshots.
+
+- "Third-party keyboard installed" (guide s3-2, t41-4): What shows the
+  system keyboard. Pass. This agrees with the spec ("The app blocks third-
+  party keyboards").
+- "Dictation" (guide s3-3, t41-4): dictation and emoji work in What. Pass.

@@ -115,3 +115,16 @@ Notification Centre grouping and removal timing; the largest accessibility
 text size on the Reminders group and the close-the-day screen; VoiceOver's
 reading order and custom actions; and the shame walk, which also covers a
 reminder on the Lock Screen at work.
+
+### Results on a device
+
+Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
+iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
+58cbf1a. The device test guide holds each step. Each check passed.
+The guide holds no screenshots.
+
+- Permission denied (guide s5-1, t24-1, t24-r4): the first tap on Today's
+  permission line opens iOS Settings, and the second tap does not. Pass.
+- App activation replaces the pending reminders (guide s5-2, t24-2): after
+  three returns to the app, Pending reminders does not grow and nothing
+  arrives twice. Pass.

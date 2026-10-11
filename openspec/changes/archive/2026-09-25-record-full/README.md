@@ -138,6 +138,28 @@ edit screens, the largest-text-size large content viewer on the navigation
 bar's buttons, and the shame walk. Ash does each check and adds its date and
 screenshot to this README.
 
+### Results on a device
+
+Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
+iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
+58cbf1a. The device test guide holds each step. Each check passed.
+The guide holds no screenshots.
+
+- Calls from the support sheet on Today (guide s2-1, t12b-6): the sheet
+  lists six items, and each call shows the system call prompt. Pass.
+- Calls from an earlier day (guide s2-4, t12b-6): the same sheet and the
+  same system call prompt. Pass.
+- Decision 89, inline predictions (guide s3-1, t12b-3): the system keyboard
+  in Messages does not offer a What back. Pass. The fallback ruling is not
+  necessary.
+- Third-party keyboard (guide s3-2, t12b-4): with a third-party keyboard
+  active, New entry shows the system keyboard. Pass.
+- App switcher with the app lock on (guide s4-5, t12b-q2): Today, New entry,
+  the edit screen and an open sheet show only the cover. Pass on iOS 26. The
+  iOS 27 part of t12b-q2 is not done.
+- App lock off (guide s4-7, t12b-q2): Today is never blank. Pass on iOS 26.
+  The iOS 27 part of t12b-q2 is not done.
+
 ## A note on `PredictiveTextView`
 
 SwiftUI's `TextField` and `TextEditor` expose no modifier for
