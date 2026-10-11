@@ -295,3 +295,5 @@ on branch rulings2-record-review: each row reads its own answer, and
 | 9 October 2026 | e5a8119 (main) | iOS 27.0 (24A434) | 151 of 152 passed in 5865 s. testAnAlertKeepsTheSystemBlue saw light mode on the simulator that had stayed booted; after a restart it passed twice by name. The script now restarts the simulator at the start of each run. |
 | 9 October 2026 | e5a8119 (main), --audits | iOS 27.0 (24A434) | 22 of 22 audits passed in 5425 s; 96 issues with no element were recorded for review. |
 | 9 October 2026 | 8358781 (main) | iOS 27.0 (24A434) | 152 of 152 passed in 6064 s. |
+| 11 October 2026 | 2109ddb (main) | iOS 27.0 (24A434) | 153 of 153 passed in 6118 s. |
+| 11 October 2026 | 2109ddb (main), --audits | iOS 27.0 (24A434) | 25 of 25 audits passed in 6298 s, with the Increase Contrast pass (r22-07) and the limits of 4.5:1 for text and 3:1 for glyphs (r22-06). |
