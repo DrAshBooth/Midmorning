@@ -9,7 +9,7 @@ enum Appearance {
     /// The row background's assumed colour, for a caller that documents a
     /// contrast ratio: `.systemBackground` under the plain list style, white
     /// in light mode and black in dark mode.
-    static let accentContrastNote = "AccentColor: light 1F4E79 vs white 8.7:1; dark 7CB4E6 vs black 9.5:1; Increase Contrast 5078A0 vs white 4.6:1 and vs black 4.5:1."
+    static let accentContrastNote = "AccentColor: light 1F4E79 vs white 8.7:1; dark 7CB4E6 vs black 9.5:1; Increase Contrast light 143552 vs white 12.6:1; Increase Contrast dark A8D2F7 vs black 13.2:1 (ruling r22-06: 4.5:1 or more)."
 }
 
 /// The content of a view that shows an alert, with the accent colour as its
@@ -53,11 +53,15 @@ extension View {
 /// text is the system background colour: white in light mode, and black
 /// (on a sheet, the near-black 1C1C1E of the sheet) in dark mode. The
 /// system's own white text on the dark accent value 7CB4E6 is about 2.2:1,
-/// under the 3:1 of product-rules "Accessibility everywhere". Measured in
+/// under the 4.5:1 of product-rules "Accessibility everywhere" for the text
+/// of a button (ruling r22-06). Measured in
 /// screenshots of onboarding screen 1 on the iOS 27.0 simulator (9 October
 /// 2026): light mode, white on 1F4E79, 8.7:1; dark mode, black on 7CB4E6,
 /// 9.5:1. With Increase Contrast the system changes the fill: light mode,
-/// white on 406080, 6.6:1; dark mode, black on B3DBFF, 14.5:1.
+/// white on 406080, 6.6:1; dark mode, black on B3DBFF, 14.5:1 (with the
+/// earlier Increase Contrast value 5078A0). From ruling r22-06 the asset
+/// has an Increase Contrast value for each mode: 143552 in light mode and
+/// A8D2F7 in dark mode.
 /// `AccentContrastTests` checks each text on each value of the asset. A
 /// disabled button keeps the system's own colours. Every filled button
 /// uses `.buttonStyle(.filled)`, never `.borderedProminent`. The one filled

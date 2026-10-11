@@ -76,11 +76,15 @@ struct CoverView: View {
                     .buttonStyle(.bordered)
                     .accessibilityFocused($focusedControl, equals: .deleteFromThisDevice)
                 }
+                // Ruling r22-06 (mm-t45.17): button text contrasts at 4.5:1 or
+                // more. The secondary text colour is about 3.4:1 on white, so the
+                // text uses the accent colour, as product-rules "Appearance" gives
+                // every control.
                 Button { Task { await tapDeleteEverything() } } label: {
                     Text("applock.cover.deleteEverything").minimumHitArea()
                 }
                 .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                .foregroundStyle(.tint)
                 // data-and-privacy spec, "Delete-all" (ruling r14-01): one
                 // line under the controls after a failed deletion. The
                 // same line after a failed "Delete from this device"

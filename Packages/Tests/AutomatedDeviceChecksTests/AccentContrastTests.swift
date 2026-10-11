@@ -52,13 +52,13 @@ final class AccentContrastTests: XCTestCase {
     /// The same with Increase Contrast on (36 36 38).
     static let sheetDarkIncreasedContrast = RGB(0x242426)
 
-    /// The three values of the AccentColor asset: light, dark and Increase
-    /// Contrast.
-    private func accentValues() throws -> (light: RGB, dark: RGB, increasedContrast: RGB) {
+    /// The four values of the AccentColor asset: light, dark, and the
+    /// Increase Contrast value of each mode.
+    private func accentValues() throws -> (light: RGB, dark: RGB, increasedContrast: RGB, darkIncreasedContrast: RGB) {
         let url = AppFiles.appSources.appendingPathComponent("Assets.xcassets/AccentColor.colorset/Contents.json")
         let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         let colours = try XCTUnwrap(json["colors"] as? [[String: Any]])
-        var light: RGB?, dark: RGB?, increased: RGB?
+        var light: RGB?, dark: RGB?, increased: RGB?, darkIncreased: RGB?
         for entry in colours {
             let colour = try XCTUnwrap(entry["color"] as? [String: Any])
             XCTAssertEqual(colour["color-space"] as? String, "srgb")
@@ -75,12 +75,14 @@ final class AccentContrastTests: XCTestCase {
                 dark = rgb
             } else if appearances == [["appearance": "contrast", "value": "high"]] {
                 increased = rgb
+            } else if appearances == [["appearance": "luminosity", "value": "dark"], ["appearance": "contrast", "value": "high"]] {
+                darkIncreased = rgb
             } else {
                 XCTFail("the asset has a value for \(appearances): add it to this test")
             }
         }
         return (try XCTUnwrap(light, "a light value"), try XCTUnwrap(dark, "a dark value"),
-                try XCTUnwrap(increased, "an Increase Contrast value"))
+                try XCTUnwrap(increased, "an Increase Contrast value"), try XCTUnwrap(darkIncreased, "an Increase Contrast value for dark mode"))
     }
 
     /// The Debug and the Release settings of the App target name the
@@ -103,17 +105,22 @@ final class AccentContrastTests: XCTestCase {
     }
 
     /// product-rules "Appearance": each value of the asset contrasts with
-    /// the row background at 3:1 or more (white in light mode, black in
-    /// dark mode, either with Increase Contrast).
+    /// the row background at 4.5:1 or more, the limit for the text of a
+    /// button (ruling r22-06): white in light mode, black or the near-black
+    /// of a sheet in dark mode, with and without Increase Contrast.
     func testEachAccentValueContrastsWithTheRowBackground() throws {
         let accent = try accentValues()
-        XCTAssertGreaterThanOrEqual(accent.light.contrast(with: Self.white), 3, "light \(accent.light) on white")
-        XCTAssertGreaterThanOrEqual(accent.dark.contrast(with: Self.black), 3, "dark \(accent.dark) on black")
-        XCTAssertGreaterThanOrEqual(accent.dark.contrast(with: Self.sheetDark), 3, "dark \(accent.dark) on a sheet")
-        for background in [Self.white, Self.black] {
-            XCTAssertGreaterThanOrEqual(accent.increasedContrast.contrast(with: background), 3,
-                                        "Increase Contrast \(accent.increasedContrast) on \(background)")
+        XCTAssertGreaterThanOrEqual(accent.light.contrast(with: Self.white), 4.5, "light \(accent.light) on white")
+        XCTAssertGreaterThanOrEqual(accent.increasedContrast.contrast(with: Self.white), 4.5, "Increase Contrast \(accent.increasedContrast) on white")
+        for background in [Self.black, Self.sheetDark, Self.sheetDarkIncreasedContrast] {
+            XCTAssertGreaterThanOrEqual(accent.dark.contrast(with: background), 4.5, "dark \(accent.dark) on \(background)")
+            XCTAssertGreaterThanOrEqual(accent.darkIncreasedContrast.contrast(with: background), 4.5,
+                                        "dark Increase Contrast \(accent.darkIncreasedContrast) on \(background)")
         }
+        // An Increase Contrast value has more contrast than the value it
+        // replaces.
+        XCTAssertGreaterThan(accent.increasedContrast.contrast(with: Self.white), accent.light.contrast(with: Self.white))
+        XCTAssertGreaterThan(accent.darkIncreasedContrast.contrast(with: Self.black), accent.dark.contrast(with: Self.black))
     }
 
     /// Ruling r21-02: the text of a filled button is white in light mode
@@ -121,17 +128,17 @@ final class AccentContrastTests: XCTestCase {
     /// `FilledButtonStyle`, and the keyboard's "Save" at the base level,
     /// black). Each text
     /// contrasts with each fill that
-    /// can show with it at 3:1 or more. With Increase Contrast on in dark
-    /// mode, the fill is the dark value or the Increase Contrast value, so
-    /// the test checks both.
+    /// can show with it at 4.5:1 or more, the limit for the text of a
+    /// button (ruling r22-06). With Increase Contrast on, the fill is the
+    /// Increase Contrast value of the mode.
     func testTheTextOfAFilledButtonContrastsWithTheAccent() throws {
         let accent = try accentValues()
         let lightMode = [(accent.light, Self.white), (accent.increasedContrast, Self.white)]
         let darkMode = [Self.black, Self.sheetDark, Self.sheetDarkIncreasedContrast].flatMap { text in
-            [(accent.dark, text), (accent.increasedContrast, text)]
+            [(accent.dark, text), (accent.darkIncreasedContrast, text)]
         }
         for (fill, text) in lightMode + darkMode {
-            XCTAssertGreaterThanOrEqual(fill.contrast(with: text), 3, "the text \(text) on the fill \(fill)")
+            XCTAssertGreaterThanOrEqual(fill.contrast(with: text), 4.5, "the text \(text) on the fill \(fill)")
         }
         // The fault that the ruling mends: white text on the dark value.
         XCTAssertLessThan(accent.dark.contrast(with: Self.white), 3, "white text on the dark value \(accent.dark) is under 3:1")

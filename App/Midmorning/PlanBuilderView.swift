@@ -147,7 +147,11 @@ struct PlanBuilderView: View {
                 .accessibilityLabel(PlanBuilderAccessibility.renameControlLabel(slotLabel: slotLabel).string)
                 if !locked {
                     Spacer()
-                    Button(role: .destructive) { remove(meal.slotIndex) } label: {
+                    // Ruling r22-06 (mm-t45.17): button text contrasts at 4.5:1 or
+                    // more. The system red of a destructive role is about 3.6:1 on white,
+                    // so this button has no role and uses the accent colour, as
+                    // product-rules "Appearance" gives every control.
+                    Button { remove(meal.slotIndex) } label: {
                         Text(PlanBuilderAccessibility.removeControlLabel(slotLabel: slotLabel).string).minimumHitArea()
                     }
                 }

@@ -18,8 +18,15 @@ import UIKit
 ///   own hit-region check reported nothing.
 /// - The contrast audit in dark mode on the same screens
 ///   (`testAuditContrastInDarkMode` and the two tests after it). A UI test
-///   cannot turn on Increase Contrast: mm-t45.19 holds the question of a
-///   pass of the script with Increase Contrast on.
+///   cannot turn on Increase Contrast itself. So `automated-checks.sh
+///   --audits` runs these three tests again with Increase Contrast on
+///   (ruling r22-07, mm-t45.19): the script turns it on with `xcrun simctl
+///   ui`, and the variable `INCREASE_CONTRAST` tells the tests
+///   (`auditIncreaseContrast`). Each log line and each failure message of
+///   that pass names Increase Contrast.
+/// - The contrast limits of ruling r22-06 (mm-t45.17): 4.5:1 for primary
+///   text and for the text of a button, 3:1 for secondary text and for each
+///   glyph (`auditContrastLimit`).
 /// - Checks of the accessibility tree for what the audit cannot see and the
 ///   specs name: header traits, the labels and the reading order that the
 ///   specs give, and the VoiceOver custom actions of rows and day headings.
@@ -159,8 +166,12 @@ extension AutomatedChecks {
         /// it holds none, in a screenshot (`measuredContrast`).
         var measured: Double?
         /// For a contrast issue: each part that the test measured, with its
-        /// contrast ("<label>" 4.2:1).
+        /// contrast and its limit ("text "<label>" 4.2:1, limit 4.5:1").
         var measuredParts: [String] = []
+        /// For a contrast issue: each part that the test measured meets its
+        /// own limit (`auditContrastLimit`), and the test measured at least
+        /// one part.
+        var meetsItsLimits = false
         /// For an issue with no element: the labels of the content texts
         /// that were under a bar when the audit ran (`auditTextUnderBars`).
         var textUnderBars: [String] = []
@@ -191,13 +202,13 @@ extension AutomatedChecks {
             let element = elementType.map { "element \($0.rawValue) \"\(label ?? "")\" at \(frame.map { "\($0.integral)" } ?? "?")" }
                 ?? (viaAX ? "no element; its accessibility element \"\(label ?? "")\" at \(frame.map { "\($0.integral)" } ?? "?")" : "no element")
             var ratio = measured.map { String(format: " (measured %.1f:1 in a screenshot", $0) } ?? ""
-            if !ratio.isEmpty { ratio += measuredParts.allSatisfy({ $0.hasPrefix("the whole element") }) ? ")" : ", the lowest of \(measuredParts.joined(separator: ", ")))" }
+            if !ratio.isEmpty { ratio += measuredParts.allSatisfy({ $0.hasPrefix("the whole element") }) ? ": \(measuredParts.joined(separator: ", ")))" : ", the lowest of \(measuredParts.joined(separator: ", ")))" }
             // Under a bar, the screenshot shows the bar's material over a
             // part of the element, so that value is not the contrast of the
             // element on its own background.
             if !ratio.isEmpty, underABar { ratio = String(ratio.dropLast()) + "; a bar covered a part of the element, so this is not its contrast on its own background)" }
             let under = elementType == nil ? " (content text under a bar: \(textUnderBars.isEmpty ? "none" : textUnderBars.joined(separator: " | ")); the issue's fields: \(fields.isEmpty ? "none" : fields))" : ""
-            return "\(screen) (\(size.rawValue)\(dark ? ", dark mode" : "")): \(typeName): \(compact): \(element): \(detail)\(ratio)\(under)"
+            return "\(screen) (\(size.rawValue)\(dark ? ", dark mode" : "")\(AutomatedChecks.auditIncreaseContrast ? ", Increase Contrast" : "")): \(typeName): \(compact): \(element): \(detail)\(ratio)\(under)"
         }
 
         /// A short name of the issue for the log line of a second sighting.
@@ -233,11 +244,29 @@ extension AutomatedChecks {
     /// The description of a hit-area issue (`smallControls`).
     static let hitAreaCompact = "Hit area under 44 by 44 points"
 
-    /// The description of a contrast issue that the test measures in a
-    /// screenshot of a system calendar
-    /// (`assertTheSelectedDayOfTheCalendarContrasts`). The audit never gives
-    /// this description, so an entry that names it takes no audit issue.
-    static let calendarDayCompact = "Selected day of a system calendar under 3:1"
+    /// The pass of `automated-checks.sh --audits` with Increase Contrast on
+    /// (ruling r22-07, mm-t45.19). The script sets `INCREASE_CONTRAST` to 1
+    /// for that pass only.
+    static let auditIncreaseContrast = ProcessInfo.processInfo.environment["INCREASE_CONTRAST"] == "1"
+
+    /// The contrast limit of ruling r22-06 (mm-t45.17), product-rules
+    /// "Accessibility everywhere": primary text and the text of a button at
+    /// 4.5:1 or more; secondary text and each glyph that carries meaning at
+    /// 3:1 or more.
+    ///
+    /// The test tells the kinds apart from the screenshot. An image is a
+    /// glyph. A text whose colour is a grey (no hue, and neither near black
+    /// nor near white: `isGrey`) is secondary text: the system's secondary
+    /// text colour is 8A8A8E on white and about 98989F on black, and a
+    /// section header is 85858B. Every other text is primary text or the
+    /// text of a button: black, white, or the accent colour. So a button
+    /// with grey text gets only 3:1 here; the app has no such button (each
+    /// one uses the accent colour). WCAG 2 also sets 3:1 for large text; the
+    /// test does not use that exception, so it is stricter than the rule
+    /// for a large text.
+    static func auditContrastLimit(isImage: Bool, isGrey: Bool) -> Double {
+        isImage || isGrey ? 3 : 4.5
+    }
 
     /// The issues that the audits exclude. Each one is not a fault of the
     /// app, and each entry tells why. No entry takes every issue of a type.
@@ -247,15 +276,15 @@ extension AutomatedChecks {
     /// open until an audit page shows the element clear of the bars.
     static let auditExclusions: [AuditExclusion] = [
         AuditExclusion(reason: """
-            Each text and each image inside the element's frame contrasts at 3:1 or more with the fill behind it. \
-            The test measures each of them in a screenshot just after the audit (`measuredContrast`) and takes the \
-            lowest; it measures the element itself only when it holds no text and no image. product-rules \
-            "Accessibility everywhere" sets 3:1 for secondary text and for every glyph that carries meaning, and \
-            sets no limit for primary text: the test uses 3:1 for all text until Ash decides (mm-t45.17). The \
-            audit uses other limits: it reports "Contrast nearly passed" from 3:1 to 4.5:1, and it can report \
-            "Contrast failed" on a row whose label is black on white when a system part of the row (a disclosure \
-            chevron, the track of a switch) is lighter. A part below 3:1 still fails the test.
-            """) { $0.type.contains(.contrast) && $0.hasFrame && !$0.underABar && ($0.measured ?? 0) >= 3 },
+            Each text and each image inside the element's frame contrasts with the fill behind it at its own limit \
+            or more. The test measures each of them in a screenshot just after the audit (`measuredContrast`); it \
+            measures the element itself only when it holds no text and no image. product-rules "Accessibility \
+            everywhere" sets 4.5:1 for primary text and for the text of a button, and 3:1 for secondary text and for \
+            every glyph that carries meaning (ruling r22-06, mm-t45.17; `auditContrastLimit`). The audit uses \
+            other limits: it reports "Contrast nearly passed" from 3:1 to 4.5:1, also for secondary text, and it can \
+            report "Contrast failed" on a row whose label is black on white when a system part of the row (a \
+            disclosure chevron, the track of a switch) is lighter. A part below its own limit still fails the test.
+            """) { $0.type.contains(.contrast) && $0.hasFrame && !$0.underABar && $0.meetsItsLimits },
         AuditExclusion(reason: """
             The control is disabled (for example "Save" on the weigh-in screen before a weight is typed). WCAG 2 \
             (1.4.3) sets no contrast for the text of an inactive control, and product-rules sets none for it. The \
@@ -268,10 +297,12 @@ extension AutomatedChecks {
             title's label keeps the full text, which VoiceOver reads.
             """) { ($0.type.contains(.dynamicType) || $0.type.contains(.textClipped)) && $0.inABar },
         AuditExclusion(reason: """
-            The hour-and-minute wheels of the system date picker (the audit names `_UIDatePickerWheelsTimeLabel`) in \
-            the record's time control. iOS draws the wheels at a fixed text size at every Dynamic Type size; the app \
-            cannot make them grow. For VoiceOver the control is one adjustable element, "Time", whose value reads the \
-            date and the time (RecordTimeControl.swift), and the date segments above the wheels scale.
+            The wheels of the system date picker (the audit names `_UIDatePickerWheels...`): the hour-and-minute \
+            wheels of the record's time control, and the day, month and year wheels of "From" and "To" on the export \
+            screen (ruling r22-05). iOS draws the wheels at a fixed text size at every Dynamic Type size; the app \
+            cannot make them grow. For VoiceOver the time control is one adjustable element, "Time", whose value reads \
+            the date and the time (RecordTimeControl.swift), and the date segments above the wheels scale. Each export \
+            wheel is an adjustable element of the picker "From" or "To", and the label above each picker scales.
             """) { $0.type.contains(.dynamicType) && $0.detail.contains("_UIDatePickerWheels") },
         AuditExclusion(reason: """
             The label is an e-mail address: the contact address that the privacy notice must show (data-and-privacy, \
@@ -352,9 +383,11 @@ extension AutomatedChecks {
             note: """
                 The audit itself measured this text at 3:1 or more: "Contrast nearly passed" says that the text passes \
                 at a larger font size, and WCAG 2 sets 3:1 for large text (4.5:1 for other text). product-rules sets \
-                3:1 (mm-t45.17 holds the decision on primary text). The audit gives no element and no frame, so the \
-                test cannot measure the text itself. A likely part is text in the secondary colour, about 3.4:1 on \
-                white. This is not proved.
+                4.5:1 for primary text and for the text of a button, and 3:1 for secondary text (ruling r22-06). The \
+                audit gives no element and no frame, so the test cannot measure the text itself or tell its kind. A \
+                likely part is text in the secondary colour, about 3.4:1 on white, which obeys its 3:1. This is not \
+                proved. Ruling r22-03: while the audits log such an issue, the team declares no "Sufficient \
+                Contrast" label.
                 """) { _ in true },
         AuditElementlessNote(
             types: [.elementDetection, .dynamicType, .textClipped],
@@ -412,16 +445,6 @@ extension AutomatedChecks {
             no count; the test records each one (`auditRecorded`).
             """) { finding in
             finding.isElementless && finding.type.contains(.contrast) && finding.compact == "Contrast failed"
-        },
-        AuditKnownDefect(bead: "mm-t12b.30", reason: """
-            In dark mode, the system calendar of "To" on the export screen shows the numeral of the selected current \
-            day in white on the dark accent value 7CB4E6: about 2.2:1 in a screenshot (9 October 2026). The system \
-            calendar draws the numeral, and the app cannot set its colour. The bead holds the options for Ash. The \
-            entry takes only this measurement of the test (`assertTheSelectedDayOfTheCalendarContrasts`), only in \
-            dark mode, and only from 2:1 up, so a lower value fails the test.
-            """) { finding in
-            finding.compact == calendarDayCompact && finding.dark && finding.screen == "the export screen"
-                && (finding.label ?? "").hasPrefix("Today, ") && (finding.measured ?? 0) >= 2
         },
     ] + auditHitAreaKnownDefects
 
@@ -578,6 +601,16 @@ extension AutomatedChecks {
     /// audit measures each text and image of an element on its own
     /// (`measureContrast`).
     func measuredContrast(in frame: CGRect, of image: CGImage, scale: CGFloat) -> Double? {
+        measuredContrastSample(in: frame, of: image, scale: scale)?.ratio
+    }
+
+    /// `measuredContrast`, and whether the text is a grey (`isGrey`): the
+    /// colour of the text pixel that gives the ratio has no hue (its
+    /// channels differ by at most 16 of 255), and it is neither near black
+    /// nor near white (a luminance from 0.05 to 0.6). The system's
+    /// secondary text colour is such a grey; primary text is black or
+    /// white, and the accent colour has a hue (`auditContrastLimit`).
+    func measuredContrastSample(in frame: CGRect, of image: CGImage, scale: CGFloat) -> (ratio: Double, isGrey: Bool)? {
         let inner = frame.insetBy(dx: min(16, frame.width / 4), dy: frame.height * 0.2)
         let rect = CGRect(x: inner.minX * scale, y: inner.minY * scale, width: inner.width * scale, height: inner.height * scale)
             .integral.intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
@@ -595,15 +628,19 @@ extension AutomatedChecks {
             let c = Double(value) / 255
             return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
         }
-        var luminance: [Double] = []
-        luminance.reserveCapacity(width * height)
+        var samples: [(luminance: Double, pixel: Int)] = []
+        samples.reserveCapacity(width * height)
         for index in stride(from: 0, to: pixels.count, by: 4) {
-            luminance.append(0.2126 * channel(pixels[index]) + 0.7152 * channel(pixels[index + 1]) + 0.0722 * channel(pixels[index + 2]))
+            samples.append((0.2126 * channel(pixels[index]) + 0.7152 * channel(pixels[index + 1]) + 0.0722 * channel(pixels[index + 2]), index))
         }
-        luminance.sort()
-        let last = Double(luminance.count - 1)
-        let dark = luminance[Int(last * 0.005)], background = luminance[luminance.count / 2], light = luminance[Int(last * 0.995)]
-        return max((background + 0.05) / (dark + 0.05), (light + 0.05) / (background + 0.05))
+        samples.sort { $0.luminance < $1.luminance }
+        let last = Double(samples.count - 1)
+        let dark = samples[Int(last * 0.005)], background = samples[samples.count / 2].luminance, light = samples[Int(last * 0.995)]
+        let darkRatio = (background + 0.05) / (dark.luminance + 0.05), lightRatio = (light.luminance + 0.05) / (background + 0.05)
+        let text = darkRatio >= lightRatio ? dark : light
+        let rgb = [pixels[text.pixel], pixels[text.pixel + 1], pixels[text.pixel + 2]].map(Int.init)
+        let isGrey = (rgb.max()! - rgb.min()!) <= 16 && text.luminance >= 0.05 && text.luminance <= 0.6
+        return (max(darkRatio, lightRatio), isGrey)
     }
 
     /// The contrast of a flagged element: each text and each image in the
@@ -613,8 +650,8 @@ extension AutomatedChecks {
     /// texts are not in the tree) is measured as one frame. Only the
     /// element's own descendants count: content under a bar can have a
     /// frame inside the frame of a button in the bar.
-    func measureContrast(of finding: AuditFinding, in image: CGImage, scale: CGFloat, root: XCUIElementSnapshot?) -> (lowest: Double?, parts: [String]) {
-        guard let frame = finding.frame else { return (nil, []) }
+    func measureContrast(of finding: AuditFinding, in image: CGImage, scale: CGFloat, root: XCUIElementSnapshot?) -> (lowest: Double?, parts: [String], meetsItsLimits: Bool) {
+        guard let frame = finding.frame else { return (nil, [], false) }
         var node: XCUIElementSnapshot?
         func find(_ element: XCUIElementSnapshot) {
             guard node == nil else { return }
@@ -637,16 +674,22 @@ extension AutomatedChecks {
             }
         }
         if let node { collect(node) }
-        var measured: [(String, Double)] = []
+        // Each part with its ratio and its limit (`auditContrastLimit`).
+        var measured: [(String, Double, Double)] = []
         for part in parts {
-            if let ratio = measuredContrast(in: part.frame, of: image, scale: scale) {
-                measured.append(("\(part.elementType == .image ? "image" : "text") \"\(part.label.prefix(40))\"", ratio))
+            if let sample = measuredContrastSample(in: part.frame, of: image, scale: scale) {
+                let isImage = part.elementType == .image
+                let kind = isImage ? "image" : sample.isGrey ? "secondary text" : "text"
+                measured.append(("\(kind) \"\(part.label.prefix(40))\"", sample.ratio, Self.auditContrastLimit(isImage: isImage, isGrey: sample.isGrey)))
             }
         }
-        if measured.isEmpty, let ratio = measuredContrast(in: frame, of: image, scale: scale) {
-            measured.append(("the whole element", ratio))
+        if measured.isEmpty, let sample = measuredContrastSample(in: frame, of: image, scale: scale) {
+            let isImage = finding.elementType == .image
+            measured.append(("the whole element", sample.ratio, Self.auditContrastLimit(isImage: isImage, isGrey: sample.isGrey)))
         }
-        return (measured.map(\.1).min(), measured.map { String(format: "%@ %.1f:1", $0.0, $0.1) })
+        return (measured.map(\.1).min(),
+                measured.map { String(format: "%@ %.1f:1, limit %.1f:1", $0.0, $0.1, $0.2) },
+                !measured.isEmpty && measured.allSatisfy { $0.1 >= $0.2 })
     }
 
     /// The part of the screen where content shows clear of every bar, from
@@ -1360,6 +1403,7 @@ extension AutomatedChecks {
                 let result = measureContrast(of: findings[index], in: image, scale: scale, root: root)
                 findings[index].measured = result.lowest
                 findings[index].measuredParts = result.parts
+                findings[index].meetsItsLimits = result.meetsItsLimits
             }
         }
         let window = app.windows.firstMatch.frame
@@ -1382,8 +1426,8 @@ extension AutomatedChecks {
             findings += smallControls(on: name, size: size)
         }
         let elementless = findings.filter { $0.elementType == nil }.count
-        auditLog("AUDIT \(name) (\(size.rawValue)\(dark ? ", dark" : "")): \(findings.count) issues\(elementless > 0 ? ", \(elementless) with no element" : "")")
-        let shots = "\(name) (\(size.rawValue)\(dark ? ", dark" : ""))".replacingOccurrences(of: "/", with: "-")
+        auditLog("AUDIT \(name) (\(size.rawValue)\(dark ? ", dark" : "")\(Self.auditIncreaseContrast ? ", Increase Contrast" : "")): \(findings.count) issues\(elementless > 0 ? ", \(elementless) with no element" : "")")
+        let shots = "\(name) (\(size.rawValue)\(dark ? ", dark" : "")\(Self.auditIncreaseContrast ? ", Increase Contrast" : ""))".replacingOccurrences(of: "/", with: "-")
         var failed = false
         var elementlessIndex = 0
         for finding in findings {
@@ -1491,7 +1535,7 @@ extension AutomatedChecks {
             // `OUT_DIR/audit-shots` keeps the ones with no element.
             var folders = environment["AUDIT_SHOTS_DIR"].map { [$0] } ?? []
             if elementless > 0, let out = environment["OUT_DIR"] { folders.append(out + "/audit-shots") }
-            let base = "\(name) (\(size.rawValue)\(dark ? ", dark" : ""))"
+            let base = "\(name) (\(size.rawValue)\(dark ? ", dark" : "")\(Self.auditIncreaseContrast ? ", Increase Contrast" : ""))"
             for (image, when) in [(screenBefore, "before the audit"), (screenshot, "after the audit")] {
                 let shot = XCTAttachment(screenshot: image)
                 shot.name = "\(base), \(when)"
@@ -2063,9 +2107,10 @@ extension AutomatedChecks {
     /// filled button on iOS 26 and later: the accent colour fills it. The
     /// audit pages hide the keyboard, so the test measures that "Save" in a
     /// screenshot while the keyboard shows: its text contrasts with the
-    /// fill at 3:1 or more (ruling r21-02, mm-t12b.29). Before the fix,
-    /// the white text on the dark accent value measured 2.1:1 (9 October
-    /// 2026).
+    /// fill at 4.5:1 or more, the limit for the text of a button (ruling
+    /// r22-06, mm-t45.17; ruling r21-02, mm-t12b.29). Before the fix of
+    /// r21-02, the white text on the dark accent value measured 2.1:1 (9
+    /// October 2026).
     func assertTheKeyboardSaveContrasts(on screen: String, dark: Bool, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "\(screen) shows the keyboard", file: file, line: line)
         // The navigation bar has a "Save" too; the keyboard's is the lower one.
@@ -2081,9 +2126,9 @@ extension AutomatedChecks {
         }
         let scale = CGFloat(image.width) / max(app.windows.firstMatch.frame.width, 1)
         let ratio = measuredContrast(in: save.frame, of: image, scale: scale)
-        let mode = dark ? ", dark" : ""
+        let mode = (dark ? ", dark" : "") + (Self.auditIncreaseContrast ? ", Increase Contrast" : "")
         auditLog("  (\(screen)\(mode): the keyboard's \"Save\" measured \(ratio.map { String(format: "%.1f", $0) } ?? "nothing"):1)")
-        XCTAssertGreaterThanOrEqual(ratio ?? 0, 3, "on \(screen)\(mode), the text of the keyboard's \"Save\" contrasts with its fill at 3:1 or more",
+        XCTAssertGreaterThanOrEqual(ratio ?? 0, 4.5, "on \(screen)\(mode), the text of the keyboard's \"Save\" contrasts with its fill at 4.5:1 or more",
                                     file: file, line: line)
     }
 
@@ -2256,56 +2301,26 @@ extension AutomatedChecks {
             try auditLaunchOnToday("week1", size: size)
             auditOpenSettings()
             auditOpen("Export", screen: "Export")
-            audit("the export screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 3, largest: 10))
-            if size == .standard { assertTheSelectedDayOfTheCalendarContrasts(size: size, dark: false) }
+            audit("the export screen", size: size, types: auditTypes(size), pages: auditPages(size, standard: 4, largest: 12))
+            if size == .standard { assertTheExportDatesAreWheels() }
         }
     }
 
-    /// The export screen's "To" is a compact date picker. A tap opens the
-    /// system calendar, which fills the circle of the selected day with the
-    /// accent colour. "To" starts at the current day, and the calendar
-    /// shows the numeral of the current day in white on that fill (9
-    /// October 2026, iOS 27.0 simulator). The audit pages do not open the
-    /// calendar, so the test measures that day in a screenshot, as
-    /// `assertTheKeyboardSaveContrasts` does: 3:1 or more (ruling r21-02,
-    /// mm-t12b.29). A value under 3:1 is an issue (`calendarDayCompact`)
-    /// that goes through `auditKnownDefects`, as an audit issue does. White
-    /// on the dark value 7CB4E6 is about 2.2:1: in dark mode the entry for
-    /// mm-t12b.30 takes it while that bead waits for a decision, so it is an
-    /// expected failure from `auditKnownDefects` and the log line says
-    /// "known fault mm-t12b.30". Then the test closes the calendar.
-    func assertTheSelectedDayOfTheCalendarContrasts(size: AuditTextSize, dark: Bool, file: StaticString = #filePath, line: UInt = #line) {
-        let to = app.datePickers["To"].firstMatch
-        XCTAssertTrue(to.waitForExistence(timeout: 5), "the export screen shows \"To\"", file: file, line: line)
-        to.tap()
-        let day = app.buttons.matching(NSPredicate(format: "selected == true AND label BEGINSWITH %@", "Today, ")).firstMatch
-        XCTAssertTrue(day.waitForExistence(timeout: 5), "the calendar of \"To\" shows the current day, selected", file: file, line: line)
-        sleep(1)
-        guard let image = XCUIScreen.main.screenshot().image.cgImage else {
-            XCTFail("no screenshot", file: file, line: line)
-            return
+    /// Ruling r22-05 (mm-t12b.30): "From" and "To" on the export screen are
+    /// wheel date pickers, each with three wheels (day, month, year) on the
+    /// screen, and no control opens the system calendar. The calendar
+    /// filled the selected day with the accent colour and drew its numeral
+    /// in white: 2.2:1 on the dark accent value (9 October 2026). The audit
+    /// pages measure the wheels as they measure every other text on the
+    /// screen.
+    func assertTheExportDatesAreWheels(file: StaticString = #filePath, line: UInt = #line) {
+        for label in ["From", "To"] {
+            let picker = app.datePickers[label].firstMatch
+            XCTAssertTrue(picker.waitForExistence(timeout: 5), "the export screen shows \"\(label)\"", file: file, line: line)
+            XCTAssertEqual(picker.pickerWheels.count, 3, "\"\(label)\" is a wheel date picker with three wheels", file: file, line: line)
         }
-        let scale = CGFloat(image.width) / max(app.windows.firstMatch.frame.width, 1)
-        let ratio = measuredContrast(in: day.frame, of: image, scale: scale) ?? 0
-        let mode = dark ? ", dark" : ""
-        let text = String(format: "the export screen\(mode): the selected current day \"\(day.label)\" of the calendar of \"To\" measured %.1f:1", ratio)
-        auditLog("  (\(text))")
-        if ratio < 3 {
-            let finding = AuditFinding(
-                screen: "the export screen", size: size, dark: dark, type: .contrast, compact: Self.calendarDayCompact,
-                detail: "the numeral of the selected day contrasts with its fill at less than 3:1",
-                elementType: day.elementType, label: day.label, identifier: day.identifier, frame: day.frame, measured: ratio)
-            if let defect = Self.auditKnownDefects.first(where: { $0.matches(finding) }) {
-                auditLog("  known fault \(defect.bead): \(finding.text)")
-                auditExpectFailure(finding, defect, file: file, line: line)
-            } else {
-                auditLog("  ISSUE: \(finding.text)")
-                XCTFail("\(text): the numeral contrasts with its fill at less than 3:1", file: file, line: line)
-            }
-        }
-        let dismiss = app.buttons["PopoverDismissRegion"].firstMatch
-        if dismiss.exists { dismiss.tap() } else { to.tap() }
-        XCTAssertTrue(day.waitForNonExistence(timeout: 5), "the calendar of \"To\" closes", file: file, line: line)
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Today, ")).firstMatch.exists,
+                       "the export screen shows no calendar", file: file, line: line)
     }
 
     /// The support sheet from Today (`week1`).
@@ -2764,7 +2779,10 @@ extension AutomatedChecks {
     /// mode on the main screens, at the default text size (the strict case
     /// for contrast). A UI test cannot turn on Increase Contrast from inside
     /// XCTest; the simulator can (`xcrun simctl ui <udid> increase_contrast
-    /// enabled`), and mm-t45.19 asks Ash for a pass of the script with it.
+    /// enabled`). So `automated-checks.sh --audits` runs this test and the
+    /// two after it again with Increase Contrast on (ruling r22-07,
+    /// mm-t45.19; `auditIncreaseContrast`), and `assertDarkMode` checks
+    /// that the setting is on in that pass.
     ///
     /// The test sets dark mode with `XCUIDevice.appearance` and puts light
     /// mode back at the end. On the iOS 27.0 simulator a new simulator did
@@ -2851,8 +2869,8 @@ extension AutomatedChecks {
     /// group, the privacy notice, Diagnostics, Export, the stage screen, the
     /// Reviews list, safe mode and the store-open fault screen. Each screen
     /// has the same pages as its audit in light mode. On the export screen
-    /// the test also measures the selected day of the calendar of "To"
-    /// (`assertTheSelectedDayOfTheCalendarContrasts`). The edit screen shows
+    /// the test also checks that the dates are wheels, with no calendar
+    /// (`assertTheExportDatesAreWheels`, ruling r22-05). The edit screen shows
     /// a selected (filled) Where chip. The test also audits the deleted
     /// screen, which has no audit in light mode, for its filled button
     /// "Done" (ruling r21-02, mm-t12b.29). With the next test,
@@ -2903,8 +2921,8 @@ extension AutomatedChecks {
             try auditLaunchOnToday("week1", size: size)
             auditOpenSettings()
             auditOpen("Export", screen: "Export")
-            audit("the export screen", size: size, dark: true, types: .contrast, pages: 3)
-            assertTheSelectedDayOfTheCalendarContrasts(size: size, dark: true)
+            audit("the export screen", size: size, dark: true, types: .contrast, pages: 4)
+            assertTheExportDatesAreWheels()
             try auditLaunchOnToday("week1", size: size)
             tapToolbar("Programme")
             assertScreen("Programme")
@@ -2995,6 +3013,15 @@ extension AutomatedChecks {
     /// fail the test. automated-checks.sh restarts a simulator once when it
     /// does not change to dark mode (a new iOS 27.0 simulator).
     func assertDarkMode(file: StaticString = #filePath, line: UInt = #line) {
+        // The pass with Increase Contrast (ruling r22-07, mm-t45.19): the
+        // script turned it on with `xcrun simctl ui`, and the test runner
+        // on the same simulator sees the setting.
+        if Self.auditIncreaseContrast {
+            XCTAssertTrue(UIAccessibility.isDarkerSystemColorsEnabled, """
+                Increase Contrast is on for the pass of automated-checks.sh --audits that sets INCREASE_CONTRAST \
+                (xcrun simctl ui <udid> increase_contrast enabled)
+                """, file: file, line: line)
+        }
         var corner: [CGFloat] = []
         for attempt in 0..<6 {
             if attempt > 0 { sleep(1) }
