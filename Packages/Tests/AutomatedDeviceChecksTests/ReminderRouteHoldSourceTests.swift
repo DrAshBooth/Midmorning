@@ -33,14 +33,24 @@ final class ReminderRouteHoldSourceTests: XCTestCase {
     /// path does not close the page with no "Done".
     func testEachSafeguardingPageHoldsTheRoute() throws {
         for path in ["Safeguarding/NotRightNowPageView.swift", "Safeguarding/GPSuggestionPageView.swift"] {
-            XCTAssertTrue(try stackModifiers(path).hasPrefix(" .holdsReminderRoutes() "), "\(path): the page's NavigationStack holds the route")
+            XCTAssertTrue(try stackModifiers(path).hasPrefix(" .holdsReminderRoutes(.safeguardingPage) "), "\(path): the page's NavigationStack holds the route")
         }
     }
 
     /// The new-entry screen holds the route while it holds a draft.
     func testTheNewEntryScreenHoldsTheRouteWhileItHoldsADraft() throws {
         let modifiers = try stackModifiers("NewEntryView.swift")
-        XCTAssertTrue(modifiers.hasPrefix(" .holdsReminderRoutes(NewEntryDraft.holdsADraft(what: what, context: context, whereSelection: whereSelection, pendingPlace: pendingPlace, feltLikeABinge: feltLikeABinge)) "), "NewEntryView's NavigationStack holds the route while it holds a draft")
+        XCTAssertTrue(modifiers.hasPrefix(" .holdsReminderRoutes(NewEntryDraft.holdsADraft(what: what, context: context, whereSelection: whereSelection, pendingPlace: pendingPlace, feltLikeABinge: feltLikeABinge) ? .newEntryDraft : nil) "), "NewEntryView's NavigationStack holds the route while it holds a draft")
+    }
+
+    /// Ruling r22-01 (mm-t45.23): the weekly review, the restart re-screen
+    /// and the weigh-in screen hold the route until the person leaves them.
+    /// The re-screen holds on its own `NavigationStack`. (The app has no
+    /// check-in screen yet.)
+    func testEachScreenWithAnswersHoldsTheRouteWhileOpen() throws {
+        XCTAssertTrue(try stackModifiers("Programme/RescreenView.swift").hasPrefix(" .holdsReminderRoutesWhileOpen(.rescreen) "), "the re-screen's NavigationStack holds the route")
+        XCTAssertTrue(try ScreenText.source("WeighIn/WeighInScreenView.swift").contains(".holdsReminderRoutesWhileOpen(.weighInScreen)"), "the weigh-in screen holds the route")
+        XCTAssertTrue(try ScreenText.source("WeeklyReview/ReviewScreenView.swift").contains(".holdsReminderRoutesWhileOpen(.weeklyReview(week: runStartDay == nil ? week : nil))"), "the weekly review holds the route")
     }
 
     /// Today sets `sheetOnScreen` when each of its four sheets appears, and

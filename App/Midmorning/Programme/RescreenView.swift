@@ -39,6 +39,9 @@ struct RescreenView: View {
                 })
             }
         }
+        // Ruling r22-01 (mm-t45.23): a reminder tap does not close the
+        // re-screen. The route waits until the person leaves it.
+        .holdsReminderRoutesWhileOpen(.rescreen)
     }
 
     private func attemptContinue() {
