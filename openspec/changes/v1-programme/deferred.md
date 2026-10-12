@@ -11,7 +11,7 @@ When Ash archives an owning change, Ash moves its rows to that change's README. 
 | data-and-privacy | every sync, account, restore and Erasure requirement, and "Every install has one device row" | Onboarding offers "This device only" as the one choice with "iCloud sync comes in a later version." | 4.1b sync | the requirement beads under mm-t41b |
 | onboarding | "Screen 4: the iCloud choice" and "Restore before onboarding" | "This device only" is the one choice; no CloudKit read | 4.1b sync | mm-t14.10 and mm-t41b.8 |
 | widgets-and-intents | every requirement except "Notification actions are entry points" and "The action queue" | Entry points are the app and the notification actions only | 2.5 widgets-and-intents | the requirement beads under mm-t25 |
-| reminders | Worksheet review and check-in reminders | The app schedules neither type | 3.3 problem-solving, 3.6 staying-on-track | mm-t33.13, mm-t36.14 |
+| reminders | Worksheet review and check-in reminders | The app schedules neither type | 2.4b far-reminders, 3.3 problem-solving, 3.6 staying-on-track | mm-t24b.1, mm-t33.13, mm-t36.14 |
 | reminders | Time Sensitive is opt-in | The switch is absent; the entitlement waits | 2.5 widgets-and-intents | mm-t25.1 |
 | weekly-review | "Taking stock" and "The taking stock questionnaire and the module recommendation" | The review of week 6 is a plain review | 3.2b taking-stock, with 3.4 and 3.5 | the requirement beads under mm-t32b |
 | urge-toolkit | every requirement | The Urge button is absent | 3.1 urge-toolkit | the requirement beads under mm-t31 |
