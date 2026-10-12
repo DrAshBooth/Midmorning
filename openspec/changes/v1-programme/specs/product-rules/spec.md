@@ -54,8 +54,9 @@ The app MUST NOT use a plate, fork, apple, scale or tape-measure image anywhere.
 - the urge screen's "I binged" control
 - the "Urge" button on Today from stage 3
 - the line "Urge open since %@" on Today
+- the sentence of a suggestion card from urges on Today, from stage 4, for example "Most of your recent urges were after 20:00."
 
-`urge-toolkit` owns the last three. Each exception is body text, not a heading or an image. The "Urge" button and the line show only on Today, inside the app and behind the app lock. The PRD asks for an "Urge" button that stays on Today from stage 3, so the button and its line are exceptions.
+`urge-toolkit` owns the "I binged" control, the "Urge" button and the line. `problem-solving` owns the card sentence. Each exception is body text, not a heading or an image. These exceptions show only inside the app and behind the app lock. The PRD asks for an "Urge" button that stays on Today from stage 3, so the button and its line are exceptions. Ash ruled that urges give pattern sentences (r23-09) and that the suggestion card shows a sentence with no number (r24-02), so the card sentence is an exception too.
 
 #### Scenario: The app icon
 - **WHEN** the app icon appears on a lock screen or home screen

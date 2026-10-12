@@ -506,7 +506,7 @@ For these two holds, Today MUST read two moments: the time of the latest starred
 Three more holds apply to the card slot. Ash ruled them on 12 October 2026 (r24-03).
 
 - While an urge is open, the card slot MUST show no card of any kind. This includes the stage 7 lapse card. `urge-toolkit` states when an urge is open.
-- After any urge outcome, the card slot MUST show no card for the rest of the outcome's record day. That record day is the outcome's `outcomeDayKey`. The stage 7 lapse card stays the one same-day exception after a starred entry or an "I binged" outcome, as Ash ruled on 25 September 2026 (r8-17, decision 100).
+- After any urge outcome, the card slot MUST show no card for the rest of the outcome's record day. That record day is the outcome's `outcomeDayKey`. The stage 7 lapse card is the one exception to this hold, after any outcome, as it is after a starred entry (r8-17, decision 100). A lapse card that is due MUST show when no urge is open, also after a later "It passed" or "I ate as planned" in the same record day.
 - A suggestion card MUST also wait until SUGGESTION_HOLD_HOURS have passed since the later of the two moments above. This hold also runs across the day start, into the next record day. `programme` names SUGGESTION_HOLD_HOURS = 12 in ProgrammeConstants. The clinical reviewer can change its value.
 
 `programme` states the first two holds for opening cards in "No opening card after a binge in the same record day". `problem-solving` states all three for the suggestion card in "The suggestion card".
@@ -564,6 +564,10 @@ The order above is the only order. Another capability MUST NOT add an element to
 #### Scenario: The lapse card waits for an open urge
 - **WHEN** stage 7 is open, the person saves a starred entry at 14:10 on Tuesday 5 January 2027, the next planned meal is at 16:00, the person taps "Urge" at 15:50 and "Close" at 15:52, and saves no outcome
 - **THEN** the card slot shows no card while the urge is open, and shows the maintenance plan card from 17:50, when the urge reaches URGE_OPEN_MINUTES
+
+#### Scenario: The lapse card after a later "It passed"
+- **WHEN** stage 7 is open, the person saves a starred entry at 14:10 on Tuesday 5 January 2027, taps "Urge" at 19:00 and taps "It passed" at 19:20
+- **THEN** Today shows the maintenance plan card at 19:21, and shows no other card for the rest of that record day
 
 #### Scenario: The suggestion hold after a binge at night
 - **WHEN** the day start is 04:00, a suggestion card is due, and the person saves the outcome "I binged" at 03:30 on Wednesday 14 October 2026
