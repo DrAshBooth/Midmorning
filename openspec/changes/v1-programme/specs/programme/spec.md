@@ -12,6 +12,8 @@ The team can change a gate constant in a later version. When a gate lowers, the 
 
 The app MUST match past planned meals with the window constants the store kept with the planned day at materialisation. Regular-eating-plan owns the planned day. The change README MUST hold a dated line for every constant change, with the app version.
 
+When a constant changes, the team MUST check every card that states its value. A card holds no placeholder, as `content` states in "The app bundles the cards". So a card states a value in words, for example "about twenty minutes" for URGE_TIMER_MINUTES.
+
 #### Scenario: A gate lowers
 - **WHEN** the person has four recorded days, the fourth from an entry saved at 19:20 on Thursday 8 October 2026, and an update sets RECORDED_DAYS_FOR_STAGE_2 to 3
 - **THEN** stage 2 is open after the update, and the opening moment in the store is the save moment of the entry that made the third recorded day
@@ -85,6 +87,9 @@ The app MUST hold every programme constant in one value type, ProgrammeConstants
 - PATTERN_MIN_STARRED = 5
 - PATTERN_MIN_URGES = 5
 - PATTERN_MIN_GROUP = 3
+- PATTERN_MAX_SENTENCES = 3
+- PATTERN_NIGHT_END_HOUR = 4
+- WORKSHEET_REVIEW_DAYS = 7
 - LOCK_GRACE_SECONDS = 0, 30, 120 or 300; the default is 0
 - PLANNED_MEAL_WINDOW_BEFORE_MINUTES = 60
 - PLANNED_MEAL_WINDOW_AFTER_MINUTES = 90
@@ -95,6 +100,8 @@ Every capability MUST read its constant from ProgrammeConstants. The code MUST N
 LOCK_GRACE_SECONDS is a set of four values. App-lock owns the "Lock after" setting that picks one. Its default is 0.
 
 PATTERN_MIN_URGES is the minimum urge total for a pattern sentence from urges, as `problem-solving` states. Ash ruled this on 12 October 2026 (r23-09).
+
+`problem-solving` states the use of three more constants. PATTERN_MAX_SENTENCES is the largest number of pattern sentences that the Problem solving screen shows. PATTERN_NIGHT_END_HOUR is the clock hour at which the "after 20:00" time band ends. It is not the day start, and "Day starts at" does not change it. WORKSHEET_REVIEW_DAYS is the number of days between the record day on which the app saves a worksheet's review day and that review day.
 
 Every threshold test MUST construct a modified ProgrammeConstants value. A test MUST NOT edit `.default`.
 
@@ -123,8 +130,8 @@ DEFAULT_DAY_START_HOUR MUST stay 4 in every version. A test MUST assert that DEF
 - **THEN** the app uses 05:00 as the day start, and DEFAULT_DAY_START_HOUR still holds 4
 
 #### Scenario: A capability reads a constant
-- **WHEN** the urge timer starts
-- **THEN** it reads URGE_TIMER_MINUTES from ProgrammeConstants and runs for 20 minutes
+- **WHEN** the urge timer starts and ProgrammeConstants holds URGE_TIMER_MINUTES = 20
+- **THEN** the urge screen reads URGE_TIMER_MINUTES from ProgrammeConstants, the wave is complete at 20:00, and the timer keeps counting past 20:00
 
 ### Requirement: The seven stages and their tools
 
@@ -425,7 +432,7 @@ When a stage opens, the app MUST show one opening card. When the build does not 
 
 The card never returns after either control. Its dismiss control is therefore "Close", not "Not now".
 
-"Open" MUST show the stage on the Programme screen. "Open" MUST also take the card off both screens. "Close" MUST take the card off both screens. The card MUST stay until the person taps one of the two controls.
+"Open" MUST push the stage screen of that stage, as "The stage screen" states. So "Open" on the stage 3 opening card pushes the "Alternatives" stage screen, where the "Tools" group holds "Alternatives list". This follows decision 93 (r8-10). "Open" MUST also take the card off both screens. "Close" MUST take the card off both screens. The card MUST stay until the person taps one of the two controls.
 
 The app MUST NOT add an animation, a sound or a haptic. The app MUST NOT add a number on the app icon, a notification or a colour change. The card MUST use the same text style as an entry row. The app MUST NOT show an opening card for stage 1. When two stages open at once, the app MUST show their cards one at a time, in stage order.
 
@@ -455,8 +462,8 @@ The stage 2 card MUST add one line after the opening sentence when it first appe
 - **THEN** the card leaves Today and the Programme screen, and the stage stays open
 
 #### Scenario: Open
-- **WHEN** the person taps "Open" on the stage 3 opening card
-- **THEN** the app shows the "Alternatives" stage on the Programme screen and the card leaves both screens
+- **WHEN** the person taps "Open" on the stage 3 opening card on Today
+- **THEN** the app pushes the "Alternatives" stage screen, with "Alternatives list" in its "Tools" group, and the card leaves both screens
 
 #### Scenario: No celebration, by eye
 - **WHEN** a reviewer opens stage 4 on a test device and watches Today and the Programme screen
@@ -476,7 +483,7 @@ The stage 2 card MUST add one line after the opening sentence when it first appe
 
 ### Requirement: The card's answer is kept in the record
 
-When the person taps "Open" or "Close", the store MUST write an Answer row of kind card answer in Record.store. The row MUST hold the card id, the answer, the moment and its own changedAt. A card whose Answer row exists on any device MUST NOT show again. Data-and-privacy owns sync and the Answer model. A suggestion card's answer is an Answer row of kind card answer with the template id as its key. Problem-solving owns the suggestion card.
+When the person taps "Open" or "Close", the store MUST write an Answer row of kind card answer in Record.store. The row MUST hold the card id, the answer, the moment and its own changedAt. A card whose Answer row exists on any device MUST NOT show again. Data-and-privacy owns sync and the Answer model. A suggestion card's answer is an Answer row of kind card answer with the pattern key of its sentence as its key. Problem-solving owns the suggestion card and its pattern key, in "The suggestion card".
 
 The same rule applies to every other card this capability puts in the card slot. The stage 1 cards on Today have the keys "stage1.why" and "stage1.cycle". The plan card has the key "plancard.3" or "plancard.10". The Focus card has the key "focuscard". The app MUST write the row on any control of those cards.
 
@@ -498,6 +505,8 @@ While the first import after sync turns on is running, the app MUST show no card
 
 The app MUST NOT show an opening card after a starred entry in the same record day. The app MUST NOT show an opening card after an "I binged" urge outcome in the same record day. This rule applies to every Today load that follows the entry or the outcome. The card MUST wait for the next record day.
 
+For this rule the app MUST read two moments: the time of the latest starred entry, and the `outcomeAt` of the latest "I binged" outcome. `outcomeAt` is the moment the person saves the entry of that outcome, as `urge-toolkit` states. When the later of the two moments is in the current record day, the card MUST wait. So the card still waits when the person turns the star of that entry off, or moves the entry to the previous record day.
+
 The stage MUST open at once. Only the card waits. The app MUST show the card the first time Today appears on the next record day. The same rule applies to the stage 1 cards on Today, the plan card and the Focus card below. This rule does not cover the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card alone can show in the same record day as the starred entry or the outcome. Decision 100 sets this exception.
 
 #### Scenario: The fifth recorded day ends with a starred entry
@@ -511,6 +520,10 @@ The stage MUST open at once. Only the card waits. The app MUST show the card the
 #### Scenario: A binge outcome then Today
 - **WHEN** the person saves the outcome "I binged" at 23:00 and returns to Today at 23:05
 - **THEN** stage 4 is open and Today shows no opening card until the next record day
+
+#### Scenario: The star turned off after "I binged"
+- **WHEN** the person's first urge outcome is "I binged", saved at 21:35 on Tuesday 13 October 2026, the person turns the star of its entry off at 21:40, and opens Today at 21:41
+- **THEN** Today shows no stage 4 opening card on Tuesday 13 October, and shows it the first time Today appears after 04:00 on Wednesday 14 October
 
 ### Requirement: Two stage 1 cards come to Today
 
@@ -807,7 +820,7 @@ Delete-all MUST delete the stage state with everything else. Data-and-privacy ow
 - **THEN** stage 2 stays open
 
 #### Scenario: The first urge outcome deleted
-- **WHEN** stage 4 is open and the person deletes the only urge outcome
+- **WHEN** stage 4 opened from the person's only urge outcome, "I binged", and the person deletes the entry of that outcome
 - **THEN** stage 4 stays open
 
 #### Scenario: Restart of the app

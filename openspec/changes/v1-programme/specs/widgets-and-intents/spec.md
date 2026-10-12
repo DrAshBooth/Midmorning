@@ -14,6 +14,8 @@ While the app is locked, the app MUST show the new-entry screen at once, empty, 
 
 An entry point MUST NOT save an entry without the new-entry screen on screen. When onboarding is not complete, an entry point MUST open the first onboarding screen. When the not-right-now page is on, an entry point MUST open the new-entry screen, because the record stays available.
 
+When an entry point opens the app while the app kept the urge screen, the app MUST close the urge screen as "Close" does. The urge stays open, and the app opens the new-entry screen, as `urge-toolkit` states in "The timer keeps running in the background".
+
 #### Scenario: Widget to entry
 - **WHEN** the person taps the Lock Screen widget with the app locked, types "Toast and tea", taps Save and Face ID succeeds
 - **THEN** Today shows the entry, as it does for an entry saved from Today

@@ -43,7 +43,7 @@ One `ModelContainer` opens two configurations in `Application Support/Record`. `
 
 Rejected: one configuration. A configuration syncs every model in it, so device-only data would sync.
 
-Every synced row carries `changedAt`, an app field, and every row the person can delete carries `deleted` with a moment. The app never hard-deletes a synced row; readers hide deleted rows and their dependants. The `Reconciler` never deletes a row. It picks one winner per natural key on read. The store deletes a losing version or row only after both 90-day tests pass: the device clock and the latest sync moment.
+Every synced row carries `changedAt`, an app field, and every row the person can delete carries `deleted`. The `changedAt` of a delete is the moment of the delete. The app never hard-deletes a synced row; readers hide deleted rows and their dependants. The `Reconciler` never deletes a row. It picks one winner per natural key on read. The store deletes a losing version or row only after both 90-day tests pass: the device clock and the latest sync moment.
 
 The reader ignores rows that a clock guard would delete. Ash accepted this on 25 September 2026 from the data-model review. Every hard delete and every whole-row winner rule loses data across two devices.
 
@@ -56,14 +56,14 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 | `DayState` | one row per (dateKey, kind): paused, didn't record, fasting, feeling word | dateKey + kind | later changedAt |
 | `Template` | weekday or weekend slots | kind | later changedAt |
 | `Day` | a planned day: dateKey, slots, window constants; a separate set event row (dateKey, setAt, setBy) | dateKey | later changedAt; set is sticky |
-| `Answer` | planned meal answers (dateKey + slot index) and card answers (card id, optional dayKey) | as listed | later changedAt; a match beats Skipped on read |
+| `Answer` | planned meal answers (dateKey + slot index) and card answers (card id, optional dateKey; a suggestion card's id is its pattern key) | as listed | later changedAt; a match beats Skipped on read |
 | `Measure` | weigh-in | dateKey | later changedAt |
-| `Session` | urge: startedAt, startUTCOffset (r23-09), startDayKey, outcome, outcomeAt, outcomeDayKey, entryId | id | one open per record day, earliest start |
+| `Session` | urge: startedAt, utcOffsetSeconds (r23-09), startDayKey, outcome (a code), outcomeAt, outcomeDayKey, entryId | id | one open per record day: no outcome, earliest start |
 | `ListItem` | alternatives, food rule, avoided food, ladder step, custom place | id | later changedAt; union by id |
 | `Sheet` | worksheet, maintenance plan, taking stock, reintroduction, Feeling fat note | id (maintenance plan: fixed) | later changedAt |
 | `Review` | weekly review, check-in | due dateKey | earliest freeze; edits into the winner |
 | `Profile` | height, onboarding BMI, caution flag, askedAt | fixed id | later changedAt per key |
-| `Settings` | one row per key: start day, day start history, slot labels, weigh-in day or none, unit, quiet hours, reminder times, switches that sync, finishDate, finish answers, remindersPausedAt, restart moment | key | later changedAt |
+| `Settings` | one row per key: start day, day start history, slot labels, weigh-in day or none, unit, quiet hours, reminder times, switches that sync, the grounding exercise choice, finishDate, finish answers, remindersPausedAt, restart moment | key | later changedAt |
 | `Seen` | card views | id | none |
 | `Place` | reserved name; holds no rows in v1. Custom places are `ListItem` kind custom place | | |
 | `Device` | install id, joinedDay, lastSeenDay, leftAt | install id | later changedAt |
@@ -78,6 +78,7 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 - explicit wording
 - Time Sensitive
 - snooze length
+- the "Buzz at 20 minutes" choice
 - module switches
 - install id and moment
 - completion flag
@@ -90,9 +91,13 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 - store creation moment
 - pending offline erase instruction
 - first-import-running flag
+- first-import-failed flag
 - morning-plan unanswered count
 - collapse or expand choice per record day
 - snooze counts
+- the permission line tapped flag
+- the moment of each pending worksheet review reminder (r23-04)
+- the suggestion card that the card slot showed on the current record day, with that record day's key (r23-06)
 
 ### Entries are append-only versions
 
@@ -136,14 +141,15 @@ Rejected: matching by a slot the person types. The record has no slot field, by 
 
 ### The scheduler is a pure function over a rolling horizon
 
-`Scheduler.requests(plan:templates:settings:state:snoozes:now:)` returns the local notification requests for the next `REMINDER_HORIZON_DAYS` record days, plus every far single reminder (worksheet reviews, check-ins). It caps the result at 60 pending requests. It applies these rules in order:
+`Scheduler.requests(plan:templates:settings:state:snoozes:now:)` returns the local notification requests for the next `REMINDER_HORIZON_DAYS` record days, plus every far single reminder (worksheet reviews, check-ins). It caps the result at 60 pending requests. It keeps every far single reminder under that cap, and it drops the requests of the farthest horizon days first. A far single reminder carries the id of its worksheet or check-in in its request id and its userInfo. It applies these steps in order, as reminders states in "The scheduler pipeline":
 
 - the per-type switches
 - `remindersPausedAt`
 - the paused day
-- quiet hours
-- the same-minute rule
+- the reduced cadence after `finishDate`
 - the cap
+- the same-minute shift
+- quiet hours
 
 Under the cap, planned meal reminders never drop. Of the other types, at most `MAX_OTHER_REMINDERS_PER_DAY` fire, and the scheduler drops them in the order the reminders spec gives. The weekly review reminder never drops. On activation the app materialises every elapsed record day, then replaces all pending requests with the result. Snooze state lives in the action queue and is an input.
 
@@ -167,7 +173,7 @@ Cards and every other bundled string family live in `Packages/Content/Resources`
 
 ### Pattern sentences and reviews are templates plus numbers
 
-Every sentence the app builds is a reviewed template with numeric and time placeholders. The engine chooses a template by rule and fills the placeholders. The app forms no other words at runtime.
+Every sentence the app builds is a reviewed template with count, slot and place placeholders. The engine chooses a template by rule and fills the placeholders. The app forms no other words at runtime.
 
 ### No analytics of our own
 
@@ -195,8 +201,8 @@ Every rule the specs state as a pure function has a named home, so that a test w
 
 - `ProgrammeConstants` is a value with `.default`; every function that reads a threshold takes it as a parameter.
 - `now: Date`, `calendar: Calendar` and `locale: Locale` are parameters on every function that touches time or formatting. A `Clock` protocol and a `ContinuousClock` protocol (ticks that count through sleep) sit at the app boundary.
-- `Programme` takes value facts (`RecordedDayFact`, `PlannedDayFact`, `UrgeOutcomeFact`, card memory, stored openings, `finishDate`), never SwiftData models, so it compiles without `Record` and `Plan`.
-- `Scheduler.requests` returns `ReminderRequest` values (id, trigger, empty title, time body, userInfo with a slot index, interruption level, category, thread); the app maps them to `UNNotificationRequest`. `NotificationAuthorisation` is an input. A `NotificationCentre` protocol in the app has a fake that keeps every call.
+- `Programme` takes value facts (`RecordedDayFact`, `PlannedDayFact`, `UrgeOutcomeFact`, `UrgeFact`, card memory, stored openings, `finishDate`), never SwiftData models, so it compiles without `Record` and `Plan`. `UrgeOutcomeFact` carries each saved urge outcome, for the stage 4 gate. `UrgeFact` carries every urge, also an urge with no outcome: `startedAt`, `utcOffsetSeconds`, `startDayKey` and the outcome code or none. The weekly review counts and the urge pattern sentences read it (r23-09).
+- `Scheduler.requests` returns `ReminderRequest` values (id, trigger, empty title, time body, userInfo, interruption level, category, thread); the app maps them to `UNNotificationRequest`. The userInfo of a planned meal reminder holds a slot index. The userInfo of a far single reminder holds the id of its worksheet or check-in. `NotificationAuthorisation` is an input. A `NotificationCentre` protocol in the app has a fake that keeps every call.
 - `SnoozeDecision.decide(userInfo:now:)` is one pure function that both the notification handler and the scheduler call.
 - `ActionQueue` has a codec with a format version and an applier on the store.
 - `AppLifecycle.reduce(state, event)` handles background and foreground, protected data availability, authentication and the pending route. `LockPolicy.shouldAsk(enteredBackgroundAt:now:grace:)` and `Biometry` sit beside it.
@@ -228,7 +234,7 @@ Rejected: an iPad layout and landscape. No spec requires them, and each adds a d
 
 - [SwiftData with CloudKit and many entities] → every relationship optional with an inverse; V1 ships one schema version and store fixtures start at the first TestFlight schema; the `Reconciler` picks winners on read and never deletes.
 - [The on-read winner rule costs a scan] → the store indexes versions by entry id and deletes only losing versions, after both 90-day tests pass.
-- [Templates sound robotic] → the clinician writes the templates; the engine only fills numbers.
+- [Templates sound robotic] → the clinician writes the templates; the engine only fills counts, a slot label or a place.
 - [A person who purges is not screened out] → Ash's decision; screen 1 warns, a stage-2 card explains, and the proposal dates a revisit before beta.
 - [Threshold rules as device function] → Rule A, and the weight reason at a restart re-screen, pause reminders; the rest suggest a GP; a written MHRA opinion is a release gate.
 - [Simulator cannot verify protection classes, sync, zone deletion or Face ID] → each build task names its device checklist beside its pure-function tests. About 120 scenarios need a device and about 22 a second device; the agent lists each in the epic's device-check bead, and Ash does the check and adds a date and a screenshot to the change README (decision 68).
