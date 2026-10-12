@@ -317,7 +317,17 @@ Where several conceptual entities share one name, the model MUST carry a `kind` 
 
 A file in the repository MUST freeze the CKRecord type names and every field name. The content test MUST check that file before the first build that carries the CloudKit entitlement. A later change MUST add only an optional field with a default, or a new record type. A later change MUST NOT rename, delete or retype a record type or a field.
 
-Every schema MUST be a numbered `VersionedSchema` with a migration stage. V1 MUST ship one schema version. A test MUST open a store fixture from every earlier schema version. The fixtures MUST start at the first TestFlight schema.
+Every schema MUST be a numbered `VersionedSchema` with a migration stage. A test MUST open a store fixture from every earlier schema version. The fixtures MUST start at the first TestFlight schema.
+
+The first TestFlight cut ships one schema version, `RecordSchemaV1`, as it is. A build MUST NOT change `RecordSchemaV1` in place. The 3.1 build, the urge toolkit, MUST add the second schema version. That version is the smallest change that SwiftData allows. Its only change is three new fields on `Session`: `changedAt`, `utcOffsetSeconds` and `discarded`. Each new field MUST be optional or have a default. The build MUST add one migration step, from `RecordSchemaV1` to the second schema version. Ash ruled this on 12 October 2026 (r24-01).
+
+A migration MUST NOT lose a row or a value. When no real value exists for a new field of an existing row, the migration MUST fill the field with an assumed value. Ash's note on r24-01 says that assumed data is better than missing data. For each `Session` row of a store at `RecordSchemaV1`, the migration step MUST write these assumed values:
+
+- `changedAt`: `outcomeAt` when the row holds one, else `startedAt`
+- `utcOffsetSeconds`: the UTC offset of the device's current time zone at `startedAt`
+- `discarded`: false
+
+A test MUST open a committed store fixture that the `RecordSchemaV1` models wrote, under the second schema version. The test MUST find every row and every value of the fixture, and each assumed value above. The same build MUST do bead mm-7sm. In safe mode, the reads that Export uses MUST then read a store at `RecordSchemaV1` with that version's own model types, as "Launch safety" states (r15-01). `FrozenSchemaTests` already asks for this work before a second schema version.
 
 The action queue and the widget snapshot MUST each carry a format version. The app MUST discard a queue or snapshot file whose format version it does not know. The app MUST then write the snapshot again. The widgets-and-intents capability defines the two files.
 
@@ -330,8 +340,16 @@ The action queue and the widget snapshot MUST each carry a format version. The a
 - **THEN** the content test passes and a store from the earlier schema opens
 
 #### Scenario: One schema version in V1
-- **WHEN** a reviewer lists the `VersionedSchema` types in the V1 release build
-- **THEN** there is one, and the Diagnostics page shows its number
+- **WHEN** a reviewer lists the `VersionedSchema` types in a build before the 3.1 build
+- **THEN** there is one, `RecordSchemaV1`, and the Diagnostics page shows its number
+
+#### Scenario: The second schema version
+- **WHEN** a reviewer lists the `VersionedSchema` types in the 3.1 build
+- **THEN** there are two, `RecordSchemaV1` and the second schema version, `RecordMigrationPlan` holds one migration step between them, and the Diagnostics page shows the number of the second
+
+#### Scenario: A first-cut store under the second version
+- **WHEN** the device's time zone is London, and a test opens under the second schema version a committed fixture that the `RecordSchemaV1` models wrote, with an urge that started at 21:10 on Tuesday 13 October 2026 with the outcome `passed` at 21:28, and an urge that started at 22:40 that day with no outcome
+- **THEN** the store holds every row and every value of the fixture, the first urge holds `changedAt` 21:28, `utcOffsetSeconds` 3600 and `discarded` false, and the second holds `changedAt` 22:40, `utcOffsetSeconds` 3600 and `discarded` false
 
 #### Scenario: Every earlier version opens
 - **WHEN** a later change adds a schema version and the migration test runs against a store fixture from each version since the first TestFlight schema
@@ -383,7 +401,7 @@ The store MUST sync every value in the "Shared" column of this table through `Re
 | --- | --- |
 | entries as entry version rows; Day rows, set events and day state rows; plan templates; planned meal answers | the app lock, "Face ID only" or "Touch ID only", the enrolment state hash, "Lock after" |
 | weigh-ins, urge sessions, every list, worksheets | the eight reminder switches |
-| weekly reviews, check-ins, taking stock answers, Feeling fat notes, the maintenance plan, the pinned note | explicit wording, Time Sensitive, snooze length, the "Buzz at 20 minutes" choice |
+| weekly reviews, check-ins, taking stock answers, Feeling fat notes, the maintenance plan, the pinned note | explicit wording, Time Sensitive, snooze length |
 | `Settings` rows: the start day, the day start rows, the slot labels, the weigh-in day, the weigh-in unit, quiet hours | the module switches |
 | `Settings` rows: the reminder times, the weekly summary sentence opt-outs, the pattern sentence opt-outs, the grounding exercise choice | the install id and moment, the completion flag |
 | `Settings` rows: `finishDate`, the finish answers beside it, and `remindersPausedAt` | the sync choice, the iCloud account hash, the last successful sync day |
@@ -394,11 +412,11 @@ The store MUST sync every value in the "Shared" column of this table through `Re
 
 `reminders` owns the first value of the last row, and `problem-solving` owns the second. Ash ruled this on 12 October 2026 (r23-04, r23-06).
 
-`urge-toolkit` owns the two choices of the alternatives list setup. The grounding exercise choice is the `Settings` key `toolkit.grounding`. Its value is "breathing" or "walk", and its default is "breathing". The "Buzz at 20 minutes" choice is the `Local.store` key `toolkit.buzz.enabled`, and its default is off. It stays on the device, as Time Sensitive does, because a haptic acts on one device only.
+`urge-toolkit` owns the one choice of the alternatives list setup. The grounding exercise choice is the `Settings` key `toolkit.grounding`. Its value is "breathing" or "walk", and its default is "breathing". `Local.store` holds no key for a buzz, because Ash dropped "Buzz at 20 minutes" on 12 October 2026 (r24-15).
 
-#### Scenario: The setup's choices on two devices
-- **WHEN** sync is on, and on device A the person chooses "A walk" as the grounding exercise and turns "Buzz at 20 minutes" on
-- **THEN** device B shows "A walk" after the batch, and device B keeps its own "Buzz at 20 minutes" choice
+#### Scenario: The grounding choice on two devices
+- **WHEN** sync is on, and on device A the person chooses "A walk" as the grounding exercise
+- **THEN** device B shows "A walk" after the batch
 
 #### Scenario: Plan on two devices
 - **WHEN** sync is on and the person saves a planned day on one device
@@ -560,9 +578,9 @@ The snooze count MUST live in `Local.store`, keyed by the date key and the slot 
 
 ### Requirement: Day states, sessions and reviews
 
-A day state MUST be one row per date key and state kind, with its own `changedAt`. The collapse or expand choice is not a day state. It lives in `Local.store` by date key. A `Session` row MUST hold `startedAt`, `utcOffsetSeconds`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey` and `entryId`. `utcOffsetSeconds` is the UTC offset at `startedAt`, as `urge-toolkit` states. The field has the same name as the offset field of an entry version. Ash ruled this on 12 October 2026 (r23-09).
+A day state MUST be one row per date key and state kind, with its own `changedAt`. The collapse or expand choice is not a day state. It lives in `Local.store` by date key. A `Session` row MUST hold `startedAt`, `utcOffsetSeconds`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey`, `entryId`, `changedAt` and `discarded`. `utcOffsetSeconds` is the UTC offset at `startedAt`, as `urge-toolkit` states. The field has the same name as the offset field of an entry version. Ash ruled this on 12 October 2026 (r23-09). `changedAt`, `utcOffsetSeconds` and `discarded` come with the second schema version, as "The schema is frozen and grows by addition only" states. `discarded` is true for an urge that the person discarded, as `urge-toolkit` states. No reader counts or shows a discarded urge. Ash ruled this on 12 October 2026 (r24-01, r24-04).
 
-Readers MUST treat at most one urge per record day as open: the urge with no outcome and the earliest start. Readers MUST treat every other session of that record day as not open. After the day end, readers MUST treat no session of that record day as open. The store MUST NOT write an outcome, `outcomeAt` or `outcomeDayKey` for a session because its record day ended. Only an outcome that the person saves writes those fields, as `urge-toolkit` states.
+Readers MUST treat at most one urge per record day as open. Only an urge with no outcome, no discard and a start less than URGE_OPEN_MINUTES ago can be open. Of those, the open urge is the one with the earliest start. Readers MUST treat every other session of that record day as not open. After the day end, readers MUST treat no session of that record day as open. The store MUST NOT write an outcome, `outcomeAt` or `outcomeDayKey` for a session because its record day ended, or because it reached URGE_OPEN_MINUTES. Only an outcome that the person saves writes those fields, as `urge-toolkit` states.
 
 A review's natural key MUST be the due day's date key: the start day plus seven times n. It MUST NOT be a week number. After a restart the "Reviews" list can show two runs. A device MUST freeze a review's numbers only when its last sync moment is later than the review's due moment. When two frozen rows share a key, the store MUST keep the row with the earliest freeze moment. An edit MUST write into that row.
 
@@ -577,6 +595,10 @@ A review's natural key MUST be the due day's date key: the start day plus seven 
 #### Scenario: Two open urges
 - **WHEN** device A starts an urge at 21:00 and device B starts one at 21:10 on Thursday 22 October 2026, neither urge has an outcome, and the person taps "Sync now" on both devices
 - **THEN** both devices show the 21:00 urge as open, after the day end neither device shows an urge of Thursday 22 October as open or a message about it, and the store holds no `outcome`, `outcomeAt` or `outcomeDayKey` for either urge
+
+#### Scenario: A discarded urge on another device
+- **WHEN** device A discards an urge of Thursday 22 October 2026 at 21:00:10, and the person taps "Sync now" on both devices
+- **THEN** device B holds the urge with `discarded` true, shows no line for it, and counts it nowhere
 
 #### Scenario: Reviews keyed by due day
 - **WHEN** the start day is 1 September and the person restarts on 20 October
@@ -758,7 +780,7 @@ The app MUST add one to the launch failure count in `Local.store` each time it f
 
 When the container throws for any reason other than unavailable protected data, the app MUST show one page. The page MUST read "Midmorning cannot open your record on this device." with Get support, "Try again" and "Delete everything". "Try again" MUST open the container again. "Delete everything" MUST open the Delete-all confirmation. The app MUST NOT delete the store without the person's confirmation.
 
-In safe mode the app MUST open the store at the schema version that the store holds. A store that needs a schema migration cannot open read-only with the current schema version. So in safe mode the app MUST first read the schema version that the metadata of each store file names. `Record.store` and `Local.store` migrate one at a time, so the two files can hold different versions after a launch that stopped between them. The app MUST then open each file read-only with the `VersionedSchema` of its own version from `RecordMigrationPlan.schemas`, and with no migration plan. No migration step runs, and no store file changes. When that open succeeds, the app shows Today with Export and Get support, as above. Today then appears in safe mode, so the next launch is not in safe mode. That launch MUST run the migration. When no `VersionedSchema` in the app agrees with the metadata of a file, the open throws, and the app MUST show the page above. The app holds one schema version now, `RecordSchemaV1`. So a test MUST prove this rule with a second schema version that only the test holds. Ash ruled this on 7 October 2026 (r15-01) and, for two files at different versions, on 8 October 2026 (r18-01).
+In safe mode the app MUST open the store at the schema version that the store holds. A store that needs a schema migration cannot open read-only with the current schema version. So in safe mode the app MUST first read the schema version that the metadata of each store file names. `Record.store` and `Local.store` migrate one at a time, so the two files can hold different versions after a launch that stopped between them. The app MUST then open each file read-only with the `VersionedSchema` of its own version from `RecordMigrationPlan.schemas`, and with no migration plan. No migration step runs, and no store file changes. When that open succeeds, the app shows Today with Export and Get support, as above. Today then appears in safe mode, so the next launch is not in safe mode. That launch MUST run the migration. When no `VersionedSchema` in the app agrees with the metadata of a file, the open throws, and the app MUST show the page above. Until the 3.1 build, the app holds one schema version, `RecordSchemaV1`. So a test proves this rule with a second schema version that only the test holds. Ash ruled this on 7 October 2026 (r15-01) and, for two files at different versions, on 8 October 2026 (r18-01). The 3.1 build adds the app's own second schema version, as "The schema is frozen and grows by addition only" states. From that build, a test MUST prove this rule with the committed `RecordSchemaV1` store fixture and the app's second schema version. The same build does bead mm-7sm. Ash ruled this on 12 October 2026 (r24-01).
 
 #### Scenario: Third launch with an uncleared marker
 - **WHEN** the app ends before Today appears on two launches in a row and the person opens it a third time

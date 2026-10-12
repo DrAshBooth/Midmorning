@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The settings screen holds every switch, time and choice the person can change, in one place, one tap from Today. The alternatives list setup is a named exception. Its two choices, "Grounding exercise" and "Buzz at 20 minutes", live in the setup, as `urge-toolkit` states. Each item's owning capability defines what it does. This spec defines where the item lives, its label, its default and whether it syncs.
+The settings screen holds every switch, time and choice the person can change, in one place, one tap from Today. The alternatives list setup is a named exception. Its one choice, "Grounding exercise", lives in the setup, as `urge-toolkit` states. Ash dropped the switch "Buzz at 20 minutes" on 12 October 2026 (r24-15). Each item's owning capability defines what it does. This spec defines where the item lives, its label, its default and whether it syncs.
 
 ## ADDED Requirements
 

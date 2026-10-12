@@ -58,7 +58,7 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 | `Day` | a planned day: dateKey, slots, window constants; a separate set event row (dateKey, setAt, setBy) | dateKey | later changedAt; set is sticky |
 | `Answer` | planned meal answers (dateKey + slot index) and card answers (card id, optional dateKey; a suggestion card's id is its pattern key) | as listed | later changedAt; a match beats Skipped on read |
 | `Measure` | weigh-in | dateKey | later changedAt |
-| `Session` | urge: startedAt, utcOffsetSeconds (r23-09), startDayKey, outcome (a code), outcomeAt, outcomeDayKey, entryId | id | one open per record day: no outcome, earliest start |
+| `Session` | urge: startedAt, utcOffsetSeconds (r23-09), startDayKey, outcome (a code), outcomeAt, outcomeDayKey, entryId, changedAt, discarded (the second schema version, r24-01, r24-04) | id | later changedAt; one open per record day: no outcome, not discarded, inside URGE_OPEN_MINUTES, earliest start |
 | `ListItem` | alternatives, food rule, avoided food, ladder step, custom place | id | later changedAt; union by id |
 | `Sheet` | worksheet, maintenance plan, taking stock, reintroduction, Feeling fat note | id (maintenance plan: fixed) | later changedAt |
 | `Review` | weekly review, check-in | due dateKey | earliest freeze; edits into the winner |
@@ -78,7 +78,6 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 - explicit wording
 - Time Sensitive
 - snooze length
-- the "Buzz at 20 minutes" choice
 - module switches
 - install id and moment
 - completion flag
@@ -173,7 +172,7 @@ Cards and every other bundled string family live in `Packages/Content/Resources`
 
 ### Pattern sentences and reviews are templates plus numbers
 
-Every sentence the app builds is a reviewed template with count, slot and place placeholders. The engine chooses a template by rule and fills the placeholders. The app forms no other words at runtime.
+Every sentence the app builds is a reviewed template with count, slot and place placeholders. The engine chooses a template by rule and fills the placeholders. The app forms no other words at runtime. A pattern group counts starred runs, not entries (r24-05). The suggestion card on Today shows a card template with no count (r24-02).
 
 ### No analytics of our own
 
@@ -201,7 +200,7 @@ Every rule the specs state as a pure function has a named home, so that a test w
 
 - `ProgrammeConstants` is a value with `.default`; every function that reads a threshold takes it as a parameter.
 - `now: Date`, `calendar: Calendar` and `locale: Locale` are parameters on every function that touches time or formatting. A `Clock` protocol and a `ContinuousClock` protocol (ticks that count through sleep) sit at the app boundary.
-- `Programme` takes value facts (`RecordedDayFact`, `PlannedDayFact`, `UrgeOutcomeFact`, `UrgeFact`, card memory, stored openings, `finishDate`), never SwiftData models, so it compiles without `Record` and `Plan`. `UrgeOutcomeFact` carries each saved urge outcome, for the stage 4 gate. `UrgeFact` carries every urge, also an urge with no outcome: `startedAt`, `utcOffsetSeconds`, `startDayKey` and the outcome code or none. The weekly review counts and the urge pattern sentences read it (r23-09).
+- `Programme` takes value facts (`RecordedDayFact`, `PlannedDayFact`, `UrgeOutcomeFact`, `UrgeFact`, card memory, stored openings, `finishDate`), never SwiftData models, so it compiles without `Record` and `Plan`. `UrgeOutcomeFact` carries each saved urge outcome, for the stage 4 gate. `UrgeFact` carries every urge that the person did not discard, also an urge with no outcome: `startedAt`, `utcOffsetSeconds`, `startDayKey` and the outcome code or none. The weekly review counts and the urge pattern sentences read it (r23-09). No fact carries a discarded urge (r24-04).
 - `Scheduler.requests` returns `ReminderRequest` values (id, trigger, empty title, time body, userInfo, interruption level, category, thread); the app maps them to `UNNotificationRequest`. The userInfo of a planned meal reminder holds a slot index. The userInfo of a far single reminder holds the id of its worksheet or check-in. `NotificationAuthorisation` is an input. A `NotificationCentre` protocol in the app has a fake that keeps every call.
 - `SnoozeDecision.decide(userInfo:now:)` is one pure function that both the notification handler and the scheduler call.
 - `ActionQueue` has a codec with a format version and an applier on the store.
@@ -232,7 +231,7 @@ Rejected: an iPad layout and landscape. No spec requires them, and each adds a d
 
 ## Risks / Trade-offs
 
-- [SwiftData with CloudKit and many entities] → every relationship optional with an inverse; V1 ships one schema version and store fixtures start at the first TestFlight schema; the `Reconciler` picks winners on read and never deletes.
+- [SwiftData with CloudKit and many entities] → every relationship optional with an inverse; the first TestFlight cut ships one schema version, `RecordSchemaV1`, and no build changes it in place; the 3.1 build adds the second schema version with one migration step that keeps every row and fills each new field with an assumed value (r24-01); store fixtures start at the first TestFlight schema; the `Reconciler` picks winners on read and never deletes.
 - [The on-read winner rule costs a scan] → the store indexes versions by entry id and deletes only losing versions, after both 90-day tests pass.
 - [Templates sound robotic] → the clinician writes the templates; the engine only fills counts, a slot label or a place.
 - [A person who purges is not screened out] → Ash's decision; screen 1 warns, a stage-2 card explains, and the proposal dates a revisit before beta.

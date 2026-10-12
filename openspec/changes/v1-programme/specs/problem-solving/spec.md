@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Problem solving is the stage 4 tool. The app finds patterns in the person's starred entries and urges, and states each one as a plain sentence with the numbers filled in. The person works a pattern through with a six-step worksheet, keeps the worksheet in the "Worksheets" list, and reviews it a week later.
+Problem solving is the stage 4 tool. The app finds patterns in the person's starred entries and urges, and states each one as a plain sentence with the numbers filled in. On Today, a card can state a pattern once, with no number. The person works a pattern through with a six-step worksheet, keeps the worksheet in the "Worksheets" list, and reviews it a week later.
 
 ## ADDED Requirements
 
@@ -24,6 +24,8 @@ The Problem solving screen MUST show Get support. The `safeguarding` capability 
 
 From stage 4, the current day heading's menu on Today MUST also offer "New worksheet". The heading also offers it as a custom action. `record` owns the menu and states the item in "A new worksheet from the day heading's menu". The item MUST open a new worksheet with no linked sentence, as "New worksheet" on the Problem solving screen does. Ash ruled this on 12 October 2026 (r23-08).
 
+From stage 4, the same menu MUST also offer "Worksheets", after "New worksheet". The heading also offers it as a custom action. "Worksheets" MUST push the Problem solving screen onto Today's navigation stack. So the Problem solving screen opens from two places: the "Problem solving" row in the "Tools" group, and "Worksheets" in the current day heading's menu. `record` states the item. Ash ruled this on 12 October 2026 (r24-14). The scenarios quote the sentences in the wording that Ash ruled on 12 October 2026 (r24-05).
+
 #### Scenario: Before stage 4 opens
 - **WHEN** stage 4 is closed and the person taps "Problem solving" on the Programme screen
 - **THEN** the "Problem solving" stage screen shows the stage 4 cards and no "Tools" group, and the app shows no pattern sentence, no suggestion card and no worksheet control
@@ -44,39 +46,61 @@ From stage 4, the current day heading's menu on Today MUST also offer "New works
 - **WHEN** stage 4 is open, the person taps "New worksheet" in the current day heading's menu, and then taps "Done"
 - **THEN** the worksheet opened as a sheet over Today with no linked sentence, and "Done" returns to Today
 
+#### Scenario: The Problem solving screen from Today
+- **WHEN** stage 4 is open and the person taps "Worksheets" in the current day heading's menu
+- **THEN** the app pushes the Problem solving screen onto Today's navigation stack, and its back control goes back to Today
+
 #### Scenario: The order of the screen
-- **WHEN** stage 4 is open, the after 20:00 group holds 5 of 7 starred entries, the Friday group holds 4 of 7, no other group meets the minimum, and the person has one worksheet
-- **THEN** the screen shows "From the last 28 days", then "5 of your 7 starred entries were after 20:00." with "Work it through", then "4 of your 7 starred entries were on a Friday." with "Work it through", then "New worksheet", the heading "Worksheets" and the worksheet's row
+- **WHEN** stage 4 is open, the after 20:00 group holds 5 of 7 starred runs, the Friday group holds 4 of 7, no other group meets the minimum, and the person has one worksheet
+- **THEN** the screen shows "From the last 28 days", then "5 of the 7 times you starred an entry were after 20:00." with "Work it through", then "4 of the 7 times you starred an entry were on a Friday." with "Work it through", then "New worksheet", the heading "Worksheets" and the worksheet's row
 
 ### Requirement: The pattern window and the minimum data
 
-The pattern window is the PATTERN_WINDOW_DAYS = 28 record days that end with the current record day. The starred total is the number of starred entries in the pattern window. A pattern group is a set of starred entries in the window that share one dimension value.
+The pattern window is the PATTERN_WINDOW_DAYS = 28 record days that end with the current record day.
 
-The app MUST NOT show a pattern sentence when the starred total is below PATTERN_MIN_STARRED = 5. The app MUST show a sentence for a group only when the group holds at least PATTERN_MIN_GROUP = 3 entries. The group MUST also hold more than half of the starred total. The `programme` capability names PATTERN_WINDOW_DAYS, PATTERN_MIN_STARRED and PATTERN_MIN_GROUP in ProgrammeConstants. The app MUST NOT show any text about the absence of a pattern.
+A starred run is one or more starred entries in one record day. In a run, each starred entry is less than PATTERN_RUN_MINUTES = 60 minutes after the previous starred entry of the run, by entry time. An entry that is not starred does not break a run, and it does not join one. A starred entry with no other starred entry of its record day less than PATTERN_RUN_MINUTES before or after it is a run of one entry. A run never crosses the day start. So a binge that the person records as several entries counts once. Ash ruled this on 12 October 2026 (r24-05).
 
-The pattern window counts back from the current record day only. "Start week 1 again" MUST NOT change the pattern window. It MUST NOT delete a card answer row of a suggestion card. `programme` owns the restart in "Start week 1 again". The app MUST read an entry's star from the winning version of the entry. An entry that the person deletes or unstars MUST leave every group at the next computation.
+The starred total is the number of starred runs in the pattern window. A pattern group is a set of starred runs in the window that share one dimension value. Each group counts runs, not entries.
+
+The app MUST NOT show a pattern sentence when the starred total is below PATTERN_MIN_STARRED = 5. The app MUST show a sentence for a group only when the group holds at least PATTERN_MIN_GROUP = 3 runs. The group MUST also hold more than half of the starred total. So PATTERN_MIN_STARRED, PATTERN_MIN_GROUP and the rule of more than half apply to runs. The `programme` capability names PATTERN_WINDOW_DAYS, PATTERN_RUN_MINUTES, PATTERN_MIN_STARRED and PATTERN_MIN_GROUP in ProgrammeConstants. The app MUST NOT show any text about the absence of a pattern.
+
+Runs are for pattern sentences only. The weekly review still counts starred entries, as `weekly-review` states, and its counts do not change.
+
+The pattern window counts back from the current record day only. "Start week 1 again" MUST NOT change the pattern window. It MUST NOT delete a card answer row of a suggestion card. `programme` owns the restart in "Start week 1 again". The app MUST read an entry's star from the winning version of the entry. An entry that the person deletes or unstars MUST leave its run at the next computation. So a run can end, or become two runs.
 
 Urges are a second source of pattern sentences in the same pattern window. Each source has its own total and its own minimum. "Pattern sentences from urges" states the urge total, its minimum and the urge groups. Ash ruled this on 12 October 2026 (r23-09).
 
 #### Scenario: A restart keeps the window
-- **WHEN** the pattern window holds seven starred entries, five after 20:00, and the person restarts with the start day today
-- **THEN** the screen still shows "5 of your 7 starred entries were after 20:00.", and Today shows no card for the after 20:00 template when the person closed it before the restart
+- **WHEN** the pattern window holds seven starred runs, five after 20:00, and the person restarts with the start day today
+- **THEN** the screen still shows "5 of the 7 times you starred an entry were after 20:00.", and Today shows no card for the after 20:00 template when the person closed it before the restart
 
 #### Scenario: An entry unstarred
-- **WHEN** the after 20:00 group holds 5 of 7 starred entries, and the person turns the star off on one of the five
-- **THEN** the next computation gives 4 of 6 starred entries for the after 20:00 group
+- **WHEN** the after 20:00 group holds 5 of 7 starred runs, each of one entry, and the person turns the star off on the entry of one of the five
+- **THEN** the next computation gives 4 of 6 starred runs for the after 20:00 group
 
 #### Scenario: Four starred entries
-- **WHEN** the pattern window holds four starred entries, all after 20:00
+- **WHEN** the pattern window holds four starred entries on four record days, all after 20:00
 - **THEN** the Problem solving screen shows no pattern sentence and no text about the absence of one
 
 #### Scenario: Seven starred entries, five after 20:00
-- **WHEN** the pattern window holds seven starred entries and five of them have a time between 20:00 and 03:59
-- **THEN** the screen shows "5 of your 7 starred entries were after 20:00."
+- **WHEN** the pattern window holds seven starred entries on seven record days, and five of them have a time between 20:00 and 03:59
+- **THEN** the screen shows "5 of the 7 times you starred an entry were after 20:00."
 
 #### Scenario: Seven starred entries, three after 20:00
-- **WHEN** the pattern window holds seven starred entries and three of them have a time between 20:00 and 03:59
+- **WHEN** the pattern window holds seven starred entries on seven record days, and three of them have a time between 20:00 and 03:59
 - **THEN** the screen shows no sentence for the after 20:00 group
+
+#### Scenario: One evening is one run
+- **WHEN** the pattern window holds five starred entries at 20:10, 20:30, 20:50, 21:10 and 21:30 on Friday 9 October 2026, and no other starred entry
+- **THEN** the starred total is one run, and the Problem solving screen shows no pattern sentence
+
+#### Scenario: An entry that is not starred inside a run
+- **WHEN** a record day holds a starred entry at 20:10, an entry that is not starred at 20:40, and a starred entry at 21:05
+- **THEN** the two starred entries are one run
+
+#### Scenario: Sixty minutes apart
+- **WHEN** a record day holds a starred entry at 20:00 and a starred entry at 21:00, and no other starred entry
+- **THEN** the two starred entries are two runs, because the second is not less than PATTERN_RUN_MINUTES after the first
 
 #### Scenario: Starred entries outside the window
 - **WHEN** the record holds six starred entries from 40 days ago and two starred entries in the pattern window
@@ -84,21 +108,31 @@ Urges are a second source of pattern sentences in the same pattern window. Each 
 
 ### Requirement: The pattern dimensions
 
-The app MUST place a starred entry in one time band by its entry time. The bands have fixed edges. The before 12:00 band runs from 04:00 to 11:59. The between 12:00 and 17:00 band runs from 12:00 to 16:59. The between 17:00 and 20:00 band runs from 17:00 to 19:59. The after 20:00 band runs from 20:00 to 03:59. The edge at 04:00 is PATTERN_NIGHT_END_HOUR = 4. The `programme` capability names PATTERN_NIGHT_END_HOUR in ProgrammeConstants. That constant is not the day start.
+A starred run takes its dimension values from its first entry: the time band, the weekday, the Where and the gap before. It takes the missed slots of its record day. Ash ruled this on 12 October 2026 (r24-05). A starred entry with no other starred entry near it is a run of one entry, as "The pattern window and the minimum data" states. So the scenarios below that name one starred entry name a run of one entry.
+
+The app MUST place a starred run in one time band, by the entry time of its first entry. The bands have fixed edges. The before 12:00 band runs from 04:00 to 11:59. The between 12:00 and 17:00 band runs from 12:00 to 16:59. The between 17:00 and 20:00 band runs from 17:00 to 19:59. The after 20:00 band runs from 20:00 to 03:59. The edge at 04:00 is PATTERN_NIGHT_END_HOUR = 4. The `programme` capability names PATTERN_NIGHT_END_HOUR in ProgrammeConstants. That constant is not the day start.
 
 The entry time is the clock time at the UTC offset that the store kept with the entry. `record` owns that offset in "The app keeps the entry's UTC offset and creation moment". The app MUST NOT move an entry to another band after a change of the device zone. "Day starts at" MUST NOT change the band of an entry, at the save or later. So an entry at 09:30 goes in the before 12:00 band, also when "Day starts at" is 10:00.
 
-The record day of an entry is the record day key the store wrote with the entry at save. The `record` capability owns that key. The app MUST read the saved key. The app MUST NOT compute an entry's record day again from its time. The day of week of a starred entry is the weekday of its record day. The weekend group holds the starred entries whose record day is a Saturday or a Sunday.
+The record day of an entry is the record day key the store wrote with the entry at save. The `record` capability owns that key. The app MUST read the saved key. The app MUST NOT compute an entry's record day again from its time. The record day of a run is the record day of its entries. The day of week of a starred run is the weekday of its record day. The weekend group holds the starred runs whose record day is a Saturday or a Sunday.
 
-A Where group holds the starred entries with one chip, fixed or custom. The fixed chips are "Home", "Work", "Out" and "Travelling". The app MUST build a group from a custom chip by the same minimum as any group.
+A Where group holds the starred runs whose first entry has one chip, fixed or custom. The fixed chips are "Home", "Work", "Out" and "Travelling". The app MUST build a group from a custom chip by the same minimum as any group.
 
-The gap before a starred entry is the time from the previous entry in the same record day. When no earlier entry exists in that record day, the gap before is unknown. The app MUST NOT count an entry with an unknown gap before in the long-gap group. The long-gap group holds the starred entries with a gap before over MAX_AWAKE_GAP_HOURS = 4 hours.
+The gap before a starred entry is the time from the previous entry in the same record day, starred or not. The gap before a run is the gap before its first entry. When no earlier entry exists in that record day, the gap before is unknown. The app MUST NOT count a run with an unknown gap before in the long-gap group. The long-gap group holds the starred runs with a gap before over MAX_AWAKE_GAP_HOURS = 4 hours.
 
-A day with the state fasting, "paused" or "didn't record" counts no gap. The app MUST NOT count an entry on such a day in the long-gap group. The gap band of `record` leaves out the same days. The `record` capability owns these states. Every other group still counts the entry.
+A day with the state fasting, "paused" or "didn't record" counts no gap. The app MUST NOT count a run on such a day in the long-gap group. The gap band of `record` leaves out the same days. The `record` capability owns these states. Every other group still counts the run.
 
-There is one missed-slot group per slot. A slot is skipped on a record day when three things are true. The day's resolved plan holds the slot. The winning answer of the slot's planned meal is "Skipped". No entry matches the planned meal, by its window or by "That was it". This is how Today shows the planned meal, as `regular-eating-plan` and `data-and-privacy` state. The App target MUST give the skipped slots of each record day to the pattern engine as facts.
+There is one missed-slot group per slot. A slot counts as missed on a record day when all of these are true:
 
-A missed-slot group holds the starred entries on the record days where that slot is skipped. An entry MUST count in the missed-slot group of every skipped slot on its record day. The `regular-eating-plan` capability owns the "Skipped" answer. A combined group holds the starred entries in one time band and one missed-slot group.
+- The day's resolved plan holds the slot.
+- No entry matches the slot's planned meal, by its window or by "That was it".
+- The winning answer of the planned meal is "Skipped", or the record day has ended.
+- The record day holds at least one entry.
+- The record day has no state "didn't record", "paused" or "fasting".
+
+So a planned meal with no entry beside it counts as missed after its record day ends, also with no answer. On the current record day, only a "Skipped" answer makes a slot missed. A matching entry beats "Skipped". This is how Today shows the planned meal, as `regular-eating-plan` and `data-and-privacy` state. Ash ruled on 12 October 2026 that a meal with no entry counts, and that a day marked "Didn't record" does not count (r24-09). A paused day and a fasting day follow the same rule as a "didn't record" day, as the long-gap group leaves out all three states. The App target MUST give the missed slots of each record day to the pattern engine as facts.
+
+A missed-slot group holds the starred runs on the record days where that slot is missed. A run MUST count in the missed-slot group of every missed slot on its record day. The `regular-eating-plan` capability owns the "Skipped" answer. A combined group holds the starred runs in one time band and one missed-slot group.
 
 Urges have the same dimensions, except Where. "Pattern sentences from urges" states how the app places an urge in each group. Ash ruled this on 12 October 2026 (r23-09).
 
@@ -130,6 +164,14 @@ Urges have the same dimensions, except Where. "Pattern sentences from urges" sta
 - **WHEN** a record day has an entry at 12:40 and a starred entry at 19:00
 - **THEN** the app counts the starred entry in the long-gap group
 
+#### Scenario: A run takes the band of its first entry
+- **WHEN** a record day holds a starred entry at 19:40 and a starred entry at 20:10, and no other starred entry
+- **THEN** the app places the run in the between 17:00 and 20:00 band, and not in the after 20:00 band
+
+#### Scenario: Three binges after long gaps
+- **WHEN** three record days in the pattern window each hold an entry at 12:00, then starred entries at 18:00, 18:15 and 18:30, and the window holds no other starred entry
+- **THEN** the long-gap group holds 3 of 3 runs, and the screen shows no sentence, because the starred total of 3 is below PATTERN_MIN_STARRED
+
 #### Scenario: A long gap on a fasting day
 - **WHEN** a record day with the state fasting has an entry at 12:40 and a starred entry at 19:00
 - **THEN** the app counts the starred entry in the starred total and its time band, and not in the long-gap group
@@ -154,76 +196,112 @@ Urges have the same dimensions, except Where. "Pattern sentences from urges" sta
 - **WHEN** lunch at 13:00 on a record day has the answer "Skipped", an entry at 13:20 matches lunch's window, and a starred entry at 21:15 is on that day
 - **THEN** the app does not count the starred entry in the missed-lunch group, because Today shows the entry beside lunch
 
+#### Scenario: A planned meal with no entry and no answer
+- **WHEN** the record day Friday 9 October 2026 has ended, its plan holds lunch at 13:00, lunch has no answer, no entry matches lunch, and the day holds an entry at 08:00 and a starred entry at 21:15
+- **THEN** lunch counts as missed on Friday 9 October, and the app counts the run at 21:15 in the missed-lunch group
+
+#### Scenario: The current record day
+- **WHEN** it is 16:00 on Friday 9 October 2026, the plan of that record day holds lunch at 13:00, lunch has no answer, and no entry matches lunch
+- **THEN** lunch does not count as missed on Friday 9 October yet
+
+#### Scenario: A day with no entry
+- **WHEN** the record day Wednesday 7 October 2026 has ended, its plan holds lunch, the day holds no entry, and an urge started at 21:00 on that record day
+- **THEN** no slot counts as missed on Wednesday 7 October, and the urge is in no missed-slot group
+
+#### Scenario: A "didn't record" day
+- **WHEN** the record day Thursday 8 October 2026 has ended with the state "didn't record", its plan holds lunch with no answer and no matching entry, and it holds a starred entry at 21:15
+- **THEN** lunch does not count as missed on Thursday 8 October, and the run at 21:15 is in no missed-slot group
+
 ### Requirement: Pattern sentence templates
 
 Every pattern sentence MUST come from a bundled template that the clinical reviewer signed off. The app MUST fill only a template's placeholders. These are the group size, and the starred total or the urge total. A missed-slot or combined template also holds the slot label. The custom chip template also holds the chip's text. The long-gap template also holds the gap hours.
 
 The app MUST fill {slot} with the slot's label. The label is the Settings row `slot.label.<index>`, as the person typed it. When that row is missing or empty, the label is the slot's default label from the catalogue, as `regular-eating-plan` states. The app MUST NOT change the label's case or add a word to it. The app MUST NOT generate any other word at runtime. The `product-rules` capability states the "No AI at runtime" rule.
 
-The group size {n}, the starred total {m} and the gap hours {hours} are counts. A template MUST NOT hold a count itself. Each count comes from a string with one count, as `content` requires in "Catalogue rules". The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld starred entries", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. Each of these strings MUST carry plural forms. The one form of "pattern.count.total" reads "%lld starred entry", and the one form of "pattern.count.hours" reads "%lld hour". Ash ruled this on 7 October 2026 (r17-05).
+The group size {n}, the starred total {m} and the gap hours {hours} are counts. A template MUST NOT hold a count itself. Each count comes from a string with one count, as `content` requires in "Catalogue rules". The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld times you starred an entry", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. Each of these strings MUST carry plural forms. The one form of "pattern.count.total" reads "%lld time you starred an entry", and the one form of "pattern.count.hours" reads "%lld hour". Ash ruled the counts in templates on 7 October 2026 (r17-05). The starred total counts runs, so "pattern.count.total" names the times the person starred an entry, not the entries. Ash ruled this wording on 12 October 2026 (r24-05). The clinical reviewer rewords the templates and the count strings before sign-off.
 
 An urge sentence uses the same templates. For an urge sentence, {m} is the urge total. The app MUST fill it from "pattern.count.urges", "%lld urges", with the plural forms that `content` requires. The one form reads "%lld urge". "Pattern sentences from urges" states the rest. Ash ruled this on 12 October 2026 (r23-09).
 
-The templates use plural verbs, for example "were". The group minimum, PATTERN_MIN_GROUP = 3 in "The pattern window and the minimum data", keeps {n} at 3 or more. So the verbs agree with {n}, and no sentence reads "1 of your 1".
+The templates use plural verbs, for example "were". The group minimum, PATTERN_MIN_GROUP = 3 in "The pattern window and the minimum data", keeps {n} at 3 or more. So the verbs agree with {n}, and no sentence reads "1 of the 1".
 
 The bundle MUST hold one template per time band, one per weekday and one for the weekend. The bundle MUST hold one template per fixed chip and one for a custom chip. The bundle MUST hold one for the long-gap group. The bundle MUST hold one missed-slot template with a {slot} placeholder. The bundle MUST hold one combined template per time band, each with a {slot} placeholder. Every clock time in a template MUST use the 24-hour clock. The band edges in a template are fixed text, as `content` allows in "Catalogue rules".
 
 The custom chip template MUST read correctly for any place name that the person types, for example "Mum's house" or "In the car". Its text below is a draft for the clinical reviewer.
 
 The templates and their ids are:
-- "pattern.band.before1200": "{n} of your {m} were before 12:00."
-- "pattern.band.1200to1700": "{n} of your {m} were between 12:00 and 17:00."
-- "pattern.band.1700to2000": "{n} of your {m} were between 17:00 and 20:00."
-- "pattern.band.after2000": "{n} of your {m} were after 20:00."
-- "pattern.weekday.monday" to "pattern.weekday.sunday": "{n} of your {m} were on a Friday." and one like it per weekday
-- "pattern.weekend": "{n} of your {m} were at the weekend."
-- "pattern.where.home": "{n} of your {m} were at home.", and one like it for "at work" ("pattern.where.work"), "when you were out" ("pattern.where.out") and "when you were travelling" ("pattern.where.travelling")
-- "pattern.place": "{n} of your {m} had the place {place}." for a custom chip, where {place} is the person's chip text and the app adds no other word
-- "pattern.longGap": "{n} of your {m} came more than {hours} after the entry before them."
-- "pattern.slot": "{n} of your {m} were on days when {slot} didn't happen." where {slot} is the slot's label
-- "pattern.combined.after2000": "{n} of your {m} were after 20:00 on days when {slot} didn't happen.", and one like it for each other time band: "pattern.combined.before1200", "pattern.combined.1200to1700" and "pattern.combined.1700to2000"
+- "pattern.band.before1200": "{n} of the {m} were before 12:00."
+- "pattern.band.1200to1700": "{n} of the {m} were between 12:00 and 17:00."
+- "pattern.band.1700to2000": "{n} of the {m} were between 17:00 and 20:00."
+- "pattern.band.after2000": "{n} of the {m} were after 20:00."
+- "pattern.weekday.monday" to "pattern.weekday.sunday": "{n} of the {m} were on a Friday." and one like it per weekday
+- "pattern.weekend": "{n} of the {m} were at the weekend."
+- "pattern.where.home": "{n} of the {m} were at home.", and one like it for "at work" ("pattern.where.work"), "when you were out" ("pattern.where.out") and "when you were travelling" ("pattern.where.travelling")
+- "pattern.place": "{n} of the {m} had the place {place}." for a custom chip, where {place} is the person's chip text and the app adds no other word
+- "pattern.longGap": "{n} of the {m} came more than {hours} after the entry before them."
+- "pattern.slot": "{n} of the {m} were on days with no entry beside {slot}." where {slot} is the slot's label
+- "pattern.combined.after2000": "{n} of the {m} were after 20:00 on days with no entry beside {slot}.", and one like it for each other time band: "pattern.combined.before1200", "pattern.combined.1200to1700" and "pattern.combined.1700to2000"
+
+The text of the slot template and of the combined templates is a draft that follows the rule for a missed slot. Ash ruled that rule on 12 October 2026 (r24-09).
 
 Each pattern sentence has a pattern key, which "The suggestion card" defines. Each pattern key holds the id of its template. So a template id MUST NOT change after a build that holds it ships. A template MUST NOT contain "you skipped". The `content` capability keeps the version of the template bundle and owns the permitted placeholders.
 
+The bundle MUST also hold one card template for each template. The card template of "pattern.<name>" is "pattern.card.<name>". The suggestion card on Today shows the sentence of a card template, as "The suggestion card" states. A card template holds no count. It starts with {subject}, and the rest of it is the rest of its template, after "{n} of the {m}". For example, the card template "pattern.card.band.after2000" is "{subject} were after 20:00.". The app MUST fill {subject} from "pattern.card.subject.starred", "Most of the times you starred an entry lately", for a sentence from starred entries. The app MUST fill it from "pattern.card.subject.urges", "Most of your recent urges", for a sentence from urges. A card sentence MUST stay true by construction. A card shows only for a group that holds more than half of its total, so "Most" is true. The starred total counts runs, so a card MUST NOT say "most of your starred entries". These texts are drafts for the clinical reviewer. Ash ruled this on 12 October 2026 (r24-02).
+
 #### Scenario: A time band sentence
-- **WHEN** the group for the after 20:00 band holds 5 entries and the starred total is 7
-- **THEN** the sentence reads "5 of your 7 starred entries were after 20:00."
+- **WHEN** the group for the after 20:00 band holds 5 runs and the starred total is 7
+- **THEN** the sentence reads "5 of the 7 times you starred an entry were after 20:00."
 
 #### Scenario: A weekday sentence
-- **WHEN** the Friday group holds 4 entries and the starred total is 6
-- **THEN** the sentence reads "4 of your 6 starred entries were on a Friday."
+- **WHEN** the Friday group holds 4 runs and the starred total is 6
+- **THEN** the sentence reads "4 of the 6 times you starred an entry were on a Friday."
 
 #### Scenario: A custom chip sentence
-- **WHEN** the Where group for the custom chip "Mum's house" holds 4 entries and the starred total is 7
-- **THEN** the sentence reads "4 of your 7 starred entries had the place Mum's house."
+- **WHEN** the Where group for the custom chip "Mum's house" holds 4 runs and the starred total is 7
+- **THEN** the sentence reads "4 of the 7 times you starred an entry had the place Mum's house."
 
 #### Scenario: The place "In the car"
-- **WHEN** the Where group for the custom chip "In the car" holds 4 entries and the starred total is 7
-- **THEN** the sentence reads "4 of your 7 starred entries had the place In the car."
+- **WHEN** the Where group for the custom chip "In the car" holds 4 runs and the starred total is 7
+- **THEN** the sentence reads "4 of the 7 times you starred an entry had the place In the car."
 
 #### Scenario: A long-gap sentence
-- **WHEN** the long-gap group holds 6 entries and the starred total is 8
-- **THEN** the sentence reads "6 of your 8 starred entries came more than 4 hours after the entry before them."
+- **WHEN** the long-gap group holds 6 runs and the starred total is 8
+- **THEN** the sentence reads "6 of the 8 times you starred an entry came more than 4 hours after the entry before them."
 
 #### Scenario: A gap of one hour
-- **WHEN** MAX_AWAKE_GAP_HOURS is 1, the long-gap group holds 6 entries and the starred total is 8
-- **THEN** the sentence reads "6 of your 8 starred entries came more than 1 hour after the entry before them."
+- **WHEN** MAX_AWAKE_GAP_HOURS is 1, the long-gap group holds 6 runs and the starred total is 8
+- **THEN** the sentence reads "6 of the 8 times you starred an entry came more than 1 hour after the entry before them."
 
 #### Scenario: A missed-lunch sentence
-- **WHEN** the slot label is "Lunch", the missed-lunch group holds 4 entries and the starred total is 7
-- **THEN** the sentence reads "4 of your 7 starred entries were on days when Lunch didn't happen."
+- **WHEN** the slot label is "Lunch", the missed-lunch group holds 4 runs and the starred total is 7
+- **THEN** the sentence reads "4 of the 7 times you starred an entry were on days with no entry beside Lunch."
 
 #### Scenario: A renamed slot
-- **WHEN** the person renamed the lunch slot "midday bite", its missed-slot group holds 4 entries and the starred total is 7
-- **THEN** the sentence reads "4 of your 7 starred entries were on days when midday bite didn't happen."
+- **WHEN** the person renamed the lunch slot "midday bite", its missed-slot group holds 4 runs and the starred total is 7
+- **THEN** the sentence reads "4 of the 7 times you starred an entry were on days with no entry beside midday bite."
 
 #### Scenario: A default slot label
-- **WHEN** the Settings row `slot.label.3` is missing, the missed-mid-afternoon group holds 4 entries and the starred total is 7
-- **THEN** the sentence reads "4 of your 7 starred entries were on days when Mid-afternoon didn't happen."
+- **WHEN** the Settings row `slot.label.3` is missing, the missed-mid-afternoon group holds 4 runs and the starred total is 7
+- **THEN** the sentence reads "4 of the 7 times you starred an entry were on days with no entry beside Mid-afternoon."
 
 #### Scenario: A combined sentence
-- **WHEN** the slot label is "Lunch", the combined after 20:00 and missed-lunch group holds 5 entries and the starred total is 7
-- **THEN** the sentence reads "5 of your 7 starred entries were after 20:00 on days when Lunch didn't happen."
+- **WHEN** the slot label is "Lunch", the combined after 20:00 and missed-lunch group holds 5 runs and the starred total is 7
+- **THEN** the sentence reads "5 of the 7 times you starred an entry were after 20:00 on days with no entry beside Lunch."
+
+#### Scenario: An urge sentence
+- **WHEN** the after 20:00 urge group holds 4 urges and the urge total is 6
+- **THEN** the sentence reads "4 of the 6 urges were after 20:00."
+
+#### Scenario: A card sentence from starred entries
+- **WHEN** the suggestion card of the key "pattern.band.after2000" shows a sentence from starred entries
+- **THEN** the card reads "Most of the times you starred an entry lately were after 20:00." and holds no number
+
+#### Scenario: A card sentence from urges
+- **WHEN** the suggestion card of the key "pattern.band.after2000" shows a sentence from urges
+- **THEN** the card reads "Most of your recent urges were after 20:00." and holds no number
+
+#### Scenario: A card sentence with a slot
+- **WHEN** the slot label is "Lunch" and the suggestion card of the key "pattern.slot:2" shows a sentence from starred entries
+- **THEN** the card reads "Most of the times you starred an entry lately were on days with no entry beside Lunch."
 
 ### Requirement: How pattern sentences appear
 
@@ -238,7 +316,7 @@ The app MUST order the sentences by these rules, in this order:
 - Then groups of the same size MUST follow this order of categories: time band, day of week, Where, long gap, missed slot, combined.
 - Inside one category, groups of the same size MUST follow the earlier time band, then the lower slot index. Weekday groups follow the order Monday to Sunday, and a weekday group MUST come before the weekend group. Fixed chips follow the order "Home", "Work", "Out", "Travelling", and a fixed chip MUST come before a custom chip. Custom chips follow the alphabetical order of their text.
 
-When a combined group holds the same entries as its time band group, the app MUST show only the combined sentence. When the weekend group holds the same entries as its Saturday group or its Sunday group, the app MUST show only the weekday sentence. The app MUST apply these equal-group rules inside each source. A starred-entry group never removes an urge sentence. An urge group never removes a starred-entry sentence.
+When a combined group holds the same runs or urges as its time band group, the app MUST show only the combined sentence. When the weekend group holds the same runs or urges as its Saturday group or its Sunday group, the app MUST show only the weekday sentence. The app MUST apply these equal-group rules inside each source. A starred-entry group never removes an urge sentence. An urge group never removes a starred-entry sentence. A starred-entry group holds runs, as Ash ruled on 12 October 2026 (r24-05).
 
 Each sentence MUST have a "Work it through" control under it. A tap MUST open a new worksheet linked to that sentence. When no card answer row exists for the sentence's pattern key, the tap MUST also write one. The row holds the answer, the moment and the record day key of the tap, as after a tap on the suggestion card. So the card of that key does not show after the tap. By the rules of "The suggestion card", no other suggestion card shows on that record day either.
 
@@ -249,31 +327,31 @@ The app MUST compute the sentences again each time the Problem solving screen op
 - **THEN** the screen shows three sentences, for the groups of 6, 5 and 5, and no sentence for the groups of 4
 
 #### Scenario: Two missed-slot groups of the same size
-- **WHEN** the missed-lunch group and the missed-mid-afternoon group each hold 4 of 7 starred entries, and no other group meets the minimum
+- **WHEN** the missed-lunch group and the missed-mid-afternoon group each hold 4 of 7 starred runs, and no other group meets the minimum
 - **THEN** the missed-lunch sentence comes before the missed-mid-afternoon sentence, because lunch has the lower slot index
 
 #### Scenario: A time band group and a weekday group of the same size
-- **WHEN** the after 20:00 group and the Friday group each hold 5 of 7 starred entries, and no other group meets the minimum
+- **WHEN** the after 20:00 group and the Friday group each hold 5 of 7 starred runs, and no other group meets the minimum
 - **THEN** the after 20:00 sentence comes before the Friday sentence
 
 #### Scenario: A combined group with the same entries
-- **WHEN** the after 20:00 group and the combined after 20:00 and missed-lunch group hold the same five entries
+- **WHEN** the after 20:00 group and the combined after 20:00 and missed-lunch group hold the same five runs
 - **THEN** the screen shows the combined sentence and not the after 20:00 sentence
 
 #### Scenario: The weekend and its Saturday
-- **WHEN** the Saturday group and the weekend group hold the same four of seven starred entries
+- **WHEN** the Saturday group and the weekend group hold the same four of seven starred runs
 - **THEN** the screen shows the Saturday sentence and no weekend sentence
 
 #### Scenario: Work it through
-- **WHEN** the person taps "Work it through" under "5 of your 7 starred entries were after 20:00."
+- **WHEN** the person taps "Work it through" under "5 of the 7 times you starred an entry were after 20:00."
 - **THEN** the app opens a new worksheet with that sentence above step 1
 
 #### Scenario: Work it through answers the card
-- **WHEN** no card answer row exists for "pattern.band.after2000", and the person taps "Work it through" under "5 of your 7 starred entries were after 20:00." on the Problem solving screen at 10:00 on Monday 12 October 2026
+- **WHEN** no card answer row exists for "pattern.band.after2000", and the person taps "Work it through" under "5 of the 7 times you starred an entry were after 20:00." on the Problem solving screen at 10:00 on Monday 12 October 2026
 - **THEN** the store holds a card answer row for "pattern.band.after2000" with the `dateKey` Monday 12 October, and Today shows no suggestion card for the rest of that record day
 
 #### Scenario: The window line
-- **WHEN** stage 4 is open and the screen shows "5 of your 7 starred entries were after 20:00."
+- **WHEN** stage 4 is open and the screen shows "5 of the 7 times you starred an entry were after 20:00."
 - **THEN** the line above the sentence reads "From the last 28 days"
 
 #### Scenario: A new starred entry
@@ -284,6 +362,8 @@ The app MUST compute the sentences again each time the Problem solving screen op
 
 Pattern sentences also come from urges, by the same rules as from starred entries. `urge-toolkit` owns the urges. The urge source holds every urge whose `startDayKey` is in the pattern window, with or without an outcome. The urge total is the number of those urges. An urge group is a set of those urges that share one dimension value. Ash ruled this on 12 October 2026 (r23-09).
 
+The urge source MUST NOT hold an urge that the person discarded, as `urge-toolkit` states. An urge that reached URGE_OPEN_MINUTES with no outcome stays in the urge source. Ash ruled this on 12 October 2026 (r24-04). Urges do not form runs, so each urge counts once (r24-05).
+
 The app MUST NOT show an urge sentence when the urge total is below PATTERN_MIN_URGES = 5. The app MUST show a sentence for an urge group only when the group holds at least PATTERN_MIN_GROUP urges. The group MUST also hold more than half of the urge total. The `programme` capability names PATTERN_MIN_URGES in ProgrammeConstants. Each source has its own minimum. So a starred total below PATTERN_MIN_STARRED does not stop an urge sentence, and an urge total below PATTERN_MIN_URGES does not stop a starred-entry sentence.
 
 The urge dimensions are the time band, the weekday, the weekend, the long gap, each missed slot, and the combined time band and missed slot. An urge has no Where, so the app MUST NOT build a Where group from urges. The app MUST read the dimensions of an urge as follows:
@@ -291,7 +371,7 @@ The urge dimensions are the time band, the weekday, the weekend, the long gap, e
 - The time band comes from `startedAt` at the urge's own `utcOffsetSeconds`, with the fixed edges that "The pattern dimensions" states.
 - The weekday is the weekday of `startDayKey`. The weekend group holds the urges whose `startDayKey` is a Saturday or a Sunday.
 - The gap before an urge is the time from the previous entry in the same record day to `startedAt`. When no earlier entry exists in that record day, the gap is unknown, and the urge is not in the long-gap group. The long-gap group holds the urges with a gap over MAX_AWAKE_GAP_HOURS. A day with the state fasting, "paused" or "didn't record" counts no gap. So the app MUST NOT count an urge on such a day in the long-gap group.
-- A missed-slot group holds the urges on the record days where that slot is skipped, as "The pattern dimensions" defines. A combined group holds the urges in one time band and one missed-slot group.
+- A missed-slot group holds the urges on the record days where that slot is missed, as "The pattern dimensions" defines. A combined group holds the urges in one time band and one missed-slot group.
 
 The app MUST read the saved `startDayKey`. The app MUST NOT compute the record day of an urge again.
 
@@ -301,7 +381,7 @@ The sentences from both sources share one list on the Problem solving screen, as
 
 #### Scenario: Six urges, four after 20:00
 - **WHEN** stage 4 is open and the pattern window holds six urges, four of them with `startedAt` between 20:00 and 03:59
-- **THEN** the Problem solving screen shows "4 of your 6 urges were after 20:00."
+- **THEN** the Problem solving screen shows "4 of the 6 urges were after 20:00."
 
 #### Scenario: Four urges
 - **WHEN** the pattern window holds four urges, all after 20:00
@@ -309,11 +389,15 @@ The sentences from both sources share one list on the Problem solving screen, as
 
 #### Scenario: An urge with no outcome counts
 - **WHEN** the pattern window holds six urges, five of them after 20:00 and two of those five with no outcome
-- **THEN** the Problem solving screen shows "5 of your 6 urges were after 20:00."
+- **THEN** the Problem solving screen shows "5 of the 6 urges were after 20:00."
+
+#### Scenario: A discarded urge does not count
+- **WHEN** the pattern window holds five urges, four of them after 20:00, and one more urge after 20:00 that the person discarded
+- **THEN** the urge total is 5, and the Problem solving screen shows "4 of the 5 urges were after 20:00."
 
 #### Scenario: Each source has its own minimum
-- **WHEN** the pattern window holds four starred entries and six urges, and four of the urges were after 20:00
-- **THEN** the Problem solving screen shows "4 of your 6 urges were after 20:00." and no starred-entry sentence
+- **WHEN** the pattern window holds four starred runs and six urges, and four of the urges were after 20:00
+- **THEN** the Problem solving screen shows "4 of the 6 urges were after 20:00." and no starred-entry sentence
 
 #### Scenario: An urge after a zone change
 - **WHEN** the person tapped "Urge" at 21:30 in London, and later opens the Problem solving screen in New York
@@ -336,11 +420,11 @@ The sentences from both sources share one list on the Problem solving screen, as
 - **THEN** no urge group is a Where group
 
 #### Scenario: Both sources in one list
-- **WHEN** the after 20:00 group holds 5 of 7 starred entries, the after 20:00 urge group holds 5 of 6 urges, and no other group meets the minimum
-- **THEN** the screen shows "5 of your 7 starred entries were after 20:00.", then "5 of your 6 urges were after 20:00."
+- **WHEN** the after 20:00 group holds 5 of 7 starred runs, the after 20:00 urge group holds 5 of 6 urges, and no other group meets the minimum
+- **THEN** the screen shows "5 of the 7 times you starred an entry were after 20:00.", then "5 of the 6 urges were after 20:00."
 
 #### Scenario: Three sentences from two sources
-- **WHEN** the starred-entry groups that meet the minimum hold 6 and 4 entries, and the urge groups that meet the minimum hold 5 and 4 urges
+- **WHEN** the starred-entry groups that meet the minimum hold 6 and 4 runs, and the urge groups that meet the minimum hold 5 and 4 urges
 - **THEN** the screen shows the starred-entry sentence of 6, then the urge sentence of 5, then the starred-entry sentence of 4, and no other sentence
 
 #### Scenario: A combined urge group
@@ -349,7 +433,7 @@ The sentences from both sources share one list on the Problem solving screen, as
 
 #### Scenario: One answer covers the urge card
 - **WHEN** the person tapped "Close" on the after 20:00 card of starred entries on Monday 12 October 2026, and on Tuesday 13 October the after 20:00 urge group meets the minimum
-- **THEN** the card slot shows no card for the key "pattern.band.after2000" on Tuesday 13 October or later, and the Problem solving screen still shows "4 of your 6 urges were after 20:00."
+- **THEN** the card slot shows no card for the key "pattern.band.after2000" on Tuesday 13 October or later, and the Problem solving screen still shows "4 of the 6 urges were after 20:00."
 
 #### Scenario: Pattern sentences off
 - **WHEN** "Pattern sentences" is off and the after 20:00 urge group meets the minimum
@@ -357,7 +441,7 @@ The sentences from both sources share one list on the Problem solving screen, as
 
 ### Requirement: The suggestion card
 
-When a group first meets the minimum, the app MUST show one suggestion card in the Today card slot, by the rules below. The `record` capability defines the Today stack, the card slot and its rules. The suggestion card MUST show the pattern sentence, a "Work it through" control and a "Close" control. The sentence MUST use the same text style as an entry row, as an opening card does. "Work it through" MUST come before "Close". At an accessibility text size, the two controls MUST stack, one under the other.
+When a group first meets the minimum, the app MUST show one suggestion card in the Today card slot, by the rules below. The `record` capability defines the Today stack, the card slot and its rules. The suggestion card MUST show the card sentence of the pattern, a "Work it through" control and a "Close" control. The card sentence comes from the card template of the pattern, as "Pattern sentence templates" states. It holds no number. So Today keeps the rule of `record` that Today shows no count. The Problem solving screen keeps the sentences with numbers. Ash ruled this on 12 October 2026 (r24-02). The card sentence MUST use the same text style as an entry row, as an opening card does. "Work it through" MUST come before "Close". At an accessibility text size, the two controls MUST stack, one under the other.
 
 Each suggestion card belongs to one pattern key. The pattern key of a sentence is its template family plus its fill value. The template family is the id of the template that "Pattern sentence templates" lists. The fill value is the value that fills the template's {slot} or {place}:
 
@@ -367,11 +451,19 @@ Each suggestion card belongs to one pattern key. The pattern key of a sentence i
 
 A starred-entry sentence and an urge sentence about the same thing have the same template and the same fill value. So they share one pattern key. A pattern key MUST NOT change after a build that holds it ships. A card answer row keeps its key for ever, so a changed key would show an answered card again.
 
-The app MUST show the suggestion card once per pattern key, whatever the numbers. The card slot holds one card at a time. When the person taps either control, the app MUST take the card off Today. The app MUST NOT show the suggestion card for that key again. "Work it through" MUST open a new worksheet linked to the sentence. When both sources give a sentence with one key, the card MUST show the sentence that comes first in the card order below. One answer covers both sentences of a key. So after an answer to the card of a starred-entry sentence, the urge sentence of that key does not show as a card. The reverse is also true.
+The app MUST show the suggestion card once per pattern key, whatever the numbers. The card slot holds one card at a time. When the person taps either control, the app MUST take the card off Today. The app MUST NOT show the suggestion card for that key again. "Work it through" MUST open a new worksheet as a sheet over Today. The worksheet MUST be linked to the numbered sentence of the pattern, as that sentence reads at the tap. So the numbers show on the worksheet, which is not Today. When both sources give a sentence with one key, the card MUST show the card sentence of the source whose sentence comes first in the card order below. "Work it through" then links the numbered sentence of that source. One answer covers both sentences of a key. So after an answer to the card of a starred-entry sentence, the urge sentence of that key does not show as a card. The reverse is also true.
 
 The app MUST keep the answer to a suggestion card as a card answer row in Record.store. The row is an `Answer` row of kind "card". It holds the pattern key in `cardId`, the answer in `value`, the record day key of the tap in `dateKey` and its own `changedAt`. The `data-and-privacy` capability owns card answer rows and their sync. When any device holds a card answer row for a key, the app MUST NOT show that key's card. While the first import after sync turns on is running, the app MUST show no suggestion card.
 
 After a starred entry, the app MUST NOT show the card on a Today load in the same record day. After an "I binged" outcome, the app MUST NOT show the card on a Today load in the same record day. The card MUST wait for the next record day. The app MUST NOT schedule a reminder for a suggestion card.
+
+The card slot also holds the suggestion card by the three rules of "The Today stack" in `record`:
+
+- While an urge is open, the card slot shows no card.
+- After any urge outcome, the card slot shows no card for the rest of the outcome's record day.
+- A suggestion card waits until SUGGESTION_HOLD_HOURS have passed since the later of two moments. The two moments are the time of the latest starred entry and the `outcomeAt` of the latest "I binged" outcome. This hold also runs across the day start.
+
+`programme` names SUGGESTION_HOLD_HOURS = 12 in ProgrammeConstants. Ash ruled this on 12 October 2026 (r24-03).
 
 A key's card is due at a Today load when all of these are true:
 
@@ -381,9 +473,9 @@ A key's card is due at a Today load when all of these are true:
 - No equal-group rule of "How pattern sentences appear" leaves out the sentence of that group.
 - No device holds a card answer row for the key.
 
-The limit of PATTERN_MAX_SENTENCES does not apply to the card. So "first meets the minimum" needs no stored state other than the card answer row. The app MUST compute the group and the sentence again at each Today load. The card MUST show the sentence with the numbers of that load.
+The limit of PATTERN_MAX_SENTENCES does not apply to the card. So "first meets the minimum" needs no stored state other than the card answer row. The app MUST compute the group and the sentence again at each Today load. The card sentence does not change when the numbers change.
 
-When the group stops meeting the minimum before the person taps a control, the app MUST take the card off Today with no message. The app MUST then write no card answer row. The card can then come back when the group meets the minimum again. "Work it through" MUST link the sentence as the card showed it at the tap.
+When the group stops meeting the minimum before the person taps a control, the app MUST take the card off Today with no message. The app MUST then write no card answer row. The card can then come back when the group meets the minimum again. "Work it through" MUST link the numbered sentence as it reads at the tap.
 
 The card order has these rules, in this order:
 
@@ -400,9 +492,11 @@ The app MUST show at most one suggestion card on a record day, from the two sour
 - the due keys, each with its sentences, their group sizes and their sources
 - the `dateKey` values of the card answer rows of suggestion cards
 - the key that the card slot showed earlier on the same record day
+- whether a hold of "The Today stack" in `record` applies at that load (r24-03)
 
 The function MUST apply these rules in this order:
 
+- When a hold applies, the function MUST return no card.
 - When a card answer row of a suggestion card holds the current record day key, the function MUST return no card. The person answered a suggestion card on that record day, with "Work it through" or "Close".
 - When the card slot showed a suggestion card earlier on the same record day, the function MUST return that key while it is due. It MUST return no card while that key is not due. A card that shows and has no answer stays the same card for the rest of that record day.
 - In all other cases, the function MUST return the due key that comes first in the card order above.
@@ -410,11 +504,11 @@ The function MUST apply these rules in this order:
 So the next due key waits for the next record day. The card answer row of a suggestion card MUST hold the record day key of the tap in `dateKey`, with the answer and the moment. The app MUST keep in `Local.store` the key that the card slot showed, with the key of that record day. This rule holds back only suggestion cards. A card of another kind can show on the same record day, by the card slot rules of `record`. Ash ruled this on 12 October 2026 (r23-06).
 
 #### Scenario: The numbers change while the card waits
-- **WHEN** the after 20:00 card shows "5 of your 7 starred entries were after 20:00." on Monday, the person does not tap it, and on Tuesday the group holds 6 of 8
-- **THEN** on Tuesday the card shows "6 of your 8 starred entries were after 20:00."
+- **WHEN** the after 20:00 card shows "Most of the times you starred an entry lately were after 20:00." on Monday 12 October 2026, the person does not tap it, on Tuesday 13 October the group holds 6 of 8 starred runs, and the person taps "Work it through"
+- **THEN** on Tuesday the card shows the same sentence, and the worksheet shows "6 of the 8 times you starred an entry were after 20:00." above step 1
 
 #### Scenario: The group stops meeting the minimum
-- **WHEN** the after 20:00 card shows "5 of your 7 starred entries were after 20:00." with no answer, and the person turns the star off on three of the five entries after 20:00, so that the group holds 2 of 4
+- **WHEN** the after 20:00 card shows "Most of the times you starred an entry lately were after 20:00." with no answer, and the person turns the star off on three starred entries after 20:00, each a run of one entry, so that the group holds 2 of 4 runs
 - **THEN** the next Today load shows no after 20:00 card, and the store holds no card answer row for the after 20:00 template
 
 #### Scenario: Pattern sentences turned on again
@@ -422,19 +516,23 @@ So the next due key waits for the next record day. The card answer row of a sugg
 - **THEN** the after 20:00 card shows from the next Today load, by the card slot rules
 
 #### Scenario: First time a group qualifies
-- **WHEN** the after 20:00 group meets the minimum for the first time, with 5 of 7 starred entries, and the person opens Today the next record day
-- **THEN** the card slot shows one card with "5 of your 7 starred entries were after 20:00.", "Work it through" and "Close"
+- **WHEN** the after 20:00 group meets the minimum for the first time, with 5 of 7 starred runs, and the person opens Today the next record day
+- **THEN** the card slot shows one card with "Most of the times you starred an entry lately were after 20:00.", "Work it through" and "Close", and no number
+
+#### Scenario: A card from urges
+- **WHEN** the after 20:00 urge group holds 4 of 6 urges, no starred-entry group meets the minimum, and the person opens Today the next record day
+- **THEN** the card slot shows one card with "Most of your recent urges were after 20:00.", "Work it through" and "Close"
 
 #### Scenario: Close, then the numbers change
-- **WHEN** the person taps "Close" on the after 20:00 card, and a week later the after 20:00 group holds 7 of 9 starred entries
+- **WHEN** the person taps "Close" on the after 20:00 card, and a week later the after 20:00 group holds 7 of 9 starred runs
 - **THEN** Today shows no card for the after 20:00 template
 
 #### Scenario: Work it through from Today
-- **WHEN** the person taps "Work it through" on the card
-- **THEN** the app opens a new worksheet with the sentence above step 1, and Today shows no card when the person returns
+- **WHEN** the after 20:00 card shows, the group holds 5 of 7 starred runs, and the person taps "Work it through" on the card
+- **THEN** the app opens a new worksheet over Today with "5 of the 7 times you starred an entry were after 20:00." above step 1, and Today shows no card when the person returns
 
 #### Scenario: Two templates qualify on the same day
-- **WHEN** the after 20:00 group with 5 entries and the Friday group with 4 entries meet the minimum on Monday 12 October 2026, and the person taps "Close" on the after 20:00 card at 08:10
+- **WHEN** the after 20:00 group with 5 runs and the Friday group with 4 runs meet the minimum on Monday 12 October 2026, and the person taps "Close" on the after 20:00 card at 08:10
 - **THEN** the card slot shows no second suggestion card on Monday 12 October, and shows the Friday card from the first Today load on Tuesday 13 October
 
 #### Scenario: One key for both sources
@@ -446,7 +544,7 @@ So the next due key waits for the next record day. The card answer row of a sugg
 - **THEN** the card slot shows the missed-mid-afternoon card on a later record day, because its key "pattern.slot:3" differs from "pattern.slot:2"
 
 #### Scenario: Equal groups are not due
-- **WHEN** the after 20:00 group and the combined after 20:00 and missed-lunch group hold the same five of seven starred entries, and neither key has a card answer row
+- **WHEN** the after 20:00 group and the combined after 20:00 and missed-lunch group hold the same five of seven starred runs, and neither key has a card answer row
 - **THEN** the card slot shows the combined card, and the key "pattern.band.after2000" is not due
 
 #### Scenario: A card that waits keeps its template for the day
@@ -466,8 +564,16 @@ So the next due key waits for the next record day. The card answer row of a sugg
 - **THEN** the function returns the key with the group of 5, and with a card answer row of a suggestion card with the `dateKey` Monday 12 October it returns no card
 
 #### Scenario: A starred entry the same record day
-- **WHEN** the person saves a starred entry at 21:30 that makes the after 20:00 group qualify, then opens Today at 22:00
-- **THEN** the card slot shows no suggestion card, and the card appears on the first Today load of the next record day
+- **WHEN** the person saves a starred entry at 21:30 on Monday 12 October 2026 that makes the after 20:00 group qualify, then opens Today at 22:00
+- **THEN** the card slot shows no suggestion card, and the card appears at the first Today load from 09:30 on Tuesday 13 October, when SUGGESTION_HOLD_HOURS have passed
+
+#### Scenario: No suggestion card while an urge is open
+- **WHEN** stage 4 is open, the after 20:00 group meets the minimum with no card answer row, the person taps "Urge" at 21:10 on Tuesday 13 October 2026 and taps "Close" at 21:15
+- **THEN** Today shows "Urge open since 21:10" and no suggestion card while that urge is open
+
+#### Scenario: The hold after a binge at night
+- **WHEN** the day start is 04:00, a suggestion card is due, and the person saves the outcome "I binged" at 03:30 on Wednesday 14 October 2026
+- **THEN** Today shows no suggestion card at 04:05 on Wednesday 14 October, and shows it at the first Today load from 15:30 that day
 
 #### Scenario: Answered on another device
 - **WHEN** the person tapped "Close" on the after 20:00 card on another device and that card answer row has synced to this device
@@ -483,14 +589,14 @@ The app MUST offer a switch named "Pattern sentences" in the settings screen, on
 
 Under the switch, the settings screen MUST show one line that explains it: "Sentences about patterns in your record, on Problem solving and on Today." This line is a draft that the clinical reviewer signs off. `content` names its id.
 
-When the person turns the switch on again, the app MUST compute the sentences again. The app MUST keep the card answer rows of the suggestion cards while the switch is off.
+When the person turns the switch on again, the app MUST compute the sentences again. The app MUST keep the card answer rows of the suggestion cards while the switch is off. The scenarios below quote a sentence in the wording that Ash ruled on 12 October 2026 (r24-05).
 
 #### Scenario: Switch off
 - **WHEN** the person turns "Pattern sentences" off and opens the Problem solving screen
 - **THEN** the screen shows "New worksheet" and the "Worksheets" list, and no pattern sentence
 
 #### Scenario: A saved worksheet keeps its sentence
-- **WHEN** a worksheet is linked to "5 of your 7 starred entries were after 20:00." and the person turns "Pattern sentences" off
+- **WHEN** a worksheet is linked to "5 of the 7 times you starred an entry were after 20:00." and the person turns "Pattern sentences" off
 - **THEN** the worksheet still shows that sentence above step 1
 
 #### Scenario: Switch on again
@@ -521,7 +627,7 @@ The worksheet MUST show one step on each page of the sheet. Its navigation bar M
 
 Under the content of each step, the worksheet MUST show "Back" and "Next" side by side, then "Done" as a full-width button. "Back" MUST open the step before, and "Next" MUST open the step after. Step 1 MUST show no "Back". Step 6 MUST show no "Next". While the keyboard shows, the keyboard's toolbar MUST show "Back", "Next" and "Done", by the same rules. Each of them MUST have a touch target of at least 44 by 44 points, as the keyboard's "Save" on the new-entry screen has. Ash ruled on that "Save" on 25 September 2026 (r8-04).
 
-A worksheet MUST open at step 1, from every route except one. The worksheet review reminder opens step 6. A move to another step MUST use the system's standard transition. With Reduce Motion on, the move MUST be a cross-fade. When a step opens, the keyboard MUST go into the step's first field, and VoiceOver focus MUST move to the step's question. Step 4 has no field, so the keyboard closes there. The person MUST be able to move to any step at any time. The app MUST NOT require text in a step before the person moves on.
+A worksheet MUST open at step 1, from every route except two. The worksheet review reminder opens step 6. A row of the list of worksheets that wait for step 6, in the weekly review, also opens step 6, as `weekly-review` states in "Three reflection questions". Ash ruled that list on 12 October 2026 (r24-10). A move to another step MUST use the system's standard transition. With Reduce Motion on, the move MUST be a cross-fade. When a step opens, the keyboard MUST go into the step's first field, and VoiceOver focus MUST move to the step's question. Step 4 has no field, so the keyboard closes there. The person MUST be able to move to any step at any time. The app MUST NOT require text in a step before the person moves on.
 
 In steps 2 and 5, Return in a line MUST add a new line under it, with the keyboard in it. Under the lines, the step MUST show "Add a line", then "Edit". "Add a line" MUST add a line at the end of the list, with the keyboard in it. Each line MUST offer "Delete" as the system's swipe action and as a VoiceOver action. When the worksheet closes, the app MUST drop each line that holds no character that is not a space.
 
@@ -537,7 +643,7 @@ When a save fails, the worksheet MUST stay open. It MUST show "Could not save. T
 
 The worksheet MUST have a "Done" control that closes the worksheet with the system's standard dismissal. A swipe down that closes the worksheet MUST act as "Done". The app MUST NOT show a message, a sound, a haptic or an animation on "Done".
 
-The worksheet MUST open as a sheet over the screen it came from. That screen is the Problem solving screen, or Today for the suggestion card, the worksheet review reminder and "New worksheet" in the day heading's menu. The worksheet MUST show Get support in the trailing position of its navigation bar. The sheet exemption of `safeguarding` in "Get support on every screen" MUST NOT apply to the worksheet. The worksheet is the longest free-text screen, and the app never reads free text for risk. So Get support stays one tap away on it. This follows the PRD's safety principle of the always-present support route. It also follows decision 80, which took the three self-harm screens out of the exemption on 25 September 2026.
+The worksheet MUST open as a sheet over the screen it came from. That screen is the Problem solving screen, or Today for the suggestion card, the worksheet review reminder and "New worksheet" in the day heading's menu. For a row of the weekly review's list, that screen is the weekly review. The worksheet MUST show Get support in the trailing position of its navigation bar. The sheet exemption of `safeguarding` in "Get support on every screen" MUST NOT apply to the worksheet. The worksheet is the longest free-text screen, and the app never reads free text for risk. So Get support stays one tap away on it. This follows the PRD's safety principle of the always-present support route. It also follows decision 80, which took the three self-harm screens out of the exemption on 25 September 2026.
 
 A worksheet holds the person's answers. While it shows, a tap on a reminder MUST NOT close it. The app MUST open the screen of the reminder only after the worksheet closes, as `reminders` states in "A tap on a reminder opens its screen from Today". When the reminder is the worksheet review reminder of the worksheet on screen, the app MUST keep that worksheet and MUST open its step 6. This follows Ash's ruling of 11 October 2026 that screens with answers stay (r22-01).
 
@@ -645,7 +751,7 @@ The start date is the record day of the start, from the saved start record day k
 
 The "New worksheet" control MUST sit above the "Worksheets" list. When no worksheet exists, the screen MUST show "New worksheet" above an empty list, with no heading. The app MUST NOT show text or an image in place of the rows. Decision 95 sets this rule. Ash ruled it on 25 September 2026.
 
-The list MUST NOT show a count of worksheets or a count of finished steps. A worksheet MUST show its linked pattern sentence above step 1 as the sentence read when the worksheet started. The worksheet MUST show the start date beside the linked sentence, in the format of the row. The app MUST NOT change the linked sentence when the numbers change later.
+The list MUST NOT show a count of worksheets or a count of finished steps. A worksheet MUST show its linked pattern sentence above step 1 as the sentence read when the worksheet started. The worksheet MUST show the start date beside the linked sentence, in the format of the row. The app MUST NOT change the linked sentence when the numbers change later. The linked sentence is always the sentence with numbers, also for a worksheet from the suggestion card (r24-02). The scenarios quote it in the wording that Ash ruled on 12 October 2026 (r24-05).
 
 A worksheet started from "New worksheet", on the Problem solving screen or in the day heading's menu, MUST have no linked sentence and no empty space for one. The person MUST be able to open and edit any worksheet at any time.
 
@@ -664,11 +770,11 @@ When the person deletes a worksheet, the app MUST cancel its worksheet review re
 - **THEN** the "Worksheets" list shows the 10 October worksheet above the 3 October worksheet
 
 #### Scenario: The linked sentence stays
-- **WHEN** a worksheet is linked to "5 of your 7 starred entries were after 20:00." and the group later holds 7 of 9
-- **THEN** the worksheet still shows "5 of your 7 starred entries were after 20:00."
+- **WHEN** a worksheet is linked to "5 of the 7 times you starred an entry were after 20:00." and the group later holds 7 of 9
+- **THEN** the worksheet still shows "5 of the 7 times you starred an entry were after 20:00."
 
 #### Scenario: The start date beside the linked sentence
-- **WHEN** the person started a worksheet on Saturday 3 October 2026 from "5 of your 7 starred entries were after 20:00."
+- **WHEN** the person started a worksheet on Saturday 3 October 2026 from "5 of the 7 times you starred an entry were after 20:00."
 - **THEN** the worksheet shows that sentence with "3 October" beside it, above step 1
 
 #### Scenario: A worksheet without a problem name
@@ -716,6 +822,8 @@ The review day is the record day WORKSHEET_REVIEW_DAYS = 7 calendar days after t
 The `reminders` capability owns the reminder's text, its switch, quiet hours, the daily cap and the move to a later record day. `reminders` states in "Worksheet review and check-in reminders" when the reminder moves, the bound of that move, and how each device keeps the moment of the reminder. Ash ruled this on 12 October 2026 (r23-04).
 
 When the person opens the reminder, the app MUST open that worksheet at step 6, as a sheet over Today. When the person saves text in step 6 before the reminder fires, the app MUST cancel the reminder. The person MUST be able to open step 6 at any time without the reminder.
+
+After its review day, a worksheet with an empty step 6 also shows as a row in the weekly review, under the stage 4 question. A tap on the row opens step 6. `weekly-review` states the list in "Three reflection questions". Ash ruled this on 12 October 2026 (r24-10).
 
 The app MUST save the review day in the worksheet row, as a record day key, at the first close with text in step 5. The row MUST NOT hold a clock time for the reminder. The scheduler MUST read the day from the saved key and the time from the current "Weekly review time". So a change of that time moves each worksheet review reminder that has not fired. The app MUST NOT change the saved review day on a later close. When step 6 already holds text at that first close, the app MUST NOT schedule a reminder.
 
@@ -829,7 +937,7 @@ The VoiceOver label of a visible "Move up" or "Move down" control MUST be its te
 
 In step 4, each option MUST be one system switch. Its label MUST be the option's text, and its value MUST be on or off. So a chosen option does not depend on colour alone. Text on the Problem solving screen and the worksheet MUST use system text styles. That text MUST scale with Dynamic Type.
 
-Each row of the "Worksheets" list MUST be one accessibility element. Its label MUST be the row's visible text, the first line of step 1 or "Worksheet", then the date. Each question in the title menu "Worksheet" MUST be one menu item with the question as its label. The suggestion card MUST follow the same rules, and its sentence MUST be one accessibility element. A control with no visible text MUST have a label a person can say with Voice Control.
+Each row of the "Worksheets" list MUST be one accessibility element. Its label MUST be the row's visible text, the first line of step 1 or "Worksheet", then the date. Each question in the title menu "Worksheet" MUST be one menu item with the question as its label. The suggestion card MUST follow the same rules, and its card sentence MUST be one accessibility element. The label of that element is the card sentence, with no number (r24-02). A control with no visible text MUST have a label a person can say with Voice Control. The scenarios quote the sentences in the wording that Ash ruled on 12 October 2026 (r24-05).
 
 When a worksheet that opened over Today closes, VoiceOver focus MUST move to "Add an entry", as after the new-entry screen. When a worksheet that opened over the Problem solving screen closes, VoiceOver focus MUST return to the control that opened it. When that control is gone, focus MUST move to "New worksheet".
 
@@ -847,7 +955,7 @@ When a worksheet that opened over Today closes, VoiceOver focus MUST move to "Ad
 
 #### Scenario: VoiceOver reads a sentence
 - **WHEN** VoiceOver reads the first pattern sentence
-- **THEN** it reads "5 of your 7 starred entries were after 20:00." and nothing else for that element
+- **THEN** it reads "5 of the 7 times you starred an entry were after 20:00." and nothing else for that element
 
 #### Scenario: VoiceOver on step 1
 - **WHEN** VoiceOver focuses the step 1 field
@@ -866,8 +974,8 @@ When a worksheet that opened over Today closes, VoiceOver focus MUST move to "Ad
 - **THEN** it reads "What could you do about it?, 2" as the line's label
 
 #### Scenario: The label of "Work it through"
-- **WHEN** VoiceOver focuses "Work it through" under "5 of your 7 starred entries were after 20:00." on the Problem solving screen
-- **THEN** it reads "Work it through, 5 of your 7 starred entries were after 20:00."
+- **WHEN** VoiceOver focuses "Work it through" under "5 of the 7 times you starred an entry were after 20:00." on the Problem solving screen
+- **THEN** it reads "Work it through, 5 of the 7 times you starred an entry were after 20:00."
 
 #### Scenario: Focus when a step opens
 - **WHEN** VoiceOver is on, step 2 holds one line, and the person taps "Next" on step 1

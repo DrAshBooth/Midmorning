@@ -153,7 +153,7 @@ The repository MUST hold a forbidden list. The content test MUST fail when a car
 
 The content test MUST match each entry as a whole word, case-insensitive. A word is a maximal run of letters, digits, apostrophes and hyphens. An entry with a space MUST match as a run of whole words in that order.
 
-The full forbidden list applies to the cards, the opening sentences, the rule strings and the Today card strings. It also applies to the pattern templates, the four pattern count strings, the window line, every question and the alternatives examples. It also applies to the keys of the urge family and the worksheet family that "Content versions" defines. The content test MUST check each of those families against the full list. The content test MUST check the strings with ids support.*, gp.*, exclusion.*, notrightnow.* and gpsuggestion.* against the short list only. The short list is "Fairburn", "Oxford", "CREDO", "CBT-E", "CBT", "binger", "bingeing", "binge episode", "you've got this", "well done", "great job" and "proud".
+The full forbidden list applies to the cards, the opening sentences, the rule strings and the Today card strings. It also applies to the pattern templates, the card templates and their two subject strings, the four pattern count strings, the window line, every question and the alternatives examples. It also applies to the keys of the urge family and the worksheet family that "Content versions" defines. Ash ruled the card templates on 12 October 2026 (r24-02). The content test MUST check each of those families against the full list. The content test MUST check the strings with ids support.*, gp.*, exclusion.*, notrightnow.* and gpsuggestion.* against the short list only. The short list is "Fairburn", "Oxford", "CREDO", "CBT-E", "CBT", "binger", "bingeing", "binge episode", "you've got this", "well done", "great job" and "proud".
 
 The content test MUST skip four permitted sentences, and no other text. The permitted sentences are "It is not therapy.", "It is not therapy, and it does not replace your GP or anyone treating you.", "It uses ideas from CBT." and "Are you getting help from a clinic or a therapist for your eating at the moment?". `safeguarding` permits the first three in "What is a treatment claim". The second is line 3 of onboarding screen 1, and the `safeguarding` scenario "A negative statement" passes it. The fourth is the screening treatment question that `onboarding` states in "Screen 2: the screening questions".
 
@@ -252,7 +252,10 @@ The urge family MUST hold these keys. `urge-toolkit` states the text of each key
 - "urge.outcome.passed", "urge.outcome.atePlanned" and "urge.outcome.binged", the three outcome labels "It passed", "I ate as planned" and "I binged"
 - "urge.setup.title", the setup's title "Alternatives list"
 - "urge.setup.examplesHeading", the heading above the examples in the setup
-- "urge.buzz", the buzz switch label "Buzz at %lld minutes", filled from URGE_TIMER_MINUTES
+- "urge.actionLine", the line above the list on the urge screen, "Pick one and start it now."
+- "urge.ideasHeading", the heading "Ideas" above the examples on the urge screen when the list is empty
+
+Ash ruled the two keys of the urge screen on 12 October 2026 (r24-07). The family holds no key for a buzz, because Ash dropped "Buzz at 20 minutes" on 12 October 2026 (r24-15).
 
 The worksheet family MUST hold these keys. `problem-solving` states the text of each key.
 
@@ -511,13 +514,13 @@ A card id present in any shipped version MUST stay in every later bundle. A card
 
 ### Requirement: Every bundled string family has ids
 
-The content bundle MUST hold these families of reviewed strings, each string with an id. The owning capability specifies each string's text. Content bundles it. The signed catalogue keys that "Content versions" defines hold the other reviewed text. That text includes the urge family and the worksheet family.
+The content bundle MUST hold these families of reviewed strings, each string with an id. The owning capability specifies each string's text. Content bundles it. The signed catalogue keys that "Content versions" defines hold the other reviewed text. That text includes the urge family and the worksheet family. No family holds a string for "Buzz at 20 minutes", because Ash dropped it on 12 October 2026 (r24-15).
 
 - Cards: the ids in the card catalogue.
 - Opening sentences: "opening.stage2" to "opening.stage7". Programme owns the text. "opening.stage2.remindersoff" is the line the stage 2 opening card adds when notification permission is denied: "Reminders are off, so the Home Screen widget shows your next planned time."
-- Rule strings: "rule.stage2" to "rule.stage7", and more ids that start with "rule.stage2." or "rule.stage3.". Programme owns the text. The stage 2 rule and the stage 3 rule each show two counts, so each comes from strings with one count each. The stage 2 rule is "rule.stage2", "Opens after %lld recorded days.", then "rule.stage2.count", "You have %lld.". The stage 3 rule is "rule.stage3", "Opens after %1$@, or %2$@ after your plan starts". The app fills it from "rule.stage3.days", "%lld days on your plan", and "rule.stage3.weeks", "%lld weeks". With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts".
+- Rule strings: "rule.stage2" to "rule.stage7", and more ids that start with "rule.stage2.", "rule.stage3." or "rule.stage4.". Programme owns the text. The rules of stages 2, 3 and 4 each show more than one count, so each comes from strings with one count each. The stage 2 rule is "rule.stage2", "Opens after %lld recorded days.", then "rule.stage2.count", "You have %lld.". The stage 3 rule is "rule.stage3", "Opens after %1$@, or %2$@ after your plan starts.". The app fills it from "rule.stage3.days", "%lld days on your plan", and "rule.stage3.weeks", "%lld weeks". With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts.". From the record day on which stage 2 opened, "rule.stage3.count", "You have %lld.", follows it. Before stage 3 opens, the stage 4 rule is "rule.stage4.beforeStage3", "Opens after Alternatives". From the record day on which stage 3 opened, the stage 4 rule is "rule.stage4", "Opens after your first urge outcome, or after %lld recorded days.", then "rule.stage4.count", "You have %lld.". Ash ruled the rules of stages 3 and 4 on 12 October 2026 (r24-11).
 - Today card strings: "todaycard.plan", "Your plan isn't set yet. It takes about two minutes."; "todaycard.plan.setup", "Set it up"; "todaycard.focus", "If you use a Focus at work, let planned meal reminders through?"; "todaycard.focus.yes", "Yes"; "todaycard.read", "Read". Programme owns the text and when each card shows.
-- Pattern templates: "pattern.<name>", the four count strings "pattern.count.group", "pattern.count.total", "pattern.count.urges" and "pattern.count.hours", the window line "pattern.window", "From the last %lld days", and the line under the "Pattern sentences" switch, "pattern.switchLine". Problem-solving owns the text. A slot template reads "{n} of your {m} were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} had the place {place}."
+- Pattern templates: "pattern.<name>", the four count strings "pattern.count.group", "pattern.count.total", "pattern.count.urges" and "pattern.count.hours", the window line "pattern.window", "From the last %lld days", and the line under the "Pattern sentences" switch, "pattern.switchLine". Problem-solving owns the text. A template reads, for example, "{n} of the {m} were after 20:00." The slot template reads "{n} of the {m} were on days with no entry beside {slot}." "pattern.place" is the one template for a custom chip: "{n} of the {m} had the place {place}." Ash ruled the form of the templates on 12 October 2026 (r24-05), and the slot template on the same day (r24-09). The pattern family also holds the card templates "pattern.card.<name>", one for each template "pattern.<name>". It also holds their two subject strings, "pattern.card.subject.starred", "Most of the times you starred an entry lately", and "pattern.card.subject.urges", "Most of your recent urges". A card template reads, for example, "{subject} were after 20:00.". So the suggestion card on Today shows no count. Ash ruled this on 12 October 2026 (r24-02).
 - The reintroduction question: "dieting.reintroduction", "{weekday}, {slot}: how did it go?". Dieting-module owns the text.
 - The check-in weeks line: "checkin.weeks", and more ids that start with "checkin.weeks.". Staying-on-track owns the text. The line reads "A check-in comes at 4, 8 and 12 weeks." with the default constants. It shows three counts, so it comes from strings with one count each. The app fills the three numbers from CHECK_IN_WEEKS.
 - Reflection questions: "reflection.1" to "reflection.3". Weekly-review owns the text.
@@ -537,9 +540,11 @@ These strings MUST follow the same version, sign-off, tone and forbidden-list ru
 
 The Programme package also holds some of these strings as Swift constants, and the app can show that copy. For each such constant, the bundle MUST hold the same text under the string's id. This rule has no exception. A test MUST compare each Swift constant with its bundle string, both filled with the same values. The test MUST fail when the two differ, and it MUST name the id. The sign-off, the tone rules, the forbidden list and the catalogue rules read the bundle copy. Text that the app reads from a signed catalogue key is not a Swift constant, and it needs no bundle copy. Ash ruled this on 26 September 2026 (r13-02).
 
-Programme owns every fill: the gate value from ProgrammeConstants, the recorded-day count of the stage 2 rule, and the days and the weeks of the stage 3 rule. A rule string of one sentence MUST NOT end with a full stop. The two strings of the stage 2 rule are the exception: each is one sentence, and each ends with a full stop.
+Programme owns every fill: the gate value from ProgrammeConstants, the recorded-day count of the stage 2 rule, the days, the weeks and the planned-day count of the stage 3 rule, and the recorded-day count of the stage 4 rule. A rule string of one sentence MUST NOT end with a full stop. The rules of stages 2, 3 and 4 are the exception. "rule.stage2", "rule.stage2.count", "rule.stage3", "rule.stage3.count", "rule.stage4" and "rule.stage4.count" are each one sentence, and each ends with a full stop. "rule.stage4.beforeStage3" has no full stop.
 
-A pattern template MUST hold only the placeholders {n}, {m}, {slot} and {hours}. The one exception is "pattern.place", which MUST hold {n}, {m} and {place}. In a pattern template, {n}, {m} and {hours} stand for counts. A pattern template MUST NOT hold a %lld placeholder. The app MUST fill each count from a string with one %lld and plural forms, as "Catalogue rules" requires. The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld starred entries", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. Ash ruled this on 7 October 2026 (r17-05). In a sentence from urges, the app MUST fill {m} from "pattern.count.urges", "%lld urges", with the urge total. Its one form reads "%lld urge". Ash ruled this on 12 October 2026 (r23-09). The four count strings and the window line are not templates. Each of them MUST hold one %lld and no other placeholder. The app MUST fill the window line from PATTERN_WINDOW_DAYS, with plural forms. Its one form reads "From the last %lld day". The reintroduction question MUST hold only {weekday} and {slot}.
+A pattern template MUST hold only the placeholders {n}, {m}, {slot} and {hours}. The one exception is "pattern.place", which MUST hold {n}, {m} and {place}. In a pattern template, {n}, {m} and {hours} stand for counts. A pattern template MUST NOT hold a %lld placeholder. The app MUST fill each count from a string with one %lld and plural forms, as "Catalogue rules" requires. The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld times you starred an entry", with the starred total. Its one form reads "%lld time you starred an entry". The starred total counts starred runs, as `problem-solving` states. Ash ruled this wording on 12 October 2026 (r24-05). The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. Ash ruled the counts in templates on 7 October 2026 (r17-05).
+
+A card template MUST hold {subject}. It MUST also hold the {slot}, {hours} or {place} of its pattern template, and no other placeholder. A card template MUST NOT hold {n}, {m} or a %lld placeholder. The app MUST fill {subject} from "pattern.card.subject.starred" for a sentence from starred entries, and from "pattern.card.subject.urges" for a sentence from urges. The two subject strings hold no placeholder. Each of them is the start of a sentence, so it starts with a capital letter and has no full stop. Ash ruled this on 12 October 2026 (r24-02). In a sentence from urges, the app MUST fill {m} from "pattern.count.urges", "%lld urges", with the urge total. Its one form reads "%lld urge". Ash ruled this on 12 October 2026 (r23-09). The four count strings and the window line are not templates. Each of them MUST hold one %lld and no other placeholder. The app MUST fill the window line from PATTERN_WINDOW_DAYS, with plural forms. Its one form reads "From the last %lld day". The reintroduction question MUST hold only {weekday} and {slot}.
 
 The app MUST fill {slot} with the slot label as the person typed it, and no other word. The app MUST fill {weekday} with the weekday name from the en_GB formatter. The app MUST fill {place} with the person's custom chip text and no other word. Problem-solving owns that fill.
 
@@ -554,8 +559,16 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 - **THEN** it shows "rule.stage2" filled with the gate from RECORDED_DAYS_FOR_STAGE_2, then the second stage 2 string filled with the count, as "Opens after 5 recorded days. You have 2."
 
 #### Scenario: The stage 3 rule string
-- **WHEN** the Programme screen shows the closed stage 3 with the default constants
-- **THEN** it shows the stage 3 rule, from "rule.stage3" and its other strings, as "Opens after 7 days on your plan, or 2 weeks after your plan starts"
+- **WHEN** the Programme screen shows the closed stage 3 with the default constants, before stage 2 opens
+- **THEN** it shows the stage 3 rule, from "rule.stage3" and its other strings, as "Opens after 7 days on your plan, or 2 weeks after your plan starts."
+
+#### Scenario: The stage 3 rule string with its count
+- **WHEN** the Programme screen shows the closed stage 3 with the default constants, and three planned days count toward stage 3
+- **THEN** it shows "rule.stage3" with its other strings, then "rule.stage3.count" filled with the count, as "Opens after 7 days on your plan, or 2 weeks after your plan starts. You have 3."
+
+#### Scenario: The stage 4 rule strings
+- **WHEN** the Programme screen shows the closed stage 4 with the default constants, first before stage 3 opens, and then on a day when two recorded days count toward the fallback
+- **THEN** it shows "rule.stage4.beforeStage3" as "Opens after Alternatives", and then "rule.stage4" and "rule.stage4.count" as "Opens after your first urge outcome, or after 7 recorded days. You have 2."
 
 #### Scenario: A rule string with three placeholders
 - **WHEN** the bundle holds "rule.stage3" with three %lld placeholders in its text
@@ -567,7 +580,7 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 
 #### Scenario: The rule strings match programme
 - **WHEN** the test compares the bundle's rule strings with the Programme package's Swift constants
-- **THEN** "rule.stage4" holds "Opens after your first urge outcome, or a week from now", and "rule.stage5" and "rule.stage7" each hold "Opens %lld weeks after your plan starts"
+- **THEN** "rule.stage4.beforeStage3" holds "Opens after Alternatives", "rule.stage4" holds "Opens after your first urge outcome, or after %lld recorded days.", and "rule.stage5" and "rule.stage7" each hold "Opens %lld weeks after your plan starts"
 
 #### Scenario: A Swift constant differs from its bundle copy
 - **WHEN** the Programme package shows "Opens %lld weeks after your plan starts" for stage 5, and the bundle holds "rule.stage5" as "Opens after six weeks in the programme"
@@ -590,8 +603,8 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 - **THEN** the card shows "opening.stage2" and then "opening.stage2.remindersoff", "Reminders are off, so the Home Screen widget shows your next planned time."
 
 #### Scenario: A pattern template with its placeholders
-- **WHEN** the bundle holds "pattern.slot" as "{n} of your {m} were on days when {slot} didn't happen." and the person's slot label reads "lunch"
-- **THEN** the content test passes the placeholder check for it, and the app shows "4 of your 6 starred entries were on days when lunch didn't happen."
+- **WHEN** the bundle holds "pattern.slot" as "{n} of the {m} were on days with no entry beside {slot}." and the person's slot label reads "lunch"
+- **THEN** the content test passes the placeholder check for it, and the app shows "4 of the 6 times you starred an entry were on days with no entry beside lunch."
 
 #### Scenario: The reintroduction question
 - **WHEN** the bundle holds "dieting.reintroduction" as "{weekday}, {slot}: how did it go?" and the person's slot label reads "Evening meal"
@@ -605,13 +618,17 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 - **WHEN** the bundle holds the check-in weeks line as strings with one count each, and CHECK_IN_WEEKS is 4, 8, 12
 - **THEN** the app shows "A check-in comes at 4, 8 and 12 weeks."
 
-#### Scenario: The urge timer line
-- **WHEN** the string catalogue holds the signed key "urge.buzz" as "Buzz at %lld minutes" and URGE_TIMER_MINUTES is 20
-- **THEN** the setup shows the switch label "Buzz at 20 minutes", and the bundle hash covers "urge.buzz"
-
 #### Scenario: The custom chip template
-- **WHEN** the bundle holds "pattern.place" as "{n} of your {m} had the place {place}." and the person's custom chip reads "Mum's"
-- **THEN** the content test passes the placeholder check for it, and the app shows "4 of your 6 starred entries had the place Mum's."
+- **WHEN** the bundle holds "pattern.place" as "{n} of the {m} had the place {place}." and the person's custom chip reads "Mum's"
+- **THEN** the content test passes the placeholder check for it, and the app shows "4 of the 6 times you starred an entry had the place Mum's."
+
+#### Scenario: A card template
+- **WHEN** the bundle holds "pattern.card.band.after2000" as "{subject} were after 20:00."
+- **THEN** the content test passes the placeholder check for it, and the suggestion card shows "Most of the times you starred an entry lately were after 20:00." or "Most of your recent urges were after 20:00."
+
+#### Scenario: A count in a card template
+- **WHEN** the bundle holds "pattern.card.band.after2000" as "{n} of the {m} were after 20:00."
+- **THEN** the content test fails and names "pattern.card.band.after2000"
 
 #### Scenario: {place} in another template
 - **WHEN** the bundle holds "pattern.slot" with "{place}" in its text
@@ -622,7 +639,7 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 - **THEN** the content test fails and names "pattern.slot"
 
 #### Scenario: A count in a pattern template
-- **WHEN** the bundle holds "pattern.slot" as "%1$lld of your %2$lld starred entries were on days when {slot} didn't happen."
+- **WHEN** the bundle holds "pattern.slot" as "%1$lld of the %2$lld times you starred an entry were on days with no entry beside {slot}."
 - **THEN** the content test fails and names "pattern.slot"
 
 #### Scenario: A placeholder in a question
@@ -631,7 +648,7 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 
 #### Scenario: The urge count string
 - **WHEN** the bundle holds "pattern.count.urges" as "%lld urges", with the one form "%lld urge"
-- **THEN** the content test passes its plural check, and the app shows "4 of your 6 urges were after 20:00."
+- **THEN** the content test passes its plural check, and the app shows "4 of the 6 urges were after 20:00."
 
 #### Scenario: The window line
 - **WHEN** the bundle holds "pattern.window" as "From the last %lld days", with the one form "From the last %lld day", and PATTERN_WINDOW_DAYS is 28
@@ -667,13 +684,13 @@ Every string in the content bundle and in every string catalogue MUST follow the
 - Every constant MUST enter a string through %lld, never as a literal number. A card holds no placeholder, so a card can state the value of a constant in words, for example "about twenty minutes". `programme` states the check when a constant changes, in "A gate change never closes a stage".
 - A string with more than one placeholder MUST use positional placeholders, %1$lld, %2$@ and so on.
 - Every date, time and range MUST enter a string as %@, filled by the en_GB formatter.
-- A duration that a constant sets MUST enter a string through %lld, with plural forms, for example "Buzz at %lld minutes". Signed text, such as a card or the walk text, can state a fixed duration in words, for example "two minutes". Every other duration MUST enter a string as %@, filled by the en_GB formatter.
-- The clock times at the edges of the time bands in a pattern template, 12:00, 17:00 and 20:00, are fixed text. They do not enter through %@. `problem-solving` states the bands.
+- A duration that a constant sets MUST enter a string through %lld, with plural forms, for example "Most fade in about %lld minutes." in the wave line of the urge screen. Signed text, such as a card or the walk text, can state a fixed duration in words, for example "two minutes". Every other duration MUST enter a string as %@, filled by the en_GB formatter. Ash dropped the earlier example, "Buzz at %lld minutes", on 12 October 2026 (r24-15).
+- The clock times at the edges of the time bands in a pattern template or a card template, 12:00, 17:00 and 20:00, are fixed text. They do not enter through %@. `problem-solving` states the bands. Ash ruled the card templates on 12 October 2026 (r24-02).
 - Text the person typed MUST enter a string unchanged.
 - Every string MUST use sentence case. A string that starts with a placeholder, such as "%lld cm", passes this rule.
-- A navigation control or a card control MUST hold at most 16 characters. A list row and a screen title are not navigation controls. A list row or a screen title MUST hold at most 40 characters. So "Alternatives list", with 17 characters, can be the tool row and the setup's title that decision 93 names (r8-10). A notification action MUST hold at most 20. A chip or a slot label MUST hold at most 20. A widget line MUST hold at most 16. A switch label MUST hold at most 40. A state line or a Today line MUST hold at most 40. A one-line message MUST hold at most 80.
+- A navigation control or a card control MUST hold at most 16 characters. A list row, a control that sits in a list's place and a screen title are not navigation controls. Each of them MUST hold at most 40 characters. So "Alternatives list", with 17 characters, can be the tool row and the setup's title that decision 93 names (r8-10). And "Add an alternative", with 18 characters, can sit in the place of the empty alternatives list on the urge screen, as `urge-toolkit` states. A notification action MUST hold at most 20. A chip or a slot label MUST hold at most 20. A widget line MUST hold at most 16. A switch label MUST hold at most 40. A state line or a Today line MUST hold at most 40. A one-line message MUST hold at most 80.
 - Every string family MUST render at the AX5 text size without truncation.
-- A sentence MUST end with a full stop. A label MUST NOT end with a full stop. A rule string of one sentence MUST NOT end with a full stop. The stage 2 rule is the exception: it is two sentences from two strings, and each ends with a full stop.
+- A sentence MUST end with a full stop. A label MUST NOT end with a full stop. A rule string of one sentence MUST NOT end with a full stop. The rules of stages 2, 3 and 4 are the exception. Each string of those rules that a count can follow, and each of their count strings, is one sentence that ends with a full stop. "Every bundled string family has ids" names these strings. Ash ruled the rules of stages 3 and 4 on 12 October 2026 (r24-11).
 - The VoiceOver label of a control with visible text MUST equal the visible text, or start with the visible text and add words after it. For example, the "Rename" control in the plan builder has the label "Rename Lunch". Voice Control then finds the control by its visible text. Ash ruled this on 26 September 2026 (r13-08).
 - A string MUST NOT hold the bare plural "binges".
 - `scripts/content-signoff-list` MUST generate the README sign-off list from the bundle ids and the signed catalogue keys. It MUST read the prefixes from `signed-catalogue-keys.json`. The team MUST NOT write the list by hand.
@@ -685,7 +702,7 @@ The catalogue key "about.contact" holds the Contact email that the About group s
 - **THEN** the content test fails and names the string's id
 
 #### Scenario: A pattern count string without plural forms
-- **WHEN** the bundle holds "pattern.count.total" as "%lld starred entries" with no plural forms
+- **WHEN** the bundle holds "pattern.count.total" as "%lld times you starred an entry" with no plural forms
 - **THEN** the content test fails and names "pattern.count.total"
 
 #### Scenario: Two counts in one string
@@ -697,7 +714,7 @@ The catalogue key "about.contact" holds the Contact email that the About group s
 - **THEN** the content test passes the plural check for that string
 
 #### Scenario: A literal constant
-- **WHEN** a catalogue string holds "Buzz at 20 minutes"
+- **WHEN** a catalogue string holds "Most fade in about 20 minutes."
 - **THEN** the content test fails and names the string's id
 
 #### Scenario: Two placeholders without positions
@@ -712,13 +729,21 @@ The catalogue key "about.contact" holds the Contact email that the About group s
 - **WHEN** the "Tools" group of the "Alternatives" stage screen shows the row "Alternatives list", which holds 17 characters
 - **THEN** the row passes the length rule, because the limit of a list row is 40
 
+#### Scenario: A control in a list's place
+- **WHEN** the urge screen shows "Add an alternative", which holds 18 characters, in the place of the empty alternatives list
+- **THEN** the control passes the length rule, because the limit of a control in a list's place is 40
+
 #### Scenario: A band edge in a pattern template
-- **WHEN** the bundle holds the after 20:00 template "{n} of your {m} were after 20:00."
-- **THEN** the content test passes the template, because the band edge 20:00 is fixed text and not a time placeholder
+- **WHEN** the bundle holds the after 20:00 template "{n} of the {m} were after 20:00." and the card template "{subject} were after 20:00."
+- **THEN** the content test passes both, because the band edge 20:00 is fixed text and not a time placeholder
 
 #### Scenario: A full stop on a label
 - **WHEN** a switch label ends with a full stop
 - **THEN** the content test fails and names the string's id
+
+#### Scenario: A rule string that a count can follow
+- **WHEN** the bundle holds "rule.stage3" as "Opens after %1$@, or %2$@ after your plan starts." and "rule.stage6" as "Opens after taking stock"
+- **THEN** the content test passes the full-stop check for both strings
 
 #### Scenario: A label that starts with the visible text
 - **WHEN** a reviewer checks the "Rename" control of the Lunch slot, whose VoiceOver label is "Rename Lunch"

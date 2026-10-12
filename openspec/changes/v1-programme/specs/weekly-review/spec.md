@@ -194,13 +194,13 @@ The review of week n MUST open with a summary, one plain sentence per part. The 
 
 The app MUST count an entry in the week of its saved record day key. The store writes that key with the entry at save, and the `record` capability owns it. The app MUST NOT compute an entry's record day again at review time. A day state row and a weigh-in row keep the key the store wrote when it created them. The review MUST read that key.
 
-Every count in a summary string MUST enter through a %lld placeholder with the plural forms that `content` defines. Every duration, weekday and time MUST enter through a %@ placeholder from the en_GB formatter. The `content` capability owns the catalogue rules. The starred part with a last-week count and the urge part each show two counts. So each of them MUST come from strings with one count each, as the catalogue rules require. This requirement names those strings.
+Every count in a summary string MUST enter through a %lld placeholder with the plural forms that `content` defines. Every duration, weekday and time MUST enter through a %@ placeholder from the en_GB formatter. The `content` capability owns the catalogue rules. The starred part with a last-week count shows two counts. So it MUST come from strings with one count each, as the catalogue rules require. This requirement names those strings.
 
 The days part MUST read "Days with an entry: %lld.". The count is the number of record days in week n with at least one entry. A "didn't record" day with an entry counts. Every review MUST open with the days part, before the starred part. The days part is a count of days, not of entries.
 
 The starred part shows the starred counts of week n and week n − 1, for example "Starred entries: 4 this week, 6 last week." The app MUST show "Starred entries: %1$@, %2$@." The app MUST fill %1$@ from "%lld this week", with the starred count of week n. The app MUST fill %2$@ from "%lld last week", with the starred count of week n − 1. In the review of week 1, the starred part MUST read "Starred entries: %lld this week."
 
-The plan part MUST read "Planned meals with an entry beside them: %lld." The number is the planned meals of week n with an entry beside them. The app MUST NOT show the total of planned meals in the plan part. The app MUST NOT show a count of skipped planned meals. The `regular-eating-plan` capability owns the plan beside the record and the "Skipped" answer. The `problem-solving` capability reads that answer for its missed-slot groups. When week n has no planned day, the app MUST leave the plan part out.
+The plan part MUST read "Planned meals with an entry beside them: %lld." The number is the planned meals of week n with an entry beside them. The app MUST NOT show the total of planned meals in the plan part. The app MUST NOT show a count of skipped planned meals. The `regular-eating-plan` capability owns the plan beside the record and the "Skipped" answer. The `problem-solving` capability reads that answer, and the planned meals with no entry beside them, for its missed-slot groups (r24-09). When week n has no planned day, the app MUST leave the plan part out.
 
 The paused part MUST read "Paused days: %lld." with the count of record days in week n with the state "paused". The `record` capability owns that state. When week n has no paused day, the app MUST leave the paused part out.
 
@@ -208,7 +208,7 @@ The longest gap on a recorded day is the longest time between two consecutive en
 
 The app MUST leave out a record day the person set as "didn't record". The app MUST leave out a record day with the state fasting. A fasting day counts no gap. The app MUST leave out a record day with fewer than two entries. The `record` capability owns the "didn't record" state and the fasting state.
 
-The urge part MUST read "Urges: %lld." and "Passed: %lld.", joined by one space, for example "Urges: 3. Passed: 2." The first count is the count of urges in week n. The second is the count with the outcome "It passed". The `urge-toolkit` capability owns urges and urge outcomes. When week n has no urge, the app MUST leave the urge part out.
+The urge part MUST read "Urges: %lld.", for example "Urges: 3." The count is the count of urges in week n, with or without an outcome. A discarded urge does not count, as `urge-toolkit` states. The urge part MUST NOT show a count of outcomes. So the app MUST NOT show "Passed: %lld.", and the bundle MUST NOT hold its string "review.summary.passed". Ash ruled this on 12 October 2026 (r24-06). The `urge-toolkit` capability owns urges and urge outcomes. When week n has no urge, the app MUST leave the urge part out.
 
 The weigh-in part MUST read "Weigh-in: done on %@." with the weekday name from the en_GB formatter. When week n has no done weigh-in, the app MUST leave the weigh-in part out. The review MUST NOT state that no weigh-in happened. The app MUST NOT show a weight value in the review. The `weigh-in` capability owns the weigh-in.
 
@@ -219,8 +219,8 @@ The words part MUST read "Your words this week: %@." The placeholder holds the c
 At a check-in, the summary MUST cover the 7 record days before the check-in. At a check-in, the starred part MUST take the form of the week 1 review, with no last-week count. The `staying-on-track` capability owns the check-in and its window. When that window holds no entry, the summary MUST follow `staying-on-track`: "Starred entries: 0." and no other part.
 
 #### Scenario: A full week
-- **WHEN** week 3 has 6 days with an entry, 4 starred entries, week 2 had 6, 26 of 30 planned meals had an entry beside them, Thursday was paused, the longest gap was 12:40 to 19:00 on Tuesday, 3 urges of which 2 passed, the weigh-in was on Wednesday, and the close-the-day words were "tired", "ok" and "flat"
-- **THEN** the review shows "Days with an entry: 6.", "Starred entries: 4 this week, 6 last week.", "Planned meals with an entry beside them: 26.", "Paused days: 1.", "Longest gap between entries: 6 hours 20 minutes, on Tuesday, from 12:40 to 19:00.", "Urges: 3. Passed: 2.", "Weigh-in: done on Wednesday." and "Your words this week: tired, ok, flat.", in that order
+- **WHEN** week 3 has 6 days with an entry, 4 starred entries, week 2 had 6, 26 of 30 planned meals had an entry beside them, Thursday was paused, the longest gap was 12:40 to 19:00 on Tuesday, 3 urges, 2 of them with the outcome "It passed", the weigh-in was on Wednesday, and the close-the-day words were "tired", "ok" and "flat"
+- **THEN** the review shows "Days with an entry: 6.", "Starred entries: 4 this week, 6 last week.", "Planned meals with an entry beside them: 26.", "Paused days: 1.", "Longest gap between entries: 6 hours 20 minutes, on Tuesday, from 12:40 to 19:00.", "Urges: 3.", "Weigh-in: done on Wednesday." and "Your words this week: tired, ok, flat.", in that order
 
 #### Scenario: The first review
 - **WHEN** week 1 has 4 days with an entry, 5 starred entries, no plan, no paused day, no urge, no weigh-in and no close-the-day word
@@ -266,11 +266,11 @@ At a check-in, the summary MUST cover the 7 record days before the check-in. At 
 
 The natural key of a review is the date key of its due day, the start day plus 7n. The app MUST NOT key a review by its week number. The `data-and-privacy` capability owns the Review row, its sync and the winning row rule.
 
-When the app first builds the review of week n, it MUST write the week's counts. It MUST write them into the Review row for that key. The counts are the days-with-an-entry count, the starred count, the plan count, the paused-days count and the two urge counts. The "Reviews" list reads the frozen starred count for its rows. At the same moment the app writes the list of stages for the stage questions, as "Three reflection questions" states.
+When the app first builds the review of week n, it MUST write the week's counts. It MUST write them into the Review row for that key. The counts are the days-with-an-entry count, the starred count, the plan count, the paused-days count and the urge count. The Review row MUST NOT freeze a count of passed urges. A row that already holds one keeps it, and no reader uses it. Ash ruled this on 12 October 2026 (r24-06). The "Reviews" list reads the frozen starred count for its rows. At the same moment the app writes the list of stages for the stage questions, as "Three reflection questions" states.
 
 After that moment the counts in the row MUST NOT change. An entry the person edits or deletes later MUST NOT change the row. The `safeguarding` capability reads the frozen starred counts for the deterioration rule. The app MUST write the counts whether or not the person opens the review.
 
-The review screen MUST build its summary from the record each time it opens, as "The summary built from the record" states. The frozen counts are for the "Reviews" list and the deterioration rule. So an urge outcome that the person saves after the freeze can change the urge part on the review screen. It MUST NOT change the two frozen urge counts in the Review row.
+The review screen MUST build its summary from the record each time it opens, as "The summary built from the record" states. The frozen counts are for the "Reviews" list and the deterioration rule. The urge part counts urges, not outcomes. So an urge outcome that the person saves after the freeze changes neither the urge part nor the frozen urge count.
 
 The app MUST freeze the review of week n only after its due moment by the device clock. A device with sync on MUST also wait until its last sync moment is later than the due moment. The `data-and-privacy` capability owns the last sync moment. The Review row MUST carry its freeze moment. When one key has more than one row, the app MUST read the row with the earliest freeze moment. Every edit to the review MUST write into that row.
 
@@ -287,8 +287,12 @@ When the device clock moves back past a frozen review's due moment, that row is 
 - **THEN** the Review row for week 2 holds the starred count of week 2
 
 #### Scenario: An urge outcome after the freeze
-- **WHEN** the app froze the review of week 3 at 04:00 on Monday 12 October 2026 with the urge counts 2 and 1, and at 04:10 the person taps "It passed" for an urge with the `startDayKey` Sunday 11 October
-- **THEN** the Review row for week 3 still holds the urge counts 2 and 1, and the urge part on the review screen of week 3 counts the outcome of 04:10
+- **WHEN** the app froze the review of week 3 at 04:00 on Monday 12 October 2026 with the urge count 2, and at 04:10 the person taps "It passed" for an urge with the `startDayKey` Sunday 11 October
+- **THEN** the Review row for week 3 still holds the urge count 2, and the urge part on the review screen of week 3 reads "Urges: 2."
+
+#### Scenario: A row with a passed count from an earlier build
+- **WHEN** a Review row that an earlier build froze holds a passed count of 1, and the person opens that review
+- **THEN** the review shows no count of outcomes, and the row still holds the passed count
 
 #### Scenario: The device clock moves back
 - **WHEN** the Review row for week 3 is frozen and the device clock moves back to Wednesday 14 October, before the review of week 3 became due
@@ -358,6 +362,8 @@ Each stage question MUST have one optional free-text field with no placeholder. 
 
 The stage 3 question is "When an urge came, what did you do?" The stage 4 question is "Did a problem come up that a worksheet could help with?" These two texts are drafts, and the clinical reviewer can change them before sign-off. The questions of stages 5, 6 and 7 have no text yet. The build of each of those stages adds its question, with the clinical reviewer.
 
+Under the field of the stage 4 question, the review MUST show one row for each worksheet that waits for step 6. A worksheet waits for step 6 when its review day is before the current record day and its step 6 is empty. `problem-solving` owns the worksheet and its review day. The app MUST find these worksheets each time the review shows. The Review row MUST NOT freeze them. A row MUST show the first line of step 1 and the worksheet's start record day, as a row of the "Worksheets" list shows them. When step 1 has no text, the row MUST show "Worksheet" in place of the first line. A tap on a row MUST open that worksheet at step 6, as a sheet over the review. The list MUST show no count, no tick and no heading. A row MUST go when step 6 holds text. When no worksheet waits for step 6, the review MUST show no row and no text in their place. This follows the principle of decision 95, which Ash ruled on 25 September 2026 (r8-12). A review that asks no stage 4 question MUST show no row. The 3.3 build, problem-solving, builds this list. Ash ruled this on 12 October 2026 (r24-10).
+
 #### Scenario: The three questions
 - **WHEN** the person opens the review of week 2 with "Weekly summary" on
 - **THEN** the review shows the summary, then "What did you notice this week?", "What made things harder?" and "What helped?", each with an empty field
@@ -413,6 +419,26 @@ The stage 3 question is "When an urge came, what did you do?" The stage 4 questi
 #### Scenario: A check-in asks no stage question
 - **WHEN** the person opens a check-in with stages 3 to 7 open
 - **THEN** the check-in asks the three questions and no stage question
+
+#### Scenario: A worksheet that waits for step 6
+- **WHEN** stages 3 and 4 are open at the due moment of the review of week 6, 04:00 on Monday 2 November 2026, the worksheet "Evenings after a missed lunch" started on Saturday 10 October has the review day Saturday 17 October and an empty step 6, and the person opens that review on Monday 2 November
+- **THEN** under the field of "Did a problem come up that a worksheet could help with?", the review shows one row, "Evenings after a missed lunch" with "10 October", and no count, no tick and no heading
+
+#### Scenario: A tap on a waiting worksheet
+- **WHEN** the review shows the row "Evenings after a missed lunch" and the person taps it
+- **THEN** that worksheet opens at step 6, "How did it go?", as a sheet over the review
+
+#### Scenario: The row goes
+- **WHEN** the person types "Had the snack at 21:00" in step 6 of that worksheet and taps "Done"
+- **THEN** the review shows again, with no row for that worksheet
+
+#### Scenario: No worksheet waits
+- **WHEN** stage 4 is open at the due moment of a review, and no worksheet waits for step 6
+- **THEN** the review shows the stage 4 question and its field, and no row and no text in place of a row
+
+#### Scenario: The list when the review shows
+- **WHEN** the app built the review of week 6 at 04:00 on Monday 2 November 2026, a worksheet has the review day Monday 2 November and an empty step 6, and the person opens the review on Tuesday 3 November
+- **THEN** the review shows a row for that worksheet, although the worksheet did not wait for step 6 when the app built the review
 
 ### Requirement: The one thing to change and the pinned note
 
@@ -571,6 +597,12 @@ The review MUST NOT show a streak, a badge or a count of entries other than the 
 Each summary sentence MUST be one accessibility element whose label is the sentence text. The label of each free-text field MUST be its question. The self-harm item, "I'm getting worse", the questionnaire answers, the module controls and "Done" MUST each have a VoiceOver label. The "I'm getting worse" button MUST have the VoiceOver hint "Opens a page about seeing your GP." A chosen questionnaire answer MUST NOT depend on colour alone. A chosen module control MUST NOT depend on colour alone. Each module control MUST have the VoiceOver button trait. The chosen one MUST also have the selected trait.
 
 The pinned note on Today MUST be one accessibility element whose label is its text. Text in the review, taking stock and the pinned note MUST use system text styles. That text MUST scale with Dynamic Type.
+
+Each row of the worksheets that wait for step 6 MUST be one accessibility element with the button trait. Its label MUST be the row's visible text, the first line of step 1 or "Worksheet", then the date. When a worksheet that opened from a row closes, VoiceOver focus MUST return to that row. When the row is gone, focus MUST move to the field of the stage 4 question. Ash ruled the list on 12 October 2026 (r24-10).
+
+#### Scenario: VoiceOver on a waiting worksheet
+- **WHEN** VoiceOver focuses the row of the worksheet "Evenings after a missed lunch" started on 10 October
+- **THEN** it reads "Evenings after a missed lunch, 10 October" and the button trait
 
 #### Scenario: VoiceOver reads the summary
 - **WHEN** VoiceOver reads the first summary sentence of a week with 5 days with an entry

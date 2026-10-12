@@ -270,7 +270,7 @@ The app MUST NOT write to a device reminder switch at the restart. Each device M
 
 From the stage opening, a starred entry or the urge outcome "I binged" is a lapse. The rule is the same before and after the finish. The app MUST NOT show anything at the moment the person saves the entry or the outcome. The app MUST show one maintenance plan card in the Today card slot that `record` defines. The card MUST show "What will you do at the first slip?" with its answer first.
 
-The card MUST offer "Open" and "Close". "Open" MUST open the maintenance plan. The lapse's record day MUST be the stored record day key of the starred entry or the urge outcome. The app MUST show the card from the time of the next planned meal on that record day.
+The card MUST offer "Open" and "Close". "Open" MUST open the maintenance plan. The lapse's record day MUST be the stored record day key of the starred entry or the urge outcome. The app MUST show the card from the time of the next planned meal on that record day. While an urge is open, the card MUST wait, as `record` states in "The Today stack". Ash ruled this on 12 October 2026 (r24-03).
 
 When that record day has no later planned meal, the app MUST show the card from the next day start. The app MUST keep the card until the person answers it or the following record day ends. The app MUST show one card per lapse. While the card shows, a further lapse MUST NOT add a second card. The app MUST NOT send a notification about the lapse.
 
@@ -281,6 +281,10 @@ The app MUST NOT reset the start day, `finishDate` or the check-ins. The app MUS
 #### Scenario: A starred entry in the afternoon
 - **WHEN** the person saves a starred entry at 14:10 on Tuesday 5 January and the next planned meal is Mid-afternoon at 16:00
 - **THEN** the app shows nothing at 14:10, and from 16:00 the Today card slot shows the maintenance plan card with the first-slip answer first
+
+#### Scenario: The card waits while an urge is open
+- **WHEN** the person saves a starred entry at 14:10 on Tuesday 5 January 2027, the next planned meal is Mid-afternoon at 16:00, and an urge that started at 15:50 is open with no outcome until 17:50
+- **THEN** the Today card slot shows no card from 16:00 to 17:50, and shows the maintenance plan card from 17:50
 
 #### Scenario: A starred entry late at night
 - **WHEN** the person saves a starred entry at 23:00 on Tuesday 5 January with no later planned meal that record day
