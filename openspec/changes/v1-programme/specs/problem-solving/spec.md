@@ -10,15 +10,21 @@ Problem solving is the stage 4 tool. The app finds patterns in the person's star
 
 The `programme` capability opens stage 4 and owns its opening rule. Before stage 4 opens, the app MUST NOT compute a pattern sentence. Before stage 4 opens, the app MUST NOT show a pattern sentence, the suggestion card or the worksheet. The app MUST let the person read the stage 4 cards while stage 4 is closed. The `content` capability owns the cards.
 
-After stage 4 opens, the Problem solving screen MUST show the pattern sentences, a "New worksheet" control and the "Worksheets" list. The Problem solving screen MUST show Get support. The `safeguarding` capability owns that button. Every part of problem solving MUST work with no network.
+The person reads the stage 4 cards on the "Problem solving" stage screen, which `programme` owns in "The stage screen". For a closed stage, that screen shows the cards and no "Tools" group. So the person cannot reach the Problem solving screen before stage 4 opens. Ash set the stage screen in decision 93 on 25 September 2026.
+
+After stage 4 opens, the "Problem solving" row in the "Tools" group of that stage screen MUST open the Problem solving screen. The screen's title MUST be "Problem solving". The screen MUST show the pattern sentences, a "New worksheet" control and the "Worksheets" list. The Problem solving screen MUST show Get support. The `safeguarding` capability owns that button. The suggestion card and the worksheet review reminder each open a worksheet, as their requirements state. Every part of problem solving MUST work with no network.
 
 #### Scenario: Before stage 4 opens
-- **WHEN** the person opens the Problem solving screen while stage 4 is closed
-- **THEN** the screen shows the stage 4 cards and no pattern sentence, no suggestion card and no worksheet control
+- **WHEN** stage 4 is closed and the person taps "Problem solving" on the Programme screen
+- **THEN** the "Problem solving" stage screen shows the stage 4 cards and no "Tools" group, and the app shows no pattern sentence, no suggestion card and no worksheet control
 
 #### Scenario: After stage 4 opens
-- **WHEN** stage 4 opens after the urge outcome "It passed" and the person opens the Problem solving screen
-- **THEN** the screen shows "New worksheet", the "Worksheets" list and Get support
+- **WHEN** stage 4 opens after the urge outcome "It passed" and the person taps "Problem solving" in the "Tools" group of the "Problem solving" stage screen
+- **THEN** the screen titled "Problem solving" shows "New worksheet", the "Worksheets" list and Get support
+
+#### Scenario: Stage 4 opens by the recorded-day rule
+- **WHEN** stage 4 opens after seven recorded days with stage 3 open and no urge outcome
+- **THEN** the "Tools" group of the "Problem solving" stage screen holds "Problem solving", and the Problem solving screen works as after an urge outcome
 
 #### Scenario: No network
 - **WHEN** the device has no network connection
@@ -29,6 +35,16 @@ After stage 4 opens, the Problem solving screen MUST show the pattern sentences,
 The pattern window is the PATTERN_WINDOW_DAYS = 28 record days that end with the current record day. The starred total is the number of starred entries in the pattern window. A pattern group is a set of starred entries in the window that share one dimension value.
 
 The app MUST NOT show a pattern sentence when the starred total is below PATTERN_MIN_STARRED = 5. The app MUST show a sentence for a group only when the group holds at least PATTERN_MIN_GROUP = 3 entries. The group MUST also hold more than half of the starred total. The `programme` capability names PATTERN_WINDOW_DAYS, PATTERN_MIN_STARRED and PATTERN_MIN_GROUP in ProgrammeConstants. The app MUST NOT show any text about the absence of a pattern.
+
+The pattern window counts back from the current record day only. "Start week 1 again" MUST NOT change the pattern window, and it MUST NOT delete a card answer row of a suggestion card. `programme` owns the restart in "Start week 1 again". The app MUST read an entry's star from the winning version of the entry. An entry that the person deletes or unstars MUST leave every group at the next computation.
+
+#### Scenario: A restart keeps the window
+- **WHEN** the pattern window holds seven starred entries, five after 20:00, and the person restarts with the start day today
+- **THEN** the screen still shows "5 of your 7 starred entries were after 20:00.", and Today shows no card for the after 20:00 template when the person closed it before the restart
+
+#### Scenario: An entry unstarred
+- **WHEN** the after 20:00 group holds 5 of 7 starred entries, and the person turns the star off on one of the five
+- **THEN** the next computation gives 4 of 6 starred entries for the after 20:00 group
 
 #### Scenario: Four starred entries
 - **WHEN** the pattern window holds four starred entries, all after 20:00
@@ -50,6 +66,8 @@ The app MUST NOT show a pattern sentence when the starred total is below PATTERN
 
 The app MUST place a starred entry in one time band by its entry time. The before 12:00 band runs from the day start to 11:59. The between 12:00 and 17:00 band runs from 12:00 to 16:59. The between 17:00 and 20:00 band runs from 17:00 to 19:59. The after 20:00 band runs from 20:00 to the minute before the day start.
 
+The entry time is the clock time at the UTC offset that the store kept with the entry. `record` owns that offset in "The app keeps the entry's UTC offset and creation moment". The app MUST NOT move an entry to another band after a change of the device zone. An entry whose date at that offset is later than its saved record day key MUST go in the after 20:00 band. So a later change of "Day starts at" does not move an entry from one band to another.
+
 The record day of an entry is the record day key the store wrote with the entry at save. The `record` capability owns that key. The app MUST read the saved key. The app MUST NOT compute an entry's record day again from its time. The day of week of a starred entry is the weekday of its record day. The weekend group holds the starred entries whose record day is a Saturday or a Sunday.
 
 A Where group holds the starred entries with one chip, fixed or custom. The fixed chips are "Home", "Work", "Out" and "Travelling". The app MUST build a group from a custom chip by the same minimum as any group.
@@ -59,6 +77,14 @@ The gap before a starred entry is the time from the previous entry in the same r
 A fasting day counts no gap. The app MUST NOT count an entry on a fasting day in the long-gap group. The `record` capability owns the fasting state. Every other group still counts the entry.
 
 There is one missed-slot group per slot. A missed-slot group holds the starred entries on a record day where that slot's planned meal has the answer "Skipped". An entry MUST count in the missed-slot group of every skipped slot on its record day. The `regular-eating-plan` capability owns that answer. A combined group holds the starred entries in one time band and one missed-slot group.
+
+#### Scenario: A zone change
+- **WHEN** a starred entry was saved at 21:30 in London, and the person later opens the Problem solving screen in New York
+- **THEN** the app places the entry in the after 20:00 band
+
+#### Scenario: The day start changes later
+- **WHEN** a starred entry has the time 03:30 on Friday 25 September and the saved record day key Thursday 24 September, and the person later sets "Day starts at" to 03:00
+- **THEN** the app keeps the entry in the after 20:00 band and in the Thursday group
 
 #### Scenario: A starred entry after midnight
 - **WHEN** a starred entry has the time 00:30 on Friday 25 September and the saved record day key Thursday 24 September
@@ -189,6 +215,22 @@ The app MUST keep the answer to a suggestion card as a card answer row in Record
 
 After a starred entry, the app MUST NOT show the card on a Today load in the same record day. After an "I binged" outcome, the app MUST NOT show the card on a Today load in the same record day. The card MUST wait for the next record day. The app MUST NOT schedule a reminder for a suggestion card.
 
+A template's card is due at a Today load when four things are true. Stage 4 is open. "Pattern sentences" is on. The template's group meets the minimum at that load. No device holds a card answer row for the template. So "first meets the minimum" needs no stored state other than the card answer row. The app MUST compute the group and the sentence again at each Today load. The card MUST show the sentence with the numbers of that load.
+
+When the group stops meeting the minimum before the person taps a control, the app MUST take the card off Today with no message. The app MUST then write no card answer row. The card can then come back when the group meets the minimum again. "Work it through" MUST link the sentence as the card showed it at the tap.
+
+#### Scenario: The numbers change while the card waits
+- **WHEN** the after 20:00 card shows "5 of your 7 starred entries were after 20:00." on Monday, the person does not tap it, and on Tuesday the group holds 6 of 8
+- **THEN** on Tuesday the card shows "6 of your 8 starred entries were after 20:00."
+
+#### Scenario: The group stops meeting the minimum
+- **WHEN** the after 20:00 card waits unanswered, and the person turns the star off on two entries so that the group holds 3 of 5
+- **THEN** the next Today load shows no after 20:00 card, and the store holds no card answer row for the after 20:00 template
+
+#### Scenario: Pattern sentences turned on again
+- **WHEN** the after 20:00 group met the minimum while "Pattern sentences" was off, no card answer row exists for it, and the person turns the switch on
+- **THEN** the after 20:00 card shows from the next Today load, by the card slot rules
+
 #### Scenario: First time a group qualifies
 - **WHEN** the after 20:00 group meets the minimum for the first time and the person opens Today the next record day
 - **THEN** the card slot shows one card with "5 of your 7 starred entries were after 20:00.", "Work it through" and "Close"
@@ -255,6 +297,12 @@ In steps 2 and 5, the person MUST be able to reorder the lines. In edit mode, ea
 
 The worksheet MUST have a "Done" control that closes the worksheet with the system's standard dismissal. The app MUST NOT show a message, a sound, a haptic or an animation on "Done".
 
+The worksheet MUST open as a sheet over the screen it came from: the Problem solving screen, or Today for the suggestion card and the worksheet review reminder. One tap on "Done" closes it to a screen with Get support. So the sheet exemption of `safeguarding` in "Get support on every screen" applies to the worksheet.
+
+#### Scenario: The worksheet is a sheet
+- **WHEN** the person taps "Work it through" on the suggestion card on Today and then taps "Done"
+- **THEN** the worksheet opened as a sheet over Today, and "Done" returns to Today, where Get support shows
+
 #### Scenario: Start from a pattern sentence
 - **WHEN** the person taps "Work it through" and the worksheet opens
 - **THEN** the worksheet shows the sentence, then "What is the problem, exactly?" with an empty field and the keyboard in that field
@@ -301,7 +349,11 @@ The list MUST NOT show a count of worksheets or a count of finished steps. A wor
 
 A worksheet started from "New worksheet" MUST have no linked sentence and no empty space for one. The person MUST be able to open and edit any worksheet at any time. The person MUST be able to delete a worksheet after the system's standard confirmation. A delete MUST write `deleted = true` and the moment into the worksheet row. The store MUST NOT hard-delete the row. A reader MUST NOT show a deleted worksheet.
 
-When the person deletes a worksheet, the app MUST cancel its worksheet review reminder. When a deleted worksheet row arrives by sync, the app MUST cancel that reminder too.
+When the person deletes a worksheet, the app MUST cancel its worksheet review reminder. When a deleted worksheet row arrives by sync, the app MUST cancel that reminder too. The app MUST also remove a delivered worksheet review reminder of that worksheet from Notification Centre.
+
+#### Scenario: Delete after the reminder arrived
+- **WHEN** the worksheet review reminder of a worksheet is in Notification Centre and the person deletes that worksheet
+- **THEN** Notification Centre no longer shows that reminder
 
 #### Scenario: Order of the list
 - **WHEN** the person started a worksheet on 3 October and another on 10 October
@@ -332,6 +384,24 @@ When the person deletes a worksheet, the app MUST cancel its worksheet review re
 When the person taps "Done" with text in step 5, the app MUST schedule one worksheet review reminder. The reminder time MUST be seven calendar days after that moment, in the record's zone, at the same wall-clock time. The app MUST compute that time by calendar arithmetic, never as 7 × 86400 seconds. The app MUST schedule at most one worksheet review reminder per worksheet. The `reminders` capability owns the reminder's text, its switch, quiet hours, snooze and the daily cap.
 
 When the person opens the reminder, the app MUST open that worksheet at step 6. When the person saves text in step 6 before the reminder time, the app MUST cancel the reminder. The person MUST be able to open step 6 at any time without the reminder.
+
+The app MUST save the review moment in the worksheet row at the first "Done" with text in step 5. The scheduler MUST read the reminder from that saved moment. The app MUST NOT change the saved moment on a later "Done". When step 6 already holds text at that first "Done", the app MUST NOT schedule a reminder.
+
+The "Worksheet review" switch decides only whether the scheduler schedules the reminder. `reminders` owns the switch. The app MUST save the review moment also while the switch is off. When the person turns the switch on, the scheduler MUST schedule the reminder for each worksheet whose review moment is still to come and whose step 6 is empty.
+
+After the review moment passes, the app MUST NOT schedule the reminder for that worksheet again. When the person opens a reminder for a worksheet that a reader hides, the app MUST show Today with no message.
+
+#### Scenario: Step 6 already written
+- **WHEN** the person taps "Done" for the first time with text in step 5 and in step 6
+- **THEN** the app schedules no worksheet review reminder
+
+#### Scenario: The switch turned on later
+- **WHEN** "Worksheet review" is off, the person taps "Done" at 21:10 on Saturday 10 October with text in step 5, and turns the switch on on Monday 12 October
+- **THEN** the scheduler schedules the worksheet review reminder for 21:10 on Saturday 17 October
+
+#### Scenario: A reminder for a deleted worksheet
+- **WHEN** the person opens a worksheet review reminder, and the winning row of that worksheet in the store has `deleted = true`
+- **THEN** the app shows Today with no message
 
 #### Scenario: Schedule the review
 - **WHEN** the person taps "Done" at 21:10 on Saturday 10 October with text in step 5
@@ -378,6 +448,20 @@ Delete-all MUST delete every worksheet and every card answer row of a suggestion
 Each pattern sentence MUST be one accessibility element whose label is the sentence text. Every control on the Problem solving screen, the suggestion card and the worksheet MUST have a VoiceOver label. The label of each worksheet field MUST be its step's question. Each step's question MUST carry the header trait.
 
 A chosen solution in step 4 MUST NOT depend on colour alone. Text on the Problem solving screen and the worksheet MUST use system text styles. That text MUST scale with Dynamic Type.
+
+A chosen solution in step 4 MUST carry the selected trait. Each row of the "Worksheets" list MUST be one accessibility element. Its label MUST be the row's visible text, the first line of step 1 or "Worksheet", then the date. Each question in the list of the six questions MUST be one control with the question as its label. The suggestion card MUST follow the same rules, and its sentence MUST be one accessibility element. A control with no visible text MUST have a label a person can say with Voice Control.
+
+#### Scenario: A chosen solution with VoiceOver
+- **WHEN** VoiceOver focuses "Plan an evening snack" in step 4 after the person chose it
+- **THEN** VoiceOver reads "Plan an evening snack" with the selected trait
+
+#### Scenario: A row of the "Worksheets" list
+- **WHEN** VoiceOver focuses the row of a worksheet started on 3 October with step 1 "Evenings after a missed lunch"
+- **THEN** it reads "Evenings after a missed lunch, 3 October"
+
+#### Scenario: The suggestion card at the largest text size
+- **WHEN** the person sets the largest accessibility text size and the card slot shows a suggestion card
+- **THEN** the card shows the sentence, "Work it through" and "Close" without truncation
 
 #### Scenario: VoiceOver reads a sentence
 - **WHEN** VoiceOver reads the first pattern sentence

@@ -12,6 +12,12 @@ From stage 3, Today MUST show a button with the label "Urge". `programme` owns w
 
 The button MUST be at least 56 points tall. The button MUST span the content width. The button MUST NOT show a number or a dot. One tap on the button MUST open the urge screen with no confirmation step. While an urge is open, a tap on the button MUST show that urge. The tap MUST NOT start a new urge.
 
+The button MUST show and work on every record day from stage 3. This includes a paused day, a fasting day and a day with the state "didn't record". `record` owns those states. A day state MUST NOT change the button, the urge screen or the outcome.
+
+#### Scenario: A paused day
+- **WHEN** stage 3 is open, the person tapped "Pause for today" at 12:00, and taps "Urge" at 21:10
+- **THEN** the urge screen opens with the timer at "00:00", as on any other day
+
 #### Scenario: Stage 3 open
 - **WHEN** stage 3 is open and the person opens Today
 - **THEN** Today shows the "Urge" button, and it stays on screen when the person scrolls the record
@@ -37,6 +43,12 @@ The timer's length is URGE_TIMER_MINUTES = 20. `programme` holds the constant in
 At 20 minutes the wave MUST be complete. At half of URGE_TIMER_MINUTES and at URGE_TIMER_MINUTES the app MUST post one VoiceOver announcement. The announcement MUST be "%lld minutes" with the minutes filled in: "10 minutes", then "20 minutes".
 
 With "Buzz at 20 minutes" on and VoiceOver off, the app MUST play one system haptic at 20 minutes. Those two announcements and that haptic MUST be the only sounds, haptics or announcements in the toolkit. The app MUST NOT play an alarm. The app MUST NOT schedule a notification about an urge.
+
+The app MUST post an announcement or play the haptic only when the urge screen is on screen and the app is active at that moment. When the moment passes while the urge screen is off the screen or the app is not active, the app MUST NOT post that announcement or play that haptic later.
+
+#### Scenario: Back after twenty minutes
+- **WHEN** "Buzz at 20 minutes" is on, the person leaves the app at 15:00 elapsed, and returns to the urge screen at 25:00 elapsed
+- **THEN** the timer shows "25:00", and the app plays no haptic and posts no announcement
 
 #### Scenario: Elapsed time
 - **WHEN** the person tapped "Urge" at 21:10:00 and looks at the urge screen at 21:22:40
@@ -129,6 +141,26 @@ The person MUST be able to add, edit, reorder and delete an item at any time. In
 The app MUST NOT add an item without a tap from the person. The app MUST NOT show a message about an item's content. The app MUST NOT require any item.
 
 The setup MUST show a switch, "Buzz at %lld minutes", with URGE_TIMER_MINUTES in %lld. With the constant at 20 the label reads "Buzz at 20 minutes". The switch MUST be off by default. The timer requirement defines what the switch does.
+
+The setup MUST NOT offer an example whose text equals the text of an item in the list. When the person deletes that item, the setup MUST offer the example again. An item MUST hold at least one character that is not a space. When the person clears the text of an item and leaves the field, the app MUST keep the item's earlier text.
+
+The setup is a full screen when it opens from the "Tools" group. It MUST show Get support in the navigation bar wherever it opens, also inside the urge screen. `safeguarding` owns the control in "Get support on every screen". When the setup opens from "Edit list", the urge stays open. When the person returns to the urge screen, the urge screen MUST show the list as the person left it in the setup.
+
+#### Scenario: Get support on the setup
+- **WHEN** the person opens "Alternatives list" from the "Tools" group, or taps "Edit list" on the urge screen
+- **THEN** the setup shows Get support in the navigation bar
+
+#### Scenario: Back to the urge screen after an edit
+- **WHEN** an urge is open, the person taps "Edit list", adds "Text Jo", and returns to the urge screen
+- **THEN** the urge screen shows "Text Jo" at the end of the list, and the timer shows the time since the urge started
+
+#### Scenario: An example already in the list
+- **WHEN** the list holds "Go out for a walk"
+- **THEN** the examples do not offer "Go out for a walk", and after the person deletes that item the examples offer it again
+
+#### Scenario: An item cleared of its text
+- **WHEN** the person clears the text of "Ring Sam" and leaves the field
+- **THEN** the list still holds "Ring Sam"
 
 #### Scenario: The setup's title
 - **WHEN** the person taps "Alternatives list" in the "Tools" group of the "Alternatives" stage screen
@@ -270,6 +302,8 @@ Today MUST NOT show an opening card on a load in the same record day as the "I b
 
 When the person cancels the new-entry screen, the app MUST save no entry and no outcome. The urge MUST then stay open and the urge screen MUST show again.
 
+The requirement "An urge keeps its outcome when its entry changes" states what happens when the person later edits or deletes that entry.
+
 #### Scenario: Save the entry
 - **WHEN** the person taps "I binged" at 14:45 and saves the entry with What "Crisps and cereal"
 - **THEN** the store holds an entry at 14:45 with the star on, and the urge holds `outcome` "I binged" and that entry's id in `entryId`, and Today shows "Mid-afternoon at 16:00 still happens." on the Mid-afternoon row
@@ -316,7 +350,19 @@ The app MUST compute the elapsed time from the saved start moment and the curren
 
 When the record day of an open urge ends, the app MUST keep the urge with no outcome. The app MUST NOT show that urge again. The app MUST NOT show a message about an urge that ended without an outcome.
 
+The urge screen can be on screen while the record day of its urge ends. The urge screen MUST then stay on screen, and the person MUST be able to save an outcome for that urge. The app MUST write the record day of the tap as `outcomeDayKey`. After the urge screen goes off the screen, the app MUST NOT show that urge again.
+
 On read the store MUST hold at most one open urge per record day. When two open urges share a `startDayKey`, for example after a sync, the app keeps the urge with the earliest `startedAt` as the open urge. The other urges MUST close silently at the day end, with no outcome and no message. The app MUST NOT delete them.
+
+The store MUST write `startDayKey` when the urge starts and `outcomeDayKey` when the app saves the outcome. Each key MUST come from the moment, its UTC offset and the day start in force at that moment, as `record` states for an entry. The app MUST NOT compute either key again, after a change of the device zone or of "Day starts at". The app MUST decide whether an urge is open in the current record day by its stored `startDayKey`.
+
+#### Scenario: The day start changes after an urge
+- **WHEN** the store holds an urge with `startedAt` 03:30 on Friday 25 September and `startDayKey` Thursday 24 September, and the person then sets "Day starts at" to 03:00
+- **THEN** the urge keeps `startDayKey` Thursday 24 September
+
+#### Scenario: The day ends while the urge screen is on screen
+- **WHEN** the person tapped "Urge" at 03:50 on Friday 25 September with the day start 04:00, and taps "It passed" on the same urge screen at 04:10
+- **THEN** the store holds the outcome "It passed" with `startDayKey` Thursday 24 September and `outcomeDayKey` Friday 25 September, and Today shows no "Urge open since" line
 
 #### Scenario: Return after a walk
 - **WHEN** the person tapped "Urge" at 21:10, left the app at 21:13 and opens it at 21:52
@@ -355,6 +401,42 @@ The "Urge" button, the urge screen and the setup MUST NOT show how many urges th
 #### Scenario: The weekly review
 - **WHEN** the weekly review builds a week with three urges, two of which passed
 - **THEN** the urge part of the weekly review reads "Urges: 3. Passed: 2.", and no other screen shows those numbers
+
+### Requirement: The weekly review counts each urge on its start day
+
+The app MUST give the weekly review each urge with its stored `startDayKey` and its outcome. `weekly-review` owns the urge part and its text. The weekly review MUST count an urge in the week that holds its `startDayKey`. The week of `outcomeDayKey` MUST NOT change the count. An urge with no outcome MUST count as an urge. It MUST NOT count as passed. The "Passed" count holds the urges of the week with the outcome "It passed".
+
+The weekly review freezes its counts in the Review row, as `weekly-review` states. An outcome that the person saves after the freeze MUST NOT change the frozen counts.
+
+#### Scenario: An urge with no outcome
+- **WHEN** week 3 holds one urge with the outcome "It passed" and one urge with no outcome
+- **THEN** the urge part of the review of week 3 reads "Urges: 2. Passed: 1."
+
+#### Scenario: An outcome on the next record day
+- **WHEN** an urge has the `startDayKey` Sunday 11 October 2026, the last record day of week 3, and the outcome "It passed" at 04:10 on Monday 12 October, in the first record day of week 4
+- **THEN** the review of week 3 counts the urge and its outcome, and the review of week 4 does not count the urge
+
+#### Scenario: An outcome after the freeze
+- **WHEN** the person tapped "Urge" at 03:50 on Monday 12 October 2026 with the `startDayKey` Sunday 11 October, the last record day of week 3, the review of week 3 froze its counts at 04:00 with "Urges: 2. Passed: 1.", and the person taps "It passed" on the same urge screen at 04:10
+- **THEN** the review of week 3 still reads "Urges: 2. Passed: 1."
+
+### Requirement: An urge keeps its outcome when its entry changes
+
+An urge with the outcome "I binged" holds the id of its entry in `entryId`. The entry is an entry like any other. `record` owns how the person edits or deletes it. The urge MUST keep its outcome and its `entryId` when the person edits the entry, turns its star off, changes its time or deletes it. The app MUST NOT change an urge because of a change to its entry.
+
+When `entryId` resolves to a deleted entry or to no entry, the app MUST show nothing about the urge or the entry. The app MUST NOT show a message, and it MUST NOT ask a question. The weekly review MUST count the urge as before. Stage 4 MUST stay open, as `programme` states in "The app keeps the stage state".
+
+#### Scenario: The star turned off later
+- **WHEN** the person saved "I binged" with an entry at 21:35, and the next morning turns the star of that entry off
+- **THEN** the urge keeps the outcome "I binged" and the same `entryId`, and the app shows no message
+
+#### Scenario: The entry deleted later
+- **WHEN** the person saved "I binged" with an entry at 21:35, then deletes that entry
+- **THEN** Today and every count hide the entry, the urge keeps the outcome "I binged", the weekly review counts the urge, and the app shows no message
+
+#### Scenario: The only outcome's entry deleted
+- **WHEN** stage 4 opened from the person's first urge outcome "I binged", and the person deletes the entry of that outcome
+- **THEN** stage 4 stays open
 
 ### Requirement: The store keeps urges and the list on the device
 
@@ -396,7 +478,9 @@ Every control in the toolkit MUST have a VoiceOver label. The "Urge" button's la
 
 The timer MUST carry the updates-frequently trait. VoiceOver focus MUST NOT move when the timer or the wave changes. `record` owns Today's reading order, in which the "Urge" button is the first element from stage 3.
 
-The wave MUST be one accessibility element with the label "Urges rise, peak and fade". Before URGE_TIMER_MINUTES the wave's value MUST be "%1$lld minutes of %2$lld". The app fills in the elapsed minutes and URGE_TIMER_MINUTES, for example "12 minutes of 20". From URGE_TIMER_MINUTES the wave's value MUST be "%lld minutes" with the elapsed minutes filled in, for example "42 minutes".
+The wave MUST be one accessibility element with the label "Urges rise, peak and fade". Before URGE_TIMER_MINUTES the wave's value MUST read as the elapsed minutes of URGE_TIMER_MINUTES, for example "12 minutes of 20". That value shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The value string is "%1$@ of %2$@". The app MUST fill %1$@ from "%lld minutes" with the elapsed minutes. The app MUST fill %2$@ from "%lld" with URGE_TIMER_MINUTES. Ash ruled the one-count rule on 26 September 2026 (r13-12). From URGE_TIMER_MINUTES the wave's value MUST be "%lld minutes" with the elapsed minutes filled in, for example "42 minutes".
+
+The setup MUST follow the same rules. Each item, each example and each "Move up" and "Move down" action MUST have a VoiceOver label. The label of an example MUST start with the example's visible text. The "Grounding exercise" control MUST read its chosen value, "Breathing" or "A walk".
 
 Each list item MUST be one accessibility element that reads the item's text. The breathing text MUST be one accessibility element with the updates-frequently trait. Its value MUST be "Breathe in" or "Breathe out". The app MUST NOT post an announcement for the breathing exercise.
 
@@ -429,3 +513,15 @@ The outcome controls' labels MUST be "It passed", "I ate as planned" and "I bing
 #### Scenario: Largest text size
 - **WHEN** the person sets the largest accessibility text size
 - **THEN** the urge screen shows the timer, a wave at most 120 points tall, the list, the exercise, the three outcome controls and "Close" without truncation
+
+#### Scenario: The wave value from one-count strings
+- **WHEN** a test fills the wave value at 1:00 elapsed and at 12:40 elapsed with URGE_TIMER_MINUTES = 20
+- **THEN** the value reads "1 minute of 20" and then "12 minutes of 20", and no string the app fills holds more than one count
+
+#### Scenario: The setup at the largest text size
+- **WHEN** the person sets the largest accessibility text size and opens the setup with ten items
+- **THEN** the setup shows each item, the examples, "Buzz at 20 minutes" and "Grounding exercise" without truncation
+
+#### Scenario: The grounding control with VoiceOver
+- **WHEN** a person using VoiceOver reaches "Grounding exercise" with "A walk" chosen
+- **THEN** VoiceOver reads "Grounding exercise" and the value "A walk"
