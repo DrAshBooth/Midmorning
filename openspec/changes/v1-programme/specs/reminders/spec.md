@@ -8,13 +8,43 @@ A reminder is a notification the app schedules. Reminders hold the structure of 
 
 ### Requirement: Worksheet review and check-in reminders
 
-The `problem-solving` capability asks the scheduler for a worksheet review reminder one week after the person saves a worksheet. That capability sets its day and time. The `staying-on-track` capability asks for a check-in reminder at CHECK_IN_WEEKS = 4, 8 and 12 weeks after the finish, at the weekly review time. The scheduler MUST schedule both types under their own switches, "Worksheet review" and "Check-in". The scheduler MUST hold each as a far single reminder outside the rolling horizon.
+The `problem-solving` capability asks the scheduler for one worksheet review reminder per worksheet, on the review day of that worksheet. That capability sets the review day. The reminder's time is the "Weekly review time", which defaults to 18:00. The `staying-on-track` capability asks for a check-in reminder at CHECK_IN_WEEKS = 4, 8 and 12 weeks after the finish, at the weekly review time. The scheduler MUST schedule both types under their own switches, "Worksheet review" and "Check-in". The scheduler MUST hold each as a far single reminder outside the rolling horizon.
 
-A tap on a worksheet review reminder MUST open that worksheet. A tap on a check-in reminder MUST open the check-in. Both types MUST use the discreet text by default. Their explicit titles MUST be "Worksheet review" and "Check-in". In the drop order, both types MUST sit with the other capabilities' reminders. When the scheduler drops one for the cap, it MUST move to the next record day.
+A tap on a worksheet review reminder MUST open that worksheet. A tap on a check-in reminder MUST open the check-in. Both types MUST use the discreet text by default. Their explicit titles MUST be "Worksheet review" and "Check-in". In the drop order, both types MUST sit with the other capabilities' reminders. When the scheduler drops one for the cap, it MUST move to the next record day. A check-in reminder moves only for the cap.
+
+The scheduler MUST read the current "Weekly review time" each time it computes the schedule. So a change of that time moves each worksheet review reminder that has not fired to the new time. The scheduler MUST place a worksheet review reminder on the first record day, from its review day, on which the pipeline keeps it. So when quiet hours, a paused day or the cap drop it on a record day, it moves to the next record day, at the "Weekly review time". The steps of the pipeline then apply on that day again. A tap on "Pause for today" makes the rest of the record day a paused day. The scheduler MUST NOT place the reminder at a moment that has passed. Ash ruled this on 12 October 2026 (r23-04).
+
+The move has a bound, so that nothing loops. A worksheet review reminder can fire only on its review day or on one of the REMINDER_HORIZON_DAYS record days after it. That is as many record days as one computation of the schedule holds: the rolling horizon and the day after it. When the pipeline drops the reminder on each of those days, the reminder does not fire, and the scheduler MUST NOT move it further. Quiet hours are the same on every record day. So when the "Weekly review time" is inside quiet hours, quiet hours drop the reminder on each of those days, and it does not fire.
+
+The scheduler MUST hold at most one pending worksheet review reminder per worksheet. The reminder fires at most once. The app MUST keep, in `Local.store`, the moment of the pending worksheet review reminder of each worksheet. Each computation MUST replace that moment with the moment that it places, or clear it when it places none. A kept moment that has passed means that the reminder fired at that moment. The app MUST then keep that moment, and the scheduler MUST NOT place the reminder again. Each device keeps its own moments, because each device sends its own reminders.
 
 #### Scenario: A worksheet review reminder
-- **WHEN** the person saves a worksheet on Monday 5 October and the `problem-solving` capability asks for a review at 18:00 on Monday 12 October
+- **WHEN** the person taps "Done" with text in step 5 on Monday 5 October, the "Weekly review time" is 18:00, and the `problem-solving` capability sets the review day Monday 12 October
 - **THEN** the reminder fires at 18:00 on Monday 12 October, reads "Midmorning, 18:00", and a tap opens that worksheet
+
+#### Scenario: The weekly review time changes
+- **WHEN** a worksheet's review day is Saturday 17 October 2026, and on Thursday 15 October the person changes the "Weekly review time" from 18:00 to 19:30
+- **THEN** the worksheet review reminder fires at 19:30 on Saturday 17 October
+
+#### Scenario: A worksheet review on a paused day
+- **WHEN** a worksheet's review day is Saturday 17 October 2026, and the person taps "Pause for today" at 14:00 that day
+- **THEN** no worksheet review reminder fires on Saturday 17 October, and it fires at 18:00 on Sunday 18 October
+
+#### Scenario: A worksheet review on the weekly review day
+- **WHEN** the weekly review reminder and a worksheet review reminder are both due at 18:00 on Monday 19 October 2026, and that day has no other reminder except the planned meal reminders
+- **THEN** the weekly review reminder fires at 18:00, and the worksheet review reminder moves five minutes later and fires at 18:05, as "Two reminders never share a minute" states
+
+#### Scenario: A shift into quiet hours
+- **WHEN** the "Weekly review time" is 21:55, quiet hours run from 22:00 to 07:00, the weekly review reminder and a worksheet review reminder are both due on Monday 19 October 2026, and that day has no other reminder except the planned meal reminders
+- **THEN** the weekly review reminder fires at 21:55, the worksheet review reminder moves to 22:00 and quiet hours drop it, and it fires at 21:55 on Tuesday 20 October
+
+#### Scenario: The weekly review time inside quiet hours
+- **WHEN** quiet hours run from 17:00 to 07:00, the "Weekly review time" is 18:00, and a worksheet's review day is Saturday 17 October 2026
+- **THEN** no worksheet review reminder fires for that worksheet on Saturday 17 October or on any later day, and no computation looks past Friday 23 October
+
+#### Scenario: No second reminder after it fires
+- **WHEN** the worksheet review reminder of a worksheet fired at 18:00 on Saturday 17 October 2026, and at 19:00 the person changes the "Weekly review time" to 20:00
+- **THEN** no second worksheet review reminder fires for that worksheet
 
 #### Scenario: A check-in reminder
 - **WHEN** the person finished on Sunday 20 December and the weekly review time is 18:00
@@ -50,7 +80,9 @@ When the new-entry screen shows unsaved input, the app MUST keep that screen and
 
 A tap MUST NOT close a safeguarding page or a screen that holds answers. While the not-right-now page or the GP suggestion page shows, the app MUST keep the page in front. The app MUST open the screen of the reminder only after the person taps "Done" on the page. While the weekly review, the check-in, the restart re-screen or the weigh-in screen is open, the app MUST keep that screen. The app MUST open the screen of the reminder only after the person leaves that screen. When that screen is the screen of the reminder, the app MUST keep it and MUST NOT open it a second time. Ash ruled this on 11 October 2026 (r22-01).
 
-A sheet of Today is the new-entry screen, the edit screen, the close-the-day screen or "Today's plan". While a sheet of Today shows, the app MUST keep the sheet in front. The app MUST open the screen of the reminder only after the sheet closes. A new-entry screen with no unsaved input MUST close first, and the screen of the reminder then opens. When the sheet is the screen of the reminder, the app MUST keep it, with its input, and MUST NOT open it a second time. So the midday reminder over a new-entry screen opens no second new-entry screen. The "Get support" sheet on Today stays in front, and the screen of the reminder opens under it. A sheet that a screen on Today's navigation stack shows closes with that screen, except the restart re-screen. Ash ruled on 11 October 2026 that the app keeps this build (r22-02).
+A sheet of Today is the new-entry screen, the edit screen, the close-the-day screen, "Today's plan" or the urge screen. While a sheet of Today shows, the app MUST keep the sheet in front. The app MUST open the screen of the reminder only after the sheet closes. A new-entry screen with no unsaved input MUST close first, and the screen of the reminder then opens. When the sheet is the screen of the reminder, the app MUST keep it, with its input, and MUST NOT open it a second time. So the midday reminder over a new-entry screen opens no second new-entry screen. The "Get support" sheet on Today stays in front, and the screen of the reminder opens under it. A sheet that a screen on Today's navigation stack shows closes with that screen, except the restart re-screen. Ash ruled on 11 October 2026 that the app keeps this build (r22-02).
+
+The urge screen is a sheet of Today, as `urge-toolkit` states. So a tap MUST NOT close the urge screen or a screen that the person opened from it. The app MUST open the screen of the reminder only after the urge screen closes, with "Close" or with an outcome. Ash ruled this on 12 October 2026 (r23-02).
 
 This requirement applies only to a tap on the body of a reminder. It does not change "Add", "Skipped" or the snooze action. While the app is locked, `app-lock` governs "Add", as its requirement "A new entry before authentication" states. Ash ruled this on 9 October 2026 (r20-01).
 
@@ -101,6 +133,14 @@ This requirement applies only to a tap on the body of a reminder. It does not ch
 #### Scenario: The weigh-in day reminder on the weigh-in screen
 - **WHEN** the weigh-in screen shows "62.5" in its weight field and the person taps the body of the weigh-in day reminder
 - **THEN** the weigh-in screen and "62.5" stay, no second weigh-in screen opens, and after "Back" Today shows
+
+#### Scenario: A tap while the urge screen shows
+- **WHEN** the urge screen shows an urge that started at 21:30 on Tuesday 13 October 2026, the person taps the body of the close-the-day reminder at 21:46, and then taps "It passed"
+- **THEN** the urge screen stays until "It passed", and after it the close-the-day screen shows
+
+#### Scenario: A tap while the urge screen shows, then "Close"
+- **WHEN** the urge screen shows an urge that started at 17:50 on Monday 19 October 2026, the person taps the body of the weekly review reminder at 18:01, and then taps "Close"
+- **THEN** the urge screen stays until "Close", the urge stays open, and after "Close" the weekly review shows on Today's navigation stack
 
 ## MODIFIED Requirements
 
@@ -506,7 +546,7 @@ The scheduler MUST start both types again when the person saves an entry. The st
 
 When a day's other reminders would exceed two, the scheduler MUST drop reminders in this order until two remain. The order is: the midday reminder, the morning plan reminder, the worksheet review reminder, the check-in reminder, the weigh-in day reminder, the close-the-day reminder. The scheduler MUST NOT drop the weekly review reminder.
 
-A dropped worksheet review or check-in reminder MUST move to the next record day, where the cap applies again. The scheduler MUST NOT move a dropped reminder of any other type. The next day has its own. The pipeline requirement states where the cap sits among the other steps.
+A worksheet review or check-in reminder that the cap drops MUST move to the next record day, where the cap applies again. A worksheet review reminder that quiet hours or a paused day drop MUST also move to the next record day, where the same steps apply again. "Worksheet review and check-in reminders" states the bound of that move. Ash ruled this on 12 October 2026 (r23-04). The scheduler MUST NOT move a dropped reminder of any other type. The next day has its own. The pipeline requirement states where the cap sits among the other steps.
 
 #### Scenario: A weekday with three other reminders
 - **WHEN** a day has the morning plan reminder, the midday reminder and the close-the-day reminder
@@ -546,7 +586,7 @@ Quiet hours are a start time and an end time. The person sets them at onboarding
 
 A moment is inside quiet hours when its clock time lies in the range from the start, included, to the end, excluded. The range wraps around midnight when the end is earlier than the start. The record day does not matter. When the start equals the end, quiet hours are off.
 
-The Reminders group MUST let the person change quiet hours under "Quiet hours". The group MUST also let the person turn quiet hours off. Quiet hours sync, as the `data-and-privacy` capability states. A reminder MUST NOT fire inside quiet hours. The scheduler MUST drop a reminder whose time is inside quiet hours for that day. The scheduler MUST NOT move it to the end of quiet hours.
+The Reminders group MUST let the person change quiet hours under "Quiet hours". The group MUST also let the person turn quiet hours off. Quiet hours sync, as the `data-and-privacy` capability states. A reminder MUST NOT fire inside quiet hours. The scheduler MUST drop a reminder whose time is inside quiet hours for that day. The scheduler MUST NOT move it to the end of quiet hours. A worksheet review reminder that quiet hours drop moves to the next record day, as "Worksheet review and check-in reminders" states. Ash ruled this on 12 October 2026 (r23-04).
 
 When the person sets a reminder time inside quiet hours, the Reminders group MUST show "This time is in quiet hours. The reminder will not be sent.". The group MUST keep the time. The plan builder shows the same string, as the `regular-eating-plan` capability states.
 
@@ -572,7 +612,7 @@ When the person sets a reminder time inside quiet hours, the Reminders group MUS
 
 ### Requirement: A paused day and a reminder pause silence everything
 
-When the person taps "Pause for today", the scheduler MUST cancel every pending reminder for the rest of the record day. This MUST include snoozed reminders and the close-the-day reminder. The scheduler MUST schedule the next record day as usual. The scheduler MUST NOT change a reminder switch for a pause.
+When the person taps "Pause for today", the scheduler MUST cancel every pending reminder for the rest of the record day. This MUST include snoozed reminders and the close-the-day reminder. The scheduler MUST schedule the next record day as usual. The scheduler MUST NOT change a reminder switch for a pause. A worksheet review reminder that a paused day drops moves to the next record day, as "Worksheet review and check-in reminders" states. Ash ruled this on 12 October 2026 (r23-04).
 
 `remindersPausedAt` is a synced value. `safeguarding` sets it, and the settings screen control "Turn reminders on" clears it. While `remindersPausedAt` is set, the scheduler MUST cancel every pending reminder. The scheduler MUST schedule nothing while it stays set. Each device MUST compute its own effective reminders from `remindersPausedAt`, `finishDate` and its switches. After `finishDate`, the scheduler MUST apply the reduced cadence the `staying-on-track` capability defines. When the not-right-now page shows no weight reason, the scheduler MUST NOT pause reminders, as the `safeguarding` capability states.
 
@@ -608,7 +648,7 @@ The scheduler MUST compute a day's reminders in seven steps, in this order, and 
 - Step 6: the same-minute shift moves reminders that share a minute
 - Step 7: the quiet-hours step drops every reminder inside quiet hours
 
-A reminder that step 7 drops MUST still count toward the cap in step 5. A reminder that step 5 drops MUST NOT take part in step 6. Each step MUST take the output of the step before it.
+A reminder that step 7 drops MUST still count toward the cap in step 5. A reminder that step 5 drops MUST NOT take part in step 6. Each step MUST take the output of the step before it. When a step drops a worksheet review reminder on a record day, the scheduler moves it to the next record day and runs the steps for that day again, within the bound that "Worksheet review and check-in reminders" states. Ash ruled this on 12 October 2026 (r23-04).
 
 #### Scenario: A switch outranks the end of a pause
 - **WHEN** "Planned meals" is off, `remindersPausedAt` is cleared at 09:00, and today's plan has Lunch at 13:00

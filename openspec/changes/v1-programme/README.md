@@ -74,3 +74,9 @@ Added by the third review round, 25 September 2026:
 - "Some people make themselves sick, use laxatives, or miss insulin or another medicine after eating. If that happens more than about twice a week, this programme isn't the right tool on its own. Talk to your GP first."
 - "It is not therapy, and it does not replace your GP or anyone treating you." / "Are you getting help from a clinic or a therapist for your eating at the moment?"
 - "Eating by the clock" / "After a skipped meal or a binge" / "The next planned meal happens on time, whatever happened after the last one."
+
+Added by the round 23 rulings, 12 October 2026:
+
+- The stage questions of the weekly review (r23-05), both drafts: "When an urge came, what did you do?" (stage 3) and "Did a problem come up that a worksheet could help with?" (stage 4). The questions of stages 5, 6 and 7 come with the builds of those stages.
+- "%lld urges", with the one form "%lld urge" (r23-09). The pattern templates that the reviewer signs off for starred entries also show urge sentences, for example "4 of your 6 urges were after 20:00."
+- "New worksheet" in the day heading's menu on Today (r23-08). It is the label of the control on the Problem solving screen too.

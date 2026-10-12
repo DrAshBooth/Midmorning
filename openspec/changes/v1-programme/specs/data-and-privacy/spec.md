@@ -390,6 +390,9 @@ The store MUST sync every value in the "Shared" column of this table through `Re
 | the profile: height, the onboarding BMI, the caution flag, `askedAt` | the launch failure count, the reconcile counts, the crash count, the store creation moment |
 | the stage-opened rows, the card answers, the device rows | the pending offline erase instruction, the first-import-running flag, the first-import-failed flag |
 | | the morning-plan unanswered count, the collapse or expand choice per record day, the snooze counts, the permission line tapped flag |
+| | the moment of each pending worksheet review reminder, the suggestion card that the card slot showed on the current record day |
+
+`reminders` owns the first value of the last row, and `problem-solving` owns the second. Ash ruled this on 12 October 2026 (r23-04, r23-06).
 
 #### Scenario: Plan on two devices
 - **WHEN** sync is on and the person saves a planned day on one device
@@ -545,7 +548,7 @@ The snooze count MUST live in `Local.store`, keyed by the date key and the slot 
 
 ### Requirement: Day states, sessions and reviews
 
-A day state MUST be one row per date key and state kind, with its own `changedAt`. The collapse or expand choice is not a day state. It lives in `Local.store` by date key. A `Session` row MUST hold `startedAt`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey` and `entryId`. Readers MUST treat one urge per record day as open: the one with the earliest start. The store MUST close every other open session of that day silently at the day end.
+A day state MUST be one row per date key and state kind, with its own `changedAt`. The collapse or expand choice is not a day state. It lives in `Local.store` by date key. A `Session` row MUST hold `startedAt`, `startUTCOffset`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey` and `entryId`. `startUTCOffset` is the UTC offset at `startedAt`, as `urge-toolkit` states. Ash ruled this on 12 October 2026 (r23-09). Readers MUST treat one urge per record day as open: the one with the earliest start. The store MUST close every other open session of that day silently at the day end.
 
 A review's natural key MUST be the due day's date key: the start day plus seven times n. It MUST NOT be a week number. After a restart the "Reviews" list can show two runs. A device MUST freeze a review's numbers only when its last sync moment is later than the review's due moment. When two frozen rows share a key, the store MUST keep the row with the earliest freeze moment. An edit MUST write into that row.
 
@@ -615,7 +618,7 @@ The app MUST keep the last reconcile outcome in `Local.store` as counts of winne
 
 ### Requirement: Card answers live in the record
 
-The store MUST keep one card answer row in `Record.store` for each answered card. The row MUST hold the card id, the answer and the moment. A card whose answer row exists on any device MUST NOT show. A suggestion card's answer MUST be a card answer row keyed by the template id. While the first import after sync turns on runs, the app MUST show no card. While it runs, the app MUST write no opening moment.
+The store MUST keep one card answer row in `Record.store` for each answered card. The row MUST hold the card id, the answer and the moment. A card whose answer row exists on any device MUST NOT show. A suggestion card's answer MUST be a card answer row keyed by the template id. That row MUST also hold the record day key of the answer, so that `problem-solving` can show at most one suggestion card on a record day. Ash ruled this on 12 October 2026 (r23-06). While the first import after sync turns on runs, the app MUST show no card. While it runs, the app MUST write no opening moment.
 
 #### Scenario: Card answered on one device
 - **WHEN** the person taps "Close" on an opening card on device A and Today loads on device B after sync

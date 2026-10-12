@@ -14,6 +14,12 @@ The button MUST be at least 56 points tall. The button MUST span the content wid
 
 The button MUST show and work on every record day from stage 3. This includes a paused day, a fasting day and a day with the state "didn't record". `record` owns those states. A day state MUST NOT change the button, the urge screen or the outcome.
 
+An urge starts only from the "Urge" button on Today. The app MUST NOT offer an App Intent, a Siri phrase, a widget, a Control Centre control, a Lock Screen control or a notification action that starts or shows an urge. Ash ruled this on 12 October 2026 (r23-03).
+
+#### Scenario: Only from Today
+- **WHEN** a reviewer lists the app's App Intents, Siri phrases, widgets, Control Centre controls, Lock Screen controls and notification actions
+- **THEN** no item on the list starts an urge or shows an urge
+
 #### Scenario: A paused day
 - **WHEN** stage 3 is open, the person tapped "Pause for today" at 12:00, and taps "Urge" at 21:10
 - **THEN** the urge screen opens with the timer at "00:00", as on any other day
@@ -346,11 +352,23 @@ The app MUST make every saved urge outcome available to `programme`. `programme`
 
 ### Requirement: The timer keeps running in the background
 
-The app MUST compute the elapsed time from the saved start moment and the current moment. The timer MUST NOT reset when the app enters the background or closes. When the app becomes active, it MUST NOT open the urge screen. The urge screen opens only from the "Urge" button or the "Urge open since" line. While the urge is open in the same record day, Today MUST show the "Urge open since" line. `record` defines the record day.
+The app MUST compute the elapsed time from the saved start moment and the current moment. The timer MUST NOT reset when the app enters the background or closes. While the urge is open in the same record day, Today MUST show the "Urge open since" line. `record` defines the record day.
+
+The person leaves the app when the app enters the background. The person can leave the app while the urge screen is on screen. When the person returns and the system kept the app's process, the app MUST show the urge screen again, as the person left it. The timer MUST then show the time from the saved start. With the app lock off, the urge screen stays on screen, and the app MUST NOT close it. With the app lock on, the rules of `app-lock` apply with no change. Inside the "Lock after" grace period, the urge screen shows at once. After the cover and a successful unlock, the urge screen shows as the screen that the cover hid. Ash ruled this on 12 October 2026 (r23-02).
+
+In three cases the app MUST show Today and MUST NOT show the urge screen on a return:
+
+- The system ended the app's process. The next launch shows Today with the "Urge open since" line, as `programme` states in "Today is home".
+- The person tapped "Close" before leaving. Today shows the "Urge open since" line.
+- The record day of the urge ended while the app was in the background. The app MUST close the urge screen, also under the cover. The urge stays with no outcome, and the app shows no message.
+
+Apart from a return, the urge screen opens only from the "Urge" button and the "Urge open since" line on Today.
+
+The urge screen is a sheet of Today. A tap on a reminder MUST NOT close the urge screen or a screen that the person opened from it. The app MUST open the screen of the reminder only after the urge screen closes, with "Close" or with an outcome. `reminders` states this rule in "A tap on a reminder opens its screen from Today". Ash ruled this on 12 October 2026 (r23-02).
 
 When the record day of an open urge ends, the app MUST keep the urge with no outcome. The app MUST NOT show that urge again. The app MUST NOT show a message about an urge that ended without an outcome.
 
-The urge screen can be on screen while the record day of its urge ends. The urge screen MUST then stay on screen, and the person MUST be able to save an outcome for that urge. The app MUST write the record day of the tap as `outcomeDayKey`. After the urge screen goes off the screen, the app MUST NOT show that urge again.
+The urge screen can be on screen while the record day of its urge ends, while the app stays in the foreground. The urge screen MUST then stay on screen, and the person MUST be able to save an outcome for that urge. The app MUST write the record day of the tap as `outcomeDayKey`. After the urge screen goes off the screen, the app MUST NOT show that urge again.
 
 On read the store MUST hold at most one open urge per record day. When two open urges share a `startDayKey`, for example after a sync, the app keeps the urge with the earliest `startedAt` as the open urge. The other urges MUST close silently at the day end, with no outcome and no message. The app MUST NOT delete them.
 
@@ -365,15 +383,27 @@ The store MUST write `startDayKey` when the urge starts and `outcomeDayKey` when
 - **THEN** the store holds the outcome "It passed" with `startDayKey` Thursday 24 September and `outcomeDayKey` Friday 25 September, and Today shows no "Urge open since" line
 
 #### Scenario: Return after a walk
-- **WHEN** the person tapped "Urge" at 21:10, left the app at 21:13 and opens it at 21:52
-- **THEN** the app shows Today with "Urge open since 21:10", and a tap on the line shows the timer at "42:00"
+- **WHEN** the app lock is off, the person tapped "Urge" at 21:10, left the app from the urge screen at 21:13 and returns at 21:52, and the system kept the app's process
+- **THEN** the urge screen shows that urge with the timer at "42:00"
+
+#### Scenario: Return inside the lock grace period
+- **WHEN** "Lock after" is "5 minutes", the person tapped "Urge" at 21:10 on Tuesday 13 October 2026, left the app from the urge screen at 21:13 and returns at 21:16
+- **THEN** the urge screen shows at once with the timer at "06:00", and the app makes no authentication request
+
+#### Scenario: Return after the cover
+- **WHEN** "Lock after" is "At once", the person tapped "Urge" at 21:10 on Tuesday 13 October 2026, left the app from the urge screen at 21:13, returns at 21:52 and Face ID succeeds
+- **THEN** the cover shows first, and after the unlock the urge screen shows that urge with the timer at "42:00"
+
+#### Scenario: Close before leaving
+- **WHEN** the person tapped "Urge" at 21:10 on Tuesday 13 October 2026, tapped "Close" at 21:12, left the app at 21:13 and returns at 21:52, and the system kept the app's process
+- **THEN** the app shows Today with "Urge open since 21:10" and no urge screen
 
 #### Scenario: The app closed
-- **WHEN** the person tapped "Urge" at 21:10, the system closed the app, and the person opens it at 21:30
-- **THEN** the app shows Today with "Urge open since 21:10", and a tap on the line shows the timer at "20:00"
+- **WHEN** the person tapped "Urge" at 21:10, left the app from the urge screen, the system ended the app's process, and the person opens the app at 21:30
+- **THEN** the app shows Today with "Urge open since 21:10" and no urge screen, and a tap on the line shows the timer at "20:00"
 
 #### Scenario: Return in the same record day after midnight
-- **WHEN** the person tapped "Urge" at 21:10 on Thursday 24 September and opens the app at 02:00 on Friday 25 September
+- **WHEN** the person tapped "Urge" at 21:10 on Thursday 24 September, tapped "Close" at 21:15, and opens the app at 02:00 on Friday 25 September
 - **THEN** Today shows "Urge open since 21:10", and a tap on the line shows the timer at "4:50:00"
 
 #### Scenario: Two open urges on one record day
@@ -381,12 +411,20 @@ The store MUST write `startDayKey` when the urge starts and `outcomeDayKey` when
 - **THEN** Today on each device shows "Urge open since 21:10", a tap on "Urge" shows the 21:10 urge, and the 21:15 urge closes at the day end with no outcome and no message
 
 #### Scenario: Return the next day
-- **WHEN** the person tapped "Urge" at 21:10 on Thursday 24 September and opens the app at 09:00 on Friday 25 September
-- **THEN** the app shows Today with no "Urge open since" line, the store keeps the urge with no outcome, and the app shows nothing about it
+- **WHEN** the app lock is off, the person tapped "Urge" at 21:10 on Thursday 24 September, left the app from the urge screen, and returns at 09:00 on Friday 25 September, and the system kept the app's process
+- **THEN** the app shows Today with no urge screen and no "Urge open since" line, the store keeps the urge with no outcome, and the app shows nothing about it
+
+#### Scenario: Return the next day with the app lock on
+- **WHEN** "Lock after" is "At once", the person tapped "Urge" at 21:10 on Tuesday 13 October 2026, left the app from the urge screen at 21:13, returns at 09:00 on Wednesday 14 October and the unlock succeeds
+- **THEN** Today shows after the unlock, with no urge screen and no "Urge open since" line, and the store keeps the urge with no outcome
+
+#### Scenario: A reminder tap while the urge screen shows
+- **WHEN** the urge screen shows an urge that started at 07:20 on Monday 19 October 2026, the person taps the body of the weigh-in day reminder at 07:31, and then taps "It passed"
+- **THEN** the urge screen and its timer stay until "It passed", and after it the weigh-in screen shows on Today's navigation stack
 
 ### Requirement: What the toolkit never shows
 
-The app MUST show a count of urges or outcomes only inside the weekly review's urge part. That part reads, for example, "Urges: 3. Passed: 2.", and `weekly-review` owns that text.
+The app MUST show a count of urges or outcomes only in two places. The first is the weekly review's urge part. That part reads, for example, "Urges: 3. Passed: 2.", and `weekly-review` owns that text. The second is an urge pattern sentence on the Problem solving screen or on a suggestion card. That sentence reads, for example, "4 of your 6 urges were after 20:00.", and `problem-solving` owns it in "Pattern sentences from urges". Ash ruled this on 12 October 2026 (r23-09).
 
 The "Urge" button, the urge screen and the setup MUST NOT show how many urges the person has had. The app MUST NOT show a list of past urges. The urge screen MUST NOT show an entry, a weight value or a planned meal. The app MUST NOT show praise, a word of blame or advice after any outcome. The tone rules in `product-rules` apply to every string in the toolkit.
 
@@ -401,6 +439,10 @@ The "Urge" button, the urge screen and the setup MUST NOT show how many urges th
 #### Scenario: The weekly review
 - **WHEN** the weekly review builds a week with three urges, two of which passed
 - **THEN** the urge part of the weekly review reads "Urges: 3. Passed: 2.", and no other screen shows those numbers
+
+#### Scenario: An urge pattern sentence
+- **WHEN** stage 4 is open and the pattern window holds six urges, four of them after 20:00
+- **THEN** the Problem solving screen shows "4 of your 6 urges were after 20:00.", and the "Urge" button, the urge screen and the setup show no count
 
 ### Requirement: The weekly review counts each urge on its start day
 
@@ -440,7 +482,7 @@ When `entryId` resolves to a deleted entry or to no entry, the app MUST show not
 
 ### Requirement: The store keeps urges and the list on the device
 
-The store MUST keep each urge as one row with the fields `startedAt`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey`, `entryId` and `changedAt`. `startDayKey` is the record day of `startedAt`. `outcome`, `outcomeAt`, `outcomeDayKey` and `entryId` MUST be empty until the app saves an outcome. `entryId` MUST hold a value only for the outcome "I binged". The app MUST resolve `entryId` to its entry on read. The store MUST keep the alternatives list, the grounding exercise choice and the "Buzz at 20 minutes" choice.
+The store MUST keep each urge as one row with the fields `startedAt`, `startUTCOffset`, `startDayKey`, `outcome`, `outcomeAt`, `outcomeDayKey`, `entryId` and `changedAt`. `startDayKey` is the record day of `startedAt`. `startUTCOffset` is the UTC offset at `startedAt`. The app MUST compute it from the device's current time zone rules when the urge starts, as `record` states for an entry's offset. The store MUST write it with `startedAt` and MUST NOT change it. `problem-solving` reads it for the time band of an urge. Ash ruled this on 12 October 2026 (r23-09). `outcome`, `outcomeAt`, `outcomeDayKey` and `entryId` MUST be empty until the app saves an outcome. `entryId` MUST hold a value only for the outcome "I binged". The app MUST resolve `entryId` to its entry on read. The store MUST keep the alternatives list, the grounding exercise choice and the "Buzz at 20 minutes" choice.
 
 The store MUST keep each alternatives item as one row. The row holds its text, its position, its `changedAt` and a `deleted` flag with a moment. A delete MUST write `deleted = true` with the moment. The app MUST NOT hard-delete an urge or a list item.
 
@@ -455,6 +497,10 @@ The app MUST NOT write a list item to the system log, an error description or a 
 #### Scenario: No network
 - **WHEN** the device has no network connection and the person taps "Urge"
 - **THEN** the timer, the wave, the list, the exercise and the outcome controls all work
+
+#### Scenario: The start offset
+- **WHEN** the person taps "Urge" at 21:10 on Saturday 24 October 2026 in London, and the clocks go back one hour at 02:00 on Sunday 25 October
+- **THEN** the store holds the urge with `startUTCOffset` UTC+1 before and after the change
 
 #### Scenario: Delete a list item
 - **WHEN** the person deletes "Ring Sam" at 09:00

@@ -25,8 +25,8 @@ Each of those changes copies the text below into `cards.json`, raises the conten
 
 1. Alternatives. The cards say a good alternative is active, at least a little pleasant, possible at the times urges come, and hard to do while eating. The examples list in `urge-toolkit` holds "Put music or a podcast on". A person can eat while they listen to music. Check whether that example stays.
 2. Early urges. "stage3.urges" asks the person to act at the first sign of an urge. The app has no screen for this. The card carries it.
-3. High-risk times. "stage3.after" and "stage3.list" ask the person to fit the list to the times urges come. The app has no feature to plan an alternative ahead of a known time. Ash has that question as a decision.
-4. Review timing. "stage4.review" follows the spec: the reminder comes a week later, and the person can answer step 6 sooner. Ash has the timing as a decision. If it changes, this card changes with it.
+3. High-risk times. "stage3.after" and "stage3.list" ask the person to fit the list to the times urges come. The app has no feature to plan an alternative ahead of a known time. By ruling r23-07 (12 October 2026), the cards "Your alternatives list" and "After the urge" alone carry "plan an alternative ahead of a predictable high-risk time".
+4. Review timing. "stage4.review" follows the spec: the reminder comes a week later, and the person can answer step 6 sooner. By ruling r23-04 (12 October 2026), the reminder comes on the seventh day after the first "Done" with text in step 5, at the "Weekly review time". The card text still fits that timing.
 5. Practice. "stage4.steps" asks the person to use the worksheet early, when a problem is coming, and on small problems too.
 
 ## Stage 3, "Alternatives"
@@ -103,9 +103,9 @@ Links: one, target "Problem solving".
 
 Body:
 
-> Starred entries rarely come out of nowhere. Often the same things come before them: a time of day, a day of the week, a place, a long gap since you last ate, or a planned meal that did not happen.
+> Starred entries and urges rarely come out of nowhere. Often the same things come before them: a time of day, a day of the week, a place, a long gap since you last ate, or a planned meal that did not happen.
 >
-> When the app finds something that comes up in more than half of your recent starred entries, it shows it as one plain sentence on the Problem solving screen, with the numbers filled in. The sentence is not a judgement. It is a place to start.
+> When the app finds something that comes up in more than half of your recent starred entries, or in more than half of your recent urges, it shows it as one plain sentence on the Problem solving screen, with the numbers filled in. The sentence is not a judgement. It is a place to start.
 >
 > You can also find a pattern yourself, and you do not need one from the app to start a worksheet. Look back at your last few starred entries and ask what was happening an hour or two before each one: where you were, who you were with, how you felt, and when you last ate.
 

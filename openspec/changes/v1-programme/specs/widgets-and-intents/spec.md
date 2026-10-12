@@ -202,7 +202,7 @@ Siri MUST NOT offer the intent by voice unless the person made a shortcut for it
 
 The intent MUST accept no parameter. The intent MUST set the pending route. The intent MUST then open the app on the new-entry screen. The intent MUST NOT open the store. The intent MUST NOT save an entry. The intent MUST return no dialog and no snippet.
 
-The intent's description in Shortcuts MUST read "Opens Midmorning on a new entry." The description MUST NOT contain "log", "food", "meal", "eat", "snack", "diary", "binge" or "weight". The app MUST offer no other intent. The app MUST NOT donate the intent, as the record capability states.
+The intent's description in Shortcuts MUST read "Opens Midmorning on a new entry." The description MUST NOT contain "log", "food", "meal", "eat", "snack", "diary", "binge" or "weight". The app MUST offer no other intent. So no intent starts or shows an urge, as `urge-toolkit` states in "The Urge button on Today". Ash ruled this on 12 October 2026 (r23-03). The app MUST NOT donate the intent, as the record capability states.
 
 #### Scenario: No App Shortcuts
 - **WHEN** the person installs the app and says "Add an entry in Midmorning" without a shortcut
