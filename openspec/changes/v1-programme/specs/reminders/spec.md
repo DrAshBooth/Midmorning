@@ -108,9 +108,11 @@ A sheet of Today is the new-entry screen, the edit screen, the close-the-day scr
 
 The urge screen is a sheet of Today, as `urge-toolkit` states. So a tap MUST NOT close the urge screen or a screen that the person opened from it. The app MUST open the screen of the reminder only after the urge screen closes, with "Close" or with an outcome. This follows Ash's rulings of 11 October 2026 on the sheets of Today (r22-02) and of 12 October 2026 on the urge screen (r23-02).
 
+After the outcome "I ate as planned", the app opens the new-entry screen over Today, as `urge-toolkit` states. That new-entry screen MUST hold a route as a new-entry screen with unsaved input holds it, also before the person types. So a route that waited for the urge screen waits until that new-entry screen closes. Ash ruled this on 12 October 2026 (r24-08).
+
 After the outcome "I binged", the app MUST NOT open the screen of a reminder that waited for the urge screen. The app MUST drop that route and show Today. A line on Today that belongs to the reminder stays, for example the "Weekly review" line. So the moment after a binge stays quiet, as the holds after a binge in `record` keep it quiet (r1-10, r8-07).
 
-A worksheet keeps a waiting route in the same way, over Today or over the Problem solving screen. While a worksheet shows, the app MUST keep it in front, with its text. The app MUST open the screen of the reminder only after the worksheet closes. When the reminder is the worksheet review reminder of the worksheet on screen, the app MUST keep that worksheet and MUST show its step 6. The app MUST NOT open that worksheet a second time. A worksheet holds the person's answers, so this follows Ash's ruling of 11 October 2026 on screens with answers (r22-01).
+A worksheet keeps a waiting route in the same way, over Today, over the Problem solving screen or over the weekly review. A row of the weekly review opens a worksheet over the review, as Ash ruled on 12 October 2026 (r24-10). While a worksheet shows, the app MUST keep it in front, with its text. The app MUST open the screen of the reminder only after the worksheet closes. When the reminder is the worksheet review reminder of the worksheet on screen, the app MUST keep that worksheet and MUST show its step 6. The app MUST NOT open that worksheet a second time. A worksheet holds the person's answers, so this follows Ash's ruling of 11 October 2026 on screens with answers (r22-01).
 
 This requirement applies only to a tap on the body of a reminder. It does not change "Add", "Skipped" or the snooze action. While the app is locked, `app-lock` governs "Add", as its requirement "A new entry before authentication" states. Ash ruled this on 9 October 2026 (r20-01).
 
@@ -169,6 +171,14 @@ This requirement applies only to a tap on the body of a reminder. It does not ch
 #### Scenario: A tap while the urge screen shows, then "Close"
 - **WHEN** the urge screen shows an urge that started at 17:50 on Monday 19 October 2026, the person taps the body of the weekly review reminder at 18:01, and then taps "Close"
 - **THEN** the urge screen stays until "Close", the urge stays open, and after "Close" the weekly review shows on Today's navigation stack
+
+#### Scenario: A tap while the urge screen shows, then "I ate as planned"
+- **WHEN** the urge screen shows an urge that started at 21:30 on Tuesday 13 October 2026, the person taps the body of the close-the-day reminder at 21:46, then taps "I ate as planned", and then taps "Cancel" on the new-entry screen
+- **THEN** the new-entry screen opens after the outcome, and the close-the-day screen shows only after "Cancel"
+
+#### Scenario: A tap over the new entry after "I ate as planned"
+- **WHEN** the person taps "I ate as planned" at 21:40 on Tuesday 13 October 2026, the new-entry screen shows no input, and the person taps the body of the weigh-in day reminder
+- **THEN** the new-entry screen stays in front, and the weigh-in screen shows on Today's navigation stack after the new-entry screen closes
 
 #### Scenario: A tap while the urge screen shows, then "I binged"
 - **WHEN** the urge screen shows an urge that started at 17:50 on Monday 19 October 2026, the person taps the body of the weekly review reminder at 18:01, then taps "I binged" and saves the entry at 18:04

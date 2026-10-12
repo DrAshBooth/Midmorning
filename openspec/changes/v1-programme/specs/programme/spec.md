@@ -81,6 +81,8 @@ The app MUST hold every programme constant in one value type, ProgrammeConstants
 - MAX_SNOOZES = 2
 - ROLLING_AVERAGE_WEEKS = 4
 - URGE_TIMER_MINUTES = 20
+- URGE_OPEN_MINUTES = 120
+- URGE_DISCARD_SECONDS = 30
 - DETERIORATION_WEEKS = 3
 - CHECK_IN_WEEKS = 4, 8, 12
 - PATTERN_WINDOW_DAYS = 28
@@ -89,6 +91,8 @@ The app MUST hold every programme constant in one value type, ProgrammeConstants
 - PATTERN_MIN_GROUP = 3
 - PATTERN_MAX_SENTENCES = 3
 - PATTERN_NIGHT_END_HOUR = 4
+- PATTERN_RUN_MINUTES = 60
+- SUGGESTION_HOLD_HOURS = 12
 - WORKSHEET_REVIEW_DAYS = 7
 - LOCK_GRACE_SECONDS = 0, 30, 120 or 300; the default is 0
 - PLANNED_MEAL_WINDOW_BEFORE_MINUTES = 60
@@ -102,6 +106,12 @@ LOCK_GRACE_SECONDS is a set of four values. App-lock owns the "Lock after" setti
 PATTERN_MIN_URGES is the minimum urge total for a pattern sentence from urges, as `problem-solving` states. Ash ruled this on 12 October 2026 (r23-09).
 
 `problem-solving` states the use of three more constants. PATTERN_MAX_SENTENCES is the largest number of pattern sentences that the Problem solving screen shows. PATTERN_NIGHT_END_HOUR is the clock hour at which the "after 20:00" time band ends. It is not the day start, and "Day starts at" does not change it. WORKSHEET_REVIEW_DAYS is the number of days between the record day on which the app saves a worksheet's review day and that review day.
+
+`urge-toolkit` states the use of URGE_OPEN_MINUTES and URGE_DISCARD_SECONDS. URGE_OPEN_MINUTES is the longest time that an urge with no outcome stays open after its start. URGE_DISCARD_SECONDS is the time after the start of an urge in which "Close" discards the urge. Ash ruled this on 12 October 2026 (r24-04).
+
+PATTERN_RUN_MINUTES is the limit of the time between two starred entries of one starred run, as `problem-solving` states in "The pattern window and the minimum data". Ash ruled this on 12 October 2026 (r24-05).
+
+SUGGESTION_HOLD_HOURS is the time that a suggestion card waits after the latest starred entry or "I binged" outcome, as `record` states in "The Today stack". The clinical reviewer can change its value before sign-off. Ash ruled this on 12 October 2026 (r24-03).
 
 Every threshold test MUST construct a modified ProgrammeConstants value. A test MUST NOT edit `.default`.
 
@@ -285,7 +295,9 @@ The app MUST also open stage 3 by a fallback count of record days. The fallback 
 
 The fallback MUST open the stage at the day start that ends day RECORD_DAYS_FOR_STAGE_3_FALLBACK. The fallback MUST NOT need a recorded day, a planned day or a template. Whichever of the two rules comes first MUST open the stage.
 
-With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts", with no full stop. It shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The rule string is "Opens after %1$@, or %2$@ after your plan starts". The app MUST fill %1$@ from "%lld days on your plan", with DAYS_ON_PLAN_FOR_STAGE_3 as the count. The app MUST fill %2$@ from "%lld weeks", with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7 as the count. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
+With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts.", with a full stop. It shows two counts, so it MUST come from strings with one count each, as `content` requires in "Catalogue rules". The rule string is "Opens after %1$@, or %2$@ after your plan starts.". The app MUST fill %1$@ from "%lld days on your plan", with DAYS_ON_PLAN_FOR_STAGE_3 as the count. The app MUST fill %2$@ from "%lld weeks", with RECORD_DAYS_FOR_STAGE_3_FALLBACK divided by 7 as the count. RECORD_DAYS_FOR_STAGE_3_FALLBACK MUST be a multiple of 7. A test MUST check that.
+
+From the record day on which stage 2 opened, the rule MUST also show the count toward the gate. The app MUST show "You have %lld." after the rule, joined by one space. The app MUST fill %lld with the planned days that count toward stage 3 by the rule above. Before stage 2 opens, the app MUST show the rule with its full stop and no count. "Reading ahead is never blocked" states the strings. Ash ruled this on 12 October 2026 (r24-11).
 
 #### Scenario: Seven planned days over ten days
 - **WHEN** seven of the next ten record days are planned days with at least one entry each
@@ -304,8 +316,12 @@ With the default constants, the stage 3 rule reads "Opens after 7 days on your p
 - **THEN** stage 3 opens at 04:00 on Monday 19 October
 
 #### Scenario: The stage 3 rule string
-- **WHEN** stage 3 is closed with the default constants
-- **THEN** its row on the Programme screen reads "Alternatives" and "Opens after 7 days on your plan, or 2 weeks after your plan starts"
+- **WHEN** stage 2 and stage 3 are closed with the default constants
+- **THEN** the stage 3 row on the Programme screen reads "Alternatives" and "Opens after 7 days on your plan, or 2 weeks after your plan starts.", with no count
+
+#### Scenario: The stage 3 rule with its count
+- **WHEN** stage 2 opened on Monday 5 October 2026, Monday 5, Tuesday 6 and Wednesday 7 October are planned days with an entry, and the person opens the Programme screen at 09:00 on Thursday 8 October
+- **THEN** the stage 3 row reads "Alternatives" and "Opens after 7 days on your plan, or 2 weeks after your plan starts. You have 3."
 
 #### Scenario: A planned day with every planned meal skipped
 - **WHEN** a planned day has six planned meals, the person answers "Skipped" to all six, and saves one entry at 22:00
@@ -331,7 +347,17 @@ With the default constants, the stage 3 rule reads "Opens after 7 days on your p
 
 The app MUST open stage 4 when the store saves the first urge outcome. Urge-toolkit owns the outcome. Any of the three outcomes MUST open the stage. The app MUST NOT treat one outcome differently from another for this rule. A timer that starts without an outcome MUST NOT open the stage.
 
-The app MUST also open stage 4 after RECORDED_DAYS_FOR_STAGE_4_FALLBACK recorded days with stage 3 open. That constant is 7. The app MUST count recorded days from the record day on which stage 3 opened, that day included. Whichever of the two rules comes first MUST open the stage. The rule string for stage 4 is "Opens after your first urge outcome, or a week from now", with no full stop.
+The app MUST also open stage 4 after RECORDED_DAYS_FOR_STAGE_4_FALLBACK recorded days with stage 3 open. That constant is 7. The app MUST count recorded days from the record day on which stage 3 opened, that day included. Whichever of the two rules comes first MUST open the stage.
+
+Before stage 3 opens, the stage 4 rule string is "Opens after Alternatives", with no full stop. From the record day on which stage 3 opened, the stage 4 rule is "Opens after your first urge outcome, or after %lld recorded days." then "You have %lld.". The app MUST fill the first %lld with RECORDED_DAYS_FOR_STAGE_4_FALLBACK. The app MUST fill the second %lld with the recorded days that count toward that fallback. The app MUST show the two strings joined by one space. "Reading ahead is never blocked" states the strings. Ash ruled this on 12 October 2026 (r24-11).
+
+#### Scenario: The stage 4 rule before stage 3 opens
+- **WHEN** stage 2 is open, stage 3 is closed, and the person opens the Programme screen
+- **THEN** the stage 4 row reads "Problem solving" and "Opens after Alternatives"
+
+#### Scenario: The stage 4 rule with its count
+- **WHEN** stage 3 opened at 04:00 on Monday 12 October 2026, the person saved entries on Monday 12 and Tuesday 13 October and no urge outcome, and opens the Programme screen at 20:00 on Tuesday 13 October
+- **THEN** the stage 4 row reads "Problem solving" and "Opens after your first urge outcome, or after 7 recorded days. You have 2."
 
 #### Scenario: The first outcome is "It passed"
 - **WHEN** the person taps Urge and saves the outcome "It passed"
@@ -399,16 +425,16 @@ The app MUST let the person open every card of every stage from day 1. The Progr
 
 The rule strings are, in stage order from stage 2:
 
-- "Opens after %lld recorded days." then "You have %lld."
-- "Opens after %1$@, or %2$@ after your plan starts", filled from "%lld days on your plan" and "%lld weeks"
-- "Opens after your first urge outcome, or a week from now"
-- "Opens %lld weeks after your plan starts"
-- "Opens after taking stock"
-- "Opens %lld weeks after your plan starts"
+- stage 2: "Opens after %lld recorded days." then "You have %lld."
+- stage 3: "Opens after %1$@, or %2$@ after your plan starts.", filled from "%lld days on your plan" and "%lld weeks". From the record day on which stage 2 opened, "You have %lld." follows it.
+- stage 4: "Opens after Alternatives" before stage 3 opens. From the record day on which stage 3 opened, "Opens after your first urge outcome, or after %lld recorded days." then "You have %lld."
+- stage 5: "Opens %lld weeks after your plan starts"
+- stage 6: "Opens after taking stock"
+- stage 7: "Opens %lld weeks after your plan starts"
 
-Each string with a count MUST carry plural forms. A string holds at most one count, so the stage 2 rule and the stage 3 rule each come from more than one string. Content owns the catalogue rules. The app MUST fill each gate value from ProgrammeConstants. The stage 2 rule also shows the count toward the gate. The app MUST fill the %lld of "You have %lld." with the count of recorded days that the stage 2 rule counts. The app MUST show the two stage 2 strings joined by one space.
+Each string with a count MUST carry plural forms. A string holds at most one count, so the rules of stages 2, 3 and 4 each come from more than one string. Content owns the catalogue rules. The app MUST fill each gate value from ProgrammeConstants. The rules of stages 2, 3 and 4 also show the count toward the gate, in "You have %lld.". For stage 2, the app MUST fill that %lld with the recorded days that the stage 2 rule counts. For stage 3, the app MUST fill it with the planned days that the stage 3 rule counts. For stage 4, the app MUST fill it with the recorded days that the fallback of the stage 4 rule counts. The app MUST show a rule and its count joined by one space. Ash ruled the counts of stages 3 and 4 on 12 October 2026 (r24-11). This follows ruling r3-05 (decision 32), which showed the count toward a gate in the rule string.
 
-The app MUST show the count in the same text style as every row. The screen MUST show no bar, tick or graphic for it. A rule string of one sentence MUST NOT end with a full stop. The stage 2 rule is two sentences from two strings, and each ends with a full stop.
+The app MUST show the count in the same text style as every row. The screen MUST show no bar, tick or graphic for it. A rule string of one sentence MUST NOT end with a full stop. The rules of stages 2, 3 and 4 are the exception. Each string of those rules that a count can follow is one sentence that ends with a full stop, and so is "You have %lld.". So the stage 3 rule ends with a full stop also before stage 2 opens, when it shows no count. "Opens after Alternatives" has no full stop.
 
 #### Scenario: Stage 4 cards on day 1
 - **WHEN** the person taps "Problem solving" on the Programme screen on day 1
@@ -421,6 +447,10 @@ The app MUST show the count in the same text style as every row. The screen MUST
 #### Scenario: The count before any entry
 - **WHEN** the person opens the Programme screen after onboarding with no entry
 - **THEN** the stage 2 row reads "Opens after 5 recorded days. You have 0."
+
+#### Scenario: The rules of stages 3 and 4 before stage 2 opens
+- **WHEN** the person opens the Programme screen after onboarding with no entry
+- **THEN** the stage 3 row reads "Opens after 7 days on your plan, or 2 weeks after your plan starts." and the stage 4 row reads "Opens after Alternatives", and neither shows a count
 
 #### Scenario: A gate changes
 - **WHEN** the team sets RECORDED_DAYS_FOR_STAGE_2 to 3 and the person has one recorded day
@@ -508,6 +538,16 @@ The app MUST NOT show an opening card after a starred entry in the same record d
 For this rule the app MUST read two moments: the time of the latest starred entry, and the `outcomeAt` of the latest "I binged" outcome. `outcomeAt` is the moment the person saves the entry of that outcome, as `urge-toolkit` states. When the later of the two moments is in the current record day, the card MUST wait. So the card still waits when the person turns the star of that entry off, or moves the entry to the previous record day.
 
 The stage MUST open at once. Only the card waits. The app MUST show the card the first time Today appears on the next record day. The same rule applies to the stage 1 cards on Today, the plan card and the Focus card below. This rule does not cover the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card alone can show in the same record day as the starred entry or the outcome. Decision 100 sets this exception.
+
+Two more rules hold the opening card, as `record` states in "The Today stack". While an urge is open, the app MUST NOT show an opening card. After any urge outcome, the app MUST NOT show an opening card for the rest of the outcome's record day. That record day is the outcome's `outcomeDayKey`. So after a first urge outcome "It passed", the stage 4 opening card waits for the next record day. Ash ruled this on 12 October 2026 (r24-03).
+
+#### Scenario: A first "It passed"
+- **WHEN** stage 3 is open, the person taps "Urge" at 21:10 on Tuesday 13 October 2026, and saves the first urge outcome, "It passed", at 21:28
+- **THEN** stage 4 opens at 21:28, Today shows no stage 4 opening card on Tuesday 13 October, and shows it the first time Today appears after 04:00 on Wednesday 14 October
+
+#### Scenario: An opening card while an urge is open
+- **WHEN** the stage 5 opening card waits with no answer, the person taps "Urge" at 21:10 on Monday 9 November 2026, and taps "Close" at 21:15
+- **THEN** Today shows "Urge open since 21:10" and no opening card while that urge is open
 
 #### Scenario: The fifth recorded day ends with a starred entry
 - **WHEN** the person saves a starred entry at 22:10 that makes the fifth recorded day
@@ -659,7 +699,7 @@ For an open stage, the screen MUST show a "Tools" group under the card list. For
 
 A tap on a tool row MUST open that tool's screen. Each tool's own capability owns what its screen shows.
 
-The screen MUST NOT show a progress bar, a percentage, a tick or a count. The one exception is the count inside the stage 2 rule string. The screen MUST show Get support in the navigation bar. `safeguarding` owns the button.
+The screen MUST NOT show a progress bar, a percentage, a tick or a count. The exceptions are the counts inside the rule strings of stages 2, 3 and 4, as "Reading ahead is never blocked" states. Ash ruled the counts of stages 3 and 4 on 12 October 2026 (r24-11). The screen MUST show Get support in the navigation bar. `safeguarding` owns the button.
 
 The title and "Tools" MUST be headings for VoiceOver. Each tool row MUST be one accessibility element, with its visible text as its label. Text on the screen MUST use system text styles. That text MUST scale with Dynamic Type.
 
@@ -670,6 +710,10 @@ The title and "Tools" MUST be headings for VoiceOver. Each tool row MUST be one 
 #### Scenario: A closed stage's screen
 - **WHEN** stage 2 is closed, the person has two recorded days, and taps "Regular eating" on the Programme screen
 - **THEN** the screen's title is "Regular eating", its line reads "Opens after 5 recorded days. You have 2.", it lists the stage 2 cards, and it shows no "Tools" group
+
+#### Scenario: The stage 4 screen with its count
+- **WHEN** stage 3 opened at 04:00 on Monday 12 October 2026, the person saved entries on Monday 12 and Tuesday 13 October and no urge outcome, and taps "Problem solving" on the Programme screen on Tuesday 13 October
+- **THEN** the screen's title is "Problem solving", its line reads "Opens after your first urge outcome, or after 7 recorded days. You have 2.", and it shows no "Tools" group
 
 #### Scenario: An open stage's screen
 - **WHEN** the start day is Monday 28 September 2026, stage 2 opened on Monday 5 October, and the person taps "Regular eating"
@@ -859,7 +903,7 @@ The one-tap restart that keeps the plan and lists is "Start week 1 again". The r
 
 ### Requirement: Accessibility of the Programme screen
 
-Each stage row MUST be one accessibility element. The row's label MUST hold the title. Then it MUST hold "Now" when the row carries the marker. Then it MUST hold the rule string or "Comes in a later version" when the row shows one. A comma and a space MUST separate the parts.
+Each stage row MUST be one accessibility element. The row's label MUST hold the title. Then it MUST hold "Now" when the row carries the marker. Then it MUST hold the rule string or "Comes in a later version" when the row shows one. A comma and a space MUST separate the parts. The rule of stage 2, 3 or 4 can be two sentences, the rule and its count. The label then holds both sentences, as the row shows them. Ash ruled the counts of stages 3 and 4 on 12 October 2026 (r24-11).
 
 Every control on the Programme screen and the opening card MUST have a VoiceOver label. The label of a control with visible text MUST equal the visible text. "Open", "Close", "Read", "Set it up", "Yes" and "Start week 1 again" MUST have those labels.
 
@@ -870,8 +914,8 @@ Text on the Programme screen and the opening card MUST use system text styles. T
 - **THEN** it reads "Regular eating, Now"
 
 #### Scenario: Label of a closed stage
-- **WHEN** VoiceOver reads the row of the closed stage "Alternatives"
-- **THEN** it reads "Alternatives, Opens after 7 days on your plan, or 2 weeks after your plan starts"
+- **WHEN** stage 2 is closed and VoiceOver reads the row of the closed stage "Alternatives"
+- **THEN** it reads "Alternatives, Opens after 7 days on your plan, or 2 weeks after your plan starts."
 
 #### Scenario: Label of the stage 2 row with its count
 - **WHEN** VoiceOver reads the row of the closed stage "Regular eating" and the person has two recorded days

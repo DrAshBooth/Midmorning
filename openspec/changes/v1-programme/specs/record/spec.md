@@ -277,33 +277,39 @@ From stage 4, the current day heading's menu MUST offer "New worksheet" next to 
 
 Before stage 4 opens, the menu MUST NOT offer "New worksheet". The menu of the previous record day and the menu of an earlier day MUST NOT offer it. Today MUST NOT show a new visible control for it. The item lives only inside the menu, so the layout of Today does not change. Ash ruled this on 12 October 2026 (r23-08).
 
+From stage 4, the current day heading's menu MUST also offer "Worksheets", directly after "New worksheet". The heading MUST also offer "Worksheets" as a custom action. "Worksheets" MUST push the Problem solving screen onto Today's navigation stack. `problem-solving` owns that screen. The item MUST stay in the menu when "Pattern sentences" is off. Before stage 4 opens, the menu MUST NOT offer "Worksheets". The menu of the previous record day and the menu of an earlier day MUST NOT offer it. Today MUST NOT show a new visible control for it. The label "Worksheets" is the catalogue key "today.worksheets". It is interface text, as "Earlier days" is. Ash ruled this on 12 October 2026 (r24-14).
+
 #### Scenario: The item in the menu
 - **WHEN** stage 4 is open and the person opens the current day heading's menu
-- **THEN** the menu offers "New worksheet" directly after "Fasting today"
+- **THEN** the menu offers "New worksheet" directly after "Fasting today", and "Worksheets" directly after "New worksheet"
 
 #### Scenario: The custom action
 - **WHEN** stage 4 is open and a person using VoiceOver reaches the current day heading
-- **THEN** the actions rotor offers "New worksheet", and the action opens a new worksheet with no linked sentence
+- **THEN** the actions rotor offers "New worksheet" and "Worksheets", and the action "New worksheet" opens a new worksheet with no linked sentence
 
 #### Scenario: Open a worksheet from the menu
 - **WHEN** stage 4 is open and the person taps "New worksheet" in the current day heading's menu
 - **THEN** a new worksheet opens as a sheet over Today, with no linked sentence above step 1
 
+#### Scenario: Open the Problem solving screen from the menu
+- **WHEN** stage 4 is open and the person taps "Worksheets" in the current day heading's menu
+- **THEN** the app pushes the Problem solving screen onto Today's navigation stack, with its "Worksheets" list, and its back control goes back to Today
+
 #### Scenario: Pattern sentences off
 - **WHEN** stage 4 is open, "Pattern sentences" is off, and the person opens the current day heading's menu
-- **THEN** the menu still offers "New worksheet"
+- **THEN** the menu still offers "New worksheet" and "Worksheets"
 
 #### Scenario: Before stage 4
 - **WHEN** stage 3 is open, stage 4 is closed, and the person opens the current day heading's menu
-- **THEN** the menu offers no "New worksheet"
+- **THEN** the menu offers no "New worksheet" and no "Worksheets"
 
 #### Scenario: An earlier day
 - **WHEN** stage 4 is open and the person opens the menu of the previous record day, or of Monday 5 October 2026 from "Earlier days"
-- **THEN** the menu offers no "New worksheet"
+- **THEN** the menu offers no "New worksheet" and no "Worksheets"
 
 #### Scenario: Nothing new on Today
 - **WHEN** stage 4 is open and the person opens Today
-- **THEN** "New worksheet" is only inside the current day heading's menu and its custom actions, and Today shows no other new control for it
+- **THEN** "New worksheet" and "Worksheets" are only inside the current day heading's menu and its custom actions, and Today shows no other new control for them
 
 ### Requirement: Earlier record days
 
@@ -491,9 +497,19 @@ The card slot MUST hold at most one card at a time. A card is one of these:
 
 The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. A suggestion card MUST come after every other waiting card, as `problem-solving` states in "The suggestion card". The app MUST show the next card after the person dismisses the first. The card slot MUST show at most one suggestion card on a record day. `problem-solving` decides which suggestion card, in "The suggestion card". That rule does not hold back a card of another kind. Ash ruled this on 12 October 2026 (r23-06).
 
+The rule of "Today's appearance" stays: Today shows no count of entries, no total and no count of consecutive days, except the count line of a collapsed day. The suggestion card complies with this rule, because its sentence holds no number, as `problem-solving` states in "The suggestion card". Ash ruled this on 12 October 2026 (r24-02).
+
 After a starred entry or an "I binged" outcome, the app MUST NOT show a card in the same record day. The one exception is the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card can show in the same record day as the starred entry or the outcome. After that entry or outcome, Today MUST NOT show the pinned note until the next record day. The `weekly-review` capability owns that rule.
 
 For these two holds, Today MUST read two moments: the time of the latest starred entry, and the `outcomeAt` of the latest "I binged" outcome. `outcomeAt` is the moment the person saves the entry of that outcome, as `urge-toolkit` states. When the later of the two moments is in the current record day, Today MUST hold the cards and the pinned note. So the holds stay when the person turns the star of that entry off, or moves the entry to the previous record day. `programme` states the same rule in "No opening card after a binge in the same record day".
+
+Three more holds apply to the card slot. Ash ruled them on 12 October 2026 (r24-03).
+
+- While an urge is open, the card slot MUST show no card of any kind. This includes the stage 7 lapse card. `urge-toolkit` states when an urge is open.
+- After any urge outcome, the card slot MUST show no card for the rest of the outcome's record day. That record day is the outcome's `outcomeDayKey`. The stage 7 lapse card stays the one same-day exception after a starred entry or an "I binged" outcome, as Ash ruled on 25 September 2026 (r8-17, decision 100).
+- A suggestion card MUST also wait until SUGGESTION_HOLD_HOURS have passed since the later of the two moments above. This hold also runs across the day start, into the next record day. `programme` names SUGGESTION_HOLD_HOURS = 12 in ProgrammeConstants. The clinical reviewer can change its value.
+
+`programme` states the first two holds for opening cards in "No opening card after a binge in the same record day". `problem-solving` states all three for the suggestion card in "The suggestion card".
 
 Each day section MUST show its heading and its rows. It MUST show a state line when the day is paused or has the state "didn't record". From stage 2 it MUST show the plan beside the record and the gap bands. The current day section MUST come first. The previous day section MUST follow it, collapsed by default, and only when it has an entry.
 
@@ -509,7 +525,7 @@ Before the first weekly review becomes due, the bottom toolbar MUST NOT show "Re
 
 The current day heading and a full-width control "Add an entry" under it MUST form a pinned section header. That header MUST stay on screen while the current day's rows scroll. "Pause for today" MUST sit under the rows as a visible control. "Close the day" MUST sit beside it only after the last planned meal's time, or after 17:00 in stage 1.
 
-"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today". From stage 4, "New worksheet" MUST also live in the current day heading's menu and as a custom action. "A new worksheet from the day heading's menu" states the item. Ash ruled this on 12 October 2026 (r23-08).
+"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today". From stage 4, "New worksheet" MUST also live in the current day heading's menu and as a custom action. "A new worksheet from the day heading's menu" states the item. Ash ruled this on 12 October 2026 (r23-08). From stage 4, "Worksheets" MUST also live in that menu, after "New worksheet", and as a custom action. Ash ruled this on 12 October 2026 (r24-14).
 
 The `reminders` capability owns the rule and the two strings of the notification permission line. The line MUST sit under the pinned section header, above the rows, as a control. When permission is not determined, the line MUST read "Allow notifications to get reminders.". A tap on it MUST make the system permission request.
 
@@ -536,6 +552,22 @@ The order above is the only order. Another capability MUST NOT add an element to
 #### Scenario: Lapse card in the same record day
 - **WHEN** stage 7 is open, the person saves a starred entry at 14:10, and the next planned meal is at 16:00
 - **THEN** from 16:00 the card slot shows the maintenance plan card in that record day, and every other card waits for the next record day
+
+#### Scenario: No card while an urge is open
+- **WHEN** an opening card waits with no answer, the person taps "Urge" at 21:10 on Tuesday 13 October 2026, and taps "Close" at 21:15
+- **THEN** Today shows "Urge open since 21:10", and the card slot shows no card while that urge is open
+
+#### Scenario: No card after an urge outcome
+- **WHEN** an opening card waits with no answer, and the person taps "It passed" at 21:28 on Tuesday 13 October 2026 on an urge that started at 21:10
+- **THEN** Today shows no card for the rest of Tuesday 13 October, and shows the opening card the first time Today appears after 04:00 on Wednesday 14 October
+
+#### Scenario: The lapse card waits for an open urge
+- **WHEN** stage 7 is open, the person saves a starred entry at 14:10 on Tuesday 5 January 2027, the next planned meal is at 16:00, the person taps "Urge" at 15:50 and "Close" at 15:52, and saves no outcome
+- **THEN** the card slot shows no card while the urge is open, and shows the maintenance plan card from 17:50, when the urge reaches URGE_OPEN_MINUTES
+
+#### Scenario: The suggestion hold after a binge at night
+- **WHEN** the day start is 04:00, a suggestion card is due, and the person saves the outcome "I binged" at 03:30 on Wednesday 14 October 2026
+- **THEN** Today shows no suggestion card at 04:05 on Wednesday 14 October, and shows it at the first Today load from 15:30 that day
 
 #### Scenario: Reading order from stage 3
 - **WHEN** VoiceOver reads Today with stage 3 open

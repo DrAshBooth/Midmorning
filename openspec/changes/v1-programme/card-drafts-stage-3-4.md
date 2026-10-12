@@ -2,7 +2,7 @@
 
 Status: DRAFT. The clinical reviewer has not read these cards. Do not ship them.
 
-This file holds draft bodies and oneThing sentences for the eight cards of stage 3, "Alternatives", and stage 4, "Problem solving". `content` gives their ids and titles in "The card catalogue". An agent wrote them on 12 October 2026, in the same way as decision 97 for the stage 1 and 2 cards. The review of stages 3 and 4 on 12 October 2026 changed them, as the notes below state.
+This file holds draft bodies and oneThing sentences for the eight cards of stage 3, "Alternatives", and stage 4, "Problem solving". `content` gives their ids and titles in "The card catalogue". An agent wrote them on 12 October 2026, in the same way as decision 97 for the stage 1 and 2 cards. The review of stages 3 and 4 on 12 October 2026 changed them, as the notes below state. The round 24 rulings of 12 October 2026 changed "stage3.twenty", "stage3.after" and "stage4.patterns" again (notes 15 to 19).
 
 The drafts are not in `Packages/Content/Resources/cards.json`. A card there changes the bundle hash, so it needs a new content version and a new `content-lock.json`. Ash sets the content version at the merge with `scripts/content-lock`. So the build changes add the cards:
 
@@ -20,7 +20,7 @@ Each of those changes copies the text below into `cards.json`, raises the conten
 - `content` "The forbidden list": no word from the full list. "binge" appears only in "binge eat", "binge eating" and "a binge". No bare "binges". No card names the urge screen's control "I binged". "stage3.after" asks for the entry with the star on.
 - No draft holds a link. Card links are not built yet (`content`, "One in-app link on a card"), and a person can read a card before its stage opens. So each card names a place in the app in words.
 - `content` "Plain UK English": UK spelling, "you", plain words.
-- A check on 12 October 2026 ran the full forbidden list, the US spelling list, the "binge" rule, the bare "binges" rule and the word count over every draft. All passed. The same check ran again on 12 October 2026 after the review changes, and all passed. The clinical reviewer still checks tone and reading level.
+- A check on 12 October 2026 ran the full forbidden list, the US spelling list, the "binge" rule, the bare "binges" rule and the word count over every draft. All passed. The same check ran again on 12 October 2026 after the review changes, and all passed. It ran a third time on 12 October 2026 after the round 24 changes, also over the new strings of round 24, and all passed. The clinical reviewer still checks tone and reading level.
 
 ## Notes for the clinical reviewer
 
@@ -35,9 +35,14 @@ Each of those changes copies the text below into `cards.json`, raises the conten
 9. The stage 3 question of the weekly review. The draft is "When an urge came, what did you do?" (ruling r23-05). It sits under the urge counts, and after a hard week it can read as a demand to account for a binge. Two other drafts are "What would you change on your alternatives list?", which points at the list, and "When an urge came, what did you try?". You write the text.
 10. A crisis on the worksheet. The worksheet is the longest free-text screen, and the app never reads what the person writes. The worksheet now shows "Get support" in its navigation bar, and "stage4.steps" says that thoughts of hurting yourself need a person now. Please decide whether every worksheet also needs one fixed line under step 1 that says the same. That line is clearest when it is needed, but it adds a clinical line to every everyday worksheet.
 11. The worksheet's guidance. The worksheet has two new draft lines: under step 1, "Think about what comes before it: a time, a place, a feeling or a long gap.", and under step 3, "For each one, ask: does it keep your planned meals and snacks in place?". "stage4.steps" and "stage4.pick" say the same two points. The app still never ranks or judges one option. Without these points, a person can plan a restriction, for example "Skip breakfast so I can eat later".
-12. The pattern templates. The custom place template is now the draft "{n} of your {m} had the place {place}.", so that it reads correctly for any place, for example "In the car". The slot templates say "{slot} didn't happen". That reads badly with a label for a time of day, for example "Mid-afternoon didn't happen". Please check both forms.
+12. The pattern templates. The custom place template is now the draft "{n} of the {m} had the place {place}.", so that it reads correctly for any place, for example "In the car". The slot templates now say "on days with no entry beside {slot}", for example "on days with no entry beside Mid-afternoon" (ruling r24-09). They replace "{slot} didn't happen", which read badly with a label for a time of day. Please check both forms.
 13. The stage 4 opening sentence. "The app can now show patterns from your record. The worksheet is ready." Its first sentence is false while "Pattern sentences" is off. Please reword it, or give a second form for that case.
 14. "stage4.patterns" now says "since your last entry", not "since you last ate", because the gap is from the entry before. It also says that a pattern can come to Today once, as a card.
+15. Times, not entries (ruling r24-05). A binge is often several entries. So the patterns now count the times the person starred an entry: starred entries of one record day that are less than 60 minutes apart count once. The templates now read "{n} of the {m} were after 20:00.", filled as "5 of the 7 times you starred an entry were after 20:00.". "stage4.patterns" now says "the times you starred an entry" and that entries less than an hour apart count as one time. The weekly review still counts starred entries.
+16. A card with no numbers (ruling r24-02). The suggestion card on Today shows no number, for example "Most of the times you starred an entry lately were after 20:00." or "Most of your recent urges were after 20:00.". The Problem solving screen and the worksheet keep the numbers. "Most" must stay true when a group holds just over half of the total. "stage4.patterns" now says that the card on Today has no numbers. A card waits 12 hours after a starred entry or "I binged" (ruling r24-03). You can change that value.
+17. Ideas on the urge screen (ruling r24-07). The urge screen now shows "Pick one and start it now." above the list. With an empty list, it shows your examples under "Ideas" as plain lines. So the examples also show at the moment of an urge, and a person sees them before the first visit to the setup. Please check that each example suits that moment, also late in the evening at home (note 1).
+18. "I ate as planned" (ruling r24-08). After this outcome, the app opens a new entry with the time of the tap, so the person can write down the planned meal or snack. "stage3.twenty" and "stage3.after" now say so. "stage3.after" no longer says that the app asks nothing more after "I ate as planned".
+19. The stage 4 rule (ruling r24-11). The Programme screen now shows "Opens after your first urge outcome, or after 7 recorded days. You have 2." "Urge outcome" is a word of the app, not a word that a person uses. Please reword the rule. The README of this change lists the rule strings.
 
 ## Stage 3, "Alternatives"
 
@@ -81,7 +86,7 @@ Body:
 
 > When you tap Urge, a timer starts and a wave shows the urge rising and fading. Under it is your list. Pick one thing and start it straight away. If the urge is still strong when you finish, pick another.
 >
-> You do not need to wait for the twenty minutes to end. When the urge has passed, tap "It passed". If a planned meal or snack is due, eat it and tap "I ate as planned". Eating a planned meal is not giving in. It is the plan doing its job.
+> You do not need to wait for the twenty minutes to end. When the urge has passed, tap "It passed". If a planned meal or snack is due, eat it and tap "I ate as planned". The app then opens a new entry, so you can write down what you ate. Eating a planned meal is not giving in. It is the plan doing its job.
 >
 > You can close the screen and come back to it. The timer keeps running, and Today shows when the urge started. If you prefer to breathe slowly or walk first, the exercise under the list is there for that.
 
@@ -97,7 +102,7 @@ Body:
 
 > Whatever happened, the next planned meal still happens on time.
 >
-> If the urge passed or you ate as planned, the app saves that and asks nothing more. If it was a binge, write it as you would any other entry, with the star on. A binge during this stage is a lapse. It does not mean the list does not work, and it does not undo what came before.
+> If the urge passed, the app saves that and asks nothing more. If you ate as planned, the app saves that and opens a new entry for what you ate. If it was a binge, write it as you would any other entry, with the star on. A binge during this stage is a lapse. It does not mean the list does not work, and it does not undo what came before.
 >
 > Later, at a calm moment, look back at what happened. Did you catch the urge early or late? Did the thing you chose fit the time and the place? Was there something on the list you could not do just then? Use what you notice to change the list. If urges keep coming at the same time of day, put something from your list into that time before the urge arrives.
 
@@ -115,7 +120,7 @@ Body:
 
 > Starred entries and urges rarely come out of nowhere. Often the same things come before them: a time of day, a day of the week, a place, a long gap since your last entry, or a planned meal that did not happen.
 >
-> When the app finds something that comes up in more than half of your recent starred entries, or in more than half of your recent urges, it shows it as one plain sentence on the Problem solving screen, with the numbers filled in. The same sentence can also come to Today once, as a card. The sentence is not a judgement. It is a place to start.
+> When the app finds something that comes up in more than half of the times you starred an entry lately, or in more than half of your recent urges, it shows it as one plain sentence on the Problem solving screen, with the numbers filled in. Starred entries less than an hour apart count as one time. The pattern can also come to Today once, as a card with no numbers. The sentence is not a judgement. It is a place to start.
 >
 > You can also find a pattern yourself, and you do not need one from the app to start a worksheet. Look back at your last few starred entries and ask what was happening an hour or two before each one: where you were, who you were with, how you felt, and when you last ate.
 
