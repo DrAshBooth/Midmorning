@@ -48,7 +48,14 @@ The app MUST use these words: "entry", "What", "Today", "felt like a binge", "pl
 
 ### Requirement: Nothing looks like a nutrition app
 
-The app MUST NOT use a plate, fork, apple, scale or tape-measure image anywhere. This includes the app icon, widgets and App Store screenshots. The app MUST NOT show food photography. The app's visual language MUST read as a notes or calendar app. The app MUST NOT reveal what it is for to a person who glances at any screen. The star control's label "felt like a binge" on the new-entry screen is an exception. The urge screen's "I binged" control is the other. `urge-toolkit` owns that control. Each is body text, not a heading or an image.
+The app MUST NOT use a plate, fork, apple, scale or tape-measure image anywhere. This includes the app icon, widgets and App Store screenshots. The app MUST NOT show food photography. The app's visual language MUST read as a notes or calendar app. The app MUST NOT reveal what it is for to a person who glances at any screen. This rule has four named exceptions:
+
+- the star control's label "felt like a binge" on the new-entry screen
+- the urge screen's "I binged" control
+- the "Urge" button on Today from stage 3
+- the line "Urge open since %@" on Today
+
+`urge-toolkit` owns the last three. Each exception is body text, not a heading or an image. The "Urge" button and the line show only on Today, inside the app and behind the app lock. The PRD asks for an "Urge" button that stays on Today from stage 3, so the button and its line are exceptions.
 
 #### Scenario: The app icon
 - **WHEN** the app icon appears on a lock screen or home screen
@@ -57,6 +64,10 @@ The app MUST NOT use a plate, fork, apple, scale or tape-measure image anywhere.
 #### Scenario: A glance at Today
 - **WHEN** a person sees Today from a metre away
 - **THEN** they see times and short text and no image or heading that names eating, weight or health
+
+#### Scenario: A glance at Today from stage 3
+- **WHEN** stage 3 is open, an urge is open since 22:40, and a person sees Today from a metre away
+- **THEN** they see times, short text, the "Urge" button and "Urge open since 22:40" as body text, and no image or heading that names eating, weight or health
 
 ### Requirement: The product name and the plan slot
 
@@ -144,7 +155,7 @@ The app MUST NOT call a language model or any generative service at runtime. Eve
 
 #### Scenario: A pattern sentence
 - **WHEN** the app builds a pattern sentence from the record
-- **THEN** it fills a reviewed template with numbers and times, and generates no other words
+- **THEN** it fills a reviewed template with counts, a slot label or a place, and generates no other words
 
 ### Requirement: Appearance
 

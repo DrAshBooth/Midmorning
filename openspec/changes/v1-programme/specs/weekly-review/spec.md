@@ -266,9 +266,11 @@ At a check-in, the summary MUST cover the 7 record days before the check-in. At 
 
 The natural key of a review is the date key of its due day, the start day plus 7n. The app MUST NOT key a review by its week number. The `data-and-privacy` capability owns the Review row, its sync and the winning row rule.
 
-When the app first builds the review of week n, it MUST write the week's counts. It MUST write them into the Review row for that key. The counts are the days-with-an-entry count, the starred count, the plan count, the paused-days count and the two urge counts. The "Reviews" list reads the frozen starred count for its rows. At the same moment the app writes the list of open stages for the stage questions, as "Three reflection questions" states.
+When the app first builds the review of week n, it MUST write the week's counts. It MUST write them into the Review row for that key. The counts are the days-with-an-entry count, the starred count, the plan count, the paused-days count and the two urge counts. The "Reviews" list reads the frozen starred count for its rows. At the same moment the app writes the list of stages for the stage questions, as "Three reflection questions" states.
 
 After that moment the counts in the row MUST NOT change. An entry the person edits or deletes later MUST NOT change the row. The `safeguarding` capability reads the frozen starred counts for the deterioration rule. The app MUST write the counts whether or not the person opens the review.
+
+The review screen MUST build its summary from the record each time it opens, as "The summary built from the record" states. The frozen counts are for the "Reviews" list and the deterioration rule. So an urge outcome that the person saves after the freeze can change the urge part on the review screen. It MUST NOT change the two frozen urge counts in the Review row.
 
 The app MUST freeze the review of week n only after its due moment by the device clock. A device with sync on MUST also wait until its last sync moment is later than the due moment. The `data-and-privacy` capability owns the last sync moment. The Review row MUST carry its freeze moment. When one key has more than one row, the app MUST read the row with the earliest freeze moment. Every edit to the review MUST write into that row.
 
@@ -283,6 +285,10 @@ When the device clock moves back past a frozen review's due moment, that row is 
 #### Scenario: A review the person never opens
 - **WHEN** the review of week 2 becomes due and the person never opens it
 - **THEN** the Review row for week 2 holds the starred count of week 2
+
+#### Scenario: An urge outcome after the freeze
+- **WHEN** the app froze the review of week 3 at 04:00 on Monday 12 October 2026 with the urge counts 2 and 1, and at 04:10 the person taps "It passed" for an urge with the `startDayKey` Sunday 11 October
+- **THEN** the Review row for week 3 still holds the urge counts 2 and 1, and the urge part on the review screen of week 3 counts the outcome of 04:10
 
 #### Scenario: The device clock moves back
 - **WHEN** the Review row for week 3 is frozen and the device clock moves back to Wednesday 14 October, before the review of week 3 became due
@@ -344,9 +350,11 @@ When the switch is off, the app MUST still write the week's counts into the Revi
 
 After the summary the review MUST ask three questions, in this order: "What did you notice this week?", "What made things harder?" and "What helped?" Each question MUST have one free-text field. The app MUST NOT show a placeholder in a field. The app MUST ask the same three questions every week. The app MUST take the questions from bundled text that the clinical reviewer signed off. The app MUST save the answers with the review.
 
-After "What helped?" the review MUST ask one stage question for each programme stage, from stage 3, that is open when the app first builds the review of week n. `programme` owns the stage state. The review MUST ask the stage questions in stage order, before "What's the one thing to change next week?". When the app first builds the review and writes its counts, it MUST also write the list of those stages into the Review row. That list MUST NOT change later, also when a stage opens after that moment or the person opens the review again. Ash ruled this on 12 October 2026 (r23-05).
+After "What helped?" the review MUST ask one stage question for each programme stage, from stage 3, that meets two conditions. First, the stage opened at or before the review's due moment, the first day start of week n + 1. Second, the build holds the stage's tool, as `programme` states in "The Programme screen shows where the person is". `programme` owns the stage state. The review MUST ask the stage questions in stage order, before "What's the one thing to change next week?". Ash ruled the stage questions on 12 October 2026 (r23-05).
 
-Each stage question MUST have one optional free-text field with no placeholder. The app MUST save the answer with the review. The app MUST take each stage question from bundled text that the clinical reviewer signs off, in the family that `content` names. Taking stock MUST ask the stage questions in the same place. A check-in asks the three questions only, as `staying-on-track` states.
+When the app first builds the review and writes its counts, it MUST also write the list of those stages into the Review row. That list MUST NOT change later. A stage that opens after the due moment adds no question to that review, also when the person opens the review again. A Review row that a build without stage questions wrote holds no list of stages. The app MUST NOT ask a stage question in that review, also after an update that adds stage questions.
+
+Each stage question MUST have one optional free-text field with no placeholder. The app MUST save each stage answer in the answers of the Review row, under the content id of its question, for example "reflection.stage3". When the app saves the answers of a review, it MUST keep every key that its build does not know, with its value. So a device with an earlier build does not drop a stage answer that a later build wrote. The app MUST take each stage question from bundled text that the clinical reviewer signs off, in the family that `content` names. Taking stock MUST ask the stage questions in the same place. A check-in asks the three questions only, as `staying-on-track` states.
 
 The stage 3 question is "When an urge came, what did you do?" The stage 4 question is "Did a problem come up that a worksheet could help with?" These two texts are drafts, and the clinical reviewer can change them before sign-off. The questions of stages 5, 6 and 7 have no text yet. The build of each of those stages adds its question, with the clinical reviewer.
 
@@ -363,27 +371,43 @@ The stage 3 question is "When an urge came, what did you do?" The stage 4 questi
 - **THEN** the review asks the same three questions as the review of week 2
 
 #### Scenario: No stage question before stage 3
-- **WHEN** stage 3 is closed when the app first builds the review of week 3
+- **WHEN** stage 3 is closed at the due moment of the review of week 3
 - **THEN** the review shows "What helped?", then "What's the one thing to change next week?", and no stage question
 
 #### Scenario: The stage 3 question
-- **WHEN** stage 3 is open and stage 4 is closed when the app first builds the review of week 4, due at 04:00 on Monday 19 October 2026
+- **WHEN** stage 3 is open and stage 4 is closed at the due moment of the review of week 4, 04:00 on Monday 19 October 2026
 - **THEN** the review shows "What helped?", then "When an urge came, what did you do?" with an empty field, then "What's the one thing to change next week?"
 
 #### Scenario: Two open stages
-- **WHEN** stages 3 and 4 are open when the app first builds the review of week 5, due at 04:00 on Monday 26 October 2026
+- **WHEN** stages 3 and 4 are open at the due moment of the review of week 5, 04:00 on Monday 26 October 2026
 - **THEN** the review shows "What helped?", then "When an urge came, what did you do?", then "Did a problem come up that a worksheet could help with?", then "What's the one thing to change next week?"
 
 #### Scenario: A stage that opens after the review is built
 - **WHEN** the app built the review of week 4 at 04:00 on Monday 19 October 2026 with stage 3 open, stage 4 opens on Tuesday 20 October, and the person opens that review on Wednesday 21 October
 - **THEN** the review asks the stage 3 question and no stage 4 question
 
+#### Scenario: A stage that opens on the due day
+- **WHEN** the review of week 4 becomes due at 04:00 on Monday 19 October 2026 with stage 3 open, stage 4 opens at 07:30 that day, and the app first builds the review at 09:00
+- **THEN** the Review row holds stage 3 only, and the review asks the stage 3 question and no stage 4 question
+
+#### Scenario: A stage without its tool in the build
+- **WHEN** stages 3 and 4 are open at the due moment of the review of week 5, and the build holds the tools of stages 1 to 3 only
+- **THEN** the review asks the stage 3 question and no stage 4 question
+
+#### Scenario: A review built before the stage questions
+- **WHEN** a build without stage questions built the review of week 4, and the person opens that review after an update that adds the stage 3 question
+- **THEN** the review asks no stage question
+
 #### Scenario: A stage answer
 - **WHEN** the person types "Walked round the block" under "When an urge came, what did you do?" and taps "Done"
-- **THEN** the store keeps "Walked round the block" with that review
+- **THEN** the store keeps "Walked round the block" with that review, under "reflection.stage3"
+
+#### Scenario: An answer that the build does not know
+- **WHEN** the review of week 5 holds the stage 4 answer "Planned the evening snack", and a device whose build has no stage 4 question saves an edit to "What helped?" in that review
+- **THEN** the Review row still holds the stage 4 answer "Planned the evening snack"
 
 #### Scenario: Taking stock keeps the stage questions in place
-- **WHEN** stages 3, 4 and 5 are open when the app first builds the review that grows into taking stock
+- **WHEN** stages 3, 4 and 5 are open at the due moment of the review that grows into taking stock
 - **THEN** taking stock shows its parts, then the three questions, then the stage 3, 4 and 5 questions, then "What's the one thing to change next week?"
 
 #### Scenario: A check-in asks no stage question

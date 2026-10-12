@@ -489,9 +489,11 @@ The card slot MUST hold at most one card at a time. A card is one of these:
 - the week-13 question
 - the maintenance plan
 
-The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. The app MUST show the next card after the person dismisses the first. The card slot MUST show at most one suggestion card on a record day. `problem-solving` decides which suggestion card, in "The suggestion card". That rule does not hold back a card of another kind. Ash ruled this on 12 October 2026 (r23-06).
+The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. A suggestion card MUST come after every other waiting card, as `problem-solving` states in "The suggestion card". The app MUST show the next card after the person dismisses the first. The card slot MUST show at most one suggestion card on a record day. `problem-solving` decides which suggestion card, in "The suggestion card". That rule does not hold back a card of another kind. Ash ruled this on 12 October 2026 (r23-06).
 
 After a starred entry or an "I binged" outcome, the app MUST NOT show a card in the same record day. The one exception is the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card can show in the same record day as the starred entry or the outcome. After that entry or outcome, Today MUST NOT show the pinned note until the next record day. The `weekly-review` capability owns that rule.
+
+For these two holds, Today MUST read two moments: the time of the latest starred entry, and the `outcomeAt` of the latest "I binged" outcome. `outcomeAt` is the moment the person saves the entry of that outcome, as `urge-toolkit` states. When the later of the two moments is in the current record day, Today MUST hold the cards and the pinned note. So the holds stay when the person turns the star of that entry off, or moves the entry to the previous record day. `programme` states the same rule in "No opening card after a binge in the same record day".
 
 Each day section MUST show its heading and its rows. It MUST show a state line when the day is paused or has the state "didn't record". From stage 2 it MUST show the plan beside the record and the gap bands. The current day section MUST come first. The previous day section MUST follow it, collapsed by default, and only when it has an entry.
 
@@ -503,11 +505,11 @@ A bottom toolbar MUST hold these text controls, in this order:
 - "Reviews", from the moment the first weekly review becomes due
 - "Settings"
 
-Before the first weekly review becomes due, the bottom toolbar MUST NOT show "Reviews". The settings screen MUST be one tap from Today, through "Settings". From stage 3, the "Urge" button MUST sit above the bottom toolbar. The button MUST stay on screen while the rows scroll. In VoiceOver's reading order the "Urge" button MUST come first from stage 3.
+Before the first weekly review becomes due, the bottom toolbar MUST NOT show "Reviews". The settings screen MUST be one tap from Today, through "Settings". From stage 3, the "Urge" button MUST sit above the bottom toolbar. The button MUST stay on screen while the rows scroll. VoiceOver reads the navigation bar before the content, as "Accessibility of the additions" states. From stage 3, the "Urge" button MUST be the first element of Today's content in VoiceOver's reading order, after the navigation bar.
 
 The current day heading and a full-width control "Add an entry" under it MUST form a pinned section header. That header MUST stay on screen while the current day's rows scroll. "Pause for today" MUST sit under the rows as a visible control. "Close the day" MUST sit beside it only after the last planned meal's time, or after 17:00 in stage 1.
 
-"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today". From stage 4, "New worksheet" MUST also live in the current day heading's menu and as a custom action, as "A new worksheet from the day heading's menu" states. Ash ruled this on 12 October 2026 (r23-08).
+"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today". From stage 4, "New worksheet" MUST also live in the current day heading's menu and as a custom action. "A new worksheet from the day heading's menu" states the item. Ash ruled this on 12 October 2026 (r23-08).
 
 The `reminders` capability owns the rule and the two strings of the notification permission line. The line MUST sit under the pinned section header, above the rows, as a control. When permission is not determined, the line MUST read "Allow notifications to get reminders.". A tap on it MUST make the system permission request.
 
@@ -537,7 +539,15 @@ The order above is the only order. Another capability MUST NOT add an element to
 
 #### Scenario: Reading order from stage 3
 - **WHEN** VoiceOver reads Today with stage 3 open
-- **THEN** the first element is the "Urge" button, then the lock control in the navigation bar
+- **THEN** VoiceOver reads the lock control and Get support in the navigation bar, and then the "Urge" button as the first element of Today's content
+
+#### Scenario: Today at the largest text size from stage 3
+- **WHEN** stage 3 is open, the current record day has fifteen entries, and the accessibility audits run on Today at the AX5 text size in light mode, in dark mode and in dark mode with Increase Contrast
+- **THEN** the pinned current day heading with "Add an entry" and the pinned "Urge" button show with no clipped text, and no audit reports a fault
+
+#### Scenario: A binge entry moved to the previous record day
+- **WHEN** the pinned note is "Eat lunch at work", the person taps "I binged" on the urge screen at 07:35 on Tuesday 13 October 2026, sets the time to 23:30 on Monday 12 October and saves the entry at 07:40
+- **THEN** Today shows no pinned note for the rest of Tuesday 13 October, and shows "Eat lunch at work" the first time Today appears after 04:00 on Wednesday 14 October
 
 #### Scenario: Previous day
 - **WHEN** the previous record day has three entries and the person has not collapsed or expanded it

@@ -146,28 +146,6 @@ When "Include weigh-ins" is off, the PDF MUST hold no weight value. The `weigh-i
 - **WHEN** "Include weigh-ins" is on and no weigh-in falls in the range
 - **THEN** the PDF has no "Weigh-ins" page
 
-### Requirement: What the PDF never contains
-
-The PDF MUST NOT contain an entry's creation moment or any late label. The PDF MUST NOT contain a count of entries or a count of starred entries. The PDF MUST NOT contain a total, a streak or a score. The PDF MUST NOT contain a gap band, a planned meal, a pattern sentence, an urge outcome or a worksheet. The PDF MUST NOT contain the height, the onboarding BMI or a screening answer. The PDF MUST NOT contain a weight value unless "Include weigh-ins" is on.
-
-The PDF and its file name MUST NOT contain the product name or the person's name. The PDF's metadata MUST hold the title "Record" and the range, and no author. The PDF's Creator field MUST be empty. The app MUST leave the Producer field as the system writes it.
-
-#### Scenario: A day with fifteen entries
-- **WHEN** a day in the range has fifteen entries, three of them starred
-- **THEN** the PDF shows the fifteen lines and no number for either count
-
-#### Scenario: A gap in the range
-- **WHEN** a day in the range has entries at 08:00 and 14:00 and stage 2 is open
-- **THEN** the PDF shows the two entries and no band and no text about the gap
-
-#### Scenario: File name
-- **WHEN** the range is 28 August to 24 September 2026
-- **THEN** the file's name is "Record 2026-08-28 to 2026-09-24.pdf"
-
-#### Scenario: Metadata
-- **WHEN** a PDF reader shows the document's properties
-- **THEN** the title reads "Record 28 August – 24 September 2026", the Author and Creator fields are empty, and the Producer field holds what the system writes
-
 ### Requirement: Share sheet only
 
 On "Make PDF" the app MUST build the PDF on the device and present it in the system share sheet. The app MUST write the PDF to a temporary file with the store's protection class. The app MUST delete the file when the share sheet closes. The app MUST NOT upload the PDF or send it by any channel of its own. The app MUST NOT keep a copy in the store. The PDF MUST have no password and no encryption.
@@ -277,3 +255,31 @@ The PDF MUST declare the language en-GB on each tag: the H1, each H2, each list 
 #### Scenario: Greyscale
 - **WHEN** a printer prints the PDF in black and white
 - **THEN** every starred entry still shows its asterisk and every heading is legible
+
+## MODIFIED Requirements
+
+### Requirement: What the PDF never contains
+
+The PDF MUST NOT contain an entry's creation moment or any late label. The PDF MUST NOT contain a count of entries or a count of starred entries. The PDF MUST NOT contain a total, a streak or a score. The PDF MUST NOT contain a gap band, a planned meal, a pattern sentence, an urge, an urge outcome or a worksheet. The PDF MUST NOT contain the height, the onboarding BMI or a screening answer. The PDF MUST NOT contain a weight value unless "Include weigh-ins" is on.
+
+The PDF and its file name MUST NOT contain the product name or the person's name. The PDF's metadata MUST hold the title "Record" and the range, and no author. The PDF's Creator field MUST be empty. The app MUST leave the Producer field as the system writes it.
+
+#### Scenario: A day with fifteen entries
+- **WHEN** a day in the range has fifteen entries, three of them starred
+- **THEN** the PDF shows the fifteen lines and no number for either count
+
+#### Scenario: A gap in the range
+- **WHEN** a day in the range has entries at 08:00 and 14:00 and stage 2 is open
+- **THEN** the PDF shows the two entries and no band and no text about the gap
+
+#### Scenario: File name
+- **WHEN** the range is 28 August to 24 September 2026
+- **THEN** the file's name is "Record 2026-08-28 to 2026-09-24.pdf"
+
+#### Scenario: Metadata
+- **WHEN** a PDF reader shows the document's properties
+- **THEN** the title reads "Record 28 August – 24 September 2026", the Author and Creator fields are empty, and the Producer field holds what the system writes
+
+#### Scenario: A day with an urge
+- **WHEN** a day in the range has an entry at 21:35 and an urge that started at 21:10 with no outcome
+- **THEN** the PDF shows the 21:35 entry and no text about the urge

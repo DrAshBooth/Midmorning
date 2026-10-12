@@ -416,6 +416,8 @@ Every screen the app presents full-screen MUST show a control labelled "Get supp
 
 The weekly review, the check-in and the restart re-screen MUST each show Get support in the navigation bar. Each asks the self-harm item. The sheet exemption MUST NOT apply to these three screens. When the app shows one of these screens as a sheet, that sheet MUST show Get support.
 
+The urge screen and the worksheet MUST also show Get support in the navigation bar, from the moment each opens. The sheet exemption MUST NOT apply to these two screens. A person can be in distress during an urge. A worksheet holds free text that the app does not read, as "V1 does not read free text for risk" states. One tap on the control MUST open the support sheet over the urge screen or the worksheet. `urge-toolkit` and `problem-solving` own the two screens. This follows decision 80 and the PRD's always-present support route. Decision 94 (r8-11) already assumed Get support on the urge screen, with "Close" in the leading position.
+
 On every screen that shows it, the control MUST be in the trailing position of the navigation bar. Except on Today, the leading position MUST hold only "Cancel", "Close" or the system back control. On Today the leading position holds the lock control, as `record` states. On a screen that shows Get support, the confirming action MUST be a full-width button below the content. Examples are "Done" in the review and the check-in, "Save" in the plan builder and "Continue" in onboarding. The control MUST use the text style of the other navigation controls. It MUST have no red, no alert icon and no count. Decision 94 sets the side. Ash ruled it on 25 September 2026.
 
 The control MUST be present on every onboarding screen and the three safeguarding pages. The cover MUST NOT show the control. `app-lock` owns the cover and lists what it shows. One tap on the control MUST open the support sheet. The app MUST NOT hide the control behind a detector, a stage or a setting.
@@ -451,6 +453,14 @@ The control MUST be present on every onboarding screen and the three safeguardin
 #### Scenario: Restart re-screen
 - **WHEN** the restart re-screen is open at its self-harm item
 - **THEN** the re-screen shows "Get support" in its navigation bar, and one tap opens the support sheet
+
+#### Scenario: The urge screen
+- **WHEN** the urge screen is open as a sheet over Today
+- **THEN** the urge screen shows "Get support" as the trailing item of its navigation bar, and one tap opens the support sheet over the urge screen
+
+#### Scenario: A worksheet
+- **WHEN** a worksheet is open as a sheet over Today
+- **THEN** the worksheet shows "Get support" as the trailing item of its navigation bar, and one tap opens the support sheet over the worksheet
 
 ### Requirement: The support sheet
 
