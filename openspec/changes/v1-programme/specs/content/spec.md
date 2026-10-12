@@ -490,12 +490,13 @@ The content bundle MUST hold these families of reviewed strings, each string wit
 - Opening sentences: "opening.stage2" to "opening.stage7". Programme owns the text. "opening.stage2.remindersoff" is the line the stage 2 opening card adds when notification permission is denied: "Reminders are off, so the Home Screen widget shows your next planned time."
 - Rule strings: "rule.stage2" to "rule.stage7", and more ids that start with "rule.stage2." or "rule.stage3.". Programme owns the text. The stage 2 rule and the stage 3 rule each show two counts, so each comes from strings with one count each. The stage 2 rule is "rule.stage2", "Opens after %lld recorded days.", then "rule.stage2.count", "You have %lld.". The stage 3 rule is "rule.stage3", "Opens after %1$@, or %2$@ after your plan starts". The app fills it from "rule.stage3.days", "%lld days on your plan", and "rule.stage3.weeks", "%lld weeks". With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts".
 - Today card strings: "todaycard.plan", "Your plan isn't set yet. It takes about two minutes."; "todaycard.plan.setup", "Set it up"; "todaycard.focus", "If you use a Focus at work, let planned meal reminders through?"; "todaycard.focus.yes", "Yes"; "todaycard.read", "Read". Programme owns the text and when each card shows.
-- Pattern templates: "pattern.<name>", and the three count strings "pattern.count.group", "pattern.count.total" and "pattern.count.hours". Problem-solving owns the text. A slot template reads "{n} of your {m} were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} were at {place}."
+- Pattern templates: "pattern.<name>", and the four count strings "pattern.count.group", "pattern.count.total", "pattern.count.urges" and "pattern.count.hours". Problem-solving owns the text. A slot template reads "{n} of your {m} were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} were at {place}."
 - The reintroduction question: "dieting.reintroduction", "{weekday}, {slot}: how did it go?". Dieting-module owns the text.
 - The worksheet steps: "worksheet.1" to "worksheet.6". Problem-solving owns the text. "worksheet.1" is "What is the problem, exactly?"
 - The check-in weeks line: "checkin.weeks", and more ids that start with "checkin.weeks.". Staying-on-track owns the text. The line reads "A check-in comes at 4, 8 and 12 weeks." with the default constants. It shows three counts, so it comes from strings with one count each. The app fills the three numbers from CHECK_IN_WEEKS.
 - The urge timer line: "urge.buzz", "Buzz at %lld minutes". Urge-toolkit owns the text. The app fills the number from URGE_TIMER_MINUTES.
 - Reflection questions: "reflection.1" to "reflection.3". Weekly-review owns the text.
+- Stage questions: "reflection.stage3" to "reflection.stage7", one question for each stage from stage 3. Weekly-review owns the text. The bundle holds a stage question from the build of its stage on. Ash ruled this on 12 October 2026 (r23-05).
 - Week-1 questions: "week1.1" to "week1.3". Weekly-review owns the text.
 - The taking stock questionnaire: "takingstock.<n>". Weekly-review owns the text.
 - The alternatives examples: "alternatives.<n>". Urge-toolkit owns the text.
@@ -513,7 +514,7 @@ The Programme package also holds some of these strings as Swift constants, and t
 
 Programme owns every fill: the gate value from ProgrammeConstants, the recorded-day count of the stage 2 rule, and the days and the weeks of the stage 3 rule. A rule string of one sentence MUST NOT end with a full stop. The two strings of the stage 2 rule are the exception: each is one sentence, and each ends with a full stop.
 
-A pattern template MUST hold only the placeholders {n}, {m}, {slot} and {hours}. The one exception is "pattern.place", which MUST hold {n}, {m} and {place}. In a pattern template, {n}, {m} and {hours} stand for counts. A pattern template MUST NOT hold a %lld placeholder. The app MUST fill each count from a string with one %lld and plural forms, as "Catalogue rules" requires. The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld starred entries", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. The three count strings are not templates. Each of them MUST hold one %lld and no other placeholder. Ash ruled this on 7 October 2026 (r17-05). The reintroduction question MUST hold only {weekday} and {slot}.
+A pattern template MUST hold only the placeholders {n}, {m}, {slot} and {hours}. The one exception is "pattern.place", which MUST hold {n}, {m} and {place}. In a pattern template, {n}, {m} and {hours} stand for counts. A pattern template MUST NOT hold a %lld placeholder. The app MUST fill each count from a string with one %lld and plural forms, as "Catalogue rules" requires. The app MUST fill {n} from "pattern.count.group", "%lld", with the group size. The app MUST fill {m} from "pattern.count.total", "%lld starred entries", with the starred total. The app MUST fill {hours} from "pattern.count.hours", "%lld hours", with MAX_AWAKE_GAP_HOURS. Ash ruled this on 7 October 2026 (r17-05). In a sentence from urges, the app MUST fill {m} from "pattern.count.urges", "%lld urges", with the urge total. Its one form reads "%lld urge". Ash ruled this on 12 October 2026 (r23-09). The four count strings are not templates. Each of them MUST hold one %lld and no other placeholder. The reintroduction question MUST hold only {weekday} and {slot}.
 
 The app MUST fill {slot} with the slot label as the person typed it, and no other word. The app MUST fill {weekday} with the weekday name from the en_GB formatter. The app MUST fill {place} with the person's custom chip text and no other word. Problem-solving owns that fill.
 
@@ -602,6 +603,14 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 #### Scenario: A placeholder in a question
 - **WHEN** the bundle holds "reflection.1" with "{weekNumber}" in its text
 - **THEN** the content test fails and names "reflection.1"
+
+#### Scenario: The urge count string
+- **WHEN** the bundle holds "pattern.count.urges" as "%lld urges", with the one form "%lld urge"
+- **THEN** the content test passes its plural check, and the app shows "4 of your 6 urges were after 20:00."
+
+#### Scenario: The stage 3 question in the bundle
+- **WHEN** the bundle holds "reflection.stage3" as "When an urge came, what did you do?"
+- **THEN** the content test checks it against the full forbidden list, and the review shows that text as the stage 3 question
 
 #### Scenario: The maintenance plan question
 - **WHEN** the person reaches the maintenance plan

@@ -48,7 +48,7 @@ The app MUST recommend Food rules when question 1 or 2 has "Some days" or "Most 
 
 The recommendation MUST read one of: "From your answers, Food rules is the one to open first.", "From your answers, Body image is the one to open first.", "From your answers, both modules apply. Start with either." or "From your answers, neither module stands out. Both are open if you want them." A recommendation string MUST NOT contain "feeling fat". Under the recommendation, the app MUST show two controls, "Open Food rules" and "Open Body image", whatever the recommendation.
 
-When the person taps either control, the app MUST save the questionnaire answers and the chosen module. At that tap, the app MUST NOT open the module or complete the taking stock session. After the tap, the app MUST show the tapped control as chosen and the other control as not chosen. When the person later taps the other control, the app MUST replace the chosen module with that control's module. The review MUST continue with the reflection questions, the one thing to change, the self-harm item and "I'm getting worse".
+When the person taps either control, the app MUST save the questionnaire answers and the chosen module. At that tap, the app MUST NOT open the module or complete the taking stock session. After the tap, the app MUST show the tapped control as chosen and the other control as not chosen. When the person later taps the other control, the app MUST replace the chosen module with that control's module. The review MUST continue with the reflection questions, the stage questions, the one thing to change, the self-harm item and "I'm getting worse". So taking stock asks the stage questions in the same place as every review. Ash ruled this on 12 October 2026 (r23-05).
 
 "Done" MUST close the review with or without a chosen module, as for any review. When the person first taps the review's "Done" with a chosen module, the app MUST complete the taking stock session. After the review closes, the app MUST open the chosen module. The app MUST NOT open it after a self-harm "Yes" then "Yes" in that review. The app MUST NOT open it when the system or the person closed the app before that "Done". After that first "Done", the app MUST NOT open a module at a later "Done" on that review.
 
@@ -266,7 +266,7 @@ At a check-in, the summary MUST cover the 7 record days before the check-in. At 
 
 The natural key of a review is the date key of its due day, the start day plus 7n. The app MUST NOT key a review by its week number. The `data-and-privacy` capability owns the Review row, its sync and the winning row rule.
 
-When the app first builds the review of week n, it MUST write the week's counts. It MUST write them into the Review row for that key. The counts are the days-with-an-entry count, the starred count, the plan count, the paused-days count and the two urge counts. The "Reviews" list reads the frozen starred count for its rows.
+When the app first builds the review of week n, it MUST write the week's counts. It MUST write them into the Review row for that key. The counts are the days-with-an-entry count, the starred count, the plan count, the paused-days count and the two urge counts. The "Reviews" list reads the frozen starred count for its rows. At the same moment the app writes the list of open stages for the stage questions, as "Three reflection questions" states.
 
 After that moment the counts in the row MUST NOT change. An entry the person edits or deletes later MUST NOT change the row. The `safeguarding` capability reads the frozen starred counts for the deterioration rule. The app MUST write the counts whether or not the person opens the review.
 
@@ -324,7 +324,7 @@ When the rule fires, the app MUST show the GP suggestion page that `safeguarding
 
 ### Requirement: The weekly summary is opt-out
 
-The app MUST offer a switch named "Weekly summary" in the settings screen, on by default. The `product-rules` capability states the "The person can put it down" rule. When the switch is off, the review MUST show no summary part. When the switch is off, the reflection questions and the one thing to change MUST stay as they are. The self-harm item and "I'm getting worse" MUST also stay as they are.
+The app MUST offer a switch named "Weekly summary" in the settings screen, on by default. The `product-rules` capability states the "The person can put it down" rule. When the switch is off, the review MUST show no summary part. When the switch is off, the reflection questions, the stage questions and the one thing to change MUST stay as they are. The self-harm item and "I'm getting worse" MUST also stay as they are.
 
 When the switch is off, the app MUST still write the week's counts into the Review row. When the switch is off, the "Reviews" list rows MUST show week and dates only. When the person turns the switch on again, the next review MUST show the summary.
 
@@ -344,6 +344,12 @@ When the switch is off, the app MUST still write the week's counts into the Revi
 
 After the summary the review MUST ask three questions, in this order: "What did you notice this week?", "What made things harder?" and "What helped?" Each question MUST have one free-text field. The app MUST NOT show a placeholder in a field. The app MUST ask the same three questions every week. The app MUST take the questions from bundled text that the clinical reviewer signed off. The app MUST save the answers with the review.
 
+After "What helped?" the review MUST ask one stage question for each programme stage, from stage 3, that is open when the app first builds the review of week n. `programme` owns the stage state. The review MUST ask the stage questions in stage order, before "What's the one thing to change next week?". When the app first builds the review and writes its counts, it MUST also write the list of those stages into the Review row. That list MUST NOT change later, also when a stage opens after that moment or the person opens the review again. Ash ruled this on 12 October 2026 (r23-05).
+
+Each stage question MUST have one optional free-text field with no placeholder. The app MUST save the answer with the review. The app MUST take each stage question from bundled text that the clinical reviewer signs off, in the family that `content` names. Taking stock MUST ask the stage questions in the same place. A check-in asks the three questions only, as `staying-on-track` states.
+
+The stage 3 question is "When an urge came, what did you do?" The stage 4 question is "Did a problem come up that a worksheet could help with?" These two texts are drafts, and the clinical reviewer can change them before sign-off. The questions of stages 5, 6 and 7 have no text yet. The build of each of those stages adds its question, with the clinical reviewer.
+
 #### Scenario: The three questions
 - **WHEN** the person opens the review of week 2 with "Weekly summary" on
 - **THEN** the review shows the summary, then "What did you notice this week?", "What made things harder?" and "What helped?", each with an empty field
@@ -356,9 +362,37 @@ After the summary the review MUST ask three questions, in this order: "What did 
 - **WHEN** the person opens the review of week 5
 - **THEN** the review asks the same three questions as the review of week 2
 
+#### Scenario: No stage question before stage 3
+- **WHEN** stage 3 is closed when the app first builds the review of week 3
+- **THEN** the review shows "What helped?", then "What's the one thing to change next week?", and no stage question
+
+#### Scenario: The stage 3 question
+- **WHEN** stage 3 is open and stage 4 is closed when the app first builds the review of week 4, due at 04:00 on Monday 19 October 2026
+- **THEN** the review shows "What helped?", then "When an urge came, what did you do?" with an empty field, then "What's the one thing to change next week?"
+
+#### Scenario: Two open stages
+- **WHEN** stages 3 and 4 are open when the app first builds the review of week 5, due at 04:00 on Monday 26 October 2026
+- **THEN** the review shows "What helped?", then "When an urge came, what did you do?", then "Did a problem come up that a worksheet could help with?", then "What's the one thing to change next week?"
+
+#### Scenario: A stage that opens after the review is built
+- **WHEN** the app built the review of week 4 at 04:00 on Monday 19 October 2026 with stage 3 open, stage 4 opens on Tuesday 20 October, and the person opens that review on Wednesday 21 October
+- **THEN** the review asks the stage 3 question and no stage 4 question
+
+#### Scenario: A stage answer
+- **WHEN** the person types "Walked round the block" under "When an urge came, what did you do?" and taps "Done"
+- **THEN** the store keeps "Walked round the block" with that review
+
+#### Scenario: Taking stock keeps the stage questions in place
+- **WHEN** stages 3, 4 and 5 are open when the app first builds the review that grows into taking stock
+- **THEN** taking stock shows its parts, then the three questions, then the stage 3, 4 and 5 questions, then "What's the one thing to change next week?"
+
+#### Scenario: A check-in asks no stage question
+- **WHEN** the person opens a check-in with stages 3 to 7 open
+- **THEN** the check-in asks the three questions and no stage question
+
 ### Requirement: The one thing to change and the pinned note
 
-After the reflection questions the review MUST ask "What's the one thing to change next week?" with one free-text field. The pinned note is the text of that field. Today shows it as the person's own text. The pinned note is not a message from the app. When the person taps "Done" with text in that field, Today MUST show the text as the pinned note.
+After the reflection questions and the stage questions, the review MUST ask "What's the one thing to change next week?" with one free-text field. "Three reflection questions" states the stage questions. The pinned note is the text of that field. Today shows it as the person's own text. The pinned note is not a message from the app. When the person taps "Done" with text in that field, Today MUST show the text as the pinned note.
 
 Today MUST show the pinned note in the place the Today stack that `record` defines gives it. Today MUST show it in the same text style as an entry's What. Today MUST show a pin glyph in the text colour beside it. The app MUST NOT add a label, a colour or any other word to the pinned note.
 

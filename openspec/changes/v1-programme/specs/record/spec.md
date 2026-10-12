@@ -269,6 +269,42 @@ On a fasting day the app MUST show no gap band. The `regular-eating-plan`, `week
 - **WHEN** the day start passes
 - **THEN** the next day has no fasting state
 
+### Requirement: A new worksheet from the day heading's menu
+
+From stage 4, the current day heading's menu MUST offer "New worksheet" next to "Fasting today", directly after it. The heading MUST also offer "New worksheet" as a custom action, as it offers the other items of the menu. `programme` owns when stage 4 opens.
+
+"New worksheet" MUST open a new worksheet with no linked sentence, as "New worksheet" on the Problem solving screen does. The worksheet opens as a sheet over Today. `problem-solving` owns the worksheet. The item MUST stay in the menu when "Pattern sentences" is off.
+
+Before stage 4 opens, the menu MUST NOT offer "New worksheet". The menu of the previous record day and the menu of an earlier day MUST NOT offer it. Today MUST NOT show a new visible control for it. The item lives only inside the menu, so the layout of Today does not change. Ash ruled this on 12 October 2026 (r23-08).
+
+#### Scenario: The item in the menu
+- **WHEN** stage 4 is open and the person opens the current day heading's menu
+- **THEN** the menu offers "New worksheet" directly after "Fasting today"
+
+#### Scenario: The custom action
+- **WHEN** stage 4 is open and a person using VoiceOver reaches the current day heading
+- **THEN** the actions rotor offers "New worksheet", and the action opens a new worksheet with no linked sentence
+
+#### Scenario: Open a worksheet from the menu
+- **WHEN** stage 4 is open and the person taps "New worksheet" in the current day heading's menu
+- **THEN** a new worksheet opens as a sheet over Today, with no linked sentence above step 1
+
+#### Scenario: Pattern sentences off
+- **WHEN** stage 4 is open, "Pattern sentences" is off, and the person opens the current day heading's menu
+- **THEN** the menu still offers "New worksheet"
+
+#### Scenario: Before stage 4
+- **WHEN** stage 3 is open, stage 4 is closed, and the person opens the current day heading's menu
+- **THEN** the menu offers no "New worksheet"
+
+#### Scenario: An earlier day
+- **WHEN** stage 4 is open and the person opens the menu of the previous record day, or of Monday 5 October 2026 from "Earlier days"
+- **THEN** the menu offers no "New worksheet"
+
+#### Scenario: Nothing new on Today
+- **WHEN** stage 4 is open and the person opens Today
+- **THEN** "New worksheet" is only inside the current day heading's menu and its custom actions, and Today shows no other new control for it
+
 ### Requirement: Earlier record days
 
 The current day heading's menu MUST offer a control "Earlier days". The control MUST appear only when a record day before the previous record day has an entry or a state.
@@ -453,7 +489,7 @@ The card slot MUST hold at most one card at a time. A card is one of these:
 - the week-13 question
 - the maintenance plan
 
-The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. The app MUST show the next card after the person dismisses the first.
+The `programme` capability owns the stage 1, plan and Focus cards. When more than one card is waiting, the app MUST show the oldest first. The app MUST show the next card after the person dismisses the first. The card slot MUST show at most one suggestion card on a record day. `problem-solving` decides which suggestion card, in "The suggestion card". That rule does not hold back a card of another kind. Ash ruled this on 12 October 2026 (r23-06).
 
 After a starred entry or an "I binged" outcome, the app MUST NOT show a card in the same record day. The one exception is the stage 7 lapse card, the maintenance plan card that `staying-on-track` shows. That card can show in the same record day as the starred entry or the outcome. After that entry or outcome, Today MUST NOT show the pinned note until the next record day. The `weekly-review` capability owns that rule.
 
@@ -471,7 +507,7 @@ Before the first weekly review becomes due, the bottom toolbar MUST NOT show "Re
 
 The current day heading and a full-width control "Add an entry" under it MUST form a pinned section header. That header MUST stay on screen while the current day's rows scroll. "Pause for today" MUST sit under the rows as a visible control. "Close the day" MUST sit beside it only after the last planned meal's time, or after 17:00 in stage 1.
 
-"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today".
+"Fasting today", "Didn't record" and "Earlier days" MUST live in the day heading's menu, one tap inside it. The heading MUST also offer them as custom actions. "Earlier days" MUST appear there only when a record day before the previous record day has an entry or a state. From stage 2, "Today's plan" MUST also live in the day heading's menu and as a custom action. It MUST open the plan builder at the current day's plan, as `regular-eating-plan` states in "Edit tonight for tomorrow, or this morning for today". From stage 4, "New worksheet" MUST also live in the current day heading's menu and as a custom action, as "A new worksheet from the day heading's menu" states. Ash ruled this on 12 October 2026 (r23-08).
 
 The `reminders` capability owns the rule and the two strings of the notification permission line. The line MUST sit under the pinned section header, above the rows, as a control. When permission is not determined, the line MUST read "Allow notifications to get reminders.". A tap on it MUST make the system permission request.
 

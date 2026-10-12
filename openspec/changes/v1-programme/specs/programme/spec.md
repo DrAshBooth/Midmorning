@@ -83,6 +83,7 @@ The app MUST hold every programme constant in one value type, ProgrammeConstants
 - CHECK_IN_WEEKS = 4, 8, 12
 - PATTERN_WINDOW_DAYS = 28
 - PATTERN_MIN_STARRED = 5
+- PATTERN_MIN_URGES = 5
 - PATTERN_MIN_GROUP = 3
 - LOCK_GRACE_SECONDS = 0, 30, 120 or 300; the default is 0
 - PLANNED_MEAL_WINDOW_BEFORE_MINUTES = 60
@@ -92,6 +93,8 @@ The app MUST hold every programme constant in one value type, ProgrammeConstants
 Every capability MUST read its constant from ProgrammeConstants. The code MUST NOT repeat a constant's value as a literal elsewhere. The type MUST live in the `Constants` target, not in the UI. `Constants` is a leaf target that `Record`, `Plan` and `Programme` import. A test MUST check each value of `.default`.
 
 LOCK_GRACE_SECONDS is a set of four values. App-lock owns the "Lock after" setting that picks one. Its default is 0.
+
+PATTERN_MIN_URGES is the minimum urge total for a pattern sentence from urges, as `problem-solving` states. Ash ruled this on 12 October 2026 (r23-09).
 
 Every threshold test MUST construct a modified ProgrammeConstants value. A test MUST NOT edit `.default`.
 

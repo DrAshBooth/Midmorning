@@ -152,7 +152,7 @@ Every screen MUST use the system text styles and the system semantic colours. Th
 
 The app MUST define one accent colour, in the AccentColor asset. The asset MUST hold a light value, a dark value, and an Increase Contrast value for each of light mode and dark mode. Each value MUST contrast with the row background at 4.5:1 or more, because the accent colour is the text colour of a text button. Each Increase Contrast value MUST contrast more than the value of its mode. The team changes the accent colour in that one asset only.
 
-Every control MUST use the accent colour as its tint. A control on a screen that deletes data also uses the accent colour, not red, because the system red is less than 4.5:1 on white. The app MUST NOT use the accent colour on anything that is not a control. The star control on the new-entry screen is an exception. Its tint is the system grey, as `record` states. System alerts, confirmation dialogs and swipe actions MUST also keep their system colours. So each control of a system alert MUST show the system blue, or the system red for a control that deletes, and MUST NOT show the accent colour. Ash ruled this on 11 October 2026 (r22-04). The text of a filled button MUST use the system background colour (`systemBackground`). This system semantic colour is white in light mode, and black or near-black in dark mode. So the text of a filled button is not a custom colour. It MUST contrast with the accent colour at 4.5:1 or more in light mode, in dark mode and with Increase Contrast. Ash ruled on 9 October 2026 that a filled button has near-black text in dark mode (r21-02).
+Every control MUST use the accent colour as its tint. This includes each control that deletes data and is not part of a system alert. Examples are "Delete everything" on the settings screen, on the cover and on the page "Midmorning cannot open your record on this device.", "Delete from this device" on the cover, "Delete entry" on the edit screen and "Remove %@" in the plan builder. Such a control MUST NOT use the system red, because the system red is less than 4.5:1 on white (r22-06). Ash ruled this on 12 October 2026 (r23-01). The app MUST NOT use the accent colour on anything that is not a control. The star control on the new-entry screen is an exception. Its tint is the system grey, as `record` states. System alerts, confirmation dialogs and swipe actions MUST also keep their system colours. So each control of a system alert MUST show the system blue, or the system red for a control that deletes, and MUST NOT show the accent colour. Ash ruled this on 11 October 2026 (r22-04). The text of a filled button MUST use the system background colour (`systemBackground`). This system semantic colour is white in light mode, and black or near-black in dark mode. So the text of a filled button is not a custom colour. It MUST contrast with the accent colour at 4.5:1 or more in light mode, in dark mode and with Increase Contrast. Ash ruled on 9 October 2026 that a filled button has near-black text in dark mode (r21-02).
 
 These MUST use the primary text colour and MUST NOT use the accent colour:
 
@@ -186,6 +186,10 @@ Every text field MUST fill the width of its row. Its label MUST sit above it. It
 #### Scenario: An alert keeps the system blue
 - **WHEN** the person taps "Delete everything" on the settings screen, in light mode or in dark mode
 - **THEN** the alert shows "Cancel" in the system blue, not in the accent colour
+
+#### Scenario: A control that deletes, outside an alert
+- **WHEN** the device is in light mode and the person opens the edit screen of the 13:05 entry
+- **THEN** "Delete entry" shows in the accent colour, not in the system red, and its text contrasts with the row background at 4.5:1 or more
 
 #### Scenario: Where chips at the largest text size
 - **WHEN** the text size is the largest accessibility size (AX5) and the new-entry screen shows all thirteen Where chips

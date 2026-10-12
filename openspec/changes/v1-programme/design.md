@@ -58,7 +58,7 @@ Sixteen `@Model` classes, each a neutral name, carry the conceptual entities wit
 | `Day` | a planned day: dateKey, slots, window constants; a separate set event row (dateKey, setAt, setBy) | dateKey | later changedAt; set is sticky |
 | `Answer` | planned meal answers (dateKey + slot index) and card answers (card id, optional dayKey) | as listed | later changedAt; a match beats Skipped on read |
 | `Measure` | weigh-in | dateKey | later changedAt |
-| `Session` | urge: startedAt, startDayKey, outcome, outcomeAt, outcomeDayKey, entryId | id | one open per record day, earliest start |
+| `Session` | urge: startedAt, startUTCOffset (r23-09), startDayKey, outcome, outcomeAt, outcomeDayKey, entryId | id | one open per record day, earliest start |
 | `ListItem` | alternatives, food rule, avoided food, ladder step, custom place | id | later changedAt; union by id |
 | `Sheet` | worksheet, maintenance plan, taking stock, reintroduction, Feeling fat note | id (maintenance plan: fixed) | later changedAt |
 | `Review` | weekly review, check-in | due dateKey | earliest freeze; edits into the winner |
