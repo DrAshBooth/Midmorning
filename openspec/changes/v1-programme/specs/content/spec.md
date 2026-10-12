@@ -517,7 +517,7 @@ The content bundle MUST hold these families of reviewed strings, each string wit
 - Opening sentences: "opening.stage2" to "opening.stage7". Programme owns the text. "opening.stage2.remindersoff" is the line the stage 2 opening card adds when notification permission is denied: "Reminders are off, so the Home Screen widget shows your next planned time."
 - Rule strings: "rule.stage2" to "rule.stage7", and more ids that start with "rule.stage2." or "rule.stage3.". Programme owns the text. The stage 2 rule and the stage 3 rule each show two counts, so each comes from strings with one count each. The stage 2 rule is "rule.stage2", "Opens after %lld recorded days.", then "rule.stage2.count", "You have %lld.". The stage 3 rule is "rule.stage3", "Opens after %1$@, or %2$@ after your plan starts". The app fills it from "rule.stage3.days", "%lld days on your plan", and "rule.stage3.weeks", "%lld weeks". With the default constants, the stage 3 rule reads "Opens after 7 days on your plan, or 2 weeks after your plan starts".
 - Today card strings: "todaycard.plan", "Your plan isn't set yet. It takes about two minutes."; "todaycard.plan.setup", "Set it up"; "todaycard.focus", "If you use a Focus at work, let planned meal reminders through?"; "todaycard.focus.yes", "Yes"; "todaycard.read", "Read". Programme owns the text and when each card shows.
-- Pattern templates: "pattern.<name>", the four count strings "pattern.count.group", "pattern.count.total", "pattern.count.urges" and "pattern.count.hours", and the window line "pattern.window", "From the last %lld days". Problem-solving owns the text. A slot template reads "{n} of your {m} were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} were at {place}."
+- Pattern templates: "pattern.<name>", the four count strings "pattern.count.group", "pattern.count.total", "pattern.count.urges" and "pattern.count.hours", the window line "pattern.window", "From the last %lld days", and the line under the "Pattern sentences" switch, "pattern.switchLine". Problem-solving owns the text. A slot template reads "{n} of your {m} were on days when {slot} didn't happen." "pattern.place" is the one template for a custom chip: "{n} of your {m} had the place {place}."
 - The reintroduction question: "dieting.reintroduction", "{weekday}, {slot}: how did it go?". Dieting-module owns the text.
 - The check-in weeks line: "checkin.weeks", and more ids that start with "checkin.weeks.". Staying-on-track owns the text. The line reads "A check-in comes at 4, 8 and 12 weeks." with the default constants. It shows three counts, so it comes from strings with one count each. The app fills the three numbers from CHECK_IN_WEEKS.
 - Reflection questions: "reflection.1" to "reflection.3". Weekly-review owns the text.
@@ -610,8 +610,8 @@ Every other string in the bundle MUST hold only the placeholders the catalogue r
 - **THEN** the setup shows the switch label "Buzz at 20 minutes", and the bundle hash covers "urge.buzz"
 
 #### Scenario: The custom chip template
-- **WHEN** the bundle holds "pattern.place" as "{n} of your {m} were at {place}." and the person's custom chip reads "Mum's"
-- **THEN** the content test passes the placeholder check for it, and the app shows "4 of your 6 starred entries were at Mum's."
+- **WHEN** the bundle holds "pattern.place" as "{n} of your {m} had the place {place}." and the person's custom chip reads "Mum's"
+- **THEN** the content test passes the placeholder check for it, and the app shows "4 of your 6 starred entries had the place Mum's."
 
 #### Scenario: {place} in another template
 - **WHEN** the bundle holds "pattern.slot" with "{place}" in its text

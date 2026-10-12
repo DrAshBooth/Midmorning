@@ -511,7 +511,7 @@ A worksheet MUST have six steps in this order. Each step MUST show its question 
 5. "What are the steps?" A list of free-text lines.
 6. "How did it go?" with the line "Look at how you went about it, not only whether it worked." under it. One free-text field.
 
-Each question and each line under a question MUST be bundled text that the clinical reviewer signs off, in the family with the prefix "worksheet.". The questions are "worksheet.1" to "worksheet.6", and `content` lists the ids of the lines. This follows ruling r17-03, which put clinical guidance under the sign-off. The line under step 1 about what comes before the problem, and the line under step 3, are drafts for the clinical reviewer. The app MUST NOT rank, judge or comment on one option. A line that asks the same question of every option does not judge one option.
+Each question and each line under a question MUST be a signed catalogue key with the prefix "worksheet.". The clinical reviewer signs off these keys. The questions are "worksheet.1" to "worksheet.6". `content` lists the ids of the lines in "Content versions". This follows ruling r17-03, which put clinical guidance under the sign-off. The line under step 1 about what comes before the problem, and the line under step 3, are drafts for the clinical reviewer. The app MUST NOT rank, judge or comment on one option. A line that asks the same question of every option does not judge one option.
 
 Step 5 MUST show the options chosen in step 4 above its list. Step 6 MUST show step 1's text, then the options chosen in step 4, then the lines of step 5, above its field. When step 1 is empty, step 4 has no chosen option or step 5 has no line, the step MUST show no empty space for that part.
 
