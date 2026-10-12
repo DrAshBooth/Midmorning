@@ -80,3 +80,17 @@ Added by the round 23 rulings, 12 October 2026:
 - The stage questions of the weekly review (r23-05), both drafts: "When an urge came, what did you do?" (stage 3) and "Did a problem come up that a worksheet could help with?" (stage 4). The questions of stages 5, 6 and 7 come with the builds of those stages.
 - "%lld urges", with the one form "%lld urge" (r23-09). The pattern templates that the reviewer signs off for starred entries also show urge sentences, for example "4 of your 6 urges were after 20:00."
 - "New worksheet" in the day heading's menu on Today (r23-08). It is the label of the control on the Problem solving screen too.
+
+Added by the review of stages 3 and 4, 12 October 2026. Every string below is a draft. `card-drafts-stage-3-4.md` holds the notes for the reviewer on this text, in "Notes for the clinical reviewer".
+
+- The wave after 20 minutes: the curve is flat from 20 minutes to its end at 60 minutes, while the timer counts on, for example "42:00" and "1:02:15". A person who still has a strong urge sees a flat line. Please check that this does not read as "the urge should be over" (`urge-toolkit`, "The wave" and "The timer").
+- The alternatives examples. The setup offers at least six examples that the reviewer signs off. The seven drafts are "Go out for a walk", "Call or message a friend", "Have a shower or a bath", "Do a puzzle or a game", "Go to another room and shut the door", "Put music or a podcast on" and "Do one small job with your hands". "Do a puzzle or a game" and "Put music or a podcast on" are flagged, because eating fits easily alongside them.
+- The signed text of the urge screen and the setup, in the family with the prefix "urge.": the wave line and the walk text above, "Breathe" / "Stop" / "Breathe in" / "Breathe out", the three outcome labels above, the setup title "Alternatives list" and the heading "Examples".
+- The setup's controls: "Edit" / "Stop editing", the add field "Add an alternative" and its control "Add".
+- The timer's spoken value, for example "12 minutes 40 seconds" and "1 hour 2 minutes 15 seconds".
+- The worksheet's two new lines: "Think about what comes before it: a time, a place, a feeling or a long gap." (step 1) and "For each one, ask: does it keep your planned meals and snacks in place?" (step 3).
+- The worksheet's controls: the title menu "Worksheet", "Back" / "Next" / "Done", "Add a line", "Edit" / "Stop editing", "Delete worksheet", and the alert "Delete this worksheet?" with "Delete" and "Cancel".
+- "From the last %lld days", with the one form "From the last %lld day", above the pattern sentences.
+- "{n} of your {m} had the place {place}.", filled as "4 of your 7 starred entries had the place In the car." It replaces the draft "{n} of your {m} were at {place}." above.
+- "Sentences about patterns in your record, on Problem solving and on Today." under the switch "Pattern sentences".
+- The VoiceOver labels that add words to the visible text: "Move up Ring Sam", "How would each one work out?, Plan an evening snack", "What could you do about it?, 2" and "Work it through, 5 of your 7 starred entries were after 20:00."
