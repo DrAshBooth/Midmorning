@@ -152,7 +152,7 @@ Every screen in the core loop MUST work with no network. The app MUST NOT need a
 
 ### Requirement: No AI at runtime
 
-The app MUST NOT call a language model or any generative service at runtime. Every card, question and sentence MUST be text that the app carries, in the content bundle or in a string catalogue. The clinical reviewer's sign-off MUST cover the content bundle and the signed catalogue keys, as `content` states in "Content versions". The clinical reviewer MUST review the other interface text before release. Ash ruled this on 26 September 2026 (r13-01).
+The app MUST NOT call a language model or any generative service at runtime. Every card, question and sentence MUST be text that the app carries, in the content bundle or in a string catalogue. Before the App Store build, the clinical reviewer's sign-off MUST cover the content bundle and the signed catalogue keys, as `content` states in "Content versions". A tester build can carry the owner's sign-off instead. Ash ruled this on 13 October 2026 (r25-01). The clinical reviewer MUST review the other interface text before release. Ash ruled this on 26 September 2026 (r13-01).
 
 #### Scenario: A pattern sentence
 - **WHEN** the app builds a pattern sentence from the record
