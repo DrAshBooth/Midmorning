@@ -99,7 +99,7 @@ Verify for every task below: `swift test --package-path Packages --filter Progra
 ## 23. mm-t14.11 — onboarding: Screen 4: permissions (P1)
 
 - [x] 23.1 `Screen4View`'s notifications, app lock and widget sections, wired to `BiometryLabels.strings(for:)` and `RecordStore.setLocalSettingValue` (`AppLockSettingsKeys.enabled`). Built here: "App lock default", "App lock off". Built here over fixture facts, with no live dependency: "Notifications denied", "Notifications not asked" (mm-t24.21 runs the scheduler side end to end). "Lock sentence on a Touch ID device" needs a real Touch ID device or simulator enrolment and `LocalAuthentication`'s own `Biometry` detection (not wired to a live value in this first cut — `currentBiometry` is `.faceID`), so it is listed on the epic's device-check bead.
-- [ ] 23.2 Deferred: "Widget skipped" (mm-t25.15).
+- [ ] 23.2 Deferred: "Widget skipped" (mm-t25.5).
 
 ## 24. mm-t14.12 — onboarding: What onboarding keeps and what it never keeps (P1)
 

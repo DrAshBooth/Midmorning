@@ -12,7 +12,7 @@ Every task's verify command is `swift test --package-path Packages` and `xcodebu
 
 ## 3. The Record group
 
-- [x] 3.1 mm-t13.3 — settings, "The Record group" (decision 65). `RecordStore.dayStartHour(effectiveOn:)`, `setDayStartHour(_:now:calendar:)`, `RecordDay.nextDayKey(after:calendar:startHour:)`, `gapBandsOn`, `setGapBandsOn`. "Day starts at" and "Gap bands" carry no scenario of their own in the requirement; `SettingsScreenTests.swift` proves the day-start-applies-from-the-next-day rule and the day-start-never-moves-a-saved-entry rule as pure functions with fixed dates, and gap bands' default and toggle. The requirement's one scenario, "Turn pattern sentences off", is `deferred: mm-t33.15`.
+- [x] 3.1 mm-t13.3 — settings, "The Record group" (decision 65). `RecordStore.dayStartHour(effectiveOn:)`, `setDayStartHour(_:now:calendar:)`, `RecordDay.nextDayKey(after:calendar:startHour:)`, `gapBandsOn`, `setGapBandsOn`. "Day starts at" and "Gap bands" carry no scenario of their own in the requirement; `SettingsScreenTests.swift` proves the day-start-applies-from-the-next-day rule and the day-start-never-moves-a-saved-entry rule as pure functions with fixed dates, and gap bands' default and toggle. The requirement's one scenario, "Turn pattern sentences off", is `deferred: mm-t33.7`.
 
 ## 4. The Privacy group and the privacy notice
 

@@ -408,7 +408,7 @@ The store MUST sync every value in the "Shared" column of this table through `Re
 | the profile: height, the onboarding BMI, the caution flag, `askedAt` | the launch failure count, the reconcile counts, the crash count, the store creation moment |
 | the stage-opened rows, the card answers, the device rows | the pending offline erase instruction, the first-import-running flag, the first-import-failed flag |
 | | the morning-plan unanswered count, the collapse or expand choice per record day, the snooze counts, the permission line tapped flag |
-| | the moment of each pending worksheet review reminder, the suggestion card that the card slot showed on the current record day |
+| | the moment of each pending worksheet review reminder and of each pending check-in reminder, the suggestion card that the card slot showed on the current record day |
 
 `reminders` owns the first value of the last row, and `problem-solving` owns the second. Ash ruled this on 12 October 2026 (r23-04, r23-06).
 
