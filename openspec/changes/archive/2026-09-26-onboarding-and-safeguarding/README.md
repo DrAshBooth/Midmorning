@@ -57,7 +57,7 @@ Every scenario below needs a device or the simulator's own hardware-backed behav
 
 Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
 iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
-58cbf1a. The device test guide holds each step. Each check passed.
+58cbf1a. The device test guide (tools/skeleton-checks/device-guide.md) holds each step. Each check passed.
 The guide holds no screenshots.
 
 - Validation messages (guide s1-1, t14-q2): on screens 2 and 3, no message

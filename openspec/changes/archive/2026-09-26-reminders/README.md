@@ -120,7 +120,7 @@ reminder on the Lock Screen at work.
 
 Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
 iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
-58cbf1a. The device test guide holds each step. Each check passed.
+58cbf1a. The device test guide (tools/skeleton-checks/device-guide.md) holds each step. Each check passed.
 The guide holds no screenshots.
 
 - Permission denied (guide s5-1, t24-1, t24-r4): the first tap on Today's

@@ -109,3 +109,13 @@ Added by the round 24 rulings, 12 October 2026. Every string below is a draft. `
 ## Co-design panel
 
 The co-design panel holds one session on the 3.1 build and one on the 3.3 build, each before that build reaches testers. Ash ruled this on 12 October 2026 (r24-13).
+
+## Gate lines
+
+Each gate and human prerequisite of tasks 4.3 and 4.3b writes its dated line here.
+
+- 13 October 2026, mm-t43.26 (the app icon): the icon is `App/Midmorning/Assets.xcassets/AppIcon.appiconset`, with light, dark and tinted 1024 pt images, commit 58cbf1a. Ash chose sketch 1, "Ruled page", on 11 October 2026. A later icon change is a new bead.
+
+## Device checks
+
+The device checks that stay with Ash are in `tools/skeleton-checks/device-guide.md`, one item per check with its id, its bead and its steps. Each archived change README cites the guide by id in its "Results on a device" section.
