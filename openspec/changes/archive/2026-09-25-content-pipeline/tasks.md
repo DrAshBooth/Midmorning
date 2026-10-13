@@ -45,7 +45,7 @@ Verify for every task below: `swift test --package-path Packages --filter Conten
 ## 7. mm-t11.14 — Every bundled string family has ids (P1)
 
 - [x] 7.1 Add the id-uniqueness check. Built here: "Two strings with one id". Built here over a fixture bundle: "Sign-off covers the strings". Verify: `StringFamilyIdsTests` passes.
-- [ ] 7.2 Deferred: "The stage 2 opening card with reminders off" (mm-t25.15), "The Focus card text" (mm-t25.16), "A pattern template with its placeholders" (mm-t33.17), "The custom chip template" (mm-t33.17), "{place} in another template" (mm-t33.17), "{weekday} in a pattern template" (mm-t33.17), "The first worksheet step" (mm-t33.17), "The reintroduction question" (mm-t34.15), "The check-in weeks line" (mm-t36.20), "The maintenance plan question" (mm-t36.20), "The urge timer line" (mm-t31.16).
+- [ ] 7.2 Deferred: "The stage 2 opening card with reminders off" (mm-t25.5), "The Focus card text" (mm-t25.16), "A pattern template with its placeholders" (mm-t33.17), "The custom chip template" (mm-t33.17), "{place} in another template" (mm-t33.17), "{weekday} in a pattern template" (mm-t33.17), "The first worksheet step" (mm-t33.17), "The reintroduction question" (mm-t34.15), "The check-in weeks line" (mm-t36.20), "The maintenance plan question" (mm-t36.20), "The urge timer line" (mm-t31.16).
 
 ## 8. First-cut string families (P1), each bundled under "Every bundled string family has ids"
 

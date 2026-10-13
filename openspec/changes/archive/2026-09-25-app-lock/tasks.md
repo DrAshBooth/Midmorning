@@ -52,7 +52,7 @@ Verify for every task below: `swift test --package-path Packages --filter AppLoc
 ## 12. mm-t15.6 — A new entry before authentication (P1)
 
 - [x] 12.1 `PendingRoute` and the `coverMode` rule that shows no cover while a pending route is set, plus `pendingRouteRequested`/`pendingRouteResolved` in `AppLifecycle.reduce`. Built here: none (the rule only). Verify: `AppLifecycleTests`' pending-route tests pass.
-- [ ] 12.2 Deferred: "Widget tap while locked" (mm-t25.15), "Save while locked" (mm-t25.15), "Cancel the request at Save" (mm-t25.15), "Cancel on the screen" (mm-t25.15), "Notification action while locked" (mm-t24.19), "Actions on a planned meal reminder" (mm-t24.19), "Skipped while the app is locked" (mm-t24.19), "Skipped on the locked device" (mm-t24.19), "Snooze while the device is locked" (mm-t24.19).
+- [ ] 12.2 Deferred: "Widget tap while locked" (mm-t25.2), "Save while locked" (mm-t25.2), "Cancel the request at Save" (mm-t25.2), "Cancel on the screen" (mm-t25.2), "Notification action while locked" (mm-t24.19), "Actions on a planned meal reminder" (mm-t24.19), "Skipped while the app is locked" (mm-t24.19), "Skipped on the locked device" (mm-t24.19), "Snooze while the device is locked" (mm-t24.19).
 
 ## 13. mm-t15.13 — settings: Face ID only in the About group (P1)
 
