@@ -262,6 +262,14 @@ item needs a new line for the commit of that build (gate mm-t43.31). A
 build on which Ash does each of those checks by hand does not need the
 line.
 
+The checks that stay with Ash are in `device-guide.md` in this folder: one
+item per check, with its guide id, its bead and its steps, grouped into
+sessions (the clock, real notifications, Face ID, privacy on the Mac,
+crashes, deletion, the export, the shame walk, and the groups that need
+iOS 27, another device, sync or the second schema version). The archived
+change READMEs cite the guide by id. The "Remaining device checks" comment
+on each device-check bead is the same list, one bead at a time.
+
 Two bugs change what the suite checks:
 
 - mm-t12b.27: on the iOS 27.0 simulator Today is blank while TodayView,

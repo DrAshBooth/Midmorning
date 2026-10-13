@@ -174,7 +174,7 @@ built app and adds its date and screenshot here.
 
 Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
 iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
-58cbf1a. The device test guide holds each step. Each check passed.
+58cbf1a. The device test guide (tools/skeleton-checks/device-guide.md) holds each step. Each check passed.
 The guide holds no screenshots.
 
 - "Third-party keyboard installed" (guide s3-2, t41-4): What shows the

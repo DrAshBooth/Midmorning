@@ -32,7 +32,7 @@ When Ash archives an owning change, Ash moves its rows to that change's README. 
 | data-and-privacy | Delete-all: "Widget after Delete-all" | The first cut builds the other scenarios | 2.5 widgets-and-intents | mm-t25.15 |
 | data-and-privacy | Delete-all: the erasure marker, the zone deletion and "Delete everything offline" | Local deletion only | 4.1b sync | mm-t41b.10 |
 | data-and-privacy | File protection | The first cut builds the other scenarios | 2.5 widgets-and-intents | mm-t25.15 |
-| data-and-privacy | Release gates and the App Store submission | Not part of the first TestFlight build | 4.3b app-store-submission | mm-t43.12 |
+| data-and-privacy | Release gates and the App Store submission | The review notes carry no Time Sensitive line and no background refresh line, and no demo video of every stage exists; the first cut declares neither background mode | 4.3b app-store-submission | mm-t43.12 |
 | data-and-privacy | The Diagnostics counts come from the device | The first cut builds the other scenarios | 4.1b sync | mm-t41b.11 |
 | data-and-privacy | The app excludes the whole store directory from backups | The first cut builds the other scenarios | 4.1b sync | mm-t41b.11 |
 | data-and-privacy | The app holds no analytics of its own | The first cut builds the other scenarios | 4.1b sync | mm-t41b.11 |

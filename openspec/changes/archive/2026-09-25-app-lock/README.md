@@ -52,7 +52,7 @@ Every scenario below needs a device or the simulator's own hardware-backed behav
 
 Ash did these checks on 11 October 2026 on an iPhone 17 Pro Max with
 iOS 26.6.2 (23G90), Face ID and a passcode, on the Debug build of main at
-58cbf1a. The device test guide holds each step. Each check passed.
+58cbf1a. The device test guide (tools/skeleton-checks/device-guide.md) holds each step. Each check passed.
 The guide holds no screenshots.
 
 - "When the app asks" (guide s4-1, t15-1, t15-r4): Face ID asks by itself at
